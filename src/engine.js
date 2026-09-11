@@ -1,7 +1,14 @@
 (() => {
   const {RESOURCE_TYPES,ZH,DATA_ZH,createInitialState}=window.SimWorld;
   let state=null, eventSeq=0;
-  function rand(min=0,max=1){return min+Math.random()*(max-min)}
+  const DEFAULT_SEED=20260911;
+  function normalizeSeed(seed){const n=Number(seed);return Number.isFinite(n)&&n!==0?(n>>>0):DEFAULT_SEED}
+  function random(){
+    state.rngState=(state.rngState+0x6D2B79F5)>>>0;
+    let t=state.rngState;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;
+  }
+  function rand(min=0,max=1){return min+random()*(max-min)}
+  function shuffle(list){for(let i=list.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list}
   function clamp(v,a=0,b=100){return Math.max(a,Math.min(b,v))}
   function sumContents(obj){return Object.values(obj?.contents||{}).reduce((a,b)=>a+b,0)}
   function zoneName(id){return state.zones[id]?.name||id}
@@ -27,9 +34,21 @@
     return {success,failRisk,roll,ok:roll<=success,coord,baseRisk,environmentRisk};
   }
   function timeStr(minute=state.minute){const h=Math.floor(minute/60)%24,m=minute%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`}
+  function pruneCauses(){
+    if(eventSeq<2200)return;
+    const keep=new Set(), roots=[...state.events.map(e=>e.id),...Object.values(state.endpointCauses)];
+    for(const a of Object.values(state.agents)){
+      if(a.causes?.intoxication)roots.push(a.causes.intoxication);
+      for(const part of Object.values(a.causes?.contacts||{}))for(const id of Object.values(part||{}))if(id)roots.push(id);
+    }
+    const mark=id=>{if(!id||keep.has(id))return;keep.add(id);const e=state.causes[id];for(const c of e?.causeIds||[])mark(c)};
+    roots.forEach(mark);
+    const cutoff=eventSeq-2000;
+    for(const id of Object.keys(state.causes)){const n=Number(id.slice(1));if(n<cutoff&&!keep.has(id))delete state.causes[id];}
+  }
   function addEvent(text,type='normal',causeIds=[],data={}){
     const id='e'+(++eventSeq); const e={id,time:timeStr(),text,type,causeIds:[...new Set(causeIds.filter(Boolean))],data};
-    state.events.unshift(e); state.causes[id]=e; if(state.events.length>260) state.events.pop(); return id;
+    state.events.unshift(e); state.causes[id]=e; if(state.events.length>260) state.events.pop(); if(eventSeq%100===0)pruneCauses(); return id;
   }
 
   function objectLocation(id){
@@ -133,7 +152,7 @@
       if(needsCheck){
         const pc=precisionCheck(a,.2,envRisk);
         if(!pc.ok){
-          a.needs.comfort=clamp(a.needs.comfort-rand(4,9));a.needs.safety=clamp(a.needs.safety-rand(5,12));
+          a.wellbeing.comfort=clamp(a.wellbeing.comfort-rand(4,9));a.wellbeing.safety=clamp(a.wellbeing.safety-rand(5,12));
           const slip=addEvent(`${a.name}在${zoneName(zoneId)}腳下一滑，踉蹌了一下。`,'warn',[resourceCause(sid,'water'),resourceCause(sid,'alcohol')].filter(Boolean),{reason:envRisk>pc.failRisk/2?'floor_hazard':'coordination',coordination:pc.coord,environmentRisk:envRisk,location:zoneId});
           if(a.held) spillContainerAt(a.held,rand(.2,.48),zoneId,[slip]);
         }
@@ -157,16 +176,22 @@
     c.heldBy=a.id;c.location=a.location;a.held=id;return true;
   }
   function releaseHeld(a){if(!a.held)return;const c=state.containers[a.held];if(c){c.heldBy=null;c.location=a.location;}a.held=null}
-  function compatibleDrinkContainers(resourceId){
-    return Object.values(state.containers).filter(c=>c.portable&&c.canDrink&&sumContents(c)<=.1||c.portable&&c.canDrink&&Object.keys(c.contents).every(r=>r===resourceId));
+  function drinkVessels(){return Object.values(state.containers).filter(c=>c.portable&&c.canDrinkFrom)}
+  function hasForeignContents(c,resourceId){return Object.entries(c.contents||{}).some(([r,v])=>r!==resourceId&&v>.1)}
+  function drinkVesselScore(a,c,resourceId,preferFilled=true){
+    const filled=amountAt(c.id,resourceId)>0, empty=sumContents(c)<=.1, foreign=hasForeignContents(c,resourceId);
+    let score=(c.drinkPreference??.5)*45-shortestPath(a.location,objectLocation(c.id),a,true).length*4;
+    if(preferFilled&&filled)score+=25;else if(empty)score+=12;
+    if(foreign)score-=35;
+    return score;
   }
-  function freeDrinkContainer(a,resourceId,preferFilled=true){
-    const list=compatibleDrinkContainers(resourceId).filter(c=>!c.heldBy||c.heldBy===a.id);
-    list.sort((x,y)=>{
-      const xf=amountAt(x.id,resourceId)>0?1:0,yf=amountAt(y.id,resourceId)>0?1:0;
-      if(preferFilled&&xf!==yf)return yf-xf;
-      return shortestPath(a.location,objectLocation(x.id),a,true).length-shortestPath(a.location,objectLocation(y.id),a,true).length;
-    });
+  function eligibleDrinkVessels(a,resourceId){
+    const desperate=(a.needs.thirst||0)>=88;
+    return drinkVessels().filter(c=>(!c.heldBy||c.heldBy===a.id)&&(desperate||!hasForeignContents(c,resourceId)));
+  }
+  function freeDrinkVessel(a,resourceId,preferFilled=true){
+    const list=eligibleDrinkVessels(a,resourceId);
+    list.sort((x,y)=>drinkVesselScore(a,y,resourceId,preferFilled)-drinkVesselScore(a,x,resourceId,preferFilled));
     return list[0]||null;
   }
 
@@ -176,7 +201,8 @@
       a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75));
       a.needs.fatigue=clamp(a.needs.fatigue+rand(.1,.5));
       a.needs.social=clamp(a.needs.social+rand(a.kind==='cat'?.08:.05,a.kind==='cat'?.28:.3));
-      if(a.kind==='cat') a.needs.cleanliness=clamp(a.needs.cleanliness+rand(.08,.28));
+      if(a.kind==='cat') a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28));
+      if(a.pendingInteraction){a.pendingInteraction.ttl--;if(a.pendingInteraction.ttl<=0){if(a.pendingInteraction.type==='catAttention')addEvent(`${a.name}沒有立刻回應橘子的撒嬌，橘子便自己走開了。`,'normal',[],{action:'ignoreCat',target:a.pendingInteraction.from,location:a.location});a.pendingInteraction=null;}}
       if(a.status.intoxication>0){a.status.intoxication=clamp(a.status.intoxication-rand(.15,.45));if(a.status.intoxication<1){a.status.intoxication=0;a.causes.intoxication=null;}}
       for(const [zone,contents] of Object.entries(a.contacts)) for(const [r,amt] of Object.entries(contents)){
         const def=RESOURCE_TYPES[r]; if(def?.phase==='liquid') contents[r]=Math.max(0,amt-rand(.02,.12));
@@ -190,25 +216,28 @@
     state.noiseEvents.forEach(n=>n.ttl--); state.noiseEvents=state.noiseEvents.filter(n=>n.ttl>0);
   }
 
+  function totalContainerResource(resourceId){return Object.values(state.containers).reduce((sum,c)=>sum+amountAt(c.id,resourceId),0)}
   function options(a){
-    const o=[], food=amountAt('mealTray','food'), water=amountAt('waterBucket','water'), alcohol=amountAt('alcoholBottle','alcohol')+Object.values(state.containers).filter(c=>c.canDrink).reduce((s,c)=>s+amountAt(c.id,'alcohol'),0);
+    const o=[], food=amountAt('mealTray','food'), water=amountAt('waterBucket','water'), alcohol=totalContainerResource('alcohol');
     if(a.kind==='human'){
       if(food>0) o.push({id:'eat',score:a.needs.hunger*1.16+17,why:['飢餓越高越想吃','現成食物仍有存量；但必須真的走到餐桌區']});
-      if(water>0) o.push({id:'drinkWater',score:a.needs.thirst*1.15+20,why:['口渴越高越想喝','需要找到可用杯子，再前往水桶取水']});
-      if(alcohol>0) o.push({id:'drinkAlcohol',score:a.needs.thirst*.72+a.traits.alcoholLike*45-a.status.intoxication*.35,why:['口渴會提高飲用意願',`個人對酒的偏好：${Math.round(a.traits.alcoholLike*100)}`,'需要先取得一個可用的通用杯子']});
+      if(water>0) o.push({id:'drinkWater',score:a.needs.thirst*1.15+20,why:['口渴越高越想喝','需要取得適合的飲用容器，再前往水桶取水']});
+      if(alcohol>0) o.push({id:'drinkAlcohol',score:a.needs.thirst*.72+a.traits.alcoholLike*45-a.status.intoxication*.35,why:['口渴會提高飲用意願',`個人對酒的偏好：${Math.round(a.traits.alcoholLike*100)}`,'通常偏好杯子；沒有合適杯子時也能直接拿酒瓶喝']});
       if(food<24&&sourceCanProvide('foodPantry','food')) o.push({id:'refillFood',score:(24-food)*2.1+a.traits.careful*10,why:['現成食物快吃完了','必須先去食物櫃取食物，再搬到餐桌區']});
       if(water<24&&sourceCanProvide('tap','water')) o.push({id:'refillWater',score:(24-water)*2.2+a.traits.careful*9,why:['水桶快空了','水龍頭與水桶都在水槽區，但操作仍需要時間']});
-      o.push({id:'rest',score:a.needs.fatigue*1.05+12+(100-a.needs.safety)*.06,why:['疲勞越高越想休息','會尋找安靜且舒適的區域；太吵會換地方']});
-      o.push({id:'talk',score:a.needs.social*.78+a.traits.social*34,why:['社交需求','需要實際走到另一個人所在的位置']});
-      const cat=state.agents.orange;if(cat.location===a.location) o.push({id:'petCat',score:a.needs.social*.55+(100-a.needs.comfort)*.2+cat.needs.social*.35,why:['橘子就在附近','摸貓可以同時影響人與貓的狀態']});
-      const wettest=wettestZone(); if(wettest&&floorSlipRisk(wettest)>0.4)o.push({id:'cleanFloor',score:floorSlipRisk(wettest)*4.5+a.traits.careful*18+(100-a.needs.safety)*.12,why:['某處地面有液體，形成滑倒風險',`最高滑倒風險在${zoneName(wettest)}，約 ${floorSlipRisk(wettest).toFixed(1)}%`]});
-      o.push({id:'wander',score:8+rand(0,10)-(100-a.needs.safety)*.08,why:['沒有更迫切需求時可能短暫走動']});
+      o.push({id:'rest',score:Math.max(0,a.needs.fatigue-20)*1.15+6+(100-a.wellbeing.safety)*.06,why:['疲勞越高越想休息','會尋找安靜且舒適的區域；太吵會換地方']});
+      o.push({id:'talk',score:Math.max(0,a.needs.social-15)*.85+a.traits.social*10,why:['社交需求超過低需求區後才明顯提高聊天意願','需要實際走到另一個人所在的位置']});
+      const cat=state.agents.orange,catDistance=Math.max(0,shortestPath(a.location,cat.location,a,true).length-1),responding=a.pendingInteraction?.type==='catAttention'&&a.pendingInteraction.from===cat.id;
+      const petScore=Math.max(0,a.needs.social-22)*.48+Math.max(0,68-a.wellbeing.comfort)*.35+Math.max(0,cat.needs.social-35)*.28+(a.traits.animalAffinity??.5)*18+(responding?34:0)-catDistance*4;
+      if(responding||petScore>8)o.push({id:'petCat',score:petScore,why:[responding?'橘子剛主動靠過來，正在等待回應':'角色可以主動去找橘子',`對動物的親近傾向：${Math.round((a.traits.animalAffinity??.5)*100)}`,catDistance?`與橘子距離約 ${catDistance} 段路徑`:'橘子就在附近']});
+      const wettest=wettestZone(); if(wettest&&floorSlipRisk(wettest)>0.4)o.push({id:'cleanFloor',score:floorSlipRisk(wettest)*4.5+a.traits.careful*18+(100-a.wellbeing.safety)*.12,why:['某處地面有液體，形成滑倒風險',`最高滑倒風險在${zoneName(wettest)}，約 ${floorSlipRisk(wettest).toFixed(1)}%`]});
+      o.push({id:'wander',score:8+rand(0,10)-(100-a.wellbeing.safety)*.08,why:['沒有更迫切需求時可能短暫走動']});
     }else{
       if(food>0)o.push({id:'eat',score:a.needs.hunger*1.08+12,why:['飢餓','需要走到現成食物所在位置']});
       const pawTotal=Object.values(a.contacts.paws||{}).reduce((x,y)=>x+y,0);
-      o.push({id:'groom',score:a.needs.cleanliness*.83+pawTotal*.9+18,why:['清潔需求',pawTotal>0?'腳掌沾到異物，強烈提高舔毛意願':'一般理毛習慣']});
-      o.push({id:'rest',score:a.needs.fatigue*.95+20,why:['疲勞越高越想睡','同樣會偏好較安靜的位置']});
-      o.push({id:'seekHuman',score:a.needs.social*.95+a.traits.social*28,why:['貓的社交需求現在會隨時間上升','會主動走去找附近的人']});
+      o.push({id:'groom',score:a.needs.groomingNeed*.83+pawTotal*.9+18,why:['理毛需求',pawTotal>0?'腳掌沾到異物，強烈提高舔毛意願':'一般理毛習慣']});
+      o.push({id:'rest',score:Math.max(0,a.needs.fatigue-15)*1.05+8,why:['疲勞越高越想睡','同樣會偏好較安靜的位置']});
+      if(a.needs.social>14)o.push({id:'seekHuman',score:Math.max(0,a.needs.social-10)*.95+a.traits.social*18,why:['貓的社交需求會隨時間上升','會主動走去找附近的人；抵達後由人決定是否回應']});
       o.push({id:'wander',score:20+a.traits.curious*25+rand(0,16),why:['貓的探索傾向','移動途中會真的接觸所在區域的地面']});
       if(water>0)o.push({id:'drinkWater',score:a.needs.thirst*1.05+8,why:['口渴','會走到水桶所在的水槽區']});
     }
@@ -230,8 +259,8 @@
   function startPlan(a,choice){
     let p={intent:choice.id,phase:'start',wait:0,started:state.tick};
     if(choice.id==='eat')p={...p,targetObject:'mealTray',phase:'move'};
-    else if(choice.id==='drinkWater') p=a.kind==='cat'?{...p,targetObject:'waterBucket',resource:'water',phase:'move'}:{...p,resource:'water',sourceObject:'waterBucket',phase:'findCup',container:null};
-    else if(choice.id==='drinkAlcohol') p={...p,resource:'alcohol',sourceObject:'alcoholBottle',phase:'findCup',container:null};
+    else if(choice.id==='drinkWater') p=a.kind==='cat'?{...p,targetObject:'waterBucket',resource:'water',phase:'move'}:{...p,resource:'water',sourceObject:'waterBucket',phase:'findVessel',container:null};
+    else if(choice.id==='drinkAlcohol') p={...p,resource:'alcohol',sourceObject:'alcoholBottle',phase:'findVessel',container:null};
     else if(choice.id==='refillFood')p={...p,phase:'toSource',sourceObject:'foodPantry',targetObject:'mealTray'};
     else if(choice.id==='refillWater')p={...p,phase:'move',targetObject:'waterBucket'};
     else if(choice.id==='rest')p={...p,phase:'move',targetZone:bestRestZone(a),restTicks:0};
@@ -287,7 +316,7 @@
         if(!acquireLock(a,target.id)){
           waitFor(a,target.id,'到了食物旁，卻得先等一下');
           const blocker=state.agents[state.locks[target.id]];
-          if(blocker&&blocker.location===a.location&&a.needs.social>45&&Math.random()<.35){a.needs.social=clamp(a.needs.social-rand(3,7));blocker.needs.social=clamp(blocker.needs.social-rand(2,5));addEvent(`${a.name}等食物時順便和${blocker.name}聊了兩句。`,'good',[],{action:'talkWhileWaiting',location:a.location});}
+          if(blocker&&blocker.location===a.location&&a.needs.social>45&&random()<.35){a.needs.social=clamp(a.needs.social-rand(3,7));blocker.needs.social=clamp(blocker.needs.social-rand(2,5));addEvent(`${a.name}等食物時順便和${blocker.name}聊了兩句。`,'good',[],{action:'talkWhileWaiting',location:a.location});}
           p.phase='wait';return;
         }
         p.phase='eating';addEvent(`${a.name}在${zoneName(a.location)}開始吃東西。`,'normal',[],{action:'eat',phase:'start',location:a.location});return;
@@ -299,36 +328,33 @@
     }
     if((p.intent==='drinkWater'||p.intent==='drinkAlcohol')&&a.kind==='human'){
       const resource=p.resource,sourceId=p.sourceObject;
-      if(p.phase==='findCup'){
-        const cup=freeDrinkContainer(a,resource,true);
-        if(!cup){
-          const held=compatibleDrinkContainers(resource).find(c=>c.heldBy&&c.heldBy!==a.id);
-          if(held){p.wait++;const owner=state.agents[held.heldBy];addEvent(`${a.name}想${resource==='water'?'喝水':'喝酒'}，但可用杯子都被拿走了${owner?`；${owner.name}正拿著${held.name}`:''}。`,'normal',[],{action:'wait',target:'cup',location:a.location});if(p.wait>=2&&owner&&owner.location===a.location)addEvent(`${a.name}向${owner.name}問了一下杯子還要不要用。`,'normal',[],{action:'request',target:held.id,location:a.location});return;}
+      if(p.phase==='findVessel'){
+        const vessel=freeDrinkVessel(a,resource,true);
+        if(!vessel){
+          const held=drinkVessels().find(c=>(amountAt(c.id,resource)>0||!hasForeignContents(c,resource))&&c.heldBy&&c.heldBy!==a.id);
+          if(held){p.wait++;const owner=state.agents[held.heldBy];addEvent(`${a.name}想${resource==='water'?'喝水':'喝酒'}，但偏好的飲用容器都不可用${owner?`；${owner.name}正拿著${held.name}`:''}。`,'normal',[],{action:'wait',target:'drinkVessel',location:a.location});if(p.wait>=2&&owner&&owner.location===a.location)addEvent(`${a.name}向${owner.name}問了一下${held.name}還要不要用。`,'normal',[],{action:'request',target:held.id,location:a.location});return;}
           finishPlan(a);return;
         }
-        if(p.container&&p.container!==cup.id)addEvent(`${a.name}發現原本的杯子不可用，改找${cup.name}。`,'normal',[],{action:'switchContainer',from:p.container,to:cup.id,location:a.location});
-        if(!p.container&&amountAt(cup.id,resource)<=0){
-          const occupiedFilled=compatibleDrinkContainers(resource).find(c=>amountAt(c.id,resource)>0&&c.heldBy&&c.heldBy!==a.id);
-          if(occupiedFilled)addEvent(`${a.name}本來想用${occupiedFilled.name}，但它正被${state.agents[occupiedFilled.heldBy]?.name||'別人'}拿著，因此改拿${cup.name}。`,'normal',[],{action:'switchContainer',from:occupiedFilled.id,to:cup.id,location:a.location});
-        }
-        p.container=cup.id;p.phase='toCup';
+        if(p.container&&p.container!==vessel.id)addEvent(`${a.name}發現原本的飲用容器不可用，改找${vessel.name}。`,'normal',[],{action:'switchContainer',from:p.container,to:vessel.id,location:a.location});
+        p.container=vessel.id;p.phase='toVessel';
       }
-      if(p.phase==='toCup'){
-        const cup=state.containers[p.container];
-        if(cup.heldBy&&cup.heldBy!==a.id){const alt=freeDrinkContainer(a,resource,true);if(alt&&alt.id!==cup.id){addEvent(`${a.name}發現${cup.name}被${state.agents[cup.heldBy]?.name||'別人'}拿著，改用${alt.name}。`,'normal',[],{action:'switchContainer',from:cup.id,to:alt.id,location:a.location});p.container=alt.id;return;}p.wait++;addEvent(`${a.name}到了杯子附近，但${cup.name}還在別人手上，只好等一下。`,'normal',[],{action:'wait',target:cup.id,location:a.location});return;}
-        const loc=objectLocation(cup.id);if(a.location!==loc){moveToward(a,loc,`去拿${cup.name}`);return;}
-        if(!holdContainer(a,cup.id)){p.phase='findCup';return;}
-        addEvent(`${a.name}拿起了${cup.name}。`,'normal',[],{action:'takeContainer',container:cup.id,location:a.location});
-        p.phase=amountAt(cup.id,resource)>=4?'drink':'toSource';
+      if(p.phase==='toVessel'){
+        const vessel=state.containers[p.container];
+        if(vessel.heldBy&&vessel.heldBy!==a.id){const alt=freeDrinkVessel(a,resource,true);if(alt&&alt.id!==vessel.id){addEvent(`${a.name}發現${vessel.name}被${state.agents[vessel.heldBy]?.name||'別人'}拿著，改用${alt.name}。`,'normal',[],{action:'switchContainer',from:vessel.id,to:alt.id,location:a.location});p.container=alt.id;return;}p.wait++;addEvent(`${a.name}到了${vessel.name}附近，但它還在別人手上，只好等一下。`,'normal',[],{action:'wait',target:vessel.id,location:a.location});return;}
+        const loc=objectLocation(vessel.id);if(a.location!==loc){moveToward(a,loc,`去拿${vessel.name}`);return;}
+        if(!holdContainer(a,vessel.id)){p.phase='findVessel';return;}
+        addEvent(`${a.name}拿起了${vessel.name}。`,'normal',[],{action:'takeContainer',container:vessel.id,location:a.location});
+        p.phase=amountAt(vessel.id,resource)>=4?'drink':'toSource';
       }
       if(p.phase==='toSource'){
         const sourceLoc=objectLocation(sourceId);if(a.location!==sourceLoc){moveToward(a,sourceLoc,`拿著${endpointName(p.container)}去取${resourceName(resource)}`);return;}
         if(amountAt(sourceId,resource)<=0){addEvent(`${a.name}到了${endpointName(sourceId)}，卻發現${resourceName(resource)}已經沒有了。`,'warn',[],{action:'resourceMissing',source:sourceId,resource,location:a.location});finishPlan(a);return;}
-        pourIntoHeld(a,sourceId,resource,resource==='alcohol'?1.4:.8);p.phase='drink';return;
+        if(p.container!==sourceId)pourIntoHeld(a,sourceId,resource,resource==='alcohol'?1.4:.8);p.phase='drink';return;
       }
       if(p.phase==='drink'){
         if(amountAt(p.container,resource)<=0){p.phase='toSource';return;}
-        consumeFrom(a,p.container,resource,rand(5,10),resource==='alcohol'?'喝下了杯裡的酒。':'喝了杯裡的水。',resource==='alcohol'?'warn':'good');releaseHeld(a);finishPlan(a);return;
+        const vesselName=endpointName(p.container);
+        consumeFrom(a,p.container,resource,rand(5,10),resource==='alcohol'?`直接從${vesselName}喝了些酒。`:`從${vesselName}喝了些水。`,resource==='alcohol'?'warn':'good');releaseHeld(a);finishPlan(a);return;
       }
     }
     if(p.intent==='refillWater'){
@@ -352,22 +378,22 @@
       if(a.location!==p.targetZone){moveToward(a,p.targetZone,'去找地方休息');return;}
       const noise=zoneNoise(a.location);
       if(noise>24){const old=p.targetZone,alt=bestRestZone(a,old,true);if(alt&&alt!==old){p.targetZone=alt;p.restTicks=0;addEvent(`${a.name}到了${zoneName(old)}，但那裡太吵（噪音 ${Math.round(noise)}），決定改去${zoneName(alt)}。`,'warn',[],{action:'replanRest',from:old,to:alt,noise,location:a.location});return;}}
-      p.restTicks++;a.needs.fatigue=clamp(a.needs.fatigue-rand(6,11));a.needs.comfort=clamp(a.needs.comfort+rand(1,4));if(p.restTicks===1)addEvent(`${a.name}在${zoneName(a.location)}坐下休息。`,'normal',[],{action:'rest',noise,location:a.location});if(p.restTicks>=2)finishPlan(a);return;
+      p.restTicks++;a.needs.fatigue=clamp(a.needs.fatigue-rand(6,11));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,4));if(p.restTicks===1)addEvent(`${a.name}在${zoneName(a.location)}坐下休息。`,'normal',[],{action:'rest',noise,location:a.location});if(p.restTicks>=2)finishPlan(a);return;
     }
     if(p.intent==='talk'){
-      const other=state.agents[p.targetAgent];if(!other){finishPlan(a);return;}if(a.location!==other.location){moveToward(a,other.location,`去找${other.name}`);return;}a.needs.social=clamp(a.needs.social-rand(12,22));other.needs.social=clamp(other.needs.social-rand(5,12));a.needs.comfort=clamp(a.needs.comfort+rand(1,3));addNoise(a.location,24,2);addEvent(`${a.name}走到${other.name}旁邊，兩人聊了幾句。`,'good',[],{action:'talk',target:other.id,location:a.location,noise:zoneNoise(a.location)});finishPlan(a);return;
+      const other=state.agents[p.targetAgent];if(!other){finishPlan(a);return;}if(a.location!==other.location){moveToward(a,other.location,`去找${other.name}`);return;}a.needs.social=clamp(a.needs.social-rand(12,22));other.needs.social=clamp(other.needs.social-rand(5,12));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,3));addNoise(a.location,24,2);addEvent(`${a.name}走到${other.name}旁邊，兩人聊了幾句。`,'good',[],{action:'talk',target:other.id,location:a.location,noise:zoneNoise(a.location)});finishPlan(a);return;
     }
     if(p.intent==='petCat'){
-      const cat=state.agents.orange;if(a.location!==cat.location){moveToward(a,cat.location,'去找橘子');return;}a.needs.social=clamp(a.needs.social-rand(4,9));a.needs.comfort=clamp(a.needs.comfort+rand(4,8));cat.needs.social=clamp(cat.needs.social-rand(13,23));cat.needs.comfort=clamp(cat.needs.comfort+rand(4,7));addEvent(`${a.name}蹲下來摸了摸橘子；橘子靠過去蹭了幾下。`,'good',[],{action:'petCat',target:'orange',location:a.location});finishPlan(a);return;
+      const cat=state.agents.orange;if(a.location!==cat.location){moveToward(a,cat.location,'去找橘子');return;}const responding=a.pendingInteraction?.type==='catAttention'&&a.pendingInteraction.from===cat.id;a.pendingInteraction=null;a.needs.social=clamp(a.needs.social-rand(4,9));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(4,8));cat.needs.social=clamp(cat.needs.social-rand(10,18));cat.wellbeing.comfort=clamp(cat.wellbeing.comfort+rand(4,7));addEvent(`${a.name}${responding?'回應橘子的撒嬌，':'主動走去找橘子，'}蹲下來摸了摸牠；橘子靠過去蹭了幾下。`,'good',[],{action:'petCat',target:'orange',reason:responding?'cat_request':'proactive',location:a.location});finishPlan(a);return;
     }
     if(p.intent==='seekHuman'){
-      const human=state.agents[p.targetAgent]||nearestHuman(a);if(!human){finishPlan(a);return;}p.targetAgent=human.id;if(a.location!==human.location){moveToward(a,human.location,`去找${human.name}`);return;}a.needs.social=clamp(a.needs.social-rand(15,25));a.needs.comfort=clamp(a.needs.comfort+rand(2,5));human.needs.comfort=clamp(human.needs.comfort+rand(2,5));human.needs.social=clamp(human.needs.social-rand(2,6));addNoise(a.location,6,1);addEvent(`${a.name}主動跑到${human.name}旁邊，喵了一聲又蹭了蹭腿。`,'good',[],{action:'seekHuman',target:human.id,location:a.location});finishPlan(a);return;
+      const human=state.agents[p.targetAgent]||nearestHuman(a);if(!human){finishPlan(a);return;}p.targetAgent=human.id;if(a.location!==human.location){moveToward(a,human.location,`去找${human.name}`);return;}a.needs.social=clamp(a.needs.social-rand(7,12));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,3));human.pendingInteraction={type:'catAttention',from:a.id,ttl:3};addNoise(a.location,6,1);addEvent(`${a.name}主動跑到${human.name}旁邊，喵了一聲又蹭了蹭腿，等著${human.name}回應。`,'normal',[],{action:'seekHuman',target:human.id,phase:'request',location:a.location});finishPlan(a);return;
     }
     if(p.intent==='cleanFloor'){
-      if(!p.targetZone){finishPlan(a);return;}if(a.location!==p.targetZone){moveToward(a,p.targetZone,'去處理地上的液體');return;}const sid=surfaceId(a.location),floor=state.surfaces[sid].contents,removed=[];for(const [r,amt] of Object.entries({...floor})){if(RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;const got=takeResource(sid,r,Math.min(amt,rand(8,18)));if(got>0)removed.push(`${resourceName(r)} ${got.toFixed(1)}`);}a.needs.safety=clamp(a.needs.safety+rand(2,6));a.needs.comfort=clamp(a.needs.comfort+rand(1,4));addNoise(a.location,10,1);addEvent(`${a.name}在${zoneName(a.location)}清理了地面上的液體。`,'good',[],{action:'cleanFloor',amount:removed.join('、'),environmentRisk:floorSlipRisk(a.location),location:a.location});finishPlan(a);return;
+      if(!p.targetZone){finishPlan(a);return;}if(a.location!==p.targetZone){moveToward(a,p.targetZone,'去處理地上的液體');return;}const sid=surfaceId(a.location),floor=state.surfaces[sid].contents,removed=[];for(const [r,amt] of Object.entries({...floor})){if(RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;const got=takeResource(sid,r,Math.min(amt,rand(8,18)));if(got>0)removed.push(`${resourceName(r)} ${got.toFixed(1)}`);}a.wellbeing.safety=clamp(a.wellbeing.safety+rand(2,6));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,4));addNoise(a.location,10,1);addEvent(`${a.name}在${zoneName(a.location)}清理了地面上的液體。`,'good',[],{action:'cleanFloor',amount:removed.join('、'),environmentRisk:floorSlipRisk(a.location),location:a.location});finishPlan(a);return;
     }
     if(p.intent==='groom'){
-      a.needs.cleanliness=clamp(a.needs.cleanliness-rand(19,31));const groom=addEvent(`${a.name}停下來舔毛清潔。`,'normal',[],{action:'groom',location:a.location});for(const [r,amt] of Object.entries({...a.contacts.paws})){if(amt<=0)continue;const taken=takeResource(`contact:${a.id}:paws`,r,amt*rand(.48,.82));if(taken<=0)continue;const ing=addEvent(`${a.name}在舔毛時攝入了腳掌上的${resourceName(r)}。`,RESOURCE_TYPES[r]?.intoxicationFactor?'bad':'normal',[groom,contactCause(a,'paws',r)].filter(Boolean),{transfer:'contact_to_internal',resource:r,from:`contact:${a.id}:paws`,to:'internal',amount:taken,location:a.location});applyIngestion(a,r,taken,[ing]);if(amountAt(`contact:${a.id}:paws`,r)<.25)setContactCause(a,'paws',r,null);}finishPlan(a);return;
+      a.needs.groomingNeed=clamp(a.needs.groomingNeed-rand(19,31));const groom=addEvent(`${a.name}停下來舔毛清潔。`,'normal',[],{action:'groom',location:a.location});for(const [r,amt] of Object.entries({...a.contacts.paws})){if(amt<=0)continue;const taken=takeResource(`contact:${a.id}:paws`,r,amt*rand(.48,.82));if(taken<=0)continue;const ing=addEvent(`${a.name}在舔毛時攝入了腳掌上的${resourceName(r)}。`,RESOURCE_TYPES[r]?.intoxicationFactor?'bad':'normal',[groom,contactCause(a,'paws',r)].filter(Boolean),{transfer:'contact_to_internal',resource:r,from:`contact:${a.id}:paws`,to:'internal',amount:taken,location:a.location});applyIngestion(a,r,taken,[ing]);if(amountAt(`contact:${a.id}:paws`,r)<.25)setContactCause(a,'paws',r,null);}finishPlan(a);return;
     }
     if(p.intent==='wander'){
       if(a.location!==p.targetZone){moveToward(a,p.targetZone,'隨意走動');return;}finishPlan(a);return;
@@ -376,7 +402,7 @@
 
   function tick(){
     state.tick++;state.minute+=2;if(state.minute>=1440){state.minute-=1440;state.day++;}
-    needDrift();const order=Object.values(state.agents).sort(()=>Math.random()-.5);
+    needDrift();const order=shuffle(Object.values(state.agents));
     for(const a of order){if(!a.plan)startPlan(a,choose(a));advancePlan(a);}
   }
 
@@ -387,12 +413,12 @@
     const target=p.targetZone?zoneName(p.targetZone):p.targetObject?endpointName(p.targetObject):p.targetAgent?state.agents[p.targetAgent]?.name:p.container?endpointName(p.container):'';
     return `${ZH[p.intent]||p.intent}・${phaseLabel(p.phase)}${target?`・目標：${target}`:''}${p.wait?`・等待 ${p.wait} 輪`:''}`;
   }
-  function phaseLabel(p){return ({start:'準備',move:'移動中',wait:'等待',eating:'進食中',findCup:'找杯子',toCup:'去拿杯子',toSource:'前往來源',drink:'飲用',toTarget:'前往目標',interact:'互動',groom:'清潔'})[p]||p}
+  function phaseLabel(p){return ({start:'準備',move:'移動中',wait:'等待',eating:'進食中',findVessel:'找飲用容器',toVessel:'去拿容器',toSource:'前往來源',drink:'飲用',toTarget:'前往目標',interact:'互動',groom:'清潔'})[p]||p}
 
-  function resetSim(){
+  function resetSim(seed=state?.seed??DEFAULT_SEED){
     eventSeq=0;
-    state=createInitialState();
-    addEvent('v7 初始化：模擬核心與觀測 UI 已拆分。需求增長率維持 v6；本版優先改善可觀測性。','system');
+    const resolved=normalizeSeed(seed);state=createInitialState(resolved);
+    addEvent(`v7.1 初始化：使用 Seed ${resolved}。狀態語意、飲用 affordance、人貓互動與可重現性已修正。`,'system',[],{seed:resolved});
     return state;
   }
   function getEntity(type,id){
@@ -405,7 +431,7 @@
     return null;
   }
   window.SimEngine={
-    reset:resetSim,tick,getState:()=>state,getEntity,
+    reset:resetSim,tick,getState:()=>state,getSeed:()=>state.seed,getEntity,
     RESOURCE_TYPES,ZH,DATA_ZH,
     clamp,coordination,zoneNoise,floorLiquidAmount,floorSlipRisk,timeStr,zoneName,surfaceId,
     objectLocation,endpointName,resourceName,resourceIcon,contentSummary,contactSummary,planLabel,phaseLabel,
