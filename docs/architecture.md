@@ -1,67 +1,84 @@
-# v8.1 架構說明
+# v9 架構說明
 
 ## 核心分層
 
 ### `world.js`
 描述世界資料：資源、區域拓樸、Agent、容器、來源、表面與初始值。
 
-角色狀態分為：
+角色狀態仍分成：
 
-- `needs`：高值＝需求更迫切，如飢餓、口渴、疲勞、社交、理毛需求。
-- `wellbeing`：高值＝狀態較好，目前有舒適、安全感。
+- `needs`：高值＝需求更迫切。
+- `wellbeing`：高值＝狀態較好。
 - `status`：效果型狀態，例如醉酒。
-- `metrics`：觀測／統計資料。`exertionToday` 是當日活動量，跨日歸零；`lastExertion` 保留最近一次活動來源。
+- `metrics`：觀測／統計資料；`exertionToday` 是當日活動量，`lastExertion` 保留最近一次活動來源。
 
-體力相關 trait 目前拆成兩個互不等價的維度：
+體力 trait 仍分成：
 
-- `exertionSensitivity`：同樣活動量會造成多少疲勞。低值代表較不容易因活動疲勞。
-- `recoveryRate`：休息時的恢復倍率。高值代表短時間休息較有效。
-
-容器維持 affordance / preference 分離：`canDrinkFrom` 描述物理能力，`drinkPreference` 描述角色通常多願意拿它來喝。
+- `exertionSensitivity`：同樣活動量造成多少疲勞。
+- `recoveryRate`：休息時的恢復倍率。
 
 ### `engine.js` + `recovery.js`
-`engine.js` 保留通用 exertion 與主要行動鏈；v8.1 將角色差異與休息恢復拆到獨立 `recovery.js`，避免繼續把所有規則塞進單一 engine。
+主要 simulation 與 v8.1 恢復模型不變：活動量透過 exertion 影響疲勞、口渴與少量飢餓；休息逐 tick 恢復並讀取環境 `restEfficiency`。
 
-`applyExertion` 在 v8.1 的有效結果明確區分「活動量」和「疲勞成本」：
+### `supply.js`
+v9 把食物的有限庫存接成第一條勞動閉環。此模組包裝既有 tick，但不改寫核心資源／移動規則。
 
-```text
-行動
-→ activity（客觀活動量）
-├─ metrics.exertionToday += activity
-├─ fatigue += activity × exertionSensitivity
-├─ thirst += activity × 小倍率
-└─ hunger += activity × 更小倍率
-```
-
-因此兩個人做完全相同的工作，今日活動量可以一樣，但累積疲勞不同。
-
-休息則改為逐 tick 恢復：
+補給流程：
 
 ```text
-休息恢復
-= 基礎恢復
-× 角色 recoveryRate
-× 當前區域 restEfficiency
+stock < trigger
+→ 選擇目前可承擔工作的 human
+→ 使用既有移動行動走到 doorway
+→ supplyWork 多 tick
+→ applyExertion(...)
+→ carrying = food
+→ 使用既有移動行動搬回 pantry
+→ pantry.contents.food 增加
 ```
 
-`restEfficiency` 由區域 `restQuality` 和即時噪音共同決定。角色會持續休息到疲勞降到目標值，或單次休息達 24 tick（48 分鐘）後結束；因此高疲勞或低恢復倍率角色會自然休更久。
+重要限制：
 
-跨日只重置 `metrics.exertionToday`，**不重置 fatigue，也不清除最近一次活動來源**。疲勞只能透過實際休息下降。
+- 補給只在角色原本的行動完成、變成 idle 後才接管，不中斷正在進行的吃飯、喝水、休息等行動。
+- 疲勞、口渴、飢餓過高時，不安排新補給；工作途中達到危急門檻也可中止。
+- 同時只允許一名 `workerId`，避免第一版直接變成多人排程系統。
+- 去出入口與搬回食物櫃都沿用核心 `wander/moveToward` 行動，因此仍會產生移動 exertion，並保留既有路徑／地面風險行為。
+- 工作階段本身透過既有 `applyExertion`，所以 `exertionSensitivity` 仍會造成角色差異。
+- 工作產出的食物目前代表「房間外部世界取得的資源」；外部農場、商店、生產鏈與貨幣尚未建模。
 
-目前仍只有「短期疲勞」一層；`sleepDebt / sleepNeed / sleepEfficiency` 尚未加入，避免過早把 MVP 變成完整睡眠模擬。
+v9 另外使用獨立、由同一 Seed 初始化的 supply PRNG，因此補給時長與產量可以重現，又不會改變核心 engine 的隨機序列。
 
-### `ui.js` + `recovery-ui.js`
-主要 UI 維持在 `ui.js`；v8.1 的體力觀測補充放在 `recovery-ui.js`，讓恢復系統可以先獨立迭代。
+### `ui.js` + `recovery-ui.js` + `supply-ui.js`
+UI 仍保持為觀測層。
 
-觀測層現在明確顯示：
+v9 新增最小補給觀測：
 
-- 今日活動量（不是疲勞槽）。
-- 最近活動的活動量與實際疲勞成本。
-- `exertionSensitivity`、`recoveryRate`。
-- 角色所在區域目前的休息效率。
+- 世界 badge 顯示食物總庫存。
+- 有補給工作時顯示目前 worker。
+- Agent 行動摘要會顯示「前往出入口／工作進度／搬運回食物櫃」。
+- 食物櫃與現成食物 Inspector 顯示觸發門檻、已完成趟數與累積帶回量。
+- 補給工作被選中時，最近決策會保留庫存不足與角色當下需求作為理由。
+
+## v9 成功條件
+
+第一版不是要做完整工作系統，而是確認以下因果鏈能穩定成立：
+
+```text
+食物被消耗
+→ 庫存下降
+→ 角色安排補給工作
+→ 工作造成活動與疲勞
+→ 角色把食物搬回
+→ 庫存回升
+→ 補給壓力消失
+```
+
+同時必須允許個人需求打斷這條鏈，例如角色太累時先休息，而不是無條件工作到補滿。
 
 ## 下一個決策點
 
-v8.1 先把「活動 → 疲勞 → 休息恢復」閉環釐清。下一步仍是補給層：固定補貨、勞動補給或真正貨幣經濟。
+觀察 v9 後再決定：
 
-若後續出現「明明休息很久仍應該困」或「睡不夠會累積到隔天」的需求，再新增 `sleepDebt`，不要把它混進目前的 `exertionToday`。
+1. 酒是否也用同一套勞動補給規則，作為非生存型資源。
+2. 補給工作是否需要拆成職業／技能／產量差異。
+3. 是否需要把「房間外部」實體化成新的空間或來源，而不是目前的 off-map 抽象。
+4. 是否真的有必要引入貨幣；只有當「工作產出」與「實際取得何種資源」需要分離時，貨幣才會帶來明顯價值。
