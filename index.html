@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v7｜視覺觀測</title>
+  <title>因果湧現模擬器 v7.1｜行為修正</title>
   <link rel="stylesheet" href="styles/app.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <header class="appbar">
     <div>
       <div class="eyebrow">EMERGENT CAUSAL SIM</div>
-      <h1>因果湧現模擬器 <span>v7・視覺觀測</span></h1>
+      <h1>因果湧現模擬器 <span>v7.1・行為修正</span></h1>
     </div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
@@ -22,6 +22,7 @@
     <button id="step10">10 步</button>
     <button id="reset" class="ghost">重置</button>
     <div class="toolbar-spacer"></div>
+    <label class="seed-control">Seed <input id="seedInput" type="number" inputmode="numeric" value="20260911" title="重置時使用此隨機種子"></label>
     <label class="toggle"><input id="showThoughts" type="checkbox" checked> 決策原因</label>
   </div>
 
