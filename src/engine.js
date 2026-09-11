@@ -10,6 +10,17 @@
   function rand(min=0,max=1){return min+random()*(max-min)}
   function shuffle(list){for(let i=list.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list}
   function clamp(v,a=0,b=100){return Math.max(a,Math.min(b,v))}
+  function applyExertion(a,amount,reason,{thirstFactor=.24,hungerFactor=.08}={}){
+    if(!a||amount<=0)return 0;
+    const scale=a.kind==='cat'?.72:1, cost=amount*scale;
+    a.needs.fatigue=clamp(a.needs.fatigue+cost);
+    a.needs.thirst=clamp(a.needs.thirst+cost*thirstFactor);
+    a.needs.hunger=clamp(a.needs.hunger+cost*hungerFactor);
+    a.metrics??={exertionToday:0,lastExertion:null};
+    a.metrics.exertionToday=(a.metrics.exertionToday||0)+cost;
+    a.metrics.lastExertion={amount:cost,reason,tick:state.tick};
+    return cost;
+  }
   function sumContents(obj){return Object.values(obj?.contents||{}).reduce((a,b)=>a+b,0)}
   function zoneName(id){return state.zones[id]?.name||id}
   function surfaceId(zoneId){return `floor:${zoneId}`}
@@ -140,7 +151,11 @@
     if(normal[1]&&normal[1]!==next) addEvent(`${a.name}避開較擁擠或濕滑的${zoneName(normal[1])}，改從${zoneName(next)}繞過去。`,'normal',[],{action:'reroute',from:from,to:next,target:targetZone});
     a.location=next;
     if(a.held&&state.containers[a.held]) state.containers[a.held].location=next;
-    addEvent(`${a.name}從${zoneName(from)}走到${zoneName(next)}，${reason}。`,'normal',[],{action:'move',from:from,to:next,target:targetZone,location:next});
+    let moveCost=.34;
+    if(a.held&&state.containers[a.held])moveCost+=.10+sumContents(state.containers[a.held])*.002;
+    if(a.carrying)moveCost+=.28+Math.min(.35,(a.carrying.amount||0)*.008);
+    const appliedMoveCost=applyExertion(a,moveCost,a.carrying?'搬運中移動':a.held?'拿著物品移動':'移動');
+    addEvent(`${a.name}從${zoneName(from)}走到${zoneName(next)}，${reason}。`,'normal',[],{action:'move',from:from,to:next,target:targetZone,location:next,exertion:appliedMoveCost});
     onEnterZone(a,next);
     return a.location===targetZone;
   }
@@ -199,7 +214,7 @@
     for(const a of Object.values(state.agents)){
       a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55));
       a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75));
-      a.needs.fatigue=clamp(a.needs.fatigue+rand(.1,.5));
+      a.needs.fatigue=clamp(a.needs.fatigue+rand(.04,.18));
       a.needs.social=clamp(a.needs.social+rand(a.kind==='cat'?.08:.05,a.kind==='cat'?.28:.3));
       if(a.kind==='cat') a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28));
       if(a.pendingInteraction){a.pendingInteraction.ttl--;if(a.pendingInteraction.ttl<=0){if(a.pendingInteraction.type==='catAttention')addEvent(`${a.name}沒有立刻回應橘子的撒嬌，橘子便自己走開了。`,'normal',[],{action:'ignoreCat',target:a.pendingInteraction.from,location:a.location});a.pendingInteraction=null;}}
@@ -360,18 +375,18 @@
     if(p.intent==='refillWater'){
       const loc=objectLocation('waterBucket');if(a.location!==loc){moveToward(a,loc,'去補水桶');return;}
       if(!acquireLock(a,'waterBucket')){waitFor(a,'waterBucket','想補水，但水桶正在被使用');return;}
-      const desired=Math.min(capacityLeft('waterBucket'),rand(28,42));if(desired>0){const pc=precisionCheck(a,.8,floorSlipRisk(a.location)*.08);const attempt=addEvent(`${a.name}打開水龍頭補水桶。`,'normal',[],{action:'refillWater',successChance:pc.success,roll:pc.roll,coordination:pc.coord,location:a.location});if(pc.ok){const moved=transferResource('water','tap','waterBucket',desired);const e=addEvent(`${a.name}順利把水桶補滿了一些。`,'good',[attempt],{resource:'water',from:'tap',to:'waterBucket',amount:moved,location:a.location});setResourceCause('waterBucket','water',e);}else{const kept=transferResource('water','tap','waterBucket',desired*.45),spilled=putResource(surfaceId(a.location),'water',desired*.55);const f=addEvent(`${a.name}補水時灑出了一些水。`,'warn',[attempt],{resource:'water',amount:spilled,coordination:pc.coord,location:a.location});if(kept>0)setResourceCause('waterBucket','water',f);if(spilled>0)setResourceCause(surfaceId(a.location),'water',f);}}releaseLock(a,'waterBucket');finishPlan(a);return;
+      const desired=Math.min(capacityLeft('waterBucket'),rand(28,42));if(desired>0){const pc=precisionCheck(a,.8,floorSlipRisk(a.location)*.08);const attempt=addEvent(`${a.name}打開水龍頭補水桶。`,'normal',[],{action:'refillWater',successChance:pc.success,roll:pc.roll,coordination:pc.coord,location:a.location});if(pc.ok){const moved=transferResource('water','tap','waterBucket',desired);const e=addEvent(`${a.name}順利把水桶補滿了一些。`,'good',[attempt],{resource:'water',from:'tap',to:'waterBucket',amount:moved,location:a.location});setResourceCause('waterBucket','water',e);}else{const kept=transferResource('water','tap','waterBucket',desired*.45),spilled=putResource(surfaceId(a.location),'water',desired*.55);const f=addEvent(`${a.name}補水時灑出了一些水。`,'warn',[attempt],{resource:'water',amount:spilled,coordination:pc.coord,location:a.location});if(kept>0)setResourceCause('waterBucket','water',f);if(spilled>0)setResourceCause(surfaceId(a.location),'water',f);}}applyExertion(a,.9,'補水桶');releaseLock(a,'waterBucket');finishPlan(a);return;
     }
     if(p.intent==='refillFood'){
       if(p.phase==='toSource'){
         const loc=objectLocation('foodPantry');if(a.location!==loc){moveToward(a,loc,'去食物櫃拿補充食物');return;}
         if(!acquireLock(a,'foodPantry')){waitFor(a,'foodPantry','想拿食物，但食物櫃前有人正在用');return;}
-        const amount=takeResource('foodPantry','food',rand(24,36));a.carrying={resource:'food',amount};releaseLock(a,'foodPantry');addEvent(`${a.name}從食物櫃拿了些食物，準備送到餐桌區。`,'normal',[],{action:'carryResource',resource:'food',amount,from:'foodPantry',location:a.location});p.phase='toTarget';return;
+        const amount=takeResource('foodPantry','food',rand(24,36));a.carrying={resource:'food',amount};applyExertion(a,.55+amount*.008,'拿取補充食物');releaseLock(a,'foodPantry');addEvent(`${a.name}從食物櫃拿了些食物，準備送到餐桌區。`,'normal',[],{action:'carryResource',resource:'food',amount,from:'foodPantry',location:a.location});p.phase='toTarget';return;
       }
       if(p.phase==='toTarget'){
         const loc=objectLocation('mealTray');if(a.location!==loc){moveToward(a,loc,'拿著食物去補餐桌上的現成食物');return;}
         if(!acquireLock(a,'mealTray')){waitFor(a,'mealTray','拿著食物到了餐桌旁，但現成食物正在被使用');return;}
-        const moved=putResource('mealTray','food',a.carrying?.amount||0);a.carrying=null;const e=addEvent(`${a.name}把帶來的食物補進現成食物。`,'good',[],{action:'refillFood',resource:'food',to:'mealTray',amount:moved,location:a.location});setResourceCause('mealTray','food',e);releaseLock(a,'mealTray');finishPlan(a);return;
+        const moved=putResource('mealTray','food',a.carrying?.amount||0);applyExertion(a,.45+moved*.004,'整理補充食物');a.carrying=null;const e=addEvent(`${a.name}把帶來的食物補進現成食物。`,'good',[],{action:'refillFood',resource:'food',to:'mealTray',amount:moved,location:a.location});setResourceCause('mealTray','food',e);releaseLock(a,'mealTray');finishPlan(a);return;
       }
     }
     if(p.intent==='rest'){
@@ -390,10 +405,10 @@
       const human=state.agents[p.targetAgent]||nearestHuman(a);if(!human){finishPlan(a);return;}p.targetAgent=human.id;if(a.location!==human.location){moveToward(a,human.location,`去找${human.name}`);return;}a.needs.social=clamp(a.needs.social-rand(7,12));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,3));human.pendingInteraction={type:'catAttention',from:a.id,ttl:3};addNoise(a.location,6,1);addEvent(`${a.name}主動跑到${human.name}旁邊，喵了一聲又蹭了蹭腿，等著${human.name}回應。`,'normal',[],{action:'seekHuman',target:human.id,phase:'request',location:a.location});finishPlan(a);return;
     }
     if(p.intent==='cleanFloor'){
-      if(!p.targetZone){finishPlan(a);return;}if(a.location!==p.targetZone){moveToward(a,p.targetZone,'去處理地上的液體');return;}const sid=surfaceId(a.location),floor=state.surfaces[sid].contents,removed=[];for(const [r,amt] of Object.entries({...floor})){if(RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;const got=takeResource(sid,r,Math.min(amt,rand(8,18)));if(got>0)removed.push(`${resourceName(r)} ${got.toFixed(1)}`);}a.wellbeing.safety=clamp(a.wellbeing.safety+rand(2,6));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,4));addNoise(a.location,10,1);addEvent(`${a.name}在${zoneName(a.location)}清理了地面上的液體。`,'good',[],{action:'cleanFloor',amount:removed.join('、'),environmentRisk:floorSlipRisk(a.location),location:a.location});finishPlan(a);return;
+      if(!p.targetZone){finishPlan(a);return;}if(a.location!==p.targetZone){moveToward(a,p.targetZone,'去處理地上的液體');return;}const sid=surfaceId(a.location),floor=state.surfaces[sid].contents,removed=[];for(const [r,amt] of Object.entries({...floor})){if(RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;const got=takeResource(sid,r,Math.min(amt,rand(8,18)));if(got>0)removed.push(`${resourceName(r)} ${got.toFixed(1)}`);}a.wellbeing.safety=clamp(a.wellbeing.safety+rand(2,6));a.wellbeing.comfort=clamp(a.wellbeing.comfort+rand(1,4));const cleanEffort=applyExertion(a,rand(1.7,2.8),'清理地面');addNoise(a.location,10,1);addEvent(`${a.name}在${zoneName(a.location)}清理了地面上的液體。`,'good',[],{action:'cleanFloor',amount:removed.join('、'),environmentRisk:floorSlipRisk(a.location),location:a.location,exertion:cleanEffort});finishPlan(a);return;
     }
     if(p.intent==='groom'){
-      a.needs.groomingNeed=clamp(a.needs.groomingNeed-rand(19,31));const groom=addEvent(`${a.name}停下來舔毛清潔。`,'normal',[],{action:'groom',location:a.location});for(const [r,amt] of Object.entries({...a.contacts.paws})){if(amt<=0)continue;const taken=takeResource(`contact:${a.id}:paws`,r,amt*rand(.48,.82));if(taken<=0)continue;const ing=addEvent(`${a.name}在舔毛時攝入了腳掌上的${resourceName(r)}。`,RESOURCE_TYPES[r]?.intoxicationFactor?'bad':'normal',[groom,contactCause(a,'paws',r)].filter(Boolean),{transfer:'contact_to_internal',resource:r,from:`contact:${a.id}:paws`,to:'internal',amount:taken,location:a.location});applyIngestion(a,r,taken,[ing]);if(amountAt(`contact:${a.id}:paws`,r)<.25)setContactCause(a,'paws',r,null);}finishPlan(a);return;
+      a.needs.groomingNeed=clamp(a.needs.groomingNeed-rand(19,31));applyExertion(a,.35,'舔毛清潔',{thirstFactor:.08,hungerFactor:.03});const groom=addEvent(`${a.name}停下來舔毛清潔。`,'normal',[],{action:'groom',location:a.location});for(const [r,amt] of Object.entries({...a.contacts.paws})){if(amt<=0)continue;const taken=takeResource(`contact:${a.id}:paws`,r,amt*rand(.48,.82));if(taken<=0)continue;const ing=addEvent(`${a.name}在舔毛時攝入了腳掌上的${resourceName(r)}。`,RESOURCE_TYPES[r]?.intoxicationFactor?'bad':'normal',[groom,contactCause(a,'paws',r)].filter(Boolean),{transfer:'contact_to_internal',resource:r,from:`contact:${a.id}:paws`,to:'internal',amount:taken,location:a.location});applyIngestion(a,r,taken,[ing]);if(amountAt(`contact:${a.id}:paws`,r)<.25)setContactCause(a,'paws',r,null);}finishPlan(a);return;
     }
     if(p.intent==='wander'){
       if(a.location!==p.targetZone){moveToward(a,p.targetZone,'隨意走動');return;}finishPlan(a);return;
@@ -401,7 +416,7 @@
   }
 
   function tick(){
-    state.tick++;state.minute+=2;if(state.minute>=1440){state.minute-=1440;state.day++;}
+    state.tick++;state.minute+=2;if(state.minute>=1440){state.minute-=1440;state.day++;for(const a of Object.values(state.agents)){a.metrics??={};a.metrics.exertionToday=0;a.metrics.lastExertion=null;}}
     needDrift();const order=shuffle(Object.values(state.agents));
     for(const a of order){if(!a.plan)startPlan(a,choose(a));advancePlan(a);}
   }
@@ -418,7 +433,7 @@
   function resetSim(seed=state?.seed??DEFAULT_SEED){
     eventSeq=0;
     const resolved=normalizeSeed(seed);state=createInitialState(resolved);
-    addEvent(`v7.1 初始化：使用 Seed ${resolved}。狀態語意、飲用 affordance、人貓互動與可重現性已修正。`,'system',[],{seed:resolved});
+    addEvent(`v8 初始化：使用 Seed ${resolved}。通用活動負荷已接入移動、搬運、補給與清理；尚未加入工作或經濟。`,'system',[],{seed:resolved});
     return state;
   }
   function getEntity(type,id){
@@ -433,7 +448,7 @@
   window.SimEngine={
     reset:resetSim,tick,getState:()=>state,getSeed:()=>state.seed,getEntity,
     RESOURCE_TYPES,ZH,DATA_ZH,
-    clamp,coordination,zoneNoise,floorLiquidAmount,floorSlipRisk,timeStr,zoneName,surfaceId,
+    clamp,applyExertion,coordination,zoneNoise,floorLiquidAmount,floorSlipRisk,timeStr,zoneName,surfaceId,
     objectLocation,endpointName,resourceName,resourceIcon,contentSummary,contactSummary,planLabel,phaseLabel,
     causeTree:(id)=>{function walk(cid,depth=0,seen=new Set()){if(seen.has(cid))return `${'  '.repeat(depth)}└─（循環參照）`;seen.add(cid);const e=state.causes[cid];if(!e)return '';let out=`${'  '.repeat(depth)}${depth?'└─ ':''}${e.text}`;for(const c of e.causeIds||[])out+='\n'+walk(c,depth+1,new Set(seen));return out}return walk(id);},
     occupants
