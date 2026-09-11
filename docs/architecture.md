@@ -1,4 +1,4 @@
-# v8 架構說明
+# v8.1 架構說明
 
 ## 核心分層
 
@@ -10,55 +10,58 @@
 - `needs`：高值＝需求更迫切，如飢餓、口渴、疲勞、社交、理毛需求。
 - `wellbeing`：高值＝狀態較好，目前有舒適、安全感。
 - `status`：效果型狀態，例如醉酒。
-- `metrics`：觀測／統計資料。v8 目前有 `exertionToday`、`lastExertion`。
+- `metrics`：觀測／統計資料。`exertionToday` 是當日活動量，跨日歸零；`lastExertion` 保留最近一次活動來源。
+
+體力相關 trait 目前拆成兩個互不等價的維度：
+
+- `exertionSensitivity`：同樣活動量會造成多少疲勞。低值代表較不容易因活動疲勞。
+- `recoveryRate`：休息時的恢復倍率。高值代表短時間休息較有效。
 
 容器維持 affordance / preference 分離：`canDrinkFrom` 描述物理能力，`drinkPreference` 描述角色通常多願意拿它來喝。
 
-### `engine.js`
-描述世界如何變化。v8 新增通用：
+### `engine.js` + `recovery.js`
+`engine.js` 保留通用 exertion 與主要行動鏈；v8.1 將角色差異與休息恢復拆到獨立 `recovery.js`，避免繼續把所有規則塞進單一 engine。
+
+`applyExertion` 在 v8.1 的有效結果明確區分「活動量」和「疲勞成本」：
 
 ```text
 行動
-→ applyExertion(amount, reason)
-├─ 疲勞增加
-├─ 口渴小幅增加
-├─ 飢餓極小幅增加
-└─ metrics 記錄今日累積與最近來源
+→ activity（客觀活動量）
+├─ metrics.exertionToday += activity
+├─ fatigue += activity × exertionSensitivity
+├─ thirst += activity × 小倍率
+└─ hunger += activity × 更小倍率
 ```
 
-`applyExertion` 不綁定工作或特定事件，因此移動、搬運、清理、補給，以及未來工作／施工／戰鬥都可以共用。
+因此兩個人做完全相同的工作，今日活動量可以一樣，但累積疲勞不同。
 
-目前成本原則：
+休息則改為逐 tick 恢復：
 
-- 普通移動有小成本。
-- 持有有內容物的容器會提高移動成本。
-- 搬運散裝資源提高更多成本，且依搬運量調整。
-- 清理地面是目前較明顯的單次體力工作。
-- 補給有操作成本。
-- 被動疲勞漂移已降低，避免和 exertion 重複計算。
+```text
+休息恢復
+= 基礎恢復
+× 角色 recoveryRate
+× 當前區域 restEfficiency
+```
 
-活動成本本身不額外製造大量 log；主要透過 Agent Inspector 的累積負荷與最近負荷觀測，避免時間線再次被低價值事件塞滿。
+`restEfficiency` 由區域 `restQuality` 和即時噪音共同決定。角色會持續休息到疲勞降到目標值，或單次休息達 24 tick（48 分鐘）後結束；因此高疲勞或低恢復倍率角色會自然休更久。
 
-### `ui.js`
-維持觀測層，不直接改模擬狀態。v8 新增：
+跨日只重置 `metrics.exertionToday`，**不重置 fatigue，也不清除最近一次活動來源**。疲勞只能透過實際休息下降。
 
-- 行動卡顯示今日活動負荷。
-- Agent Inspector 顯示今日活動負荷與最近負荷來源。
+目前仍只有「短期疲勞」一層；`sleepDebt / sleepNeed / sleepEfficiency` 尚未加入，避免過早把 MVP 變成完整睡眠模擬。
 
-## 已保留的 correctness 基礎
+### `ui.js` + `recovery-ui.js`
+主要 UI 維持在 `ui.js`；v8.1 的體力觀測補充放在 `recovery-ui.js`，讓恢復系統可以先獨立迭代。
 
-- Seeded PRNG，可用同 Seed 重現因果鏈。
-- 人貓雙向互動與 `pendingInteraction`。
-- `needs / wellbeing / status` 語意分離。
-- 飲用 affordance 與偏好分離。
-- 因果事件有界保留。
+觀測層現在明確顯示：
 
-## 下一個決策點：補給與經濟
+- 今日活動量（不是疲勞槽）。
+- 最近活動的活動量與實際疲勞成本。
+- `exertionSensitivity`、`recoveryRate`。
+- 角色所在區域目前的休息效率。
 
-exertion 先回答「做事會不會真的消耗角色」。下一步才決定資源從哪裡回來：
+## 下一個決策點
 
-1. **固定補貨**：外部週期補給，最低複雜度。
-2. **勞動補給**：角色花時間與體力換取庫存，不先引入貨幣。
-3. **貨幣經濟**：工作 → 收入 → 採購 → 庫存；連鎖最多，但同時需要處理價格、資產與購買決策。
+v8.1 先把「活動 → 疲勞 → 休息恢復」閉環釐清。下一步仍是補給層：固定補貨、勞動補給或真正貨幣經濟。
 
-在選擇之前，先觀察 v8 的疲勞、休息、移動與補給行為是否因活動成本出現更自然的差異。
+若後續出現「明明休息很久仍應該困」或「睡不夠會累積到隔天」的需求，再新增 `sleepDebt`，不要把它混進目前的 `exertionToday`。

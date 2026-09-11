@@ -1,8 +1,8 @@
-# 因果湧現模擬器 v8
+# 因果湧現模擬器 v8.1
 
 這是一個用來驗證「少量底層規則能否互相組合，產生未直接寫死的因果鏈」的瀏覽器模擬 sandbox。
 
-v8 建立在 v7.1 的 correctness / behavior pass 上，新增通用 **exertion / action cost（活動負荷）**。目的不是加入職業或經濟，而是讓疲勞不再只由時間被動增加：角色做了什麼，現在會反過來改變疲勞、口渴與少量飢餓。
+v8.1 建立在 v8 的 exertion / action cost 上，進一步把「當日活動統計」與「當下疲勞」拆清楚，並讓休息變成受角色特質與環境影響的逐 tick 恢復。
 
 目前活動負荷已接到：
 
@@ -14,9 +14,11 @@ v8 建立在 v7.1 的 correctness / behavior pass 上，新增通用 **exertion 
 - 清理地面液體。
 - 橘子舔毛有很小的活動成本。
 
-角色會記錄 `metrics.exertionToday` 與 `metrics.lastExertion`，Inspector 可直接看到「今日活動負荷」與最近一次負荷來源。跨日會重置當日累積值。
+角色會記錄 `metrics.exertionToday` 與 `metrics.lastExertion`。`exertionToday` 現在明確定義為**今日活動量統計**，跨日歸零但休息時不下降；真正的當下疲勞仍是 `needs.fatigue`。
 
-為避免「時間自然疲勞＋行動疲勞」雙重灌得太快，v8 同時降低被動疲勞漂移；因此疲勞更依賴角色實際做了多少事。
+角色新增 `exertionSensitivity` 與 `recoveryRate`：同樣活動可以造成不同疲勞，而同樣休息時間也可以恢復不同幅度。休息改為逐 tick 恢復，並乘上區域休息品質與即時噪音計算的 `restEfficiency`。疲勞不會因跨日自動歸零。
+
+目前仍沒有加入睡眠債；若之後需要「睡不夠隔天容易累」再新增 `sleepDebt / sleepNeed / sleepEfficiency`。
 
 v7.1 的修正仍保留：
 
@@ -47,14 +49,16 @@ emergent-causal-sim/
 │  └─ app.css
 ├─ src/
 │  ├─ world.js   # 資源、角色、容器與初始世界資料
-│  ├─ engine.js  # tick、需求、行動鏈、移動、exertion、資源與因果
-│  └─ ui.js      # 地圖、時間線、Inspector、控制器
+│  ├─ engine.js       # tick、需求、行動鏈、移動、exertion、資源與因果
+│  ├─ recovery.js     # v8.1 疲勞成本、休息恢復與跨日統計語意
+│  ├─ ui.js           # 地圖、時間線、Inspector、控制器
+│  └─ recovery-ui.js  # v8.1 體力特質與恢復觀測補充
 └─ docs/
    └─ architecture.md
 ```
 
 ## 尚未加入
 
-v8 **沒有**加入工作、薪資、貨幣或購物。食物與酒仍是有限初始庫存，因此補給閉環仍是下一個設計決策，而不是這版偷偷預設的系統。
+v8.1 **沒有**加入工作、薪資、貨幣、購物或完整睡眠系統。食物與酒仍是有限初始庫存，因此補給閉環仍是下一個設計決策，而不是這版偷偷預設的系統。
 
 其他 MVP 限制：空間仍是節點拓樸；`access` 尚未真正控制多人同時使用；火爐尚未形成熱／火災系統；事件尚未建立正式 entity-event index。

@@ -9,7 +9,7 @@
     eat:'吃東西', drinkWater:'喝水', drinkAlcohol:'喝酒', refillFood:'補充現成食物', refillWater:'補充水桶', rest:'休息', talk:'找人聊天', petCat:'摸橘子', seekHuman:'找人撒嬌', cleanFloor:'清理地面', groom:'舔毛清潔', wander:'閒晃',
     intoxication:'醉酒', coordination:'動作協調', normal:'正常'
   };
-  const DATA_ZH={seed:'隨機種子',exertion:'活動負荷',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',source:'補給來源',location:'位置',target:'目標',noise:'噪音',phase:'階段'};
+  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',source:'補給來源',location:'位置',target:'目標',noise:'噪音',phase:'階段'};
 
   function createInitialState(seed=20260911){
     const zones={
@@ -37,9 +37,9 @@
       surfaces,
       endpointCauses:{}, locks:{}, noiseEvents:[],
       agents:{
-        zhen:{id:'zhen',name:'阿真',kind:'human',location:'rest',needs:{hunger:34,thirst:29,fatigue:41,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,plan:null},
-        zhou:{id:'zhou',name:'老周',kind:'human',location:'table',needs:{hunger:31,thirst:62,fatigue:46,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,plan:null},
-        orange:{id:'orange',name:'橘子',kind:'cat',location:'doorway',needs:{hunger:26,thirst:22,fatigue:30,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},contacts:{paws:{}},causes:{intoxication:null,contacts:{paws:{}}},traits:{curious:.7,careful:.62,social:.78},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,plan:null}
+        zhen:{id:'zhen',name:'阿真',kind:'human',location:'rest',needs:{hunger:34,thirst:29,fatigue:41,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,plan:null},
+        zhou:{id:'zhou',name:'老周',kind:'human',location:'table',needs:{hunger:31,thirst:62,fatigue:46,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,plan:null},
+        orange:{id:'orange',name:'橘子',kind:'cat',location:'doorway',needs:{hunger:26,thirst:22,fatigue:30,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},contacts:{paws:{}},causes:{intoxication:null,contacts:{paws:{}}},traits:{curious:.7,careful:.62,social:.78,exertionSensitivity:.90,recoveryRate:1.10},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,plan:null}
       },
       events:[], causes:{}, thoughts:{}
     };
