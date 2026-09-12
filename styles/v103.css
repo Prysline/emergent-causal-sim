@@ -1,0 +1,4 @@
+/* v10.3: single UI selection + state validation visibility */
+.sim-tile.selected{box-shadow:inset 0 0 0 2px rgba(132,201,232,.72);z-index:4}
+.furniture-footprint.selected{opacity:1;box-shadow:inset 0 0 0 2px rgba(216,190,126,.72),0 0 0 1px rgba(0,0,0,.35)}
+.validation-warn{border-color:rgba(224,142,90,.62)!important;background:rgba(111,62,35,.28)!important}
