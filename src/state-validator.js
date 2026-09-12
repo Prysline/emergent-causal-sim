@@ -44,7 +44,8 @@
         if(!c)add('held_missing_container',`${a.name}持有不存在的容器 ${a.held}。`,{agentId:a.id});
         else{
           if(c.heldBy!==a.id)add('held_owner_mismatch',`${a.name}.held=${a.held}，但容器 heldBy=${c.heldBy||'null'}。`,{agentId:a.id,containerId:a.held});
-          if(c.position&&!same(c.position,a.position))add('held_position_mismatch',`${c.name}被${a.name}持有，但杯子在 ${key(c.position)}、角色在 ${key(a.position)}；plan=${a.plan?.intent||'none'}/${a.plan?.phase||'none'}。`,{agentId:a.id,containerId:c.id,containerPosition:key(c.position),agentPosition:key(a.position),intent:a.plan?.intent||null,phase:a.plan?.phase||null});
+          const effective=SP.objectPosition(c.id);
+          if(effective&&!same(effective,a.position))add('held_effective_position_mismatch',`${c.name}的有效位置 ${key(effective)} 與持有者 ${a.name} 的 ${key(a.position)} 不一致。`,{agentId:a.id,containerId:c.id,effectivePosition:key(effective),agentPosition:key(a.position)});
         }
       }
       if(a.carrying&&(!Number.isFinite(a.carrying.amount)||a.carrying.amount<=0))add('invalid_carrying',`${a.name}的搬運數量無效。`,{agentId:a.id});
@@ -58,7 +59,8 @@
       if(a.__eatAfterSeat&&!a.__seatTarget)add('seat_transition_incomplete',`${a.name}保留待用餐 plan，但沒有座位目標。`,{agentId:a.id});
     }
 
-    for(const [tile,ids] of byTile)if(ids.length>1)add('agent_tile_overlap',`Tile ${tile} 同時有 ${ids.join('、')}。`,{position:tile,agentIds:ids});
+    const crowdingTiles=[];
+    for(const [tile,ids] of byTile)if(ids.length>1)crowdingTiles.push({position:tile,agentIds:[...ids],count:ids.length});
     for(const [seat,ids] of bySeat)if(ids.length>1)add('seat_double_occupied',`${seat} 同時被 ${ids.join('、')} 標記占用。`,{furnitureId:seat,agentIds:ids});
 
     for(const c of Object.values(st.containers||{}))if(c.heldBy){
@@ -77,7 +79,7 @@
     for(const a of taskAgents)if(supply?.workerId!==a.id)add('supply_task_owner_mismatch',`${a.name}有 supplyTask，但 supply.workerId=${supply?.workerId||'null'}。`,{agentId:a.id});
 
     st.debug??={};
-    st.debug.validation={tick:st.tick,issueCount:issues.length,issues,ok:issues.length===0};
+    st.debug.validation={tick:st.tick,issueCount:issues.length,issues,crowdingTiles,ok:issues.length===0};
     return st.debug.validation;
   }
 
