@@ -13,8 +13,8 @@
     },
     chairNW:{id:'chairNW',name:'餐椅 A',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,mealSeat:true,restQuality:.48,footprint:[{x:4,y:1}],displayAt:{x:4,y:1}},
     chairNE:{id:'chairNE',name:'餐椅 B',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,mealSeat:true,restQuality:.48,footprint:[{x:5,y:0}],displayAt:{x:5,y:0}},
-    chairSW:{id:'chairSW',name:'餐椅 C',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,restQuality:.48,footprint:[{x:4,y:2}],displayAt:{x:4,y:2}},
-    chairSE:{id:'chairSE',name:'餐椅 D',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,restQuality:.48,footprint:[{x:7,y:2}],displayAt:{x:7,y:2}},
+    chairSW:{id:'chairSW',name:'餐椅 C',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,mealSeat:true,restQuality:.48,footprint:[{x:4,y:2}],displayAt:{x:4,y:2}},
+    chairSE:{id:'chairSE',name:'餐椅 D',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,mealSeat:true,restQuality:.48,footprint:[{x:7,y:2}],displayAt:{x:7,y:2}},
     sofa:{
       id:'sofa',name:'沙發',icon:'🛋️',kind:'sofa',zone:'rest',occupiable:true,canRest:true,canSleep:true,restQuality:.82,
       footprint:[{x:9,y:1},{x:10,y:1}],displayAt:{x:9,y:1}
@@ -61,7 +61,7 @@
       st.spatial.zoneAnchors.rest={x:9,y:1};
       st.spatial.zoneAnchors.doorway={x:1,y:6};
     }
-    st.spatial.furnitureVersion='10.2';
+    st.spatial.furnitureVersion='10.3';
   }
 
   function initFurniture(st){applyFurniture(st);syncSupports(st);return st.furniture;}
@@ -77,7 +77,7 @@
   }
 
   function isWalkable(st,p){return inBounds(p,st)&&!!st.spatial.tiles[key(p)]?.walkable;}
-  function occupiedByOther(st,p,agentId){return Object.values(st.agents).some(a=>a.id!==agentId&&same(a.position,p));}
+  function occupiedByOther(st,p,agentId){return Object.values(st.agents).filter(a=>a.id!==agentId&&same(a.position,p)).length;}
 
   function candidateTiles(targetId,agentId,st=E.getState()){
     const f=st.furniture?.[targetId],positions=targetPositions(targetId,st),out=new Map();
@@ -89,18 +89,17 @@
         const q={x:p.x+dx,y:p.y+dy};if(isWalkable(st,q))out.set(key(q),q);
       }
     }
-    return [...out.values()].filter(p=>!occupiedByOther(st,p,agentId));
+    return [...out.values()];
   }
 
   function interactionGoal(targetId,agentId,st=E.getState()){
     const a=st.agents[agentId];if(!a?.position)return null;
-    const list=candidateTiles(targetId,agentId,st);
-    list.sort((u,v)=>{
-      const pu=SP.astar(a.position,u,agentId).length||999,pv=SP.astar(a.position,v,agentId).length||999;
-      if(pu!==pv)return pu-pv;
-      return Math.abs(a.position.x-u.x)+Math.abs(a.position.y-u.y)-Math.abs(a.position.x-v.x)-Math.abs(a.position.y-v.y);
-    });
-    return list[0]?{...list[0]}:null;
+    const list=candidateTiles(targetId,agentId,st).map(p=>{
+      const path=SP.astar(a.position,p,agentId);
+      return {...p,pathLength:path.length||999,occupied:occupiedByOther(st,p,agentId)};
+    }).filter(p=>p.pathLength<999);
+    list.sort((u,v)=>u.occupied-v.occupied||u.pathLength-v.pathLength||Math.abs(a.position.x-u.x)+Math.abs(a.position.y-u.y)-Math.abs(a.position.x-v.x)-Math.abs(a.position.y-v.y));
+    return list[0]?{x:list[0].x,y:list[0].y}:null;
   }
 
   function isAtInteraction(agentId,targetId,st=E.getState()){
