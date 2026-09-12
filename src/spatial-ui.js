@@ -4,10 +4,9 @@
   const map=document.getElementById('map'),ins=document.getElementById('inspector');
   if(!map||!ins)return;
   let rendering=false,selectedTile=null;
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const st=()=>S.getState();
   const posKey=p=>p?`${p.x},${p.y}`:'';
-  const objectPos=o=>o?.position||null;
 
   function tileEntities(tile){
     const state=st(),arr=[];
@@ -46,18 +45,37 @@
     const badges=document.getElementById('worldBadges');if(!badges)return;
     if(!badges.querySelector('[data-spatial-badge]'))badges.insertAdjacentHTML('beforeend',`<span class="mini-badge" data-spatial-badge>格狀 ${SP.WIDTH}×${SP.HEIGHT}</span>`);
   }
-  function coordinateRow(label,pos){return pos?`<div class="k">${label}</div><div>(${pos.x}, ${pos.y})</div>`:''}
+  function cleanupCoordinateRows(first){
+    const labels=[...first.children].filter(el=>el.classList?.contains('k')&&el.textContent.trim()==='Tile 座標');
+    if(!labels.length)return null;
+    const keep=labels[0],value=keep.nextElementSibling;
+    for(const extra of labels.slice(1)){
+      const extraValue=extra.nextElementSibling;
+      extra.remove();
+      if(extraValue)extraValue.remove();
+    }
+    keep.dataset.spatialCoordinate='label';
+    if(value)value.dataset.spatialCoordinate='value';
+    return {label:keep,value};
+  }
   function patchInspectorCoordinates(){
-    if(selectedTile){renderTileInspector(selectedTile);return;}
-    const small=ins.querySelector('.inspect-title small');if(!small||ins.querySelector('.spatial-coordinate-row'))return;
+    if(selectedTile){
+      const small=ins.querySelector('.inspect-title small');
+      if(small?.textContent===`Tile・${selectedTile}`)return;
+      renderTileInspector(selectedTile);return;
+    }
+    const small=ins.querySelector('.inspect-title small');if(!small)return;
     const [type,id]=small.textContent.split('・');let pos=null;
     if(type==='Agent')pos=st().agents[id]?.position;
     else if(type==='Container')pos=SP.objectPosition(id);
     else if(type==='Resource Source')pos=SP.objectPosition(id);
     if(!pos)return;
     const first=ins.querySelector('.inspect-section .kv');if(!first)return;
-    const wrap=document.createElement('div');wrap.className='spatial-coordinate-row';wrap.innerHTML=coordinateRow('Tile 座標',pos);
-    while(wrap.firstChild)first.appendChild(wrap.firstChild);
+    const existing=cleanupCoordinateRows(first),text=`(${pos.x}, ${pos.y})`;
+    if(existing?.value){if(existing.value.textContent!==text)existing.value.textContent=text;return;}
+    const label=document.createElement('div');label.className='k';label.dataset.spatialCoordinate='label';label.textContent='Tile 座標';
+    const value=document.createElement('div');value.dataset.spatialCoordinate='value';value.textContent=text;
+    first.append(label,value);
   }
   function renderTileInspector(id){
     const t=S.tileInfo(id);if(!t)return;selectedTile=id;
