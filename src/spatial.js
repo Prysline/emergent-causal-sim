@@ -158,7 +158,7 @@
     for(const slot of allSlots(st)){
       if(!slot.canRest||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
       const d=pathDistance(st,a,slot.position);if(!Number.isFinite(d))continue;
-      out.push({kind:'slot',id:slot.id,position:clonePos(slot.position),quality:slot.restQuality||0,posture:'sitting',score:d-(slot.restQuality||0)*9+noiseAt(st,slot.position)*.35+occupantsAt(st,slot.position,a.id).length*4});
+      out.push({kind:'slot',id:slot.id,position:clonePos(slot.position),quality:slot.restQuality||0,posture:slot.restPosture||'sitting',score:d-(slot.restQuality||0)*9+noiseAt(st,slot.position)*.35+occupantsAt(st,slot.position,a.id).length*4});
     }
     if(a.kind==='cat'){
       for(const t of Object.values(st.map.tiles)){
@@ -167,6 +167,16 @@
         const q=.42;
         out.push({kind:'floor',id:`floor:${t.id}`,position:p,quality:q,posture:'lying',score:d-q*7+noiseAt(st,p)*.45+occupantsAt(st,p,a.id).length*3});
       }
+    }
+    out.sort((x,y)=>x.score-y.score);return out;
+  }
+  function sleepTargets(st,a){
+    const out=[];
+    for(const slot of allSlots(st)){
+      if(!slot.canSleep||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
+      const d=pathDistance(st,a,slot.position);if(!Number.isFinite(d))continue;
+      const quality=slot.sleepQuality??slot.restQuality??.35;
+      out.push({kind:'slot',id:slot.id,position:clonePos(slot.position),quality,posture:'lying',score:d-quality*18+noiseAt(st,slot.position)*.55+occupantsAt(st,slot.position,a.id).length*4});
     }
     out.sort((x,y)=>x.score-y.score);return out;
   }
@@ -187,5 +197,5 @@
 
   function init(st){recomputeRooms(st);return st.map;}
 
-  window.SimSpatial={key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,canInteractFrom,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,compatibleMealSlots,describePlace,init};
+  window.SimSpatial={key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,canInteractFrom,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,compatibleMealSlots,describePlace,init};
 })();
