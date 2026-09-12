@@ -1,4 +1,4 @@
-/* v10.1 spatial correctness + readability */
+/* v10.2 spatial correctness + furniture readability */
 .action-board{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
 .action-card{min-width:0;overflow:hidden}
 .action-top{min-width:0}.action-top>div:last-child{min-width:0}
@@ -17,19 +17,32 @@
 .spatial-entity[data-entity="agent:zhen"]{border-radius:999px;outline:2px solid rgba(99,190,238,.85);outline-offset:1px;background:rgba(60,124,160,.18)}
 .spatial-entity[data-entity="agent:zhou"]{border-radius:999px;outline:2px solid rgba(230,174,85,.86);outline-offset:1px;background:rgba(153,104,39,.18)}
 
-/* Furniture is quieter than agents, but spatially legible. */
+/* Furniture footprint: a quiet continuous layer below entities. */
 .sim-tile.has-furniture{position:relative}
-.sim-tile.furniture-table{background:#1d1916;box-shadow:inset 0 0 0 1px rgba(188,145,93,.13)}
-.sim-tile.furniture-chair{background:#171d20;box-shadow:inset 0 0 0 1px rgba(165,183,194,.08)}
-.sim-tile.furniture-sofa{background:#171a20;box-shadow:inset 0 0 0 1px rgba(158,136,194,.12)}
-.sim-tile.furniture-door{background:#171512;box-shadow:inset 0 0 0 1px rgba(201,164,103,.18)}
-.furniture-marker{position:absolute;left:2px;bottom:1px;z-index:2;font-size:11px;line-height:1;opacity:.58;cursor:pointer;filter:grayscale(.15)}
-.furniture-marker:hover{opacity:1;transform:scale(1.08)}
-.sim-tile.furniture-door .furniture-marker{left:50%;bottom:50%;transform:translate(-50%,50%);font-size:17px;opacity:.82}
-.sim-tile.furniture-door .furniture-marker:hover{transform:translate(-50%,50%) scale(1.08)}
-.tile-furniture-name{position:absolute;left:2px;bottom:1px;z-index:1;font-size:7px;color:rgba(235,222,203,.3);pointer-events:none}
+.furniture-footprint{
+  position:absolute;inset:2px;z-index:1;display:block;cursor:pointer;
+  border:1px solid rgba(255,255,255,.11);border-radius:5px;
+  background:rgba(255,255,255,.035);opacity:.88;
+}
+.furniture-footprint:hover{opacity:1;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.furniture-footprint.join-left{left:-1px;border-left-color:transparent;border-top-left-radius:0;border-bottom-left-radius:0}
+.furniture-footprint.join-right{right:-1px;border-right-color:transparent;border-top-right-radius:0;border-bottom-right-radius:0}
+.furniture-footprint.join-up{top:-1px;border-top-color:transparent;border-top-left-radius:0;border-top-right-radius:0}
+.furniture-footprint.join-down{bottom:-1px;border-bottom-color:transparent;border-bottom-left-radius:0;border-bottom-right-radius:0}
+.furniture-footprint.furniture-table{background:rgba(126,88,48,.20);border-color:rgba(188,145,93,.24)}
+.furniture-footprint.furniture-chair{inset:5px;background:rgba(125,142,151,.10);border-color:rgba(165,183,194,.18);border-radius:7px}
+.furniture-footprint.furniture-sofa{background:rgba(112,91,151,.18);border-color:rgba(158,136,194,.24)}
+.furniture-footprint.furniture-door{inset:3px;background:rgba(157,117,57,.17);border-color:rgba(201,164,103,.30)}
+.furniture-symbol{position:absolute;left:2px;bottom:1px;font-size:12px;line-height:1;opacity:.72;pointer-events:none;filter:grayscale(.1)}
+.furniture-footprint.furniture-door .furniture-symbol{left:50%;bottom:50%;transform:translate(-50%,50%);font-size:17px;opacity:.9}
+.furniture-footprint.furniture-sofa .furniture-symbol{font-size:14px;opacity:.82}
+
+/* Keep furniture below agents/objects; their existing entity layer stays clickable. */
+.tile-entities{z-index:3}.tile-contents{z-index:2}
 
 @media(max-width:720px){
   .action-board{grid-template-columns:1fr}
   .need-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .furniture-footprint{inset:1px}.furniture-footprint.furniture-chair{inset:3px}
+  .furniture-symbol{font-size:10px}
 }
