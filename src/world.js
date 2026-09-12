@@ -7,10 +7,10 @@
   };
   const ZH={
     hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',social:'社交需求',comfort:'舒適',safety:'安全感',groomingNeed:'理毛需求',
-    eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',refillFood:'補充現成食物',refillWater:'補充水桶',rest:'休息',talk:'找人聊天',petCat:'摸橘子',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',supplyFood:'外出補給',
+    eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',refillFood:'補充現成食物',refillWater:'補充水桶',rest:'休息',sleep:'睡眠',talk:'找人聊天',petCat:'摸橘子',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',supplyFood:'外出補給',
     intoxication:'醉酒',coordination:'動作協調',normal:'正常'
   };
-  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重'};
+  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重'};
 
   const FURNITURE_DEFS={
     diningTable:{id:'diningTable',name:'餐桌',icon:'▰',kind:'table',blocksMovement:true,supportsObjects:true,value:30,
@@ -25,8 +25,13 @@
       footprint:[{x:7,y:3}],displayAt:{x:7,y:3},slots:[{id:'chairSE:seat',label:'座位',position:{x:7,y:3},canRest:true,mealSeat:true,restQuality:.48,allowKinds:['human']}]},
     sofa:{id:'sofa',name:'沙發',icon:'🛋️',kind:'sofa',blocksMovement:false,value:35,
       footprint:[{x:9,y:2},{x:10,y:2}],displayAt:{x:9,y:2},slots:[
-        {id:'sofa:left',label:'左側',position:{x:9,y:2},canRest:true,canSleep:true,restQuality:.82,allowKinds:['human','cat']},
-        {id:'sofa:right',label:'右側',position:{x:10,y:2},canRest:true,canSleep:true,restQuality:.82,allowKinds:['human','cat']}
+        {id:'sofa:left',label:'左側',position:{x:9,y:2},canRest:true,canSleep:true,restQuality:.82,sleepQuality:.62,allowKinds:['human','cat']},
+        {id:'sofa:right',label:'右側',position:{x:10,y:2},canRest:true,canSleep:true,restQuality:.82,sleepQuality:.62,allowKinds:['human','cat']}
+      ]},
+    bed:{id:'bed',name:'雙人床',icon:'🛏️',kind:'bed',blocksMovement:false,value:55,
+      footprint:[{x:9,y:5},{x:10,y:5}],displayAt:{x:9,y:5},slots:[
+        {id:'bed:left',label:'左側',position:{x:9,y:5},canRest:true,canSleep:true,restQuality:.98,sleepQuality:1,restPosture:'lying',allowKinds:['human']},
+        {id:'bed:right',label:'右側',position:{x:10,y:5},canRest:true,canSleep:true,restQuality:.98,sleepQuality:1,restPosture:'lying',allowKinds:['human']}
       ]},
     frontDoor:{id:'frontDoor',name:'大門',icon:'🚪',kind:'door',blocksMovement:true,value:18,
       footprint:[{x:0,y:6}],displayAt:{x:0,y:6},slots:[{id:'frontDoor:inside',label:'門內',position:{x:1,y:6},canExit:true,allowKinds:['human','cat']}]}
@@ -60,7 +65,7 @@
   function createInitialState(seed=20260911){
     const n=(Number(seed)>>>0)||20260911;
     const state={
-      version:'11.4-carry-load',tick:0,day:1,minute:12*60,seed:n,rngState:n,
+      version:'11.5-sleep-bed',tick:0,day:1,minute:12*60,seed:n,rngState:n,
       map:{width:WIDTH,height:HEIGHT,tiles:buildTiles(),rooms:{},roomRevision:0},
       furniture:normalizeFurniture(),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:70,workerId:null,trips:0,totalProduced:0},
