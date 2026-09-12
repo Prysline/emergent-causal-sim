@@ -53,6 +53,33 @@ E.reset(20260911);
   assert.deepEqual(path,[],'不可達路徑應回傳空陣列，而不是 [start]');
 }
 
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou,tiles=st.spatial.tiles;
+  a.position={x:1,y:4};a.location='doorway';b.position={x:2,y:4};b.location='doorway';
+  for(const id of ['0,4','4,4','1,3','2,3','3,3','1,5','2,5','3,5'])if(tiles[id])tiles[id].walkable=false;
+  const path=SP.astar(a.position,{x:3,y:4},a.id);
+  assert.ok(path.length>=3,'其他 Agent 所在 Tile 應提高成本，但不能變成絕對不可通行');
+  assert.ok(path.some(p=>p.x===2&&p.y===4),'只有通過擁擠 Tile 才有路時，A* 應允許共用 Tile');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;
+  b.position={...a.position};b.location=a.location;
+  const v=E.validateState();
+  assert.equal(v.issueCount,0,'Agent 共用 Tile 本身不應被視為 state invariant violation');
+  assert.equal(v.crowdingTiles.length,1,'共用 Tile 應保留為可觀測的 crowding debug 資訊');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,c=st.containers.cupA;
+  a.held='cupA';c.heldBy=a.id;c.position={x:1,y:1};
+  assert.deepEqual(SP.objectPosition('cupA'),a.position,'持有物的有效位置應由持有者位置決定');
+  noIssues('held effective position');
+}
+
 for(const file of ['spatial-ui.js','furniture-ui.js']){
   const src=fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8');
   assert.ok(!src.includes('MutationObserver'),`${file} 不應再靠 MutationObserver 維護 Inspector/selection`);
