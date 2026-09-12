@@ -19,6 +19,7 @@ E.reset(20260911);
   assert.equal(st.containers.plateA.servingDish,true);assert.equal(st.containers.plateA.canEatFrom,true);
   assert.equal(st.containers.plateB.servingDish,true);assert.equal(st.containers.plateB.canEatFrom,true);
   assert.equal(st.containers.mealTray.canEatFrom,true);
+  assert.equal(st.containers.waterBucket.portable,true,'v11.3 水桶必須是可攜 Container');
   noIssues('initial contract');
 }
 
@@ -107,6 +108,27 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;
+  st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=5;bucket.position={x:2,y:5};delete bucket.supportId;a.position={x:2,y:5};
+  const before=bucket.contents.water;a.action={intent:'refillWater',phase:'toBucket',started:st.tick,wait:0};let heldDuringTrip=false;
+  for(let i=0;i<30&&a.action;i++){E.tick();if(a.held==='waterBucket')heldDuringTrip=true;}
+  assert.equal(a.action,null,'補水流程應能完整結束');assert.ok(heldDuringTrip,'角色必須真的拿起水桶再搬去補水');assert.ok(bucket.contents.water>before,'實際抵達水龍頭後水桶水量才可增加');assert.equal(a.held,null,'補完水後應放下水桶');assert.ok(!SP.same(bucket.position,{x:2,y:5}),'水桶應隨角色移到水龍頭附近，而不是留在遠處被補水');assert.ok(SP.isAtInteraction(st,a,{kind:'source',id:'tap'}),'補水完成位置必須能實際操作水龍頭');assert.ok(st.events.some(e=>e.data?.action==='refillWater'&&e.data?.from==='tap'&&e.data?.to==='waterBucket'),'timeline 應記錄實際來源與目的容器');noIssues('portable bucket refill');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;bucket.contents.water=5;a.position={x:5,y:5};a.held=null;a.action={intent:'refillWater',phase:'fill',started:st.tick,wait:0};const before=bucket.contents.water;
+  E.tick();assert.equal(bucket.contents.water,before,'只站在水龍頭旁但沒有拿著水桶時不得遠端補水');assert.equal(a.action,null,'違反 transfer contract 時應中止該行動');noIssues('reject remote bucket refill');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange,bucket=st.containers.waterBucket;human.position={x:3,y:5};human.held='waterBucket';bucket.position={...human.position};cat.position={x:2,y:5};cat.action={intent:'drinkWater',phase:'move',targetObject:'waterBucket',resource:'water',started:st.tick,wait:0};
+  E.tick();assert.equal(cat.action,null,'橘子不能直接喝正在被別人拿著的水桶');assert.equal(human.held,'waterBucket');noIssues('cat respects held bucket');
+}
+
+E.reset(20260911);
+{
   const st=E.getState(),a=st.agents.zhen,before=st.containers.foodPantry.contents.food;
   st.supply.workerId=a.id;a.position={x:9,y:5};a.carrying={resource:'food',amount:40};a.action={intent:'supplyFood',phase:'returnPantry',workLeft:0,produced:40,started:st.tick,wait:0};
   E.tick();assert.equal(st.containers.foodPantry.contents.food,before,'未抵達食物櫃前不得入庫');
@@ -146,4 +168,4 @@ E.reset(20260911);
   assert.ok(css.includes('.slot-row{display:grid;grid-template-columns:minmax(0,1fr) auto;'),'Furniture slot Inspector 應使用可收縮的兩欄 layout');
   assert.ok(!css.includes('grid-template-columns:minmax(70px,1fr) 70px minmax(90px,1fr) minmax(90px,1fr)'),'不得恢復會讓 360px Inspector 爆版的四欄最小寬度');
 }
-console.log('v11.2-state-regression: ok');
+console.log('v11.3-state-regression: ok');
