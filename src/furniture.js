@@ -11,8 +11,8 @@
       id:'diningTable',name:'餐桌',icon:'▰',kind:'table',zone:'table',blocksMovement:true,supportsObjects:true,
       footprint:[{x:5,y:1},{x:6,y:1},{x:5,y:2},{x:6,y:2}],displayAt:{x:5,y:1}
     },
-    chairNW:{id:'chairNW',name:'餐椅 A',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,restQuality:.48,footprint:[{x:4,y:1}],displayAt:{x:4,y:1}},
-    chairNE:{id:'chairNE',name:'餐椅 B',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,restQuality:.48,footprint:[{x:7,y:1}],displayAt:{x:7,y:1}},
+    chairNW:{id:'chairNW',name:'餐椅 A',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,mealSeat:true,restQuality:.48,footprint:[{x:4,y:1}],displayAt:{x:4,y:1}},
+    chairNE:{id:'chairNE',name:'餐椅 B',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,mealSeat:true,restQuality:.48,footprint:[{x:5,y:0}],displayAt:{x:5,y:0}},
     chairSW:{id:'chairSW',name:'餐椅 C',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,restQuality:.48,footprint:[{x:4,y:2}],displayAt:{x:4,y:2}},
     chairSE:{id:'chairSE',name:'餐椅 D',icon:'🪑',kind:'chair',zone:'table',occupiable:true,canRest:true,restQuality:.48,footprint:[{x:7,y:2}],displayAt:{x:7,y:2}},
     sofa:{
@@ -61,7 +61,7 @@
       st.spatial.zoneAnchors.rest={x:9,y:1};
       st.spatial.zoneAnchors.doorway={x:1,y:6};
     }
-    st.spatial.furnitureVersion='10.1';
+    st.spatial.furnitureVersion='10.2';
   }
 
   function initFurniture(st){applyFurniture(st);syncSupports(st);return st.furniture;}
