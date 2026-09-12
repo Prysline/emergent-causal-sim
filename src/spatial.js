@@ -43,7 +43,6 @@
     return tiles;
   }
   function initSpatial(st){
-    const old=st.spatial;
     st.spatial={
       version:10,width:WIDTH,height:HEIGHT,tiles:initTiles(st),zoneAnchors:{...ZONE_ANCHORS},
       rngState:((st.seed^0x19a7c10d)>>>0)||0x19a7c10d,
@@ -82,7 +81,6 @@
     });
   }
   function actualPlan(a){const m=planMeta.get(a);return m?m.value:a.plan}
-  function setActualPlan(a,p){const m=planMeta.get(a);if(m)m.value=p;else a.plan=p}
 
   function spatialRandom(st){
     const s=st.spatial;s.rngState=(s.rngState+0x6D2B79F5)>>>0;let t=s.rngState;
@@ -105,12 +103,15 @@
   function occupantsAt(st,x,y,exceptId=null){return Object.values(st.agents).filter(a=>a.id!==exceptId&&a.position?.x===x&&a.position?.y===y)}
   function tileLiquidAmount(tile){return Object.entries(tile?.contents||{}).reduce((sum,[r,v])=>sum+(E.RESOURCE_TYPES[r]?.phase==='liquid'?v:0),0)}
   function tileCost(st,tile,a){
-    const wet=tileLiquidAmount(tile),occupied=occupantsAt(st,tile.x,tile.y,a?.id).length;
-    return 1+wet*(a?.kind==='cat'?.015:.07)+occupied*6;
+    const wet=tileLiquidAmount(tile);
+    return 1+wet*(a?.kind==='cat'?.015:.07);
   }
   function neighbors(st,p,a){
     const out=[];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-      const x=p.x+dx,y=p.y+dy,t=tileAt(st,x,y);if(!t||!t.walkable)continue;out.push({x,y});
+      const x=p.x+dx,y=p.y+dy,t=tileAt(st,x,y);
+      if(!t||!t.walkable)continue;
+      if(occupantsAt(st,x,y,a?.id).length)continue;
+      out.push({x,y});
     }return out;
   }
   function astar(st,start,goal,a){
@@ -129,31 +130,35 @@
         if(tent<(g[nk]??Infinity)){came[nk]=curKey;g[nk]=tent;f[nk]=tent+manhattan(n,goal);posByKey[nk]=n;open.add(nk);}
       }
     }
-    return [clonePos(start)];
+    return [];
   }
+  const pathDistance=(st,a,p)=>{const path=astar(st,a.position,p,a);return path.length?path.length-1:Infinity;};
   function zoneTiles(st,zone){return Object.values(st.spatial.tiles).filter(t=>t.zone===zone&&t.walkable)}
   function bestZoneTile(st,a,zone,p){
     if(!zone)return null;
-    if(p?.__spatialGoalZone===zone&&p.__spatialGoal){const t=tileAt(st,p.__spatialGoal.x,p.__spatialGoal.y);if(t?.walkable)return clonePos(p.__spatialGoal)}
+    if(p?.__spatialGoalZone===zone&&p.__spatialGoal){
+      const t=tileAt(st,p.__spatialGoal.x,p.__spatialGoal.y);
+      if(t?.walkable&&!occupantsAt(st,t.x,t.y,a.id).length&&astar(st,a.position,t,a).length)return clonePos(p.__spatialGoal);
+    }
     const anchor=st.spatial.zoneAnchors[zone]||{x:0,y:0};
-    const list=zoneTiles(st,zone).sort((u,v)=>{
+    const list=zoneTiles(st,zone).filter(t=>!occupantsAt(st,t.x,t.y,a.id).length&&astar(st,a.position,t,a).length).sort((u,v)=>{
       const au=manhattan(u,anchor),av=manhattan(v,anchor);if(au!==av)return au-av;
-      return astar(st,a.position,u,a).length-astar(st,a.position,v,a).length;
+      return pathDistance(st,a,u)-pathDistance(st,a,v);
     });
-    const goal=list.find(t=>occupantsAt(st,t.x,t.y,a.id).length===0)||list[0]||null;
+    const goal=list[0]||null;
     if(goal&&p){p.__spatialGoal={x:goal.x,y:goal.y};p.__spatialGoalZone=zone;}
     return goal?{x:goal.x,y:goal.y}:null;
   }
   function interactionTile(st,a,targetPos){
     if(!targetPos)return null;
     const cands=[];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-      const x=targetPos.x+dx,y=targetPos.y+dy,t=tileAt(st,x,y);if(!t?.walkable)continue;cands.push({x,y});
+      const x=targetPos.x+dx,y=targetPos.y+dy,t=tileAt(st,x,y);
+      if(!t?.walkable||occupantsAt(st,x,y,a.id).length)continue;
+      const path=astar(st,a.position,{x,y},a);if(!path.length)continue;
+      cands.push({x,y,distance:path.length-1});
     }
-    cands.sort((u,v)=>{
-      const ou=occupantsAt(st,u.x,u.y,a.id).length,ov=occupantsAt(st,v.x,v.y,a.id).length;if(ou!==ov)return ou-ov;
-      return astar(st,a.position,u,a).length-astar(st,a.position,v,a).length;
-    });
-    return cands[0]||null;
+    cands.sort((u,v)=>u.distance-v.distance);
+    return cands[0]?{x:cands[0].x,y:cands[0].y}:null;
   }
   function wettestTile(st,zone=null){
     let best=null,bestAmt=.1;for(const t of Object.values(st.spatial.tiles)){
@@ -170,7 +175,9 @@
     const score=c=>{
       const filled=(c.contents?.[resource]||0)>0,empty=Object.values(c.contents||{}).reduce((x,y)=>x+y,0)<=.1;
       const foreign=Object.entries(c.contents||{}).some(([r,v])=>r!==resource&&v>.1);
-      const goal=interactionTile(st,a,objectPosition(st,c.id));const distance=goal?Math.max(0,astar(st,a.position,goal,a).length-1):99;
+      const goal=interactionTile(st,a,objectPosition(st,c.id));
+      const path=goal?astar(st,a.position,goal,a):[];
+      const distance=path.length?path.length-1:99;
       let v=(c.drinkPreference??.5)*45-distance*4;if(filled)v+=25;else if(empty)v+=12;if(foreign)v-=35;return v;
     };
     candidates.sort((x,y)=>score(y)-score(x));const pick=candidates[0];
@@ -193,7 +200,11 @@
     if(p.intent==='refillFood')return p.phase==='toSource'?objectGoal(p.sourceObject||'foodPantry'):p.phase==='toTarget'?objectGoal(p.targetObject||'mealTray'):null;
     if(p.intent==='rest')return bestZoneTile(st,a,p.targetZone,p);
     if(p.intent==='talk'||p.intent==='petCat'||p.intent==='seekHuman')return agentGoal(p.targetAgent);
-    if(p.intent==='cleanFloor')return wettestTile(st,p.targetZone)||bestZoneTile(st,a,p.targetZone,p);
+    if(p.intent==='cleanFloor'){
+      const wet=wettestTile(st,p.targetZone);
+      if(wet&&astar(st,a.position,wet,a).length)return wet;
+      return bestZoneTile(st,a,p.targetZone,p);
+    }
     if(p.intent==='wander')return bestZoneTile(st,a,p.targetZone,p);
     return null;
   }
