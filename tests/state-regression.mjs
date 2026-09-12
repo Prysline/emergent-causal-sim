@@ -7,7 +7,16 @@ const core=['world.js','engine.js','recovery.js','supply.js','spatial.js','furni
 for(const file of core){vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});}
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
-function noIssues(label){const v=E.validateState();assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
+function noIssues(label){
+  const v=E.validateState();
+  if(v.issueCount){
+    const st=E.getState(),ids=new Set(v.issues.flatMap(x=>[x.agentId,x.containerId].filter(Boolean)));
+    const debug={tick:st.tick,issues:v.issues,agents:{},containers:{},events:st.events.slice(0,12)};
+    for(const id of ids){if(st.agents[id])debug.agents[id]=st.agents[id];if(st.containers[id])debug.containers[id]=st.containers[id];}
+    console.error('STATE_DEBUG',JSON.stringify(debug,null,2));
+  }
+  assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);
+}
 
 for(const seed of [20260911,7,42]){
   E.reset(seed);noIssues(`reset seed ${seed}`);
