@@ -3,9 +3,9 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const core=['world.js','engine.js','recovery.js','supply.js','spatial.js','furniture.js','action-guard.js','seating.js','state-validator.js'];
+const core=['world.js','engine.js','recovery.js','supply.js','spatial.js','furniture.js','action-guard.js','seating.js','rest-surface.js','state-validator.js'];
 for(const file of core){vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});}
-const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
+const E=globalThis.SimEngine,SP=globalThis.SimSpatial,F=globalThis.SimFurniture;
 
 function noIssues(label){
   const v=E.validateState();
@@ -78,6 +78,59 @@ E.reset(20260911);
   a.held='cupA';c.heldBy=a.id;c.position={x:1,y:1};
   assert.deepEqual(SP.objectPosition('cupA'),a.position,'持有物的有效位置應由持有者位置決定');
   noIssues('held effective position');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState();
+  assert.deepEqual(F.get('chairNE').footprint[0],{x:7,y:1},'餐椅 B 應恢復到原始右側位置，而不是為 mealTray workaround 移到上方');
+  assert.deepEqual(F.getSlot('sofa:left').position,{x:9,y:1},'沙發左側 slot 應有獨立座標');
+  assert.deepEqual(F.getSlot('sofa:right').position,{x:10,y:1},'沙發右側 slot 應有獨立座標');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou,left=F.getSlot('sofa:left'),right=F.getSlot('sofa:right');
+  a.position={...left.position};a.location='rest';a.seatedOn='sofa';a.seatSlot=left.id;
+  b.position={...right.position};b.location='rest';b.seatedOn='sofa';b.seatSlot=right.id;
+  noIssues('two people on different sofa slots');
+  b.position={...left.position};b.seatSlot=left.id;
+  const v=E.validateState();
+  assert.ok(v.issues.some(x=>x.code==='slot_double_occupied'),'同一沙發 slot 才應被視為重複占用');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;
+  a.needs.fatigue=72;b.needs.fatigue=72;
+  a.position={x:8,y:2};a.location='rest';b.position={x:8,y:1};b.location='rest';
+  a.plan={intent:'rest',phase:'move',targetZone:'rest',restTicks:0,started:st.tick};
+  b.plan={intent:'rest',phase:'move',targetZone:'rest',restTicks:0,started:st.tick};
+  for(let i=0;i<6&&(!a.seatSlot||!b.seatSlot);i++)E.tick();
+  assert.equal(a.seatedOn,'sofa','第一名人類休息時應優先使用沙發');
+  assert.equal(b.seatedOn,'sofa','第二名人類應使用沙發另一個空 slot，而不是站著卡住');
+  assert.notEqual(a.seatSlot,b.seatSlot,'雙人沙發應分配兩個不同 slot');
+  noIssues('rest slot allocation');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,left=F.getSlot('sofa:left');
+  const standing=E.restRecoveryInfo(a,'rest');
+  a.position={...left.position};a.location='rest';a.seatedOn='sofa';a.seatSlot=left.id;
+  const seated=E.restRecoveryInfo(a,'rest');
+  assert.ok(seated.restEfficiency>standing.restEfficiency,'坐在可休息家具上應比站著休息有效');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou,slot=F.getSlot('chairNW:seat');
+  a.position={...slot.position};a.location='table';a.seatedOn=slot.furnitureId;a.seatSlot=slot.id;
+  b.position={x:4,y:0};b.location='table';b.needs.hunger=55;
+  b.plan={intent:'eat',phase:'move',targetObject:'mealTray',wait:0,started:st.tick};
+  E.tick();
+  assert.equal(b.__eatAfterSeat,undefined,'可直接拿到 mealTray 的座位被占用時，角色應允許站著吃，而不是硬等座位');
+  assert.notEqual(b.__slotTarget,slot.id,'已占用的唯一直接用餐 slot 不應再被預約');
 }
 
 for(const file of ['spatial-ui.js','furniture-ui.js']){
