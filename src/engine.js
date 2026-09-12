@@ -85,7 +85,7 @@
   function releaseHeld(a){if(!a.held)return;const c=state.containers[a.held];if(c)c.position={...a.position};a.held=null;}
   function standUp(a){if(a.posture?.kind==='standing')return;a.posture={kind:'standing',slotId:null,furnitureId:null};}
   function sitOn(a,slot){a.posture={kind:'sitting',slotId:slot.id,furnitureId:slot.furnitureId};releaseReservation(`slot:${slot.id}`,a);}
-  function lieDown(a){a.posture={kind:'lying',slotId:null,furnitureId:null};}
+  function lieDown(a,slot=null){a.posture={kind:'lying',slotId:slot?.id||null,furnitureId:slot?.furnitureId||null};if(slot)releaseReservation(`slot:${slot.id}`,a);}
 
   function onEnterTile(a){
     const t=SP.tileByPos(state,a.position),wet=SP.tileLiquidAmount(t);if(wet<=.1)return;
@@ -189,7 +189,8 @@
       if(food>0)o.push({id:'eat',score:a.needs.hunger*1.08+12,why:['飢餓','家中有可食用的食物']});
       o.push({id:'drinkWater',score:a.needs.thirst*1.18+10,why:['口渴','會尋找可用容器與水源']});
       if((state.containers.alcoholBottle.contents.alcohol||0)>0)o.push({id:'drinkAlcohol',score:a.needs.thirst*.42+a.traits.alcoholLike*34+(a.status.intoxication<35?6:-18),why:['口渴與飲酒偏好','酒瓶本身也可直接飲用']});
-      o.push({id:'rest',score:Math.max(0,a.needs.fatigue-18)*1.25+9,why:['疲勞','會依可用 Rest Surface 與局部噪音選位置']});
+      o.push({id:'rest',score:Math.max(0,Math.min(a.needs.fatigue,68)-18)*1.25+9,why:['中度疲勞','短休會依可用 Rest Surface 與局部噪音選位置']});
+      if(a.needs.fatigue>=68&&SP.sleepTargets(state,a).length)o.push({id:'sleep',score:65+Math.max(0,a.needs.fatigue-68)*1.7,why:['疲勞很高','會尋找 canSleep 位置並維持較長睡眠承諾']});
       if(Object.values(state.agents).some(x=>x.kind==='human'&&x.id!==a.id&&!x.offMap))o.push({id:'talk',score:Math.max(0,a.needs.social-18)*.9+a.traits.social*16,why:['社交需求']});
       if(a.pendingInteraction?.type==='cat_request')o.push({id:'petCat',score:72+a.traits.animalAffinity*20,why:['橘子剛剛主動討摸','回應已形成短期社交動機']});
       else o.push({id:'petCat',score:8+a.traits.animalAffinity*18+a.needs.social*.18,why:['對橘子的親和度']});
@@ -201,7 +202,8 @@
     }else{
       if(food>0)o.push({id:'eat',score:a.needs.hunger*1.08+12,why:['飢餓','會直接吃可接近的食物，包括盤子裡的食物']});
       o.push({id:'groom',score:a.needs.groomingNeed*.83+Object.values(a.contacts.paws||{}).reduce((x,y)=>x+y,0)*.9+18,why:['理毛需求','腳掌異物會提高舔毛意願']});
-      o.push({id:'rest',score:Math.max(0,a.needs.fatigue-15)*1.05+8,why:['疲勞','可選沙發或安全乾燥地面']});
+      o.push({id:'rest',score:Math.max(0,Math.min(a.needs.fatigue,72)-15)*1.05+8,why:['中度疲勞','可選沙發或安全乾燥地面']});
+      if(a.needs.fatigue>=72&&SP.sleepTargets(state,a).length)o.push({id:'sleep',score:58+Math.max(0,a.needs.fatigue-72)*1.55,why:['疲勞很高','會使用允許貓睡眠的 canSleep 位置']});
       if(a.needs.social>14&&nearestHuman(a))o.push({id:'seekHuman',score:Math.max(0,a.needs.social-10)*.95+a.traits.social*18,why:['社交需求','會主動找附近的人']});
       o.push({id:'wander',score:20+a.traits.curious*25+rand(0,16),why:['探索傾向']});
       if(water>0)o.push({id:'drinkWater',score:a.needs.thirst*1.05+8,why:['口渴']});
@@ -218,6 +220,7 @@
       case'drinkWater':a.action=a.kind==='cat'?{...base,phase:'move',targetObject:'waterBucket',resource:'water'}:{...base,phase:'chooseVessel',sourceObject:'waterBucket',resource:'water'};break;
       case'drinkAlcohol':a.action={...base,phase:'chooseVessel',sourceObject:'alcoholBottle',resource:'alcohol'};break;
       case'rest':a.action={...base,phase:'chooseSurface',restTicks:0};break;
+      case'sleep':a.action={...base,phase:'chooseSurface',sleepTicks:0,minSleepTicks:a.kind==='cat'?12:18,targetFatigue:a.kind==='cat'?10:12,commitment:{acceptedAt:state.tick,strength:'strong'}};break;
       case'talk':{const other=Object.values(state.agents).filter(x=>x.kind==='human'&&x.id!==a.id&&!x.offMap).sort((x,y)=>SP.pathDistance(state,a,x.position)-SP.pathDistance(state,a,y.position))[0];a.action=other?{...base,phase:'move',targetAgent:other.id}:null;break;}
       case'petCat':a.action={...base,phase:'move',targetAgent:'orange',commitment:{acceptedAt:state.tick,strength:'light'}};if(a.pendingInteraction?.type==='cat_request')a.pendingInteraction.accepted=true;break;
       case'seekHuman':{const h=nearestHuman(a);a.action=h?{...base,phase:'move',targetAgent:h.id}:null;break;}
@@ -249,9 +252,15 @@
   function restRecoveryInfo(a){
     const noise=SP.noiseAt(state,a.position);let surfaceQuality=.18,surfaceKind='standing',slot=null;
     if(a.posture?.kind==='sitting'&&a.posture.slotId){slot=SP.getSlot(state,a.posture.slotId);surfaceQuality=slot?.restQuality??.35;surfaceKind='seat';}
+    else if(a.posture?.kind==='lying'&&a.posture.slotId){slot=SP.getSlot(state,a.posture.slotId);surfaceQuality=slot?.restQuality??.55;surfaceKind='lyingSurface';}
     else if(a.posture?.kind==='lying'){surfaceQuality=a.kind==='cat'?.42:.35;surfaceKind='floor';}
-    const baseEfficiency=clamp(.92-noise*.025,.25,1.08),surfaceMultiplier=surfaceKind==='seat'?clamp(.90+surfaceQuality*.25,.9,1.15):surfaceKind==='floor'?clamp(.82+surfaceQuality*.24,.78,1.05):.72,restEfficiency=clamp(baseEfficiency*surfaceMultiplier,.12,1.30),recoveryRate=a.traits.recoveryRate??1,recovery=3.2*restEfficiency*recoveryRate;
+    const baseEfficiency=clamp(.92-noise*.025,.25,1.08),surfaceMultiplier=surfaceKind==='seat'?clamp(.90+surfaceQuality*.25,.9,1.15):surfaceKind==='lyingSurface'?clamp(.92+surfaceQuality*.28,.92,1.22):surfaceKind==='floor'?clamp(.82+surfaceQuality*.24,.78,1.05):.72,restEfficiency=clamp(baseEfficiency*surfaceMultiplier,.12,1.30),recoveryRate=a.traits.recoveryRate??1,recovery=3.2*restEfficiency*recoveryRate;
     return {recovery,restEfficiency,baseEfficiency,surfaceMultiplier,surfaceKind,slotId:slot?.id||null,furnitureId:slot?.furnitureId||null,recoveryRate,noise,localComfort:SP.comfortAt(state,a.position)};
+  }
+  function sleepRecoveryInfo(a){
+    const noise=SP.noiseAt(state,a.position),slot=a.posture?.slotId?SP.getSlot(state,a.posture.slotId):null,surfaceQuality=slot?(slot.sleepQuality??slot.restQuality??.35):.25;
+    const baseEfficiency=clamp(.98-noise*.018,.35,1.08),surfaceMultiplier=clamp(.86+surfaceQuality*.34,.86,1.20),sleepEfficiency=clamp(baseEfficiency*surfaceMultiplier,.15,1.30),recoveryRate=a.traits.recoveryRate??1,recovery=4.4*sleepEfficiency*recoveryRate;
+    return {recovery,sleepEfficiency,baseEfficiency,surfaceMultiplier,surfaceQuality,slotId:slot?.id||null,furnitureId:slot?.furnitureId||null,recoveryRate,noise,localComfort:SP.comfortAt(state,a.position)};
   }
 
   function directFoodFallback(a,p){
@@ -352,14 +361,48 @@
       const t=p.restTarget;if(t.kind==='slot'&&!reserve(`slot:${t.id}`,a)){p.excludeTarget=t.id;p.phase='chooseSurface';return;}if(!moveToExact(a,t.position,'前往休息位置'))return;p.phase='settle';return;
     }
     if(p.phase==='settle'){
-      const t=p.restTarget;if(t.kind==='slot'){const slot=SP.getSlot(state,t.id);if(!slot||!SP.same(a.position,slot.position)){p.phase='chooseSurface';return;}sitOn(a,slot);}else if(t.posture==='lying')lieDown(a);else standUp(a);
-      p.phase='resting';p.restTicks=0;p.targetFatigue=a.kind==='cat'?18:20;addEvent(`${a.name}${a.posture.kind==='sitting'?`坐在${state.furniture[a.posture.furnitureId]?.name||'座位'}`:a.posture.kind==='lying'?'蜷下身體':'停下來'}休息。`,'normal',[],{action:'rest',posture:a.posture.kind,position:SP.key(a.position)});return;
+      const t=p.restTarget;
+      if(t.kind==='slot'){
+        const slot=SP.getSlot(state,t.id);if(!slot||!SP.same(a.position,slot.position)){p.phase='chooseSurface';return;}
+        if(t.posture==='lying')lieDown(a,slot);else sitOn(a,slot);
+      }else if(t.posture==='lying')lieDown(a);else standUp(a);
+      p.phase='resting';p.restTicks=0;p.targetFatigue=a.kind==='cat'?18:20;
+      const postureText=a.posture.kind==='sitting'?`坐在${state.furniture[a.posture.furnitureId]?.name||'座位'}`:a.posture.kind==='lying'?(a.posture.furnitureId?`躺在${state.furniture[a.posture.furnitureId]?.name||'休息處'}`:a.kind==='cat'?'蜷下身體':'躺下'):'停下來';
+      addEvent(`${a.name}${postureText}休息。`,'normal',[],{action:'rest',posture:a.posture.kind,position:SP.key(a.position)});return;
     }
     if(p.phase==='resting'){
       const info=restRecoveryInfo(a);p.restTicks++;
-      if(info.noise>22&&p.restTicks<=4){const old=p.restTarget?.id;if(a.posture.kind==='sitting'&&a.posture.slotId)releaseReservation(`slot:${a.posture.slotId}`,a);standUp(a);p.excludeTarget=old;p.phase='chooseSurface';addEvent(`${a.name}覺得這裡太吵，改找別的休息位置。`,'normal',[],{action:'restReroute',noise:info.noise});return;}
+      if(info.noise>22&&p.restTicks<=4){const old=p.restTarget?.id;standUp(a);p.excludeTarget=old;p.phase='chooseSurface';addEvent(`${a.name}覺得這裡太吵，改找別的休息位置。`,'normal',[],{action:'restReroute',noise:info.noise});return;}
       a.needs.fatigue=clamp(a.needs.fatigue-info.recovery);a.wellbeing.comfort=clamp(a.wellbeing.comfort+.12*info.restEfficiency);
       if(a.needs.fatigue<=p.targetFatigue||p.restTicks>=24){finishAction(a,{dropHeld:false});return;}return;
+    }
+  }
+
+  function stepSleep(a,p){
+    if(p.phase==='chooseSurface'){
+      const candidates=SP.sleepTargets(state,a).filter(x=>x.id!==p.excludeTarget),t=candidates[0];
+      if(!t){abortAction(a,'找不到可用的睡眠位置');return;}
+      p.sleepTarget={...t};if(!reserve(`slot:${t.id}`,a)){p.excludeTarget=t.id;p.sleepTarget=null;return;}p.phase='move';return;
+    }
+    if(p.phase==='move'){
+      const t=p.sleepTarget,slot=t&&SP.getSlot(state,t.id);
+      if(!slot||!slot.canSleep||!SP.slotAllows(slot,a)){abortAction(a,'原本的睡眠位置已經失效');return;}
+      if(!reserve(`slot:${slot.id}`,a)){p.excludeTarget=slot.id;p.sleepTarget=null;p.phase='chooseSurface';return;}
+      if(!moveToExact(a,slot.position,'前往睡眠位置'))return;p.phase='settle';return;
+    }
+    if(p.phase==='settle'){
+      const t=p.sleepTarget,slot=t&&SP.getSlot(state,t.id);
+      if(!slot||!slot.canSleep||!SP.slotAllows(slot,a)||!SP.same(a.position,slot.position)){abortAction(a,'沒有抵達可使用的睡眠位置');return;}
+      if(a.held)releaseHeld(a);lieDown(a,slot);p.phase='sleeping';p.sleepTicks=0;
+      addEvent(`${a.name}躺到${state.furniture[slot.furnitureId]?.name||'睡眠位置'}，開始睡覺。`,'normal',[],{action:'sleep',phase:'start',slot:slot.id,furniture:slot.furnitureId,position:SP.key(a.position)});return;
+    }
+    if(p.phase==='sleeping'){
+      const slot=a.posture?.slotId?SP.getSlot(state,a.posture.slotId):null;
+      if(a.posture?.kind!=='lying'||!slot||!slot.canSleep||!SP.slotAllows(slot,a)||!SP.same(a.position,slot.position)){standUp(a);abortAction(a,'睡眠位置失效而醒來');return;}
+      const info=sleepRecoveryInfo(a);p.sleepTicks++;a.needs.fatigue=clamp(a.needs.fatigue-info.recovery);a.wellbeing.comfort=clamp(a.wellbeing.comfort+.18*info.sleepEfficiency);
+      if((p.sleepTicks>=p.minSleepTicks&&a.needs.fatigue<=p.targetFatigue)||p.sleepTicks>=90){
+        addEvent(`${a.name}睡了一覺，醒來時疲勞降到 ${Math.round(a.needs.fatigue)}。`,'good',[],{action:'sleepWake',sleepTicks:p.sleepTicks,fatigue:a.needs.fatigue,sleepEfficiency:info.sleepEfficiency,slot:slot.id,position:SP.key(a.position)});finishAction(a,{dropHeld:false});return;
+      }return;
     }
   }
 
@@ -412,7 +455,7 @@
     if(p.phase==='deposit'){const m=putResource('foodPantry','food',a.carrying?.amount||0);a.carrying=null;state.supply.trips++;state.supply.totalProduced+=m;addEvent(`${a.name}把補給帶回的 ${Math.round(m)} 單位食物放進食物櫃。`,'good',[],{action:'supplyDeposit',amount:m});finishAction(a,{dropHeld:false});return;}
   }
 
-  function stepAction(a){const p=a.action;if(!p)return;switch(p.intent){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'talk':case'petCat':case'seekHuman':stepSocial(a,p);break;case'refillWater':stepRefillWater(a,p);break;case'refillFood':stepRefillFood(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'wander':stepWander(a,p);break;case'supplyFood':stepSupply(a,p);break;default:finishAction(a);}}
+  function stepAction(a){const p=a.action;if(!p)return;switch(p.intent){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petCat':case'seekHuman':stepSocial(a,p);break;case'refillWater':stepRefillWater(a,p);break;case'refillFood':stepRefillFood(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'wander':stepWander(a,p);break;case'supplyFood':stepSupply(a,p);break;default:finishAction(a);}}
 
   function needDrift(){for(const a of Object.values(state.agents)){a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55));a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75));a.needs.fatigue=clamp(a.needs.fatigue+rand(.03,.14));a.needs.social=clamp(a.needs.social+rand(.05,.3));if(a.kind==='cat')a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28));a.status.intoxication=clamp(a.status.intoxication-rand(.05,.18));}}
   function expirePendingInteractions(){for(const a of Object.values(state.agents)){const p=a.pendingInteraction;if(!p||state.tick<p.expiresTick)continue;if(p.type==='cat_request')addEvent(`${a.name}沒有立刻回應橘子的撒嬌，橘子便自己走開了。`,'normal',[],{action:'catRequestExpired',accepted:!!p.accepted});a.pendingInteraction=null;}}
@@ -443,6 +486,7 @@
       }
       case'drinkWater':case'drinkAlcohol':return `${ZH[p.intent]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;
       case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';
+      case'sleep':return p.phase==='sleeping'?`睡眠・${p.sleepTarget?targetLabel({kind:'slot',id:p.sleepTarget.id}):'睡眠位置'}・熟睡中`:p.sleepTarget?`睡眠・前往${targetLabel({kind:'slot',id:p.sleepTarget.id})}${moveTarget}`:'睡眠・尋找位置';
       case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;
       case'petCat':return`摸橘子${moveTarget}`;
       case'seekHuman':return`找人撒嬌${moveTarget}`;
@@ -461,8 +505,8 @@
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`;const kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}
   function supplyStatus(){return {stock:foodStock(),trigger:state.supply.trigger,workerId:state.supply.workerId,workerName:state.agents[state.supply.workerId]?.name||null,trips:state.supply.trips,totalProduced:state.supply.totalProduced};}
 
-  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent('v11.4 初始化：held Container 與 carrying Resource 共用 Carry Load；內容量會即時改變搬運活動成本。','system',[],{seed:state.seed});return state;}
+  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent('v11.5 初始化：Sleep / Bed 已進入單一 action core；canSleep slot、lying posture 與自然醒皆由正式 state 驅動。','system',[],{seed:state.seed});return state;}
   reset(DEFAULT_SEED);
 
-  window.SimEngine={RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,carriedResourceLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,foodStock,supplyStatus,actionLabel,planLabel:actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,reservationOwner,holderOf};
+  window.SimEngine={RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,carriedResourceLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,foodStock,supplyStatus,actionLabel,planLabel:actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,reservationOwner,holderOf};
 })();
