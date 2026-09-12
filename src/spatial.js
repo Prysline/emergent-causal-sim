@@ -138,7 +138,7 @@
     if(!zone)return null;
     if(p?.__spatialGoalZone===zone&&p.__spatialGoal){
       const t=tileAt(st,p.__spatialGoal.x,p.__spatialGoal.y);
-      if(t?.walkable&&!occupantsAt(st,t.x,t.y,a.id).length&&astar(st,a.position,t,a).length)return clonePos(p.__spatialGoal);
+      if(t?.walkable&&astar(st,a.position,t,a).length)return clonePos(p.__spatialGoal);
     }
     const anchor=st.spatial.zoneAnchors[zone]||{x:0,y:0};
     const list=zoneTiles(st,zone).filter(t=>astar(st,a.position,t,a).length).sort((u,v)=>{
