@@ -1,7 +1,7 @@
 name: State regression
 on:
   push:
-    branches: [main]
+    branches: [main, refactor/v11-unified-core]
   workflow_dispatch:
 jobs:
   state-regression:
@@ -11,4 +11,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node tests/state-regression.mjs
+      - run: for f in src/*.js; do node --check "$f"; done
+      - run: node tests/v11-state-regression.mjs
