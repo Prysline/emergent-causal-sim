@@ -9,7 +9,7 @@
   let seatingEventSeq=0;
 
   const same=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y;
-  const seatPos=seat=>seat?.footprint?.[0] ? {...seat.footprint[0]} : null;
+  const slotPos=slot=>slot?.position?{...slot.position}:null;
 
   function addEvent(st,text,type='normal',data={}){
     const id=`q${++seatingEventSeq}`;
@@ -19,55 +19,51 @@
     return id;
   }
 
-  function seatOccupied(st,seat,agentId){
-    const p=seatPos(seat);if(!p)return true;
-    return Object.values(st.agents).some(a=>a.id!==agentId&&same(a.position,p));
+  function isOnSlot(a,slot){return !!slot?.position&&same(a.position,slot.position);}
+  function mealSlots(st){
+    return F.allSlots().filter(slot=>slot.mealSeat&&F.slotAllowsAgent(slot,st.agents.zhen||Object.values(st.agents)[0]));
   }
 
-  function seatReserved(st,seatId,agentId){
-    return Object.values(st.agents).some(a=>{
-      if(a.id===agentId)return false;
-      if(a.seatedOn===seatId)return true;
-      if(a.__seatTarget===seatId)return true;
-      return a.plan?.__seatId===seatId;
-    });
+  function compatibleMealSlots(a,st){
+    return mealSlots(st).filter(slot=>F.slotAllowsAgent(slot,a)&&F.slotCanInteract(slot.id,'mealTray'));
   }
 
-  function isOnSeat(a,seat){const p=seatPos(seat);return !!p&&same(a.position,p);}
-
-  function mealSeats(st){return Object.values(st.furniture||{}).filter(f=>f.kind==='chair'&&f.mealSeat);}
-
-  function chooseMealSeat(a,st,excludeId=null){
-    const list=mealSeats(st).filter(seat=>seat.id!==excludeId&&!seatOccupied(st,seat,a.id)&&!seatReserved(st,seat.id,a.id));
+  function chooseMealSlot(a,st,excludeId=null){
+    const list=compatibleMealSlots(a,st).filter(slot=>slot.id!==excludeId&&F.slotAvailable(slot.id,a.id));
     list.sort((x,y)=>{
-      const px=seatPos(x),py=seatPos(y);
+      const px=slotPos(x),py=slotPos(y);
       const dx=SP?.astar&&px?(SP.astar(a.position,px,a.id).length||999):Math.abs(a.position.x-px.x)+Math.abs(a.position.y-px.y);
       const dy=SP?.astar&&py?(SP.astar(a.position,py,a.id).length||999):Math.abs(a.position.x-py.x)+Math.abs(a.position.y-py.y);
-      return dx-dy;
+      const cx=F.slotOccupant(x.id,a.id)?1:0,cy=F.slotOccupant(y.id,a.id)?1:0;
+      return cx-cy||dx-dy;
     });
     return list[0]||null;
   }
 
-  function clearSeatIfMoved(a,st){
-    if(!a.seatedOn)return;
-    const seat=st.furniture?.[a.seatedOn];
-    if(!seat||!isOnSeat(a,seat))delete a.seatedOn;
+  function clearSeatIfMoved(a){
+    if(!a.seatSlot)return;
+    const slot=F.getSlot(a.seatSlot);
+    if(!slot||!isOnSlot(a,slot)){
+      delete a.seatSlot;
+      delete a.seatedOn;
+    }
   }
 
   function restoreEatingPlan(a,st,reason=null){
     const eat=a.__eatAfterSeat;if(!eat)return;
     a.plan=eat;
     delete a.__eatAfterSeat;
-    delete a.__seatTarget;
+    delete a.__slotTarget;
     if(reason)addEvent(st,`${a.name}${reason}，改為直接站著吃。`,'normal',{action:'seatFallback',agent:a.id});
   }
 
-  function startSeatMove(a,eatPlan,seat,st){
-    const p=seatPos(seat);if(!p)return false;
+  function startSeatMove(a,eatPlan,slot,st){
+    const p=slotPos(slot);if(!p)return false;
     a.__eatAfterSeat=eatPlan;
-    a.__seatTarget=seat.id;
-    a.plan={intent:'wander',phase:'move',targetZone:'table',oneShot:true,__seatMove:true,__seatId:seat.id,__spatialGoal:p,__spatialGoalZone:'table'};
-    addEvent(st,`${a.name}準備吃東西，先往${seat.name}坐下。`,'normal',{action:'seekSeat',seat:seat.id,location:a.location});
+    a.__slotTarget=slot.id;
+    a.plan={intent:'wander',phase:'move',targetZone:slot.zone||'table',oneShot:true,__seatMove:true,__seatSlotId:slot.id,__spatialGoal:p,__spatialGoalZone:slot.zone||'table'};
+    const furniture=F.get(slot.furnitureId);
+    addEvent(st,`${a.name}準備吃東西，先往${furniture?.name||'座位'}${slot.label&&slot.label!=='座位'?`的${slot.label}`:''}坐下。`,'normal',{action:'seekSeat',slot:slot.id,furniture:slot.furnitureId,location:a.location});
     return true;
   }
 
@@ -75,40 +71,45 @@
     const p=a.plan;
     if(a.kind!=='human'||!p||p.intent!=='eat'||p.__seatDecision)return;
     p.__seatDecision=true;
-    if(a.needs.hunger>=82)return;
-
-    if(a.seatedOn){
-      const seat=st.furniture?.[a.seatedOn];
-      if(seat?.mealSeat&&isOnSeat(a,seat))return;
+    if(a.needs.hunger>=82){
+      addEvent(st,`${a.name}已經很餓，不再特地找座位，直接吃東西。`,'normal',{action:'seatFallback',reason:'very_hungry',agent:a.id});
+      return;
     }
 
-    const seat=chooseMealSeat(a,st);
-    if(seat)startSeatMove(a,p,seat,st);
+    if(a.seatSlot){
+      const slot=F.getSlot(a.seatSlot);
+      if(slot?.mealSeat&&F.slotCanInteract(slot.id,'mealTray')&&isOnSlot(a,slot))return;
+    }
+
+    const compatible=compatibleMealSlots(a,st);
+    const slot=chooseMealSlot(a,st);
+    if(slot){startSeatMove(a,p,slot,st);return;}
+    if(compatible.length)addEvent(st,`${a.name}想坐著吃，但目前能直接拿到食物的座位沒有空位，決定站著吃。`,'normal',{action:'seatFallback',reason:'no_available_meal_slot',agent:a.id});
   }
 
   function maintainSeatMove(a,st){
     if(!a.__eatAfterSeat)return;
-    const seat=st.furniture?.[a.__seatTarget];
-    if(!seat){restoreEatingPlan(a,st,'找不到原本的座位');return;}
+    const slot=F.getSlot(a.__slotTarget);
+    if(!slot){restoreEatingPlan(a,st,'找不到原本的座位');return;}
 
-    if(seatOccupied(st,seat,a.id)){
-      const alt=chooseMealSeat(a,st,seat.id);
+    if(!F.slotAvailable(slot.id,a.id)){
+      const alt=chooseMealSlot(a,st,slot.id);
       if(alt){
-        const pos=seatPos(alt);
-        a.__seatTarget=alt.id;
+        const pos=slotPos(alt);
+        a.__slotTarget=alt.id;
         if(a.plan?.__seatMove){
-          a.plan.__seatId=alt.id;
+          a.plan.__seatSlotId=alt.id;
           a.plan.__spatialGoal=pos;
-          a.plan.__spatialGoalZone='table';
+          a.plan.__spatialGoalZone=alt.zone||'table';
         }
-        addEvent(st,`${a.name}發現${seat.name}被占用，改去${alt.name}。`,'normal',{action:'switchSeat',from:seat.id,to:alt.id,location:a.location});
-      }else restoreEatingPlan(a,st,'找不到空的餐椅');
+        addEvent(st,`${a.name}發現原本的座位被占用，改去${F.get(alt.furnitureId)?.name||'另一個座位'}。`,'normal',{action:'switchSeat',from:slot.id,to:alt.id,location:a.location});
+      }else restoreEatingPlan(a,st,'找不到空的合適餐椅');
     }
   }
 
   function beforeTick(st){
     for(const a of Object.values(st.agents)){
-      clearSeatIfMoved(a,st);
+      clearSeatIfMoved(a);
       maintainSeatMove(a,st);
       if(!a.__eatAfterSeat)maybeStartSeatMove(a,st);
     }
@@ -116,16 +117,18 @@
 
   function afterTick(st){
     for(const a of Object.values(st.agents)){
-      clearSeatIfMoved(a,st);
+      clearSeatIfMoved(a);
       if(!a.__eatAfterSeat)continue;
-      const seat=st.furniture?.[a.__seatTarget];
-      if(seat&&isOnSeat(a,seat)){
+      const slot=F.getSlot(a.__slotTarget);
+      if(slot&&isOnSlot(a,slot)&&F.slotAvailable(slot.id,a.id)){
         const eat=a.__eatAfterSeat;
-        a.seatedOn=seat.id;
+        a.seatedOn=slot.furnitureId;
+        a.seatSlot=slot.id;
         a.plan=eat;
         delete a.__eatAfterSeat;
-        delete a.__seatTarget;
-        addEvent(st,`${a.name}坐到${seat.name}，準備從餐桌拿食物。`,'normal',{action:'sitForMeal',seat:seat.id,location:a.location});
+        delete a.__slotTarget;
+        const furniture=F.get(slot.furnitureId);
+        addEvent(st,`${a.name}坐到${furniture?.name||'座位'}${slot.label&&slot.label!=='座位'?`的${slot.label}`:''}，準備拿食物。`,'normal',{action:'sitForMeal',slot:slot.id,furniture:slot.furnitureId,location:a.location});
       }else if(!a.plan?.__seatMove){
         restoreEatingPlan(a,st,'沒有成功坐到座位');
       }
@@ -140,7 +143,7 @@
     seatingEventSeq=0;
     const st=baseReset(seed);
     for(const a of Object.values(st.agents)){
-      delete a.seatedOn;delete a.__eatAfterSeat;delete a.__seatTarget;
+      delete a.seatedOn;delete a.seatSlot;delete a.__eatAfterSeat;delete a.__slotTarget;
     }
     return st;
   }
@@ -148,9 +151,9 @@
   E.tick=tick;
   E.reset=reset;
   E.planLabel=a=>{
-    if(a.plan?.__seatMove){const s=F.get(a.plan.__seatId);return `吃東西・前往${s?.name||'餐椅'}`;}
+    if(a.plan?.__seatMove){const slot=F.getSlot(a.plan.__seatSlotId),f=slot&&F.get(slot.furnitureId);return `吃東西・前往${f?.name||'餐椅'}${slot?.label&&slot.label!=='座位'?` ${slot.label}`:''}`;}
     const base=basePlanLabel(a);
-    if(a.plan?.intent==='eat'&&a.seatedOn){const s=F.get(a.seatedOn);return `${base}・坐在${s?.name||'座位'}`;}
+    if(a.plan?.intent==='eat'&&a.seatSlot){const slot=F.getSlot(a.seatSlot),f=slot&&F.get(slot.furnitureId);return `${base}・坐在${f?.name||'座位'}${slot?.label&&slot.label!=='座位'?` ${slot.label}`:''}`;}
     return base;
   };
 })();
