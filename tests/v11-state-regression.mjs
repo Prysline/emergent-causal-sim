@@ -12,7 +12,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.4-carry-load');
+  assert.equal(st.version,'11.5-sleep-bed');
   assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);
   assert.equal(Object.keys(st.map.rooms).length,1,'目前單一封閉室內應自動推導成一個 Room');
   assert.ok(Object.values(st.map.tiles).some(t=>t.terrain==='wall'));
@@ -24,6 +24,9 @@ E.reset(20260911);
   assert.ok(E.RESOURCE_TYPES.water.loadPerUnit>0&&E.RESOURCE_TYPES.food.loadPerUnit>0,'資源必須具有通用 loadPerUnit');
   assert.ok(st.containers.waterBucket.emptyLoad>0&&st.containers.plateA.emptyLoad>0,'可攜容器必須具有 emptyLoad');
   assert.equal(st.containers.waterBucket.currentLoad,undefined,'不得儲存需要同步的 currentLoad 快取');
+  assert.equal(st.furniture.bed.slots.length,2,'v11.5 雙人床必須提供兩個獨立 slot');
+  assert.ok(st.furniture.bed.slots.every(s=>s.canSleep&&s.canRest&&s.restPosture==='lying'),'床位必須同時是可躺短休與可睡眠 slot');
+  assert.ok(st.furniture.sofa.slots.every(s=>s.canSleep),'沙發保留較低品質的合法睡眠 fallback');
   noIssues('initial contract');
 }
 
@@ -91,10 +94,55 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;a.position={x:8,y:2};b.position={x:8,y:3};a.needs.fatigue=72;b.needs.fatigue=72;
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;
+  for(const s of st.furniture.bed.slots)s.canRest=false;
+  a.position={x:8,y:2};b.position={x:8,y:3};a.needs.fatigue=72;b.needs.fatigue=72;
   a.action={intent:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};b.action={intent:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};
   for(let i=0;i<8&&!(a.posture.kind==='sitting'&&b.posture.kind==='sitting');i++)E.tick();
   assert.equal(a.posture.furnitureId,'sofa');assert.equal(b.posture.furnitureId,'sofa');assert.notEqual(a.posture.slotId,b.posture.slotId);noIssues('sofa slots');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;
+  a.position={x:8,y:5};b.position={x:8,y:4};a.needs.fatigue=90;b.needs.fatigue=90;
+  a.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,minSleepTicks:18,targetFatigue:12,started:st.tick,wait:0};
+  b.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,minSleepTicks:18,targetFatigue:12,started:st.tick,wait:0};
+  for(let i=0;i<12&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`two sleepers tick ${i+1}`);}
+  assert.equal(a.action?.phase,'sleeping');assert.equal(b.action?.phase,'sleeping');
+  assert.equal(a.posture.kind,'lying');assert.equal(b.posture.kind,'lying');
+  assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId,'兩人睡眠必須占用不同床位');noIssues('two bed sleep slots');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,owner=st.agents.zhou;st.agents.orange.offMap=true;owner.offMap=true;
+  st.reservations['slot:bed:left']=owner.id;st.reservations['slot:bed:right']=owner.id;
+  a.needs.fatigue=90;a.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,minSleepTicks:18,targetFatigue:12,started:st.tick,wait:0};
+  E.tick();assert.ok(a.action?.sleepTarget?.id?.startsWith('sofa:'),'床位都不可用時，睡眠應能選擇 canSleep 沙發 fallback');
+  delete st.reservations['slot:bed:left'];delete st.reservations['slot:bed:right'];noIssues('sleep sofa fallback');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,slot=SP.getSlot(st,'bed:left');st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  a.position={...slot.position};a.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
+  const rest=E.restRecoveryInfo(a),sleep=E.sleepRecoveryInfo(a);assert.ok(sleep.recovery>rest.recovery,'同一張床上，sleep 每 tick 恢復必須高於短休');noIssues('sleep stronger than rest');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,slot=SP.getSlot(st,'bed:left');st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  a.position={...slot.position};a.needs.fatigue=90;a.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};a.action={intent:'sleep',phase:'sleeping',sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},sleepTicks:2,minSleepTicks:18,targetFatigue:12,started:st.tick,wait:0};
+  E.addNoise(a.position,100,2,'test-noise');E.tick();assert.equal(a.action?.phase,'sleeping','v11.5 不應因單次噪音自行新增未定案的吵醒規則');noIssues('sleep commitment under noise');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  a.position={x:8,y:5};a.needs.fatigue=88;a.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,minSleepTicks:18,targetFatigue:12,started:st.tick,wait:0};let enteredSleep=false;
+  for(let i=0;i<120&&a.action;i++){E.tick();if(a.action?.phase==='sleeping')enteredSleep=true;noIssues(`natural wake tick ${i+1}`);}
+  assert.equal(enteredSleep,true,'睡眠流程必須真正進入 sleeping phase');assert.equal(a.action,null,'充分恢復後必須自然結束 sleep action');assert.ok(a.needs.fatigue<20,'自然醒後 fatigue 應已顯著恢復');assert.ok(st.events.some(e=>e.data?.action==='sleepWake'),'自然醒必須留下可觀察 timeline 事件');assert.equal(a.posture.kind,'lying','醒來後可保持躺著，下一次移動再正式起身');noIssues('natural wake');
 }
 
 E.reset(20260911);
@@ -206,5 +254,6 @@ E.reset(20260911);
   assert.ok(!css.includes('grid-template-columns:minmax(70px,1fr) 70px minmax(90px,1fr) minmax(90px,1fr)'),'不得恢復會讓 360px Inspector 爆版的四欄最小寬度');
   const engine=fs.readFileSync(new URL('../src/engine.js',import.meta.url),'utf8');
   assert.ok(!engine.includes('(a.carrying.amount||0)*.0015'),'不得恢復舊 carrying.amount 專用移動成本公式');
+  assert.ok(!engine.includes('window.SimSleep'),'Sleep 不得回到獨立 wrapper／patch runtime');
 }
-console.log('v11.4-state-regression: ok');
+console.log('v11.5-state-regression: ok');
