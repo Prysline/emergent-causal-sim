@@ -1,6 +1,6 @@
-# Architecture — v11.2 Unified Core + Serving / Plate
+# Architecture — v11.3 Unified Core + Physical Resource Transfer
 
-> 本文件描述目前正式架構。v10.4 以前的 wrapper / patch 設計只存在 Git history，不再是現行執行模型。v11.2 開始在 Unified Core 上新增玩法，但仍維持單一 `engine.tick()` 與單一 action state machine。
+> 本文件描述目前正式架構。v10.4 以前的 wrapper / patch 設計只存在 Git history，不再是現行執行模型。v11.2 起在 Unified Core 上新增玩法；v11.3 進一步把角色主動資源轉移的物理條件納入同一 core，仍維持單一 `engine.tick()` 與單一 action state machine。
 
 ## 1. 核心原則
 
@@ -23,7 +23,7 @@
 src/
 ├─ world.js            初始世界、Tile、家具、物件、角色資料
 ├─ spatial.js          純空間函式：A*、Room、interaction、局部環境
-├─ engine.js           唯一 tick 與所有行動 phase／資源／恢復／補給／用餐
+├─ engine.js           唯一 tick 與所有行動 phase／資源／恢復／補給／用餐／資源轉移
 ├─ state-validator.js  純 invariant 檢查，不包裝 tick
 └─ ui.js               地圖、Inspector、時間線與操作 UI
 ```
@@ -46,7 +46,7 @@ roomId
 furnitureIds
 ```
 
-外圈是牆，左側有大門位置。餐桌、食物櫃、水桶、水龍頭等會真的影響 walkability。
+外圈是牆，左側有大門位置。餐桌、食物櫃、水龍頭等固定實體會影響 walkability；水桶自 v11.3 起是可攜 Container，因此不再把所在 Tile 永久封鎖。
 
 ### 3.2 Room
 
@@ -145,9 +145,21 @@ prepare
 → finish
 ```
 
-`plateA / plateB` 是一般 portable Container，不是特殊事件物件。盛盤使用真正的 `transferResource('food', 'mealTray', plateId, amount)`。
+`plateA / plateB` 是一般 portable Container，不是特殊事件物件。盛盤使用真正的資源轉移。
 
 吃完後 `releaseHeld()` 會把空盤留在角色當下 Tile，因此盤子位置是世界狀態的一部分，不會自動回桌面。
+
+### v11.3 水桶補水
+
+```text
+toBucket
+→ takeBucket
+→ toTap
+→ fill
+→ finish / drop bucket at actual position
+```
+
+角色必須真的拿起水桶並搬到水龍頭 interaction position。`finishAction()` 會在完成時用 `releaseHeld()` 將水桶留在補水位置，而不是瞬移回原點。
 
 ### 直接進食 fallback
 
@@ -159,11 +171,7 @@ prepare
 → finish
 ```
 
-適用於：
-
-- 橘子
-- 人類非常餓
-- 沒有可用 serving dish
+適用於橘子、人類非常餓，或沒有可用 serving dish。
 
 ## 8. Movement / crowding
 
@@ -202,9 +210,10 @@ state.reservations
 slot:sofa:left
 object:mealTray
 object:plateA
+object:waterBucket
 ```
 
-`holdContainer()` 也會尊重 object reservation，避免別人在角色前往拿取已 claim 的盤子時搶走同一物件。
+`holdContainer()` 會尊重 object reservation，避免別人在角色前往拿取已 claim 的物件時搶走同一物件。
 
 ## 10. Serving / Plate
 
@@ -231,13 +240,9 @@ contents.food
 
 座位排序優先 `mealSeat`，之後才考慮其他 `canRest` slot（例如沙發）；完全沒有合適座位才站著吃。
 
-這使原本在餐桌右側、無法直接接觸 `mealTray` 的餐椅重新成為正常用餐位置：角色拿著盤子後，不再要求 seat 必須靠近食物來源。
-
 ### 橘子
 
-橘子不進入 `toDish / takeDish / serve`。牠會從所有 `canEatFrom` 且仍有 `food` 的 Container 中，挑可接近來源。
-
-若餐盤放在地上、沙發旁或其他位置且裡面還有食物，橘子可以直接去吃；如果餐盤正被其他 Agent 拿在手上，則不視為可直接取食來源。
+橘子不進入 `toDish / takeDish / serve`。牠會從所有 `canEatFrom` 且仍有 `food` 的 Container 中挑可接近來源；如果餐盤正被其他 Agent 拿在手上，則不視為可直接取食來源。
 
 ### 食物庫存
 
@@ -260,7 +265,31 @@ contents.food
 
 地面液體直接存在 `Tile.surface.contents`。A*、滑倒、貓踩濕、倒水失敗都讀真正 Tile。
 
-目前 `spillHeldAt()` 仍主要處理液體；餐盤中的固體食物尚未納入跌倒／掉落散落規則，這是後續可擴充點，不在 v11.2 範圍內。
+`transferResource()` 是底層資源 primitive，本身只負責 endpoint 之間的數量轉移，不推測是哪個角色在操作。`spillHeldAt()` 等物理結果可以直接使用它。
+
+### 12.1 Actor-mediated resource transfer
+
+v11.3 新增 `actorCanTransfer(agent, fromId, toId)` 作為角色主動資源轉移的共同前置條件：
+
+```text
+角色必須位於來源的合法 interaction position
+AND
+目的 Container 必須由角色持有，或位於角色可直接操作的位置
+AND
+若來源也是 Container，不能正被其他角色持有
+```
+
+因此：
+
+- 水龍頭 → 手持杯子：合法。
+- 水龍頭 → 手持水桶：合法。
+- mealTray → 手持餐盤：合法。
+- 人只站在水龍頭旁，但水桶沒有拿在手上且位於其他位置：非法。
+- 從另一名角色手上的水桶直接抽水：非法。
+
+這個 contract 是 action 層的物理限制；底層 `transferResource()` 仍保持通用，避免把角色語意硬塞進資源 primitive。
+
+目前 `spillHeldAt()` 仍主要處理液體；餐盤中的固體食物尚未納入跌倒／掉落散落規則，這是後續可擴充點。
 
 ## 13. Supply loop
 
@@ -305,6 +334,9 @@ target 暫時無合法 interaction position
 - 拿餐盤後可使用餐桌右側座位
 - 橘子可吃盤中食物且不得拿起餐盤
 - 非常餓／無 serving dish 的直接進食 fallback
+- 補水流程必須曾實際持有水桶並搬到水龍頭
+- 沒拿水桶時強制進入 fill phase 不得增加水量
+- 橘子不得喝正在被其他角色持有的水桶
 - 補給必須實際走到 pantry 才入庫
 - A* 不可達回 `[]`
 - offMap 社交目標強烈中斷
@@ -318,11 +350,7 @@ GitHub Actions 另對所有 `src/*.js` 執行 `node --check`，並在 `main / re
 - 完整 sleep / bed / wake conditions
 - 盤子收拾、清洗、髒污與餐具循環
 - 固體食物從餐盤跌落／散落到 Tile 的通用規則
-- 自動 Room 分割後的門開關與聲音／溫度傳播
-- Activity Area / Zone 的正式用途政策
-- material / quality 對家具與 Room value 的完整資料模型
-- 火、溫度、乾燥與材質
+- 更完整的容器重量、容量對搬運 exertion 的影響
+- 可開關門、跨 Room 的噪音／溫度傳播
 - 正式貨幣與經濟
-- interaction commitment strength / max distance / interrupt priority
-
-新增上述功能時，優先擴充既有 `Tile → affordance → action phase`，不要再新增包裝 `tick()` 的 patch module。
+- interaction commitment strength / maxDistance / interruptPriority
