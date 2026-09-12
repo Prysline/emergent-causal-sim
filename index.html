@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v9｜勞動補給閉環</title>
+  <title>因果湧現模擬器 v10｜Spatial Grid</title>
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/mobile.css">
+  <link rel="stylesheet" href="styles/spatial.css">
 </head>
 <body>
 <div class="shell">
   <header class="appbar">
     <div>
       <div class="eyebrow">EMERGENT CAUSAL SIM</div>
-      <h1>因果湧現模擬器 <span>v9・勞動補給閉環</span></h1>
+      <h1>因果湧現模擬器 <span>v10・Spatial Grid</span></h1>
     </div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
@@ -31,7 +32,7 @@
     <div class="maincol">
       <section class="panel view-panel mobile-active" data-view="map">
         <div class="panel-head">
-          <div><b>空間圖</b><small>點角色、物品、地面或區域查看狀態</small></div>
+          <div><b>空間圖</b><small>Zone 負責語意；Tile 負責實際座標、可通行性與尋路</small></div>
           <div id="worldBadges" class="world-badges"></div>
         </div>
         <div class="panel-body">
@@ -40,7 +41,7 @@
       </section>
 
       <section class="panel view-panel" data-view="agents">
-        <div class="panel-head"><div><b>目前行動</b><small>不用從細碎事件反推大家正在做什麼</small></div></div>
+        <div class="panel-head"><div><b>目前行動</b><small>角色會沿格子逐步抵達互動位置，而不是只切換 Zone</small></div></div>
         <div class="panel-body"><div id="actions" class="action-board"></div></div>
       </section>
 
@@ -54,7 +55,7 @@
     </div>
 
     <aside class="panel inspector-panel view-panel" data-view="inspector">
-      <div class="panel-head"><div><b>Inspector</b><small>同一套檢視角色、物件、地面、區域、事件</small></div></div>
+      <div class="panel-head"><div><b>Inspector</b><small>可檢視角色、物件、Zone、事件與單一 Tile</small></div></div>
       <div id="inspector" class="panel-body inspector"></div>
     </aside>
   </main>
@@ -71,8 +72,10 @@
 <script src="src/engine.js" defer></script>
 <script src="src/recovery.js" defer></script>
 <script src="src/supply.js" defer></script>
+<script src="src/spatial.js" defer></script>
 <script src="src/ui.js" defer></script>
 <script src="src/recovery-ui.js" defer></script>
 <script src="src/supply-ui.js" defer></script>
+<script src="src/spatial-ui.js" defer></script>
 </body>
 </html>

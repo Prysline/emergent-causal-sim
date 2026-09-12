@@ -1,84 +1,109 @@
-# v9 架構說明
+# v10 架構說明
 
-## 核心分層
+## 空間分層
 
-### `world.js`
-描述世界資料：資源、區域拓樸、Agent、容器、來源、表面與初始值。
+v10 不以 Tile 取代 Zone，而是建立兩層空間：
 
-角色狀態仍分成：
+### Zone / Room：語意層
 
-- `needs`：高值＝需求更迫切。
-- `wellbeing`：高值＝狀態較好。
-- `status`：效果型狀態，例如醉酒。
-- `metrics`：觀測／統計資料；`exertionToday` 是當日活動量，`lastExertion` 保留最近一次活動來源。
+Zone 繼續負責：
 
-體力 trait 仍分成：
+- 行動選擇與需求判斷。
+- 噪音、休息品質等區域屬性。
+- 「去哪裡吃飯／休息／補水」這類高階決策。
 
-- `exertionSensitivity`：同樣活動量造成多少疲勞。
-- `recoveryRate`：休息時的恢復倍率。
+因此 Agent 仍有 `location: zoneId`。
 
-### `engine.js` + `recovery.js`
-主要 simulation 與 v8.1 恢復模型不變：活動量透過 exertion 影響疲勞、口渴與少量飢餓；休息逐 tick 恢復並讀取環境 `restEfficiency`。
+### Tile / Coordinate：物理層
 
-### `supply.js`
-v9 把食物的有限庫存接成第一條勞動閉環。此模組包裝既有 tick，但不改寫核心資源／移動規則。
-
-補給流程：
+Spatial Grid 目前是 `12 × 8`。每格記錄：
 
 ```text
-stock < trigger
-→ 選擇目前可承擔工作的 human
-→ 使用既有移動行動走到 doorway
-→ supplyWork 多 tick
-→ applyExertion(...)
-→ carrying = food
-→ 使用既有移動行動搬回 pantry
-→ pantry.contents.food 增加
+x / y
+zone
+walkable
+staticBlockedBy
+contents
 ```
 
-重要限制：
-
-- 補給只在角色原本的行動完成、變成 idle 後才接管，不中斷正在進行的吃飯、喝水、休息等行動。
-- 疲勞、口渴、飢餓過高時，不安排新補給；工作途中達到危急門檻也可中止。
-- 同時只允許一名 `workerId`，避免第一版直接變成多人排程系統。
-- 去出入口與搬回食物櫃都沿用核心 `wander/moveToward` 行動，因此仍會產生移動 exertion，並保留既有路徑／地面風險行為。
-- 工作階段本身透過既有 `applyExertion`，所以 `exertionSensitivity` 仍會造成角色差異。
-- 工作產出的食物目前代表「房間外部世界取得的資源」；外部農場、商店、生產鏈與貨幣尚未建模。
-
-v9 另外使用獨立、由同一 Seed 初始化的 supply PRNG，因此補給時長與產量可以重現，又不會改變核心 engine 的隨機序列。
-
-### `ui.js` + `recovery-ui.js` + `supply-ui.js`
-UI 仍保持為觀測層。
-
-v9 新增最小補給觀測：
-
-- 世界 badge 顯示食物總庫存。
-- 有補給工作時顯示目前 worker。
-- Agent 行動摘要會顯示「前往出入口／工作進度／搬運回食物櫃」。
-- 食物櫃與現成食物 Inspector 顯示觸發門檻、已完成趟數與累積帶回量。
-- 補給工作被選中時，最近決策會保留庫存不足與角色當下需求作為理由。
-
-## v9 成功條件
-
-第一版不是要做完整工作系統，而是確認以下因果鏈能穩定成立：
+Agent、Container、Source 另外具有：
 
 ```text
-食物被消耗
-→ 庫存下降
-→ 角色安排補給工作
-→ 工作造成活動與疲勞
-→ 角色把食物搬回
-→ 庫存回升
-→ 補給壓力消失
+position: { x, y }
 ```
 
-同時必須允許個人需求打斷這條鏈，例如角色太累時先休息，而不是無條件工作到補滿。
+`location` 與 `position` 同時存在；角色逐格移動時，跨過 Zone 邊界才同步更新 `location`。
 
-## 下一個決策點
+## 行動 gate
 
-觀察 v9 後再決定：
+舊 engine 在 `startPlan()` 後同一 tick 可能立刻執行 action。v10 不直接重寫整個 decision engine，而是在 `spatial.js` 為 Agent 的 `plan` 加入空間 prerequisite gate。
 
-1. 酒是否也用同一套勞動補給規則，作為非生存型資源。
-2. 補給工作是否需要拆成職業／技能／產量差異。
-3. 是否需要把「房間外部」實體化成新的空間或來源，而不是目前的 off-map 抽象。
-4. 是否真的有必要引入貨幣；只有當「工作產出」與「實際取得何種資源」需要分離時，貨幣才會帶來明顯價值。
+流程：
+
+```text
+plan 已存在
+→ spatial.js 判斷目前 phase 需要的物理目標
+→ 把物件／Agent／Zone 轉成 interaction tile
+→ 還沒抵達：plan 對底層 engine 暫時呈現 spatial sentinel
+→ A* 前進一格
+→ 抵達：解除 gate
+→ 原本 engine 繼續 eat / drink / talk / refill / rest ...
+```
+
+這讓既有行動鏈與 v9 補給模組可以保留，同時避免「畫面沿格子走，但核心已經把行動做完」的假 spatialization。
+
+目前已接的目標類型：
+
+- `eat` → 現成食物旁的 interaction tile。
+- 人類飲水／飲酒 → 飲用容器、來源旁的 interaction tile。
+- 貓喝水 → 水桶旁。
+- 補充食物／水桶 → 對應物件旁。
+- `talk / petCat / seekHuman` → 目標 Agent 的鄰接格。
+- `rest / wander` → 目標 Zone 內的可行 tile。
+- `cleanFloor` → 該 Zone 最濕的 tile。
+- v9 supply 的出入口／食物櫃移動沿用 `wander` plan，因此自然進入 A*。
+
+## A* 與 occupancy
+
+A* 使用四方向移動。固定物件所在格標為不可通行；其他 Agent 所在格加入高成本，濕地也會增加成本，因此有其他路線時可以自然繞開。
+
+目前 occupancy 還不是完整多人交通模擬：Agent 不會協商讓路，也沒有狹窄門口 reservation。第一版只處理「實際位置會影響路徑成本」。
+
+## Surface 過渡
+
+既有 engine 使用 `floor:<zone>` 聚合地面內容。v10 為了不一次重寫所有清理／蒸發／因果規則，暫時保留它作相容層，同時新增每格 `tile.contents`。
+
+同步原則：
+
+```text
+Zone surface 增加
+→ 投影到事件附近 tile
+
+Zone surface 因清理／蒸發減少
+→ 從該 Zone 的濕 tile 同步扣除
+```
+
+此外 Spatial Grid 自己處理局部接觸：
+
+- A* 讀取單格濕度成本。
+- 貓踩到濕 tile 才把液體轉到 paws。
+- 人踩到濕 tile 才做局部滑倒檢查。
+
+等這層穩定後，再考慮反過來由 tile surface 聚合出 Zone summary，最後移除 Zone surface 的物理權威性。
+
+## UI
+
+`spatial-ui.js` 不改 decision state，只把 `state.spatial` 畫成 CSS Grid。空 tile 不放任何字元；CSS 背景與極淡邊界提供格線，避免 `⬜` 搶走視覺焦點。
+
+空 Tile 可以直接開 Tile Inspector；角色、容器與來源沿用原本 `data-entity` Inspector 流程，並補上 `(x,y)`。
+
+## Rest / Sleep 的位置
+
+v10 先處理空間底層，**尚未**把短休拆成正式 `shortRest / sleep`，也尚未放入可睡眠床位。下一輪若做睡眠，床會被建模為通用 Rest Surface affordance，而不是把 `bed` 名稱寫死進行動規則。
+
+建議順序：
+
+1. 先實玩 v10，確認逐格移動速度、路徑與手機可讀性。
+2. 再加家具 footprint / interaction tiles 與床。
+3. 拆 `shortRest` / `sleep` commitment。
+4. 最後才考慮 wake conditions（噪音、極端需求、鬧鐘、行程、trait）。

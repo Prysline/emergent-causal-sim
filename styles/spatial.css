@@ -1,0 +1,39 @@
+/* v10 Spatial Grid: floor stays quiet; entities carry the visual emphasis. */
+#map.spatial-active{display:block;overflow:auto;min-width:0;padding:2px}
+.spatial-board{
+  --tile-size:clamp(25px,5.2vw,48px);
+  display:grid;
+  grid-template-columns:repeat(var(--grid-w),minmax(0,var(--tile-size)));
+  grid-template-rows:repeat(var(--grid-h),minmax(0,var(--tile-size)));
+  width:max-content;
+  max-width:100%;
+  margin:0 auto;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  overflow:hidden;
+  background:#0f1518;
+}
+.sim-tile{
+  position:relative;
+  width:var(--tile-size);height:var(--tile-size);min-width:0;
+  padding:0;margin:0;border:0;border-right:1px solid rgba(255,255,255,.045);border-bottom:1px solid rgba(255,255,255,.045);
+  border-radius:0;color:inherit;background:#151c20;box-shadow:none;overflow:hidden;
+}
+.sim-tile:hover{filter:brightness(1.08);z-index:2}
+.sim-tile.zone-pantry{background:#171d1c}.sim-tile.zone-table{background:#181c20}.sim-tile.zone-rest{background:#171b1f}
+.sim-tile.zone-doorway{background:#151b1c}.sim-tile.zone-sink{background:#141d20}.sim-tile.zone-hearth{background:#1d1a18}
+.sim-tile.blocked{background:#0d1214;box-shadow:inset 0 0 0 1px rgba(255,255,255,.04)}
+.sim-tile.wet{box-shadow:inset 0 0 12px rgba(122,190,210,.12)}
+.tile-zone-label{position:absolute;left:2px;top:1px;font-size:8px;line-height:1;color:rgba(220,232,234,.34);white-space:nowrap;pointer-events:none;z-index:1}
+.tile-coord{display:none;position:absolute;right:2px;bottom:1px;font-size:7px;color:rgba(255,255,255,.25);pointer-events:none}
+.tile-entities{position:absolute;inset:7px 2px 2px;display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;z-index:3;pointer-events:none}
+.spatial-entity{display:inline-grid;place-items:center;min-width:18px;height:18px;font-size:17px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.7));pointer-events:auto;cursor:pointer}
+.spatial-entity.agent{font-size:19px}.spatial-entity.cat{font-size:18px}.spatial-entity.held{font-size:12px;opacity:.8;transform:translate(5px,5px)}
+.tile-contents{position:absolute;right:1px;bottom:1px;display:flex;gap:0;z-index:2;pointer-events:none}.tile-liquid{font-size:10px;opacity:.72}
+.spatial-coordinate-row{display:contents}
+@media(max-width:560px){
+  #map.spatial-active{overflow-x:auto;margin:0 -4px;padding:0 4px 5px}
+  .spatial-board{--tile-size:clamp(23px,7.2vw,30px);margin:0;max-width:none}
+  .spatial-entity{font-size:15px;min-width:14px;height:14px}.spatial-entity.agent{font-size:17px}.spatial-entity.cat{font-size:16px}
+  .tile-zone-label{font-size:7px}.tile-liquid{font-size:9px}
+}

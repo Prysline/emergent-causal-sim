@@ -1,58 +1,69 @@
-# 因果湧現模擬器 v9
+# 因果湧現模擬器 v10
 
-這是一個用來驗證「少量底層規則能否互相組合，產生未直接寫死的因果鏈」的瀏覽器模擬 sandbox。
+這是一個用來驗證「少量底層規則能否彼此組合，形成未直接寫死的因果鏈」的瀏覽器 simulation sandbox。
 
-v9 建立在 v8.1 的活動／疲勞／恢復模型上，新增第一個**勞動補給閉環**。目前先只關閉食物供應鏈，不引入薪資、價格或貨幣。
+v10 的主題是 **Spatial Grid**。前一版只有 Zone graph：角苲知道自己在「餐桌區」或「水槽區」，但同一 Zone 裡沒有真正的位置差異。v10 保留 Zone 作為語意層，同時加入 Tile / Coordinate 作為物理層。
 
-## v9：食物勞動補給
+## v10：Zone + Tile 雙層空間
 
-當「現成食物 + 食物櫃」的總庫存低於門檻時，系統會等待合適的人類角色空閒，並讓補給工作和角色自己的飢餓、口渴與疲勞競爭。
+目前空間同時包含：
 
-第一版行動鏈：
+- `Zone / Room`：餐桌區、水槽區、食物櫃旁、休息角、火爐旁、出入口。AI 仍用 Zone 判斷「哪裡適合做什麼」。
+- `Tile / Coordinate`：12×8 格，Agent、容器與資源來源都有 `(x,y)`。
+- `walkable`：固定物件所在格可以阻擋通行。
+- `occupancy`：尋路會讀取其他 Agent 的實際格子，避免把「同 Zone」當成同一點。
+- `A*`：移動會逐格尋路到目標物件旁的 interaction tile，或目標 Zone 內的可行格。
+- `surface contents`：每格都有獨立內容物資料；既有 Zone 地面資源會同步投影到單格，供顯示、尋路成本與局部接觸使用。
+
+因此現在的移動概念是：
 
 ```text
-食物總庫存過低
-→ 合適角色決定外出補給
-→ 走到出入口
-→ 在外工作多個 tick
-→ 每 tick 產生 exertion
-→ 帶著食物回來
-→ 搬運到食物櫃
-→ 世界庫存實際增加
+需求／行動目標
+→ 找到語意目標（Zone / 物件）
+→ 轉換成 interaction tile
+→ A* 尋路
+→ 每 tick 前進一格
+→ 抵達後才允許原本的互動行動繼續
 ```
 
-工作途中如果角色變得過度疲勞、口渴或飢餓，可以中止這次工作；不是「疲勞直接換食物」的數值交易。
+不是只把地圖畫成格子；Spatial Grid 會阻擋原本的行動鏈，直到角色實際走到互動位置。
 
-目前預設：
+## 單點污染
 
-- 總食物低於約 `70` 才會觸發補給需求。
-- 角色希望把庫存恢復到約 `150` 的安全區間。
-- 每次外出工作約 7～10 tick，並帶回約 32～46 單位食物。
-- 同一時間只安排一名補給者。
-- 外部世界暫時抽象在出入口之外；v9 不模擬農場、商店或貨幣。
+v10 先保留既有 Zone surface 作相容層，同時同步一份 tile surface：
 
-地圖上方會直接顯示食物總量；補給進行中也會顯示目前負責角色。點食物櫃或現成食物可查看補給趟數、累積帶回量與觸發門檻。
+- 新的灑出液體會投影到實際事件附近的 tile。
+- 蒸發／清理造成的 Zone surface 減少會同步回 tile。
+- A* 會提高濕地格的移動成本，因此角色可能繞開濕地。
+- 橘子若真的踩到有液體的 tile，腳掌才會沾到該液體。
+- 人踩到濕 tile 時會進行局部滑倒風險檢查；若手上拿著液體容器，可能再把液體灑到腳下。
 
-## v8.1 基礎仍保留
+這仍是過渡架構：Zone surface 尚未完全移除；後續若 Spatial Grid 穩定，再讓 tile surface 成為唯一物理來源。
 
-- `metrics.exertionToday` 是**今日活動量統計**，跨日歸零但休息不下降。
-- `needs.fatigue` 才是當下疲勞，不因跨日自動歸零。
-- `exertionSensitivity` 控制「同樣活動會累多少」。
-- `recoveryRate` 控制「同樣休息時間恢復多少」。
-- 休息逐 tick 恢復，並受 `restEfficiency`（區域休息品質 + 噪音）影響。
-- `sleepDebt / sleepNeed / sleepEfficiency` 仍未加入。
+## 視覺
 
-v7.1 的 correctness 修正也仍保留：`needs / wellbeing` 語意分離、人貓雙向互動、飲用 affordance / preference 分離、Seeded PRNG 與有界因果事件。
+空地不再用 `⬜` 等字元填滿。Tile 只用低對比 CSS 底色與細邊界；Zone 用很淡的底色色差與小標籤區分；角色與物件才使用高辨識圖示。
+
+點空白 Tile 可在 Inspector 查看：座標、Zone、是否可通行、固定阻擋、目前角色與該格表面內容物。角色／容器／來源 Inspector 也會補上 Tile 座標。
+
+## v9 / v8.1 基礎仍保留
+
+- 食物低庫存會觸發「外出補給食物」勞動閉環。
+- `metrics.exertionToday` 是今日活動量，不是疲勞槽。
+- `needs.fatigue` 才是當下疲勞。
+- `exertionSensitivity` 與 `recoveryRate` 分離。
+- 休息逐 tick 恢復並受環境休息效率影響。
+- 人貓雙向互動、飲用 affordance / preference、Seeded PRNG、有界因果事件仍保留。
 
 ## 執行
 
-直接開啟 `index.html` 即可。若瀏覽器限制本機多檔載入，可在專案目錄執行：
+直接開啟 `index.html`。若瀏覽器限制本機多檔載入，可在專案目錄執行：
 
 ```bash
 python -m http.server 8000
 ```
 
-然後開啟 `http://localhost:8000/`。
+再開啟 `http://localhost:8000/`。
 
 ## 結構
 
@@ -61,21 +72,25 @@ emergent-causal-sim/
 ├─ index.html
 ├─ README.md
 ├─ styles/
-│  └─ app.css
+│  ├─ app.css
+│  ├─ mobile.css
+│  └─ spatial.css      # v10 格狀地圖視覺
 ├─ src/
-│  ├─ world.js        # 資源、角色、容器與初始世界資料
-│  ├─ engine.js       # 主要 tick、需求、行動鏈、資源與因果
-│  ├─ recovery.js     # 疲勞成本、休息恢復與跨日統計語意
-│  ├─ supply.js       # v9 食物勞動補給閉環
-│  ├─ ui.js           # 地圖、時間線、Inspector、控制器
-│  ├─ recovery-ui.js  # 體力特質與恢復觀測補充
-│  └─ supply-ui.js    # 食物庫存與補給工作的觀測補充
+│  ├─ world.js
+│  ├─ engine.js
+│  ├─ recovery.js
+│  ├─ supply.js
+│  ├─ spatial.js       # v10 座標、A*、occupancy、tile surface、行動 gate
+│  ├─ ui.js
+│  ├─ recovery-ui.js
+│  ├─ supply-ui.js
+│  └─ spatial-ui.js    # v10 CSS Grid 地圖與 Tile Inspector
 └─ docs/
    └─ architecture.md
 ```
 
 ## 尚未加入
 
-v9 **沒有**加入薪資、貨幣、價格、商店、私人資產或職業系統；酒也仍是有限初始庫存。第一輪只驗證「資源不足 → 勞動 → 體力消耗 → 補給恢復」是否能自然閉合。
+v10 **沒有**加入完整睡眠系統、床位互動、鬧鐘／行程表、貨幣、價格、正式職業、門或可開關障礙。Rest Surface / bed 會等 Spatial Grid 本身穩定後再接，避免同一版同時改兩個核心系統。
 
-其他 MVP 限制：空間仍是節點拓樸；`access` 尚未真正控制多人同時使用；火爐尚未形成熱／火災系統；事件尚未建立正式 entity-event index。
+目前家具 footprint 仍只先用單格固定物件驗證阻擋；多人讓路、門、不同尺寸家具與完整 tile-only surface 會是後續空間層的下一步。
