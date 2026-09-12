@@ -44,6 +44,15 @@
   function takeResource(id,r,amount){const ep=endpoint(id);if(!ep||amount<=0)return 0;if(ep.kind==='source'){if(ep.obj.resource!==r)return 0;if(ep.obj.infinite)return amount;const m=Math.min(amount,ep.obj.amount||0);ep.obj.amount-=m;return m;}const have=ep.contents[r]||0,m=Math.min(amount,have);ep.contents[r]=Math.max(0,have-m);if(ep.contents[r]<.001)delete ep.contents[r];return m;}
   function putResource(id,r,amount){const ep=endpoint(id);if(!ep||amount<=0||ep.kind==='source')return 0;const m=Math.min(amount,capacityLeft(id));ep.contents[r]=(ep.contents[r]||0)+m;return m;}
   function transferResource(r,from,to,amount){const available=amountAt(from,r),room=capacityLeft(to),m=Math.max(0,Math.min(amount,available,room));if(!isFinite(m)||m<=0)return 0;return putResource(to,r,takeResource(from,r,m));}
+  function actorCanTransfer(a,fromId,toId){
+    if(!a||a.offMap)return false;
+    const fromTarget=state.sources[fromId]?{kind:'source',id:fromId}:state.containers[fromId]?{kind:'object',id:fromId}:null;
+    const toTarget=state.containers[toId]?{kind:'object',id:toId}:null;
+    if(!fromTarget||!toTarget)return false;
+    const sourceHolder=state.containers[fromId]?holderOf(fromId):null;
+    if(sourceHolder&&sourceHolder.id!==a.id)return false;
+    return SP.isAtInteraction(state,a,fromTarget)&&(a.held===toId||SP.isAtInteraction(state,a,toTarget));
+  }
   const causeKey=(endpointId,r)=>`${endpointId}|${r}`;
   function setResourceCause(endpointId,r,eventId){if(eventId)state.endpointCauses[causeKey(endpointId,r)]=eventId;else delete state.endpointCauses[causeKey(endpointId,r)];}
   function resourceCause(endpointId,r){return state.endpointCauses[causeKey(endpointId,r)]||null;}
@@ -135,7 +144,7 @@
   function applyIngestion(a,r,amount,causeIds=[]){const def=RESOURCE_TYPES[r];if(!def||amount<=0)return;if(def.hungerRelief){const[lo,hi]=def.hungerRelief;a.needs.hunger=clamp(a.needs.hunger-rand(lo,hi)*Math.min(1,amount/6));}if(def.thirstRelief){const[lo,hi]=def.thirstRelief;a.needs.thirst=clamp(a.needs.thirst-rand(lo,hi)*Math.min(1,amount/6));}if(def.intoxicationFactor){a.status.intoxication=clamp(a.status.intoxication+amount*def.intoxicationFactor+rand(1,5));const e=addEvent(`${a.name}的醉酒程度上升至 ${Math.round(a.status.intoxication)}。`,'warn',causeIds,{status:'intoxication',resource:r,value:a.status.intoxication,coordination:coordination(a)});a.causes.intoxication=e;}}
   function consumeFrom(a,fromId,r,amount,label){const taken=takeResource(fromId,r,amount);if(taken<=0)return false;const e=addEvent(`${a.name}${label}`,'good',[resourceCause(fromId,r)].filter(Boolean),{action:r==='food'?'eat':r==='water'?'drinkWater':'drinkAlcohol',resource:r,from:fromId,amount:taken,position:SP.key(a.position)});applyIngestion(a,r,taken,[e]);return true;}
   function pourIntoHeld(a,sourceId,r,difficulty=.9){
-    if(!a.held)return false;const desired=Math.min(capacityLeft(a.held),rand(9,16));if(desired<=0)return false;const pc=precisionCheck(a,difficulty,SP.floorSlipRiskAt(state,a.position)*.08);
+    if(!a.held||!actorCanTransfer(a,sourceId,a.held))return false;const desired=Math.min(capacityLeft(a.held),rand(9,16));if(desired<=0)return false;const pc=precisionCheck(a,difficulty,SP.floorSlipRiskAt(state,a.position)*.08);
     const attempt=addEvent(`${a.name}嘗試把${resourceName(r)}從${endpointName(sourceId)}倒進${endpointName(a.held)}。`,'normal',a.causes.intoxication?[a.causes.intoxication]:[],{action:'pour',resource:r,from:sourceId,to:a.held,successChance:pc.success,roll:pc.roll,coordination:pc.coord,position:SP.key(a.position)});
     if(pc.ok){const moved=transferResource(r,sourceId,a.held,desired);const e=addEvent(`${a.name}順利把${resourceName(r)}倒進${endpointName(a.held)}。`,'good',[attempt],{resource:r,from:sourceId,to:a.held,amount:moved});setResourceCause(a.held,r,e);return moved>0;}
     const available=isFinite(amountAt(sourceId,r))?Math.min(desired,amountAt(sourceId,r)):desired,kept=transferResource(r,sourceId,a.held,available*rand(.2,.55)),tileId=tileEndpointId(a.position),spilled=transferResource(r,sourceId,tileId,Math.max(0,available-kept));const f=addEvent(`${a.name}倒${resourceName(r)}時手一晃，灑掉了一部分。`,'warn',[attempt],{reason:'coordination',resource:r,amount:spilled,coordination:pc.coord,position:SP.key(a.position)});if(spilled>0)setResourceCause(tileId,r,f);return kept>0||spilled>0;
@@ -275,6 +284,7 @@
         p.wait=(p.wait||0)+1;if(p.wait===1||p.wait===4)addEvent(`${a.name}端著${endpointName(p.container)}等別人取完食物。`,'normal',[],{action:'wait',target:'mealTray'});
         if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等不到可以盛食物的機會');return;
       }
+      if(!actorCanTransfer(a,'mealTray',p.container)){releaseReservation('object:mealTray',a);abortAction(a,'沒有把餐盤帶到能盛食物的位置');return;}
       p.wait=0;const wanted=Math.min(capacityLeft(p.container),rand(7,10)),m=transferResource('food','mealTray',p.container,wanted);releaseReservation('object:mealTray',a);
       if(m<=0){abortAction(a,'沒有盛到食物');return;}
       const e=addEvent(`${a.name}把一份食物盛進${endpointName(p.container)}。`,'good',[],{action:'serveFood',from:'mealTray',to:p.container,amount:m});setResourceCause(p.container,'food',e);p.phase='chooseSeat';return;
@@ -320,6 +330,8 @@
 
   function stepDrink(a,p){
     if(a.kind==='cat'){
+      const bucketHolder=holderOf('waterBucket');
+      if(bucketHolder&&bucketHolder.id!==a.id){abortAction(a,'發現水桶正被別人拿著，暫時喝不到水');return;}
       if(p.phase==='move'){if(!moveToInteraction(a,{kind:'object',id:'waterBucket'},'去找水喝'))return;p.phase='drink';return;}
       if(p.phase==='drink'){consumeFrom(a,'waterBucket','water',rand(4,8),'低頭喝了些水。');finishAction(a,{dropHeld:false});return;}return;
     }
@@ -327,7 +339,7 @@
     if(p.phase==='toVessel'){const holder=holderOf(p.container);if(holder&&holder.id!==a.id){p.phase='chooseVessel';return;}if(!moveToInteraction(a,{kind:'object',id:p.container},`去拿${endpointName(p.container)}`))return;p.phase='take';return;}
     if(p.phase==='take'){if(!holdContainer(a,p.container)){p.phase='chooseVessel';return;}addEvent(`${a.name}拿起了${endpointName(p.container)}。`,'normal',[],{action:'takeContainer',container:p.container});p.phase=amountAt(p.container,p.resource)>=4?'drink':'toSource';return;}
     if(p.phase==='toSource'){if(p.container===p.sourceObject){p.phase='drink';return;}if(!moveToInteraction(a,{kind:state.sources[p.sourceObject]?'source':'object',id:p.sourceObject},`拿著${endpointName(p.container)}去取${resourceName(p.resource)}`))return;p.phase='fill';return;}
-    if(p.phase==='fill'){if(amountAt(p.sourceObject,p.resource)<=0){abortAction(a,`到了${endpointName(p.sourceObject)}卻發現已經沒有${resourceName(p.resource)}`);return;}pourIntoHeld(a,p.sourceObject,p.resource,p.resource==='alcohol'?1.4:.8);p.phase='drink';return;}
+    if(p.phase==='fill'){if(amountAt(p.sourceObject,p.resource)<=0){abortAction(a,`到了${endpointName(p.sourceObject)}卻發現已經沒有${resourceName(p.resource)}`);return;}if(!pourIntoHeld(a,p.sourceObject,p.resource,p.resource==='alcohol'?1.4:.8)){abortAction(a,'目前無法從來源裝取資源');return;}p.phase='drink';return;}
     if(p.phase==='drink'){if(amountAt(p.container,p.resource)<=0){p.phase='toSource';return;}const name=endpointName(p.container);consumeFrom(a,p.container,p.resource,rand(5,10),p.resource==='alcohol'?`直接從${name}喝了些酒。`:`從${name}喝了些水。`);finishAction(a);return;}
   }
 
@@ -366,9 +378,22 @@
   }
 
   function stepRefillWater(a,p){
-    if(p.phase==='toBucket'){if(!moveToInteraction(a,{kind:'object',id:'waterBucket'},'去水桶旁'))return;p.phase='toTap';return;}
-    if(p.phase==='toTap'){if(!moveToInteraction(a,{kind:'source',id:'tap'},'準備補水'))return;p.phase='fill';return;}
-    if(p.phase==='fill'){const wanted=Math.min(capacityLeft('waterBucket'),rand(18,30)),m=transferResource('water','tap','waterBucket',wanted);applyExertion(a,.7,'補充水桶');addEvent(`${a.name}替水桶補了 ${Math.round(m)} 單位的水。`,'good',[],{action:'refillWater',amount:m});finishAction(a,{dropHeld:false});return;}
+    if(p.phase==='toBucket'){
+      if(!reserve('object:waterBucket',a)){p.wait=(p.wait||0)+1;if(p.wait===1||p.wait===4)addEvent(`${a.name}想補水，但水桶正被別人使用。`,'normal',[],{action:'wait',target:'waterBucket'});if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等不到可用的水桶');return;}
+      p.wait=0;if(!moveToInteraction(a,{kind:'object',id:'waterBucket'},'去拿水桶'))return;p.phase='takeBucket';return;
+    }
+    if(p.phase==='takeBucket'){
+      if(!holdContainer(a,'waterBucket')){abortAction(a,'沒能拿起水桶');return;}
+      applyExertion(a,.16,'拿起水桶',{thirstFactor:.14,hungerFactor:.04});addEvent(`${a.name}拿起水桶，準備搬去水龍頭補水。`,'normal',[],{action:'takeBucket',container:'waterBucket',position:SP.key(a.position)});p.phase='toTap';return;
+    }
+    if(p.phase==='toTap'){
+      if(a.held!=='waterBucket'){abortAction(a,'補水途中已經沒有拿著水桶');return;}
+      if(!moveToInteraction(a,{kind:'source',id:'tap'},'把水桶搬到水龍頭'))return;p.phase='fill';return;
+    }
+    if(p.phase==='fill'){
+      if(a.held!=='waterBucket'||!actorCanTransfer(a,'tap','waterBucket')){abortAction(a,'水桶沒有在水龍頭旁可操作的位置');return;}
+      const wanted=Math.min(capacityLeft('waterBucket'),rand(18,30)),m=transferResource('water','tap','waterBucket',wanted);applyExertion(a,.7,'補充水桶');const e=addEvent(`${a.name}拿著水桶在水龍頭旁補了 ${Math.round(m)} 單位的水。`,'good',[],{action:'refillWater',from:'tap',to:'waterBucket',amount:m,position:SP.key(a.position)});if(m>0)setResourceCause('waterBucket','water',e);finishAction(a);return;
+    }
   }
   function stepRefillFood(a,p){
     if(p.phase==='toPantry'){if(!moveToInteraction(a,{kind:'object',id:'foodPantry'},'去食物櫃拿食物'))return;p.phase='take';return;}
@@ -425,7 +450,7 @@
       case'cleanFloor':return`清理地面${moveTarget}`;
       case'groom':return'舔毛清潔';
       case'wander':return`閒晃${moveTarget}`;
-      case'refillWater':return`補充水桶・${p.phase}`;
+      case'refillWater':return`補充水桶・${p.phase==='toBucket'?'去拿水桶':p.phase==='takeBucket'?'拿起水桶':p.phase==='toTap'?'搬到水龍頭':p.phase==='fill'?'補水中':p.phase}`;
       case'refillFood':return`補充現成食物・${p.phase}`;
       case'supplyFood':return`外出補給・${p.phase}`;
       default:return ZH[p.intent]||p.intent;
@@ -437,8 +462,8 @@
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`;const kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}
   function supplyStatus(){return {stock:foodStock(),trigger:state.supply.trigger,workerId:state.supply.workerId,workerName:state.agents[state.supply.workerId]?.name||null,trips:state.supply.trips,totalProduced:state.supply.totalProduced};}
 
-  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent('v11.2 初始化：Serving / Plate 已納入同一 action core；人類可端盤找座位，橘子可直接吃可接近盤子裡的食物。','system',[],{seed:state.seed});return state;}
+  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent('v11.3 初始化：水桶已納入可攜 Container 與 actor-mediated transfer contract；補水必須真的拿桶到水龍頭。','system',[],{seed:state.seed});return state;}
   reset(DEFAULT_SEED);
 
-  window.SimEngine={RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,coordination,applyExertion,restRecoveryInfo,foodStock,supplyStatus,actionLabel,planLabel:actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,reservationOwner,holderOf};
+  window.SimEngine={RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,foodStock,supplyStatus,actionLabel,planLabel:actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,reservationOwner,holderOf};
 })();
