@@ -60,7 +60,7 @@
   function createInitialState(seed=20260911){
     const n=(Number(seed)>>>0)||20260911;
     const state={
-      version:'11.2-serving-plate',tick:0,day:1,minute:12*60,seed:n,rngState:n,
+      version:'11.3-portable-water-bucket',tick:0,day:1,minute:12*60,seed:n,rngState:n,
       map:{width:WIDTH,height:HEIGHT,tiles:buildTiles(),rooms:{},roomRevision:0},
       furniture:normalizeFurniture(),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:70,workerId:null,trips:0,totalProduced:0},
@@ -69,7 +69,7 @@
         plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',capacity:12,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateA},supportId:'diningTable'},
         plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',capacity:12,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateB},supportId:'diningTable'},
         foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🧺',capacity:200,preferredResource:'food',contents:{food:140},portable:false,access:1,position:{...OBJECT_START.foodPantry}},
-        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,preferredResource:'water',contents:{water:72},portable:false,access:1,position:{...OBJECT_START.waterBucket}},
+        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,preferredResource:'water',contents:{water:72},portable:true,access:1,position:{...OBJECT_START.waterBucket}},
         cupA:{id:'cupA',name:'白色杯子',icon:'🥛',capacity:35,contents:{alcohol:20},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupA},supportId:'diningTable'},
         cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',capacity:35,contents:{},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupB},supportId:'diningTable'},
         alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',capacity:160,preferredResource:'alcohol',contents:{alcohol:120},portable:true,canDrinkFrom:true,drinkPreference:.28,position:{...OBJECT_START.alcoholBottle},supportId:'diningTable'}
