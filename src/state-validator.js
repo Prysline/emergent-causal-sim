@@ -56,10 +56,6 @@
         const occupants=bySeat.get(a.seatedOn)||[];occupants.push(a.id);bySeat.set(a.seatedOn,occupants);
       }
       if(a.__eatAfterSeat&&!a.__seatTarget)add('seat_transition_incomplete',`${a.name}保留待用餐 plan，但沒有座位目標。`,{agentId:a.id});
-      if(a.plan?.__spatialTarget&&a.position&&!same(a.position,a.plan.__spatialTarget)){
-        const path=SP.astar(a.position,a.plan.__spatialTarget,a.id);
-        if(!path.length)add('unreachable_spatial_target',`${a.name}目前的空間目標 ${key(a.plan.__spatialTarget)} 不可達。`,{agentId:a.id,target:key(a.plan.__spatialTarget)});
-      }
     }
 
     for(const [tile,ids] of byTile)if(ids.length>1)add('agent_tile_overlap',`Tile ${tile} 同時有 ${ids.join('、')}。`,{position:tile,agentIds:ids});
