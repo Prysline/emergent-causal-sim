@@ -90,6 +90,7 @@
   }
 
   document.addEventListener('click',e=>{
+    if(e.target.closest('[data-furniture]'))return;
     const entity=e.target.closest('.spatial-entity[data-entity]');if(entity){selectedTile=null;return;}
     const tile=e.target.closest('.sim-tile[data-tile]');if(!tile)return;
     e.preventDefault();e.stopImmediatePropagation();renderTileInspector(tile.dataset.tile);
