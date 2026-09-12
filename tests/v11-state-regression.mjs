@@ -95,7 +95,7 @@ E.reset(20260911);
   plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};
   const before=plate.contents.food;
   for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null,'橘子吃盤中食物時不得拿起餐盤');}
-  assert.ok(plate.contents.food<before,'橘子應能直接吃可接近餐盤裡的食物');assert.equal(cat.held,null);noIssues('cat eats nearby plate food');
+  assert.ok((plate.contents.food||0)<before,'橘子應能直接吃可接近餐盤裡的食物');assert.equal(cat.held,null);noIssues('cat eats nearby plate food');
 }
 
 E.reset(20260911);
