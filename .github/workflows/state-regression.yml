@@ -11,4 +11,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node tests/state-regression.mjs
+      - run: node tests/v11-state-regression.mjs
