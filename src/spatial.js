@@ -103,14 +103,14 @@
   function occupantsAt(st,x,y,exceptId=null){return Object.values(st.agents).filter(a=>a.id!==exceptId&&a.position?.x===x&&a.position?.y===y)}
   function tileLiquidAmount(tile){return Object.entries(tile?.contents||{}).reduce((sum,[r,v])=>sum+(E.RESOURCE_TYPES[r]?.phase==='liquid'?v:0),0)}
   function tileCost(st,tile,a){
-    const wet=tileLiquidAmount(tile);
-    return 1+wet*(a?.kind==='cat'?.015:.07);
+    const wet=tileLiquidAmount(tile),occupied=occupantsAt(st,tile.x,tile.y,a?.id).length;
+    const crowding=occupied*(a?.kind==='cat'?2.5:5);
+    return 1+wet*(a?.kind==='cat'?.015:.07)+crowding;
   }
   function neighbors(st,p,a){
     const out=[];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const x=p.x+dx,y=p.y+dy,t=tileAt(st,x,y);
       if(!t||!t.walkable)continue;
-      if(occupantsAt(st,x,y,a?.id).length)continue;
       out.push({x,y});
     }return out;
   }
@@ -141,7 +141,8 @@
       if(t?.walkable&&!occupantsAt(st,t.x,t.y,a.id).length&&astar(st,a.position,t,a).length)return clonePos(p.__spatialGoal);
     }
     const anchor=st.spatial.zoneAnchors[zone]||{x:0,y:0};
-    const list=zoneTiles(st,zone).filter(t=>!occupantsAt(st,t.x,t.y,a.id).length&&astar(st,a.position,t,a).length).sort((u,v)=>{
+    const list=zoneTiles(st,zone).filter(t=>astar(st,a.position,t,a).length).sort((u,v)=>{
+      const ou=occupantsAt(st,u.x,u.y,a.id).length,ov=occupantsAt(st,v.x,v.y,a.id).length;if(ou!==ov)return ou-ov;
       const au=manhattan(u,anchor),av=manhattan(v,anchor);if(au!==av)return au-av;
       return pathDistance(st,a,u)-pathDistance(st,a,v);
     });
@@ -153,11 +154,11 @@
     if(!targetPos)return null;
     const cands=[];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const x=targetPos.x+dx,y=targetPos.y+dy,t=tileAt(st,x,y);
-      if(!t?.walkable||occupantsAt(st,x,y,a.id).length)continue;
+      if(!t?.walkable)continue;
       const path=astar(st,a.position,{x,y},a);if(!path.length)continue;
-      cands.push({x,y,distance:path.length-1});
+      cands.push({x,y,distance:path.length-1,occupied:occupantsAt(st,x,y,a.id).length});
     }
-    cands.sort((u,v)=>u.distance-v.distance);
+    cands.sort((u,v)=>u.occupied-v.occupied||u.distance-v.distance);
     return cands[0]?{x:cands[0].x,y:cands[0].y}:null;
   }
   function wettestTile(st,zone=null){
