@@ -44,7 +44,7 @@
         if(!c)add('held_missing_container',`${a.name}持有不存在的容器 ${a.held}。`,{agentId:a.id});
         else{
           if(c.heldBy!==a.id)add('held_owner_mismatch',`${a.name}.held=${a.held}，但容器 heldBy=${c.heldBy||'null'}。`,{agentId:a.id,containerId:a.held});
-          if(c.position&&!same(c.position,a.position))add('held_position_mismatch',`${c.name}被${a.name}持有，但座標不同。`,{agentId:a.id,containerId:c.id});
+          if(c.position&&!same(c.position,a.position))add('held_position_mismatch',`${c.name}被${a.name}持有，但杯子在 ${key(c.position)}、角色在 ${key(a.position)}；plan=${a.plan?.intent||'none'}/${a.plan?.phase||'none'}。`,{agentId:a.id,containerId:c.id,containerPosition:key(c.position),agentPosition:key(a.position),intent:a.plan?.intent||null,phase:a.plan?.phase||null});
         }
       }
       if(a.carrying&&(!Number.isFinite(a.carrying.amount)||a.carrying.amount<=0))add('invalid_carrying',`${a.name}的搬運數量無效。`,{agentId:a.id});
