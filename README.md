@@ -2,9 +2,9 @@
 
 湧現式因果模擬器。用少量可組合規則觀察角色、物件、資源與環境如何自行形成因果鏈。
 
-目前版本：**v11.3・Portable Water Bucket**。
+目前版本：**v11.4・Carry Load / Resource Weight**。
 
-> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 起在這個 core 上重新增加玩法。v11.3 進一步要求由角色主動進行的資源轉移符合實際 interaction／持有關係，不再允許站在來源旁遠端改寫另一個容器。
+> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 起在這個 core 上重新增加玩法。v11.3 把角色主動資源轉移納入物理 interaction contract；v11.4 再把手持 Container 與抽象搬運 Resource 收斂成同一套即時負重計算。
 
 ## 核心方向
 
@@ -18,6 +18,52 @@ Activity Area      = 未來可選用途 overlay，不提供環境魔法加成
 ```
 
 舊版六個 `Zone` 不再負責噪音、休息品質、是否抵達物件或行動 prerequisite。局部環境由真正的 Tile、家具、液體、角色與噪音事件決定。
+
+## v11.4：Carry Load / Resource Weight
+
+負重使用內部的「負重單位」，不是公斤。重量完全由現行資料即時計算，不另外儲存會失同步的 `currentLoad`。
+
+```text
+Resource.loadPerUnit
+Container.emptyLoad
+
+containerLoad(container)
+= emptyLoad
++ Σ(contents amount × Resource.loadPerUnit)
+
+carriedResourceLoad(agent.carrying)
+= amount × Resource.loadPerUnit
+
+effectiveCarryLoad(agent)
+= held Container load
++ carrying Resource load
+```
+
+因此同一套規則會自然涵蓋：
+
+```text
+空水桶 < 滿水桶
+空餐盤 < 裝食物的餐盤
+搬 10 單位食物 < 搬 40 單位食物
+```
+
+`moveToward()` 不再分別判斷「有沒有 held」與「有沒有 carrying」，只讀 `effectiveCarryLoad()` 並把負重轉成額外 movement exertion。舊的 `carrying.amount * .0015` 專用公式與固定 held surcharge 已移除。
+
+所以現在可以形成：
+
+```text
+搬更多資源／容器內容增加
+→ effectiveCarryLoad 上升
+→ 同距離步行活動成本上升
+→ fatigue / thirst / hunger 透過既有 applyExertion 鏈條受影響
+→ 後續休息、喝水與其他需求決策改變
+```
+
+Inspector 會顯示 Agent 的「目前負重」、Container 的「空重／目前負重」，最近一次負重步行的 exertion 也會帶當時負重。
+
+目前 `Agent.carrying` 仍可代表抽象搬運中的資源，例如從 pantry 搬食物、外出補給帶食物回家；這是暫時物流表示，但它現在和手持 Container 共用完全相同的重量來源與步行成本。未來若改成籃子／箱子等真正物流 Container，可直接沿用 `containerLoad()`，不需要另一套重量系統。
+
+本版刻意**沒有**加入力量值、硬負重上限、超重禁止搬運、移動速度下降或背包 inventory。
 
 ## v11.3：Portable Water Bucket / Physical Transfer
 
@@ -36,29 +82,13 @@ Activity Area      = 未來可選用途 overlay，不提供環境魔法加成
 
 同時加入 actor-mediated resource transfer contract：角色主動把資源從 A 轉到 B 時，角色必須能實際操作來源，而且目的 Container 必須在角色手上，或本身位於角色可直接操作的位置。若來源 Container 正被別人拿著，也不能直接從對方手上的容器抽取資源。
 
-這條規則現在共用於：
-
-- 水龍頭 → 手持容器
-- 水龍頭 → 手持水桶
-- 現成食物 → 手持餐盤
-
-`transferResource()` 本身仍保留為底層物理 primitive，供灑出等不是「角色主動操作兩端」的資源轉移使用。
-
-因此以下狀況現在會被拒絕：
-
-```text
-角色只站在水龍頭旁
-＋ 水桶仍在別處／沒有拿在手上
-→ 不得增加水桶水量
-```
+這條規則現在共用於水龍頭 → 手持容器、水龍頭 → 手持水桶、現成食物 → 手持餐盤。`transferResource()` 本身仍保留為底層物理 primitive，供灑出等不是「角色主動操作兩端」的資源轉移使用。
 
 水桶改為可攜後，橘子也不會直接喝正在被其他角色拿在手上的水桶。
 
 ## v11.2：Serving / Plate
 
-用餐現在不再把「食物來源」和「實際吃飯位置」綁在同一個 interaction point。
-
-人類一般用餐流程：
+用餐不再把「食物來源」和「實際吃飯位置」綁在同一個 interaction point。
 
 ```text
 想吃東西
@@ -67,38 +97,22 @@ Activity Area      = 未來可選用途 overlay，不提供環境魔法加成
 → 到現成食物旁盛一份
 → 找座位
    ├ 餐椅優先
-   ├ 餐椅不可用時可選其他可坐家具（例如沙發）
+   ├ 餐椅不可用時可選其他可坐家具
    └ 沒有合適座位時站著吃
 → 吃完
 → 空盤留在實際用餐位置
 ```
 
-餐盤本身只是普通 portable Container：
+餐盤是普通 portable Container，具有 `servingDish / canEatFrom / contents.food`。橘子不會主動拿餐盤，但會直接吃可接近、仍有食物且沒有被別人持有的容器內容。人類非常餓或沒有可用餐盤時仍可直接吃。
 
-```text
-servingDish: true
-canEatFrom: true
-contents.food
-```
-
-因此盤子不會自動回餐桌。角色在哪裡吃完，盤子就留在哪裡；未來其他角色可以受到盤子位置與內容物影響。
-
-橘子不會主動拿餐盤，但會把任何 **可直接進食且仍裝有食物、沒有被別人拿在手上** 的容器視為食物來源。因此人類留下的盤中食物，橘子可以就近跑去吃。
-
-保留的 fallback：
-
-- 人類非常餓時可以直接在食物來源旁吃，不強迫先找盤子。
-- 沒有可用餐盤時仍可直接吃。
-- 橘子始終直接吃來源，不會進入拿盤／盛盤流程。
-
-同時，家庭食物總量改為統計所有 Container 中的 `food`，避免食物從 `mealTray` 轉進餐盤後被誤判成庫存消失。
+家庭食物總量統計所有 Container 的 `contents.food`，避免食物從 `mealTray` 轉進餐盤後被誤判成庫存消失。
 
 ## v11 / v11.1 核心狀態
 
-- 12×8 Tile map 加入實體邊界牆與大門。
+- 12×8 Tile map 有實體邊界牆與大門。
 - Room 由 floor topology 自動 flood fill；目前小屋自然形成一個主室。
-- `zone.baseNoise` / `zone.restQuality` 已移除；改用 `noiseAt(position)`、`comfortAt(position)`。
-- 所有互動只看合法 interaction position，不再要求 Agent 與物件 `location` 相同。
+- `zone.baseNoise / zone.restQuality` 已移除；改用 `noiseAt(position) / comfortAt(position)`。
+- 所有互動只看合法 interaction position，不要求 Agent 與物件 `location` 相同。
 - 角色只有 `action`，每 tick 最多移動一格或推進一個 phase。
 - `posture` 是正式 state：`standing / sitting / lying`。
 - 家具 footprint 與 slot 分離；雙人沙發可同時容納兩名角色。
@@ -128,7 +142,7 @@ docs/
 └─ architecture.md
 ```
 
-歷史 patch layer（`action-guard.js`、`recovery.js`、`supply.js`、`seating.js`、`rest-surface.js`、各 UI enhancer 等）已從現行 tree 移除，仍可由 Git history 追溯。
+歷史 patch layer 已從現行 tree 移除，仍可由 Git history 追溯。
 
 ## 現有行為
 
@@ -137,6 +151,7 @@ docs/
 - 食物、水、酒與通用容器
 - Serving / Plate 與可攜餐盤
 - 可攜水桶與 actor-mediated resource transfer
+- Resource / Container Carry Load 與負重 exertion
 - 橘子可直接吃盤中食物，但不拿盤子
 - 酒瓶可直接喝，杯子仍具較高偏好
 - A* Tile movement 與 soft crowding
@@ -176,13 +191,15 @@ Regression 包含：
 - 貓休息 posture
 - 雙人沙發 slot
 - soft co-location
-- 人類盛盤 → 找座位 → 吃完 → 空盤留在用餐位置
-- 拿餐盤後可使用餐桌右側座位，不再受 `mealTray` 單點限制
-- 橘子可吃盤中食物，但 `held` 必須保持空
-- 沒有餐盤／非常餓時直接吃 fallback
+- 盛盤、右側餐椅、橘子吃盤中食物與直接吃 fallback
 - 補水必須實際拿起水桶並搬到水龍頭
-- 未持有水桶時不得在水龍頭旁遠端增加水量
+- 未持有水桶時不得遠端增加水量
 - 橘子不能喝正在被別人持有的水桶
+- **同角色同路程：滿水桶 exertion > 空水桶**
+- **搬 40 單位食物 exertion > 搬 10 單位食物**
+- Container 內容量改變後 `containerLoad()` 立即跟著改變，且沒有 cached `currentLoad`
+- `effectiveCarryLoad = held Container + carrying Resource`
+- 舊 `carrying.amount * .0015` 專用公式不得回流
 - supply 必須實際走到 pantry 才入庫
 - A* unreachable → `[]`
 - offMap 社交目標強烈中斷
@@ -190,12 +207,11 @@ Regression 包含：
 
 ## 下一步候選
 
-1. **Sleep / Bed**：在現有 Rest Surface 上加入較強 commitment、睡眠需求與 wake conditions。
-2. **Room topology**：加入真正隔間牆、可開關門，測試噪音／未來溫度跨 Room 傳播。
-3. **Dish lifecycle / cleanup**：盤子已可被留在任意位置；是否加入收盤、清洗、髒污，等實際觀察後再決定。
-4. **Activity Area**：只有在需要制度化用途時才新增。
-5. **Material / Quality**：讓家具與 Room value 有更完整的材質／品質來源。
-6. **經濟系統**：等工作與物資閉環成熟後再決定是否加入貨幣。
+1. **Sleep / Bed**：在現有 Rest Surface、posture、fatigue 與 Carry Load 形成的活動成本上，加入較強 commitment、睡眠需求與 wake conditions。
+2. **Logistics Container**：目前搬 pantry／外出補給食物仍使用抽象 `carrying`；未來若要增加籃子、箱子、掉落、容量與放置，可轉成真正 Container，而不重做重量系統。
+3. **Room topology**：加入真正隔間牆、可開關門，測試噪音／未來溫度跨 Room 傳播。
+4. **Dish lifecycle / cleanup**：收盤、清洗、髒污與餐具循環。
+5. **Activity Area / Material / Quality / Economy**：等底層生活與物流閉環更成熟後再決定。
 
 `interaction commitment strength / maxDistance / interruptPriority` 仍保留為未來 memo。
 
