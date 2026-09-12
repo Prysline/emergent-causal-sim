@@ -1,0 +1,35 @@
+/* v10.1 spatial correctness + readability */
+.action-board{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+.action-card{min-width:0;overflow:hidden}
+.action-top{min-width:0}.action-top>div:last-child{min-width:0}
+.action-name,.action-location,.action-now{overflow-wrap:anywhere;word-break:break-word}
+.action-now{display:block;min-width:0}
+.effort-inline{float:none;display:block;margin:4px 0 0;color:var(--muted);font-size:10px}
+.need-strip{min-width:0}.need-pill{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Human identity colors: keep the same icon but give each person a stable visual accent. */
+.action-card[data-entity="agent:zhen"]{border-color:#4f7f9e;box-shadow:inset 3px 0 0 rgba(111,188,235,.72)}
+.action-card[data-entity="agent:zhou"]{border-color:#8b6f43;box-shadow:inset 3px 0 0 rgba(225,171,87,.72)}
+.action-card[data-entity="agent:zhen"] .avatar{background:rgba(91,166,211,.16);outline:1px solid rgba(111,188,235,.38);border-radius:8px;padding:2px 5px}
+.action-card[data-entity="agent:zhou"] .avatar{background:rgba(211,158,76,.14);outline:1px solid rgba(225,171,87,.36);border-radius:8px;padding:2px 5px}
+.entity-chip[data-entity="agent:zhen"]{border-color:#527d99;background:#1a2b35}
+.entity-chip[data-entity="agent:zhou"]{border-color:#826b47;background:#30281d}
+.spatial-entity[data-entity="agent:zhen"]{border-radius:999px;outline:2px solid rgba(99,190,238,.85);outline-offset:1px;background:rgba(60,124,160,.18)}
+.spatial-entity[data-entity="agent:zhou"]{border-radius:999px;outline:2px solid rgba(230,174,85,.86);outline-offset:1px;background:rgba(153,104,39,.18)}
+
+/* Furniture is quieter than agents, but spatially legible. */
+.sim-tile.has-furniture{position:relative}
+.sim-tile.furniture-table{background:#1d1916;box-shadow:inset 0 0 0 1px rgba(188,145,93,.13)}
+.sim-tile.furniture-chair{background:#171d20;box-shadow:inset 0 0 0 1px rgba(165,183,194,.08)}
+.sim-tile.furniture-sofa{background:#171a20;box-shadow:inset 0 0 0 1px rgba(158,136,194,.12)}
+.sim-tile.furniture-door{background:#171512;box-shadow:inset 0 0 0 1px rgba(201,164,103,.18)}
+.furniture-marker{position:absolute;left:2px;bottom:1px;z-index:2;font-size:11px;line-height:1;opacity:.58;cursor:pointer;filter:grayscale(.15)}
+.furniture-marker:hover{opacity:1;transform:scale(1.08)}
+.sim-tile.furniture-door .furniture-marker{left:50%;bottom:50%;transform:translate(-50%,50%);font-size:17px;opacity:.82}
+.sim-tile.furniture-door .furniture-marker:hover{transform:translate(-50%,50%) scale(1.08)}
+.tile-furniture-name{position:absolute;left:2px;bottom:1px;z-index:1;font-size:7px;color:rgba(235,222,203,.3);pointer-events:none}
+
+@media(max-width:720px){
+  .action-board{grid-template-columns:1fr}
+  .need-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
