@@ -10,14 +10,25 @@
     if(a.traits.exertionSensitivity==null)a.traits.exertionSensitivity=a.kind==='cat'?.90:1;
     if(a.traits.recoveryRate==null)a.traits.recoveryRate=a.kind==='cat'?1.10:1;
   }
+  function surfaceRecoveryInfo(a){
+    if(a.kind!=='human')return {surfaceMultiplier:1,surfaceKind:'natural',slot:null,furniture:null};
+    const F=window.SimFurniture,slot=a.seatSlot&&F?.getSlot?.(a.seatSlot),f=slot&&F?.get?.(slot.furnitureId);
+    if(slot?.canRest){
+      const quality=slot.restQuality??f?.restQuality??0;
+      return {surfaceMultiplier:clamp(.90+quality*.25,.9,1.15),surfaceKind:'seat',slot,furniture:f};
+    }
+    return {surfaceMultiplier:.72,surfaceKind:'standing',slot:null,furniture:null};
+  }
   function restRecoveryInfo(a,zoneId=a.location){
     ensureTraits(a);
     const st=E.getState(),zone=st.zones[zoneId];
     const noise=E.zoneNoise(zoneId), restQuality=zone?.restQuality||0;
-    const restEfficiency=clamp(.35+(restQuality/30)*.65-(noise/40)*.35,.18,1.20);
+    const baseEfficiency=clamp(.35+(restQuality/30)*.65-(noise/40)*.35,.18,1.20);
+    const surface=surfaceRecoveryInfo(a);
+    const restEfficiency=clamp(baseEfficiency*surface.surfaceMultiplier,.12,1.30);
     const recoveryRate=a.traits.recoveryRate??1;
     const recovery=3.2*restEfficiency*recoveryRate;
-    return {recovery,restEfficiency,recoveryRate,noise,restQuality};
+    return {recovery,restEfficiency,baseEfficiency,surfaceMultiplier:surface.surfaceMultiplier,surfaceKind:surface.surfaceKind,slotId:surface.slot?.id||null,furnitureId:surface.furniture?.id||null,recoveryRate,noise,restQuality};
   }
   function prepareState(st){for(const a of Object.values(st.agents)){ensureTraits(a);delete a.__recoverySession;}}
   function patchResetEvent(st){
@@ -64,7 +75,7 @@
         a.needs.fatigue=clamp(prev.fatigue-info.recovery);
         if(session.ticks===1){
           const ev=next.events.find(e=>e.data?.action==='rest'&&e.data?.location===a.location&&e.text.includes(a.name));
-          if(ev)Object.assign(ev.data,{recoveryRate:info.recoveryRate,restEfficiency:info.restEfficiency,recovery:info.recovery});
+          if(ev)Object.assign(ev.data,{recoveryRate:info.recoveryRate,restEfficiency:info.restEfficiency,recovery:info.recovery,surfaceMultiplier:info.surfaceMultiplier,surfaceKind:info.surfaceKind,slot:info.slotId,furniture:info.furnitureId});
         }
         p.restTicks=session.ticks;
         if(a.needs.fatigue<=session.targetFatigue||session.ticks>=24){
