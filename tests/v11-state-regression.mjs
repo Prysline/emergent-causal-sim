@@ -16,6 +16,9 @@ E.reset(20260911);
   assert.equal(Object.keys(st.map.rooms).length,1,'目前單一封閉室內應自動推導成一個 Room');
   assert.ok(Object.values(st.map.tiles).some(t=>t.terrain==='wall'));
   assert.equal(st.map.tiles['0,6'].terrain,'doorway');
+  assert.equal(st.containers.plateA.servingDish,true);assert.equal(st.containers.plateA.canEatFrom,true);
+  assert.equal(st.containers.plateB.servingDish,true);assert.equal(st.containers.plateB.canEatFrom,true);
+  assert.equal(st.containers.mealTray.canEatFrom,true);
   noIssues('initial contract');
 }
 
@@ -63,11 +66,43 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou,slot=SP.getSlot(st,'chairNW:seat');
-  a.position={...slot.position};a.posture={kind:'sitting',slotId:slot.id,furnitureId:slot.furnitureId};
-  b.position={x:4,y:3};b.needs.hunger=55;b.action={intent:'eat',phase:'prepare',targetObject:'mealTray',started:st.tick,wait:0};
-  E.tick();assert.equal(b.action.phase,'toFood','能碰到 mealTray 的座位被占用時應允許站著吃');
-  assert.ok(!Object.entries(st.reservations).some(([k,v])=>k.startsWith('slot:')&&v===b.id),'站著吃不應留下座位預約');noIssues('standing meal fallback');
+  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  const trayBefore=st.containers.mealTray.contents.food;a.needs.hunger=60;a.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};
+  for(let i=0;i<40&&a.action;i++)E.tick();
+  assert.equal(a.action,null,'一般人類用餐流程應可完整結束');
+  const serve=st.events.find(e=>e.data?.action==='serveFood');assert.ok(serve,'一般人類應先把食物盛入餐盤');
+  const plate=st.containers[serve.data.to];assert.equal(plate.servingDish,true);assert.equal(plate.contents.food||0,0,'吃完後餐盤應為空');
+  assert.ok(st.containers.mealTray.contents.food<trayBefore,'盛盤必須真的從現成食物轉移資源');
+  assert.equal(a.held,null,'吃完應把餐盤留在用餐位置');assert.ok(SP.same(plate.position,a.position),'空盤應留在角色吃完的位置');
+  assert.equal(a.posture.kind,'sitting','有空座位時人類應優先坐著吃');noIssues('human serving plate meal');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou,plate=st.containers.plateA;
+  st.agents.orange.offMap=true;
+  const nw=SP.getSlot(st,'chairNW:seat');b.position={...nw.position};b.posture={kind:'sitting',slotId:nw.id,furnitureId:nw.furnitureId};
+  st.reservations['slot:chairSW:seat']='zhou';
+  a.position={x:4,y:2};a.held='plateA';delete plate.supportId;plate.position={...a.position};plate.contents={food:8};a.action={intent:'eat',phase:'chooseSeat',container:'plateA',started:st.tick,wait:0};
+  E.tick();assert.equal(a.action.phase,'toSeat');assert.ok(['chairNE:seat','chairSE:seat'].includes(a.action.slotId),'拿著餐盤後應能選擇餐桌右側座位，不再受 mealTray 單點限制');
+  delete st.reservations['slot:chairSW:seat'];noIssues('plate decouples meal seat from tray');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),cat=st.agents.orange,plate=st.containers.plateA;
+  st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.containers.mealTray.contents.food=0;
+  plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};
+  const before=plate.contents.food;
+  for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null,'橘子吃盤中食物時不得拿起餐盤');}
+  assert.ok(plate.contents.food<before,'橘子應能直接吃可接近餐盤裡的食物');assert.equal(cat.held,null);noIssues('cat eats nearby plate food');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  st.containers.plateA.servingDish=false;st.containers.plateB.servingDish=false;a.needs.hunger=90;a.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};
+  E.tick();assert.equal(a.action.phase,'toDirectFood','非常餓或沒有可用餐盤時仍應保留直接吃的 fallback');assert.equal(a.held,null);noIssues('direct meal fallback');
 }
 
 E.reset(20260911);
@@ -111,4 +146,4 @@ E.reset(20260911);
   assert.ok(css.includes('.slot-row{display:grid;grid-template-columns:minmax(0,1fr) auto;'),'Furniture slot Inspector 應使用可收縮的兩欄 layout');
   assert.ok(!css.includes('grid-template-columns:minmax(70px,1fr) 70px minmax(90px,1fr) minmax(90px,1fr)'),'不得恢復會讓 360px Inspector 爆版的四欄最小寬度');
 }
-console.log('v11-state-regression: ok');
+console.log('v11.2-state-regression: ok');
