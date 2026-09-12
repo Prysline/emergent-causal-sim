@@ -19,19 +19,33 @@
 
   function syncPosture(st){
     for(const a of Object.values(st.agents||{})){
-      if(a.seatedOn){
-        const seat=st.furniture?.[a.seatedOn];
-        const valid=!!seat?.footprint?.some(p=>same(p,a.position));
-        if(valid){a.posture={kind:'sitting',furnitureId:a.seatedOn};continue;}
+      if(a.seatSlot){
+        const slot=F.getSlot(a.seatSlot);
+        const valid=!!slot?.position&&same(slot.position,a.position);
+        if(valid){
+          a.seatedOn=slot.furnitureId;
+          a.posture={kind:'sitting',furnitureId:slot.furnitureId,slotId:slot.id};
+          continue;
+        }
+        delete a.seatSlot;
+        delete a.seatedOn;
+      }else if(a.seatedOn){
+        const slot=F.slotsForFurniture(a.seatedOn).find(s=>same(s.position,a.position));
+        if(slot){
+          a.seatSlot=slot.id;
+          a.posture={kind:'sitting',furnitureId:slot.furnitureId,slotId:slot.id};
+          continue;
+        }
+        delete a.seatedOn;
       }
-      if(a.posture?.kind!=='lying')a.posture={kind:'standing',furnitureId:null};
+      if(a.posture?.kind!=='lying')a.posture={kind:'standing',furnitureId:null,slotId:null};
     }
   }
 
   function validateState(st=E.getState()){
     const issues=[];
     const add=(code,message,data={})=>issues.push({code,message,...data});
-    const byTile=new Map(),bySeat=new Map();
+    const byTile=new Map(),bySlot=new Map(),reservedSlots=new Map();
 
     for(const a of Object.values(st.agents||{})){
       if(!a.position){add('agent_position_missing',`${a.name}沒有 Tile 座標。`,{agentId:a.id});continue;}
@@ -50,18 +64,31 @@
       }
       if(a.carrying&&(!Number.isFinite(a.carrying.amount)||a.carrying.amount<=0))add('invalid_carrying',`${a.name}的搬運數量無效。`,{agentId:a.id});
 
-      if(a.seatedOn){
-        const seat=st.furniture?.[a.seatedOn];
-        if(!seat)add('seat_missing',`${a.name}坐在不存在的家具 ${a.seatedOn}。`,{agentId:a.id});
-        else if(!seat.footprint?.some(p=>same(p,a.position)))add('seat_position_mismatch',`${a.name}標記坐在${seat.name}，但不在其 footprint。`,{agentId:a.id,furnitureId:seat.id});
-        const occupants=bySeat.get(a.seatedOn)||[];occupants.push(a.id);bySeat.set(a.seatedOn,occupants);
+      if(a.seatSlot){
+        const slot=F.getSlot(a.seatSlot);
+        if(!slot)add('slot_missing',`${a.name}使用不存在的座位 slot ${a.seatSlot}。`,{agentId:a.id,slotId:a.seatSlot});
+        else{
+          if(!same(slot.position,a.position))add('slot_position_mismatch',`${a.name}標記使用 ${slot.id}，但角色不在該 slot 座標。`,{agentId:a.id,slotId:slot.id});
+          if(a.seatedOn!==slot.furnitureId)add('slot_furniture_mismatch',`${a.name}.seatedOn=${a.seatedOn||'null'}，但 ${slot.id} 屬於 ${slot.furnitureId}。`,{agentId:a.id,slotId:slot.id,furnitureId:slot.furnitureId});
+          const occupants=bySlot.get(slot.id)||[];occupants.push(a.id);bySlot.set(slot.id,occupants);
+        }
+      }else if(a.seatedOn){
+        add('seat_slot_missing',`${a.name}標記坐在 ${a.seatedOn}，但沒有 seatSlot。`,{agentId:a.id,furnitureId:a.seatedOn});
       }
-      if(a.__eatAfterSeat&&!a.__seatTarget)add('seat_transition_incomplete',`${a.name}保留待用餐 plan，但沒有座位目標。`,{agentId:a.id});
+
+      if(a.__slotTarget){
+        const slot=F.getSlot(a.__slotTarget);
+        if(!slot)add('reserved_slot_missing',`${a.name}預約不存在的 slot ${a.__slotTarget}。`,{agentId:a.id,slotId:a.__slotTarget});
+        else{const ids=reservedSlots.get(slot.id)||[];ids.push(a.id);reservedSlots.set(slot.id,ids);}
+      }
+      if(a.__eatAfterSeat&&!a.__slotTarget)add('seat_transition_incomplete',`${a.name}保留待用餐 plan，但沒有座位 slot 目標。`,{agentId:a.id});
+      if(a.__restAfterSlot&&!a.__slotTarget)add('rest_slot_transition_incomplete',`${a.name}保留待休息 plan，但沒有休息 slot 目標。`,{agentId:a.id});
     }
 
     const crowdingTiles=[];
     for(const [tile,ids] of byTile)if(ids.length>1)crowdingTiles.push({position:tile,agentIds:[...ids],count:ids.length});
-    for(const [seat,ids] of bySeat)if(ids.length>1)add('seat_double_occupied',`${seat} 同時被 ${ids.join('、')} 標記占用。`,{furnitureId:seat,agentIds:ids});
+    for(const [slot,ids] of bySlot)if(ids.length>1)add('slot_double_occupied',`${slot} 同時被 ${ids.join('、')} 占用。`,{slotId:slot,agentIds:ids});
+    for(const [slot,ids] of reservedSlots)if(ids.length>1)add('slot_double_reserved',`${slot} 同時被 ${ids.join('、')} 預約。`,{slotId:slot,agentIds:ids});
 
     for(const c of Object.values(st.containers||{}))if(c.heldBy){
       const a=st.agents?.[c.heldBy];
