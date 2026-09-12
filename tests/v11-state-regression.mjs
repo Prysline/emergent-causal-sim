@@ -12,6 +12,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
+  assert.equal(st.version,'11.4-carry-load');
   assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);
   assert.equal(Object.keys(st.map.rooms).length,1,'目前單一封閉室內應自動推導成一個 Room');
   assert.ok(Object.values(st.map.tiles).some(t=>t.terrain==='wall'));
@@ -20,6 +21,9 @@ E.reset(20260911);
   assert.equal(st.containers.plateB.servingDish,true);assert.equal(st.containers.plateB.canEatFrom,true);
   assert.equal(st.containers.mealTray.canEatFrom,true);
   assert.equal(st.containers.waterBucket.portable,true,'v11.3 水桶必須是可攜 Container');
+  assert.ok(E.RESOURCE_TYPES.water.loadPerUnit>0&&E.RESOURCE_TYPES.food.loadPerUnit>0,'資源必須具有通用 loadPerUnit');
+  assert.ok(st.containers.waterBucket.emptyLoad>0&&st.containers.plateA.emptyLoad>0,'可攜容器必須具有 emptyLoad');
+  assert.equal(st.containers.waterBucket.currentLoad,undefined,'不得儲存需要同步的 currentLoad 快取');
   noIssues('initial contract');
 }
 
@@ -34,6 +38,39 @@ E.reset(20260911);
   const st=E.getState(),a=st.agents.zhen,start={...a.position};
   a.action={intent:'wander',phase:'move',started:st.tick,targetTile:{x:2,y:5},wait:0};E.tick();
   assert.equal(Math.abs(a.position.x-start.x)+Math.abs(a.position.y-start.y),1,'一個 tick 最多移動一格');noIssues('atomic movement');
+}
+
+function oneStepLoadCase({water=null,foodCarry=null}){
+  E.reset(12345);
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;
+  st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  a.position={x:2,y:5};a.metrics.exertionToday=0;a.held=null;a.carrying=null;
+  if(water!==null){bucket.contents={water};bucket.position={...a.position};a.held='waterBucket';}
+  if(foodCarry!==null)a.carrying={resource:'food',amount:foodCarry};
+  a.action={intent:'wander',phase:'move',targetTile:{x:3,y:5},started:st.tick,wait:0};
+  E.tick();
+  return {exertion:a.metrics.exertionToday,load:a.metrics.lastExertion?.load||0};
+}
+{
+  const empty=oneStepLoadCase({water:0}),full=oneStepLoadCase({water:100});
+  assert.ok(full.load>empty.load,'滿水桶的即時負重必須高於空水桶');
+  assert.ok(full.exertion>empty.exertion,'相同角色與路程下，滿水桶必須造成更多活動量');
+}
+{
+  const light=oneStepLoadCase({foodCarry:10}),heavy=oneStepLoadCase({foodCarry:40});
+  assert.ok(heavy.load>light.load,'抽象搬運較多食物時負重必須較高');
+  assert.ok(heavy.exertion>light.exertion,'抽象搬運較多食物時相同步行必須更耗力');
+}
+E.reset(20260911);
+{
+  const st=E.getState(),bucket=st.containers.waterBucket;
+  bucket.contents={};const empty=E.containerLoad('waterBucket');
+  E.transferResource('water','tap','waterBucket',20);const filled=E.containerLoad('waterBucket');
+  assert.ok(filled>empty,'內容物增加後 containerLoad 必須即時計算變重');
+  assert.equal(bucket.currentLoad,undefined,'重量不得另存 cached currentLoad');
+  const a=st.agents.zhen;a.held='plateA';st.containers.plateA.contents={food:10};a.carrying={resource:'food',amount:20};
+  assert.ok(Math.abs(E.effectiveCarryLoad(a)-(E.containerLoad('plateA')+E.carriedResourceLoad(a.carrying)))<1e-9,'held 與 carrying 必須共用同一 total carry load');
+  noIssues('derived carry load');
 }
 
 E.reset(20260911);
@@ -167,5 +204,7 @@ E.reset(20260911);
   const css=fs.readFileSync(new URL('../styles/app.css',import.meta.url),'utf8');
   assert.ok(css.includes('.slot-row{display:grid;grid-template-columns:minmax(0,1fr) auto;'),'Furniture slot Inspector 應使用可收縮的兩欄 layout');
   assert.ok(!css.includes('grid-template-columns:minmax(70px,1fr) 70px minmax(90px,1fr) minmax(90px,1fr)'),'不得恢復會讓 360px Inspector 爆版的四欄最小寬度');
+  const engine=fs.readFileSync(new URL('../src/engine.js',import.meta.url),'utf8');
+  assert.ok(!engine.includes('(a.carrying.amount||0)*.0015'),'不得恢復舊 carrying.amount 專用移動成本公式');
 }
-console.log('v11.3-state-regression: ok');
+console.log('v11.4-state-regression: ok');

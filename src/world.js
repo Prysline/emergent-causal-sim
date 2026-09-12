@@ -1,16 +1,16 @@
 (() => {
   const WIDTH=12,HEIGHT=8;
   const RESOURCE_TYPES={
-    food:{id:'food',name:'食物',icon:'🍲',phase:'solid',edible:true,hungerRelief:[18,30],evaporation:0},
-    water:{id:'water',name:'水',icon:'💧',phase:'liquid',drinkable:true,thirstRelief:[18,31],evaporation:.07},
-    alcohol:{id:'alcohol',name:'酒',icon:'🍺',phase:'liquid',drinkable:true,thirstRelief:[8,17],intoxicationFactor:1.35,evaporation:.11}
+    food:{id:'food',name:'食物',icon:'🍲',phase:'solid',edible:true,hungerRelief:[18,30],evaporation:0,loadPerUnit:.035},
+    water:{id:'water',name:'水',icon:'💧',phase:'liquid',drinkable:true,thirstRelief:[18,31],evaporation:.07,loadPerUnit:.025},
+    alcohol:{id:'alcohol',name:'酒',icon:'🍺',phase:'liquid',drinkable:true,thirstRelief:[8,17],intoxicationFactor:1.35,evaporation:.11,loadPerUnit:.025}
   };
   const ZH={
     hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',social:'社交需求',comfort:'舒適',safety:'安全感',groomingNeed:'理毛需求',
     eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',refillFood:'補充現成食物',refillWater:'補充水桶',rest:'休息',talk:'找人聊天',petCat:'摸橘子',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',supplyFood:'外出補給',
     intoxication:'醉酒',coordination:'動作協調',normal:'正常'
   };
-  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間'};
+  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重'};
 
   const FURNITURE_DEFS={
     diningTable:{id:'diningTable',name:'餐桌',icon:'▰',kind:'table',blocksMovement:true,supportsObjects:true,value:30,
@@ -60,19 +60,19 @@
   function createInitialState(seed=20260911){
     const n=(Number(seed)>>>0)||20260911;
     const state={
-      version:'11.3-portable-water-bucket',tick:0,day:1,minute:12*60,seed:n,rngState:n,
+      version:'11.4-carry-load',tick:0,day:1,minute:12*60,seed:n,rngState:n,
       map:{width:WIDTH,height:HEIGHT,tiles:buildTiles(),rooms:{},roomRevision:0},
       furniture:normalizeFurniture(),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:70,workerId:null,trips:0,totalProduced:0},
       containers:{
-        mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',capacity:100,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:{...OBJECT_START.mealTray},supportId:'diningTable'},
-        plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',capacity:12,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateA},supportId:'diningTable'},
-        plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',capacity:12,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateB},supportId:'diningTable'},
-        foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🧺',capacity:200,preferredResource:'food',contents:{food:140},portable:false,access:1,position:{...OBJECT_START.foodPantry}},
-        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,preferredResource:'water',contents:{water:72},portable:true,access:1,position:{...OBJECT_START.waterBucket}},
-        cupA:{id:'cupA',name:'白色杯子',icon:'🥛',capacity:35,contents:{alcohol:20},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupA},supportId:'diningTable'},
-        cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',capacity:35,contents:{},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupB},supportId:'diningTable'},
-        alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',capacity:160,preferredResource:'alcohol',contents:{alcohol:120},portable:true,canDrinkFrom:true,drinkPreference:.28,position:{...OBJECT_START.alcoholBottle},supportId:'diningTable'}
+        mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:{...OBJECT_START.mealTray},supportId:'diningTable'},
+        plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',capacity:12,emptyLoad:.35,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateA},supportId:'diningTable'},
+        plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',capacity:12,emptyLoad:.35,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateB},supportId:'diningTable'},
+        foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🧺',capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1,position:{...OBJECT_START.foodPantry}},
+        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,access:1,position:{...OBJECT_START.waterBucket}},
+        cupA:{id:'cupA',name:'白色杯子',icon:'🥛',capacity:35,emptyLoad:.25,contents:{alcohol:20},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupA},supportId:'diningTable'},
+        cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',capacity:35,emptyLoad:.25,contents:{},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupB},supportId:'diningTable'},
+        alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,canDrinkFrom:true,drinkPreference:.28,position:{...OBJECT_START.alcoholBottle},supportId:'diningTable'}
       },
       sources:{tap:{id:'tap',name:'水龍頭',icon:'🚰',resource:'water',infinite:true,position:{...OBJECT_START.tap}}},
       agents:{

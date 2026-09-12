@@ -44,6 +44,11 @@
   function takeResource(id,r,amount){const ep=endpoint(id);if(!ep||amount<=0)return 0;if(ep.kind==='source'){if(ep.obj.resource!==r)return 0;if(ep.obj.infinite)return amount;const m=Math.min(amount,ep.obj.amount||0);ep.obj.amount-=m;return m;}const have=ep.contents[r]||0,m=Math.min(amount,have);ep.contents[r]=Math.max(0,have-m);if(ep.contents[r]<.001)delete ep.contents[r];return m;}
   function putResource(id,r,amount){const ep=endpoint(id);if(!ep||amount<=0||ep.kind==='source')return 0;const m=Math.min(amount,capacityLeft(id));ep.contents[r]=(ep.contents[r]||0)+m;return m;}
   function transferResource(r,from,to,amount){const available=amountAt(from,r),room=capacityLeft(to),m=Math.max(0,Math.min(amount,available,room));if(!isFinite(m)||m<=0)return 0;return putResource(to,r,takeResource(from,r,m));}
+  function resourceLoad(r,amount){return Math.max(0,Number(amount)||0)*(RESOURCE_TYPES[r]?.loadPerUnit||0);}
+  function containerLoad(idOrObj){const c=typeof idOrObj==='string'?state.containers[idOrObj]:idOrObj;if(!c)return 0;return Math.max(0,c.emptyLoad||0)+Object.entries(c.contents||{}).reduce((sum,[r,v])=>sum+resourceLoad(r,v),0);}
+  function carriedResourceLoad(carrying){return carrying?resourceLoad(carrying.resource,carrying.amount):0;}
+  function effectiveCarryLoad(a){return (a?.held?containerLoad(a.held):0)+carriedResourceLoad(a?.carrying);}
+  function movementExertion(load){return .10+Math.min(.18,Math.max(0,load)*.012);}
   function actorCanTransfer(a,fromId,toId){
     if(!a||a.offMap)return false;
     const fromTarget=state.sources[fromId]?{kind:'source',id:fromId}:state.containers[fromId]?{kind:'object',id:fromId}:null;
@@ -59,10 +64,10 @@
 
   function coordination(a){const intoxPenalty=a.status.intoxication*.65,fatiguePenalty=Math.max(0,a.needs.fatigue-65)*.35;return clamp(100-intoxPenalty-fatiguePenalty);}
   function precisionCheck(a,baseRisk=1,environmentRisk=0){const coord=coordination(a),careful=a.traits.careful??.55,ordinaryRisk=baseRisk*(1.18-careful*.36),impairmentRisk=Math.max(0,95-coord)*.55,failRisk=clamp(ordinaryRisk+impairmentRisk+environmentRisk,.1,75),success=100-failRisk,roll=rand(0,100);return {success,failRisk,roll,ok:roll<=success,coord,baseRisk,environmentRisk};}
-  function applyExertion(a,amount,reason,{thirstFactor=.24,hungerFactor=.08}={}){
+  function applyExertion(a,amount,reason,{thirstFactor=.24,hungerFactor=.08,load=0}={}){
     if(!a||amount<=0)return 0;const activity=amount*(a.kind==='cat'?.72:1),fatigueCost=activity*(a.traits.exertionSensitivity??1);
     a.needs.fatigue=clamp(a.needs.fatigue+fatigueCost);a.needs.thirst=clamp(a.needs.thirst+activity*thirstFactor);a.needs.hunger=clamp(a.needs.hunger+activity*hungerFactor);
-    a.metrics.exertionToday=(a.metrics.exertionToday||0)+activity;a.metrics.lastExertion={amount:activity,fatigueCost,reason,tick:state.tick};return activity;
+    a.metrics.exertionToday=(a.metrics.exertionToday||0)+activity;a.metrics.lastExertion={amount:activity,fatigueCost,reason,load,tick:state.tick};return activity;
   }
 
   function reservationOwner(key){const id=state.reservations[key];return id?state.agents[id]||null:null;}
@@ -130,7 +135,7 @@
   }
   function moveToward(a,goal,reason){
     if(!goal||a.offMap)return false;if(SP.same(a.position,goal))return true;const path=SP.astar(state,a.position,goal,a.id);if(path.length<2)return false;
-    standUp(a);const next=path[1];a.position={...next};let cost=.10;if(a.held)cost+=.03;if(a.carrying)cost+=.05+Math.min(.05,(a.carrying.amount||0)*.0015);applyExertion(a,cost,a.carrying?'搬運中步行':a.held?'拿著物品步行':'步行',{thirstFactor:.18,hungerFactor:.05});onEnterTile(a);a.action.lastMoveReason=reason;a.action.lastPath=path.map(p=>({...p}));return SP.same(a.position,goal);
+    standUp(a);const next=path[1];a.position={...next};const load=effectiveCarryLoad(a),cost=movementExertion(load),moveReason=load>.01?'負重步行':'步行';applyExertion(a,cost,moveReason,{thirstFactor:.18,hungerFactor:.05,load});onEnterTile(a);a.action.lastMoveReason=reason;a.action.lastPath=path.map(p=>({...p}));return SP.same(a.position,goal);
   }
   function moveToInteraction(a,target,reason){
     const status=targetAvailability(target);if(!status.exists||!status.available){interruptUnavailableTarget(a,target,status);return false;}
@@ -254,13 +259,9 @@
   }
   function stepEat(a,p){
     if(p.phase==='prepare'){
-      if(a.kind==='cat'){
-        directFoodFallback(a,p);return;
-      }
+      if(a.kind==='cat'){directFoodFallback(a,p);return;}
       if(a.needs.hunger>=82){directFoodFallback(a,p);return;}
-      for(const dish of servingDishes(a)){
-        if(reserve(`object:${dish.id}`,a)){p.container=dish.id;p.phase='toDish';return;}
-      }
+      for(const dish of servingDishes(a)){if(reserve(`object:${dish.id}`,a)){p.container=dish.id;p.phase='toDish';return;}}
       directFoodFallback(a,p);return;
     }
     if(p.phase==='toDish'){
@@ -290,9 +291,7 @@
       const e=addEvent(`${a.name}把一份食物盛進${endpointName(p.container)}。`,'good',[],{action:'serveFood',from:'mealTray',to:p.container,amount:m});setResourceCause(p.container,'food',e);p.phase='chooseSeat';return;
     }
     if(p.phase==='chooseSeat'){
-      for(const slot of mealSlots(a)){
-        if(reserve(`slot:${slot.id}`,a)){p.slotId=slot.id;p.phase='toSeat';return;}
-      }
+      for(const slot of mealSlots(a)){if(reserve(`slot:${slot.id}`,a)){p.slotId=slot.id;p.phase='toSeat';return;}}
       p.phase='standEat';return;
     }
     if(p.phase==='toSeat'){
@@ -384,7 +383,7 @@
     }
     if(p.phase==='takeBucket'){
       if(!holdContainer(a,'waterBucket')){abortAction(a,'沒能拿起水桶');return;}
-      applyExertion(a,.16,'拿起水桶',{thirstFactor:.14,hungerFactor:.04});addEvent(`${a.name}拿起水桶，準備搬去水龍頭補水。`,'normal',[],{action:'takeBucket',container:'waterBucket',position:SP.key(a.position)});p.phase='toTap';return;
+      const load=containerLoad('waterBucket');applyExertion(a,.10+Math.min(.12,load*.012),'拿起水桶',{thirstFactor:.14,hungerFactor:.04,load});addEvent(`${a.name}拿起水桶，準備搬去水龍頭補水。`,'normal',[],{action:'takeBucket',container:'waterBucket',load,position:SP.key(a.position)});p.phase='toTap';return;
     }
     if(p.phase==='toTap'){
       if(a.held!=='waterBucket'){abortAction(a,'補水途中已經沒有拿著水桶');return;}
@@ -397,7 +396,7 @@
   }
   function stepRefillFood(a,p){
     if(p.phase==='toPantry'){if(!moveToInteraction(a,{kind:'object',id:'foodPantry'},'去食物櫃拿食物'))return;p.phase='take';return;}
-    if(p.phase==='take'){const m=takeResource('foodPantry','food',Math.min(rand(12,20),capacityLeft('mealTray')));if(m<=0){finishAction(a,{dropHeld:false});return;}a.carrying={resource:'food',amount:m};applyExertion(a,.55,'搬取食物',{thirstFactor:.18,hungerFactor:.06});p.phase='toTray';return;}
+    if(p.phase==='take'){const m=takeResource('foodPantry','food',Math.min(rand(12,20),capacityLeft('mealTray')));if(m<=0){finishAction(a,{dropHeld:false});return;}a.carrying={resource:'food',amount:m};applyExertion(a,.55,'搬取食物',{thirstFactor:.18,hungerFactor:.06,load:carriedResourceLoad(a.carrying)});p.phase='toTray';return;}
     if(p.phase==='toTray'){if(!moveToInteraction(a,{kind:'object',id:'mealTray'},'把食物搬到餐桌'))return;p.phase='deposit';return;}
     if(p.phase==='deposit'){const m=putResource('mealTray','food',a.carrying?.amount||0);a.carrying=null;addEvent(`${a.name}把食物補進現成食物。`,'good',[],{action:'refillFood',amount:m});finishAction(a,{dropHeld:false});return;}
   }
@@ -408,7 +407,7 @@
     const door=SP.getSlot(state,'frontDoor:inside');
     if(p.phase==='toDoor'){if(!door||!moveToExact(a,door.position,'準備外出補給'))return;p.phase='exit';return;}
     if(p.phase==='exit'){a.offMap=true;standUp(a);addEvent(`${a.name}從大門外出補給食物。`,'normal',[],{action:'supplyExit'});p.phase='work';return;}
-    if(p.phase==='work'){if(a.needs.fatigue>88||a.needs.thirst>94||a.needs.hunger>94){a.offMap=false;a.position={...door.position};abortAction(a,'身體狀況太差，提早回家');return;}applyExertion(a,1.05,'外出補給工作',{thirstFactor:.33,hungerFactor:.10});p.workLeft--;if(p.workLeft<=0){p.produced=rand(32,46);a.carrying={resource:'food',amount:p.produced};a.offMap=false;a.position={...door.position};p.phase='returnPantry';addEvent(`${a.name}完成外出補給，帶著食物回到大門。`,'good',[],{action:'supplyReturn',amount:p.produced});}return;}
+    if(p.phase==='work'){if(a.needs.fatigue>88||a.needs.thirst>94||a.needs.hunger>94){a.offMap=false;a.position={...door.position};abortAction(a,'身體狀況太差，提早回家');return;}applyExertion(a,1.05,'外出補給工作',{thirstFactor:.33,hungerFactor:.10});p.workLeft--;if(p.workLeft<=0){p.produced=rand(32,46);a.carrying={resource:'food',amount:p.produced};a.offMap=false;a.position={...door.position};p.phase='returnPantry';addEvent(`${a.name}完成外出補給，帶著食物回到大門。`,'good',[],{action:'supplyReturn',amount:p.produced,load:carriedResourceLoad(a.carrying)});}return;}
     if(p.phase==='returnPantry'){if(!moveToInteraction(a,{kind:'object',id:'foodPantry'},'把補給帶回食物櫃'))return;p.phase='deposit';return;}
     if(p.phase==='deposit'){const m=putResource('foodPantry','food',a.carrying?.amount||0);a.carrying=null;state.supply.trips++;state.supply.totalProduced+=m;addEvent(`${a.name}把補給帶回的 ${Math.round(m)} 單位食物放進食物櫃。`,'good',[],{action:'supplyDeposit',amount:m});finishAction(a,{dropHeld:false});return;}
   }
@@ -462,8 +461,8 @@
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`;const kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}
   function supplyStatus(){return {stock:foodStock(),trigger:state.supply.trigger,workerId:state.supply.workerId,workerName:state.agents[state.supply.workerId]?.name||null,trips:state.supply.trips,totalProduced:state.supply.totalProduced};}
 
-  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent('v11.3 初始化：水桶已納入可攜 Container 與 actor-mediated transfer contract；補水必須真的拿桶到水龍頭。','system',[],{seed:state.seed});return state;}
+  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent('v11.4 初始化：held Container 與 carrying Resource 共用 Carry Load；內容量會即時改變搬運活動成本。','system',[],{seed:state.seed});return state;}
   reset(DEFAULT_SEED);
 
-  window.SimEngine={RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,foodStock,supplyStatus,actionLabel,planLabel:actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,reservationOwner,holderOf};
+  window.SimEngine={RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,carriedResourceLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,foodStock,supplyStatus,actionLabel,planLabel:actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,reservationOwner,holderOf};
 })();
