@@ -157,7 +157,8 @@
   }
   function wettestTile(st,zone=null){
     let best=null,bestAmt=.1;for(const t of Object.values(st.spatial.tiles)){
-      if(zone&&t.zone!==zone)continue;const amt=tileLiquidAmount(t);if(amt>bestAmt){bestAmt=amt;best=t;}}return best?{x:best.x,y:best.y}:null;
+      if(zone&&t.zone!==zone)continue;const amt=tileLiquidAmount(t);if(amt>bestAmt){bestAmt=amt;best=t;}
+    }return best?{x:best.x,y:best.y}:null;
   }
   function selectDrinkVessel(st,a,p){
     const resource=p.resource,desperate=(a.needs?.thirst||0)>=88;
@@ -170,7 +171,7 @@
       const filled=(c.contents?.[resource]||0)>0,empty=Object.values(c.contents||{}).reduce((x,y)=>x+y,0)<=.1;
       const foreign=Object.entries(c.contents||{}).some(([r,v])=>r!==resource&&v>.1);
       const goal=interactionTile(st,a,objectPosition(st,c.id));const distance=goal?Math.max(0,astar(st,a.position,goal,a).length-1):99;
-      let v=(c.drinkPreference??.5)*0045-distance*4;if(filled)v+=25;else if(empty)v+=12;if(foreign)v-=35;return v;
+      let v=(c.drinkPreference??.5)*45-distance*4;if(filled)v+=25;else if(empty)v+=12;if(foreign)v-=35;return v;
     };
     candidates.sort((x,y)=>score(y)-score(x));const pick=candidates[0];
     if(pick){p.container=pick.id;p.phase='toVessel';}
@@ -180,7 +181,7 @@
     if(!p||p===SENTINEL)return null;
     const objectGoal=id=>interactionTile(st,a,objectPosition(st,id));
     const agentGoal=id=>interactionTile(st,a,agentPosition(st,id));
-    if(p.intent==='eat')return objectGoal(p.targetObject||	mealTray');
+    if(p.intent==='eat')return objectGoal(p.targetObject||'mealTray');
     if(p.intent==='drinkWater'&&a.kind==='cat')return objectGoal(p.targetObject||'waterBucket');
     if((p.intent==='drinkWater'||p.intent==='drinkAlcohol')&&a.kind==='human'){
       if(p.phase==='findVessel')selectDrinkVessel(st,a,p);
@@ -196,3 +197,140 @@
     if(p.intent==='wander')return bestZoneTile(st,a,p.targetZone,p);
     return null;
   }
+  function syncSnapshotResource(st,zone,resource){
+    const floor=st.surfaces[`floor:${zone}`];st.spatial.surfaceSnapshot[zone]??={};
+    if(floor?.contents?.[resource]>0)st.spatial.surfaceSnapshot[zone][resource]=floor.contents[resource];else delete st.spatial.surfaceSnapshot[zone][resource];
+  }
+  function spillHeldLocally(st,a,tile,causeIds=[]){
+    const c=a.held&&st.containers[a.held];if(!c)return;
+    for(const [r,amt] of Object.entries({...c.contents||{}})){
+      if(E.RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;
+      const moved=Math.min(amt,amt*(.14+spatialRandom(st)*.20));if(moved<=0)continue;
+      c.contents[r]-=moved;if(c.contents[r]<.001)delete c.contents[r];tile.contents[r]=(tile.contents[r]||0)+moved;
+      const floor=st.surfaces[`floor:${tile.zone}`];if(floor){floor.contents[r]=(floor.contents[r]||0)+moved;syncSnapshotResource(st,tile.zone,r);}
+      addSpatialEvent(st,`${a.name}踉蹌時，${E.resourceName(r)}從${c.name}灑在腳下的地面。`,'bad',{action:'tileSpill',resource:r,amount:moved,location:tile.zone,position:tile.id,container:c.id},causeIds);
+    }
+  }
+  function onEnterTile(st,a,tile){
+    const wet=tileLiquidAmount(tile);if(wet<=.1)return;
+    if(a.kind==='cat'){
+      for(const [r,amt] of Object.entries({...tile.contents})){
+        if(E.RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;
+        const picked=Math.min(amt,amt*(.08+spatialRandom(st)*.12));if(picked<=0)continue;
+        tile.contents[r]-=picked;if(tile.contents[r]<.001)delete tile.contents[r];
+        const floor=st.surfaces[`floor:${tile.zone}`];if(floor?.contents?.[r]!=null){floor.contents[r]=Math.max(0,floor.contents[r]-picked);if(floor.contents[r]<.001)delete floor.contents[r];syncSnapshotResource(st,tile.zone,r);}
+        a.contacts.paws??={};a.contacts.paws[r]=(a.contacts.paws[r]||0)+picked;
+        const ev=addSpatialEvent(st,`${a.name}真的踩過 (${tile.x}, ${tile.y}) 的${E.resourceName(r)}，腳掌沾上了一些。`,'warn',{action:'tileContact',transfer:'tile_to_contact',resource:r,amount:picked,location:tile.zone,position:tile.id});
+        a.causes?.contacts?.paws&&(a.causes.contacts.paws[r]=ev);
+      }
+      return;
+    }
+    const intox=a.status?.intoxication||0,fatigue=a.needs?.fatigue||0;
+    const risk=Math.min(45,wet*.55+Math.max(0,intox-10)*.16+Math.max(0,fatigue-75)*.24);
+    if(spatialRandom(st)*100<risk){
+      if(a.wellbeing){a.wellbeing.comfort=E.clamp(a.wellbeing.comfort-(3+spatialRandom(st)*5));a.wellbeing.safety=E.clamp(a.wellbeing.safety-(4+spatialRandom(st)*7));}
+      const slip=addSpatialEvent(st,`${a.name}踩到 (${tile.x}, ${tile.y}) 的濕地，腳下一滑。`,'warn',{action:'tileSlip',environmentRisk:risk,location:tile.zone,position:tile.id});
+      spillHeldLocally(st,a,tile,[slip]);
+    }
+  }
+  function moveOneTile(st,a,goal,reason){
+    const path=astar(st,a.position,goal,a);a.__spatialPath=path.map(clonePos);st.spatial.debug.lastPathByAgent[a.id]=a.__spatialPath;
+    if(path.length<2)return false;
+    const from=clonePos(a.position),oldZone=a.location,next=path[1],nextZone=zoneAt(st,next)||oldZone;
+    a.position=clonePos(next);a.location=nextZone;st.spatial.stats.tileSteps++;
+    let cost=.10;if(a.held)cost+=.03;if(a.carrying)cost+=.05+Math.min(.05,(a.carrying.amount||0)*.0015);
+    E.applyExertion(a,cost,a.carrying?'搬運中步行':a.held?'拿著物品步行':'步行',{thirstFactor:.18,hungerFactor:.05});
+    if(a.held&&st.containers[a.held]){st.containers[a.held].position=clonePos(next);st.containers[a.held].location=nextZone;}
+    onEnterTile(st,a,tileAt(st,next.x,next.y));
+    if(oldZone!==nextZone)addSpatialEvent(st,`${a.name}從${E.zoneName(oldZone)}走進${E.zoneName(nextZone)}。`,'normal',{action:'tileMove',from:oldZone,to:nextZone,position:key(next.x,next.y),reason,location:nextZone});
+    return true;
+  }
+  function prepareAgentMovement(st,a){
+    installPlanGate(a);const meta=planMeta.get(a);meta.block=false;meta.justStarted=false;
+    const p=meta.value;if(!p){a.__spatialPath=[];return;}
+    const goal=planGoal(st,a,p);if(!goal){a.__spatialPath=[];return;}
+    p.__spatialTarget=clonePos(goal);
+    if(!same(a.position,goal))moveOneTile(st,a,goal,p.intent);
+    if(!same(a.position,goal))meta.block=true;
+  }
+  function removeNewEvents(st,oldIds,predicate){
+    const removed=[];st.events=st.events.filter(e=>{if(oldIds.has(e.id)||!predicate(e))return true;removed.push(e.id);return false;});
+    for(const id of removed)delete st.causes[id];
+  }
+  function postCorrectEngineMovement(st,before,oldEventIds){
+    for(const a of Object.values(st.agents)){
+      installPlanGate(a);const b=before[a.id];if(!b)continue;
+      const physicalZone=zoneAt(st,a.position)||b.location;
+      if(a.location!==physicalZone){
+        const engineZone=a.location;a.location=physicalZone;
+        if(a.held&&st.containers[a.held])st.containers[a.held].location=physicalZone;
+        removeNewEvents(st,oldEventIds,e=>e.data?.action==='move'&&e.text?.startsWith(a.name));
+        st.spatial.stats.reroutes++;
+        const p=actualPlan(a);if(p?.targetZone===engineZone)p.__spatialGoalZone=null;
+      }
+      if(a.held&&a.held!==b.held){
+        const c=st.containers[a.held],cp=c?.position;
+        if(c&&cp&&manhattan(a.position,cp)>1){
+          const grabbed=a.held;c.heldBy=null;c.location=zoneAt(st,cp)||c.location;a.held=b.held||null;
+          const p=actualPlan(a);if(p&&(p.intent==='drinkWater'||p.intent==='drinkAlcohol'))p.phase='toVessel';
+          removeNewEvents(st,oldEventIds,e=>e.data?.action==='takeContainer'&&e.data?.container===grabbed&&e.text?.startsWith(a.name));
+        }
+      }
+      if(a.held&&st.containers[a.held]){const c=st.containers[a.held];c.position=clonePos(a.position);c.location=a.location;}
+      if(b.held&&!a.held&&st.containers[b.held]){const c=st.containers[b.held];c.position=clonePos(a.position);c.location=a.location;}
+    }
+  }
+
+  function eventActorPosition(st,e){
+    for(const a of Object.values(st.agents))if(e.text?.includes(a.name)&&a.location===e.data?.location&&a.position)return clonePos(a.position);
+    return null;
+  }
+  function adjustTileResource(st,zone,resource,delta,newEvents){
+    if(Math.abs(delta)<.0001)return;
+    if(delta>0){
+      const ev=newEvents.find(e=>e.data?.location===zone&&(e.data?.resource===resource||e.text?.includes(E.resourceName(resource))));
+      const pos=eventActorPosition(st,ev||{})||st.spatial.zoneAnchors[zone];const t=pos&&tileAt(st,pos.x,pos.y);if(t)t.contents[resource]=(t.contents[resource]||0)+delta;return;
+    }
+    let left=-delta;const tiles=Object.values(st.spatial.tiles).filter(t=>t.zone===zone&&(t.contents[resource]||0)>0).sort((a,b)=>(b.contents[resource]||0)-(a.contents[resource]||0));
+    for(const t of tiles){const take=Math.min(left,t.contents[resource]||0);t.contents[resource]-=take;left-=take;if(t.contents[resource]<.001)delete t.contents[resource];if(left<=.0001)break;}
+  }
+  function syncTileSurfaces(st,oldEventIds){
+    const newEvents=st.events.filter(e=>!oldEventIds.has(e.id));
+    for(const z of Object.keys(st.zones)){
+      const floor=st.surfaces[`floor:${z}`],prev=st.spatial.surfaceSnapshot[z]||{},now=floor?.contents||{};
+      const resources=new Set([...Object.keys(prev),...Object.keys(now)]);
+      for(const r of resources)adjustTileResource(st,z,r,(now[r]||0)-(prev[r]||0),newEvents);
+      st.spatial.surfaceSnapshot[z]={...now};
+    }
+  }
+
+  function captureBeforeEngine(st){
+    const out={};for(const a of Object.values(st.agents))out[a.id]={location:a.location,position:clonePos(a.position),held:a.held};return out;
+  }
+  function tick(){
+    const st=E.getState();ensureSpatial(st);
+    for(const a of Object.values(st.agents))prepareAgentMovement(st,a);
+    const before=captureBeforeEngine(st),oldEventIds=new Set(st.events.map(e=>e.id));
+    inTick=true;try{baseTick();}finally{inTick=false;for(const a of Object.values(E.getState().agents)){const m=planMeta.get(a);if(m){m.block=false;m.justStarted=false;}}}
+    const next=E.getState();postCorrectEngineMovement(next,before,oldEventIds);syncTileSurfaces(next,oldEventIds);
+  }
+  function reset(seed){
+    spatialEventSeq=0;const st=baseReset(seed);initSpatial(st);
+    addSpatialEvent(st,'v10 Spatial Grid 已啟用：Zone 保留作語意層，角色與物件新增 tile 座標，移動以 A* 尋路逐格進行。','system',{action:'spatialInit',grid:`${WIDTH}x${HEIGHT}`});
+    return st;
+  }
+  function ensureSpatial(st){if(!st.spatial||st.spatial.version!==10)initSpatial(st);for(const a of Object.values(st.agents))installPlanGate(a);return st.spatial}
+  function tileInfo(id){const st=E.getState(),t=st.spatial?.tiles?.[id];if(!t)return null;return {...t,occupants:occupantsAt(st,t.x,t.y).map(a=>a.id),liquid:tileLiquidAmount(t)};}
+  function status(){const st=E.getState();ensureSpatial(st);return {width:WIDTH,height:HEIGHT,tileSteps:st.spatial.stats.tileSteps,reroutes:st.spatial.stats.reroutes};}
+
+  Object.assign(E.DATA_ZH||{}, {position:'Tile 座標',grid:'格狀尺寸',system:'系統',tile:'格子'});
+  E.tick=tick;E.reset=reset;
+  E.positionOf=id=>objectPosition(E.getState(),id)||agentPosition(E.getState(),id);
+  E.tileInfo=tileInfo;
+  E.spatialStatus=status;
+  E.zoneAtPosition=pos=>zoneAt(E.getState(),pos);
+  window.SimSpatial={WIDTH,HEIGHT,key,tileAt:(x,y)=>tileAt(E.getState(),x,y),tileInfo,objectPosition:id=>objectPosition(E.getState(),id),agentPosition:id=>agentPosition(E.getState(),id),astar:(start,goal,agentId)=>astar(E.getState(),start,goal,E.getState().agents[agentId]),zoneAt:pos=>zoneAt(E.getState(),pos),status};
+
+  initSpatial(E.getState());
+  addSpatialEvent(E.getState(),'v10 Spatial Grid 模組已載入；空白地板使用 CSS tile，不以字元填滿。','system',{action:'spatialInit',grid:`${WIDTH}x${HEIGHT}`});
+})();
