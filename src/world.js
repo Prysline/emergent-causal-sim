@@ -33,7 +33,7 @@
   };
 
   const OBJECT_START={
-    foodPantry:{x:2,y:2},mealTray:{x:5,y:2},cupA:{x:6,y:2},cupB:{x:6,y:3},alcoholBottle:{x:5,y:3},waterBucket:{x:5,y:5},tap:{x:6,y:5}
+    foodPantry:{x:2,y:2},mealTray:{x:5,y:2},plateA:{x:5,y:2},plateB:{x:6,y:3},cupA:{x:6,y:2},cupB:{x:6,y:3},alcoholBottle:{x:5,y:3},waterBucket:{x:5,y:5},tap:{x:6,y:5}
   };
   const AGENT_START={zhen:{x:9,y:3},zhou:{x:7,y:3},orange:{x:2,y:6}};
 
@@ -60,12 +60,14 @@
   function createInitialState(seed=20260911){
     const n=(Number(seed)>>>0)||20260911;
     const state={
-      version:'11.0-refactor',tick:0,day:1,minute:12*60,seed:n,rngState:n,
+      version:'11.2-serving-plate',tick:0,day:1,minute:12*60,seed:n,rngState:n,
       map:{width:WIDTH,height:HEIGHT,tiles:buildTiles(),rooms:{},roomRevision:0},
       furniture:normalizeFurniture(),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:70,workerId:null,trips:0,totalProduced:0},
       containers:{
-        mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',capacity:100,preferredResource:'food',contents:{food:68},portable:false,access:1,position:{...OBJECT_START.mealTray},supportId:'diningTable'},
+        mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',capacity:100,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:{...OBJECT_START.mealTray},supportId:'diningTable'},
+        plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',capacity:12,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateA},supportId:'diningTable'},
+        plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',capacity:12,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateB},supportId:'diningTable'},
         foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🧺',capacity:200,preferredResource:'food',contents:{food:140},portable:false,access:1,position:{...OBJECT_START.foodPantry}},
         waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,preferredResource:'water',contents:{water:72},portable:false,access:1,position:{...OBJECT_START.waterBucket}},
         cupA:{id:'cupA',name:'白色杯子',icon:'🥛',capacity:35,contents:{alcohol:20},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupA},supportId:'diningTable'},
