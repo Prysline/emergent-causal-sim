@@ -1,366 +1,410 @@
-# v10.4 架構說明
+# Architecture — v11 Unified Core
 
-## 空間分層
+> 本文件描述目前正式的重構架構。v10.4 以前的 wrapper / patch 設計只存在 Git history，不再是現行執行模型。
 
-v10+ 不以 Tile 取代 Zone，而是維持兩層空間。
+## 1. 核心原則
 
-### Zone / Room：語意層
+本專案的目標是用少量可組合規則形成可追蹤的湧現因果，而不是替每個情境寫事件腳本。
 
-Zone 繼續負責：
+v11 重新確立以下單一真相：
 
-- 行動選擇與需求判斷。
-- 噪音、休息品質等區域屬性。
-- 「去哪裡吃飯／休息／補水」這類高階決策。
+- **Agent.position**：角色物理位置唯一真相。
+- **Tile**：物理世界最小空間單位。
+- **Room**：由牆、邊界與門的拓撲自動推導，不是手工環境加成區。
+- **Furniture / Object / Agent**：局部 affordance、噪音、舒適與互動來源。
+- **Activity Area / Zone**：若未來需要，只能作為用途／行政 overlay；不再直接提供噪音、休息品質或抵達判定。
+- **Agent.action**：目前唯一行動狀態；沒有 `plan` 與 action wrapper 並存。
+- **Agent.posture**：`standing / sitting / lying` 是正式世界狀態，UI 只讀取，不自行猜測。
 
-Agent 仍保留 `location: zoneId`。
-
-### Tile / Coordinate：物理層
-
-Spatial Grid 是 `12 × 8`。每格記錄：
+## 2. 現行模組
 
 ```text
-x / y
-zone
+src/
+├─ world.js            初始世界、Tile、家具、物件、角色資料
+├─ spatial.js          純空間函式：A*、Room、interaction、局部環境
+├─ engine.js           唯一 tick 與所有行動 phase／資源／恢復／補給
+├─ state-validator.js  純 invariant 檢查，不包裝 tick
+└─ ui.js               地圖、Inspector、時間線與操作 UI
+```
+
+已移除：
+
+```text
+action-guard.js
+recovery.js / recovery-ui.js
+supply.js / supply-ui.js
+furniture.js / furniture-ui.js
+seating.js
+rest-surface.js
+spatial-ui.js
+styles/v101.css
+styles/v103.css
+```
+
+這些功能沒有單純刪除，而是收回正式 core：
+
+- exertion / recovery → `engine.js`
+- supply loop → `engine.js`
+- furniture / slot 定義 → `world.js`
+- seating / rest surface → `engine.js` 的 action phase
+- path / Room / environment → `spatial.js`
+- Inspector enhancer → `ui.js`
+
+## 3. 空間模型
+
+### 3.1 Tile
+
+12×8 map 現在具有實際地形：
+
+```text
+terrain: floor | wall | doorway
+material
 walkable
 staticBlockedBy
-contents
+surface.contents
+roomId
 furnitureIds
 ```
 
-Agent、Container、Source 具有：
+外圈是牆，左側有大門位置。餐桌、食物櫃、水桶、水龍頭等會真的影響 walkability。
+
+### 3.2 Room
+
+Room 不由名稱或用途決定，而是 `spatial.recomputeRooms()` 對可形成室內空間的 Floor Tile 做 flood fill。
+
+目前小屋只有一個主室；未來加入隔間牆或可開關門後，可自然形成多 Room。
+
+Room 可提供聚合資訊：
+
+- floor area
+- boundary walls / doors
+- furniture list
+- simplified room value
+- average local noise
+- average local comfort
+
+目前 room value 使用簡化的 floor / wall material value + furniture value；不是嘗試完整複製 Dwarf Fortress 公式。
+
+### 3.3 Activity Area / Zone
+
+`state.activityAreas` 目前保留空資料結構，但 simulation 不使用。
+
+未來如果加入：
+
+- 醫療區
+- 工作區
+- 餐廳
+- 禁區
+- 垃圾傾倒區
+
+它們應只改變「行為用途／政策／允許事項」，不能憑空改變環境噪音、舒適或物理可達性。
+
+## 4. 局部環境
+
+舊版 `zone.baseNoise` 與 `zone.restQuality` 已移除。
+
+### 4.1 Noise
+
+噪音來自帶座標的 `noiseEvents`：
 
 ```text
-position: { x, y }
+position
+amount
+ttl
+kind
 ```
 
-`location` 與 `position` 同時存在；角色逐格移動時，跨過 Zone 邊界才同步更新 `location`。
+`noiseAt(position)` 依距離衰減；若未來 Room 分裂，不同 Room 的聲音會有額外衰減。
 
-## v10.3 tick / phase 邊界
+### 4.2 Comfort
 
-`action-guard.js` 避免同一個 tick 中連續完成多個物理階段：
+`comfortAt(position)` 目前綜合：
+
+- 附近 Rest Surface 品質
+- 所在 Tile 是否有液體
+- crowding
+- local noise
+
+它是**局部讀值**，不是 Zone 固定屬性。
+
+角色的 persistent `wellbeing.comfort` 仍存在，代表累積狀態；`comfortAt()` 則代表當下環境。
+
+## 5. Furniture / Slot
+
+Furniture 拆成兩種資訊：
 
 ```text
-每 Agent 每 tick
-
-1. 若需要移動
-   → 最多移動一格
-   → 本 tick 不再推進下一個 interaction phase
-
-2. 若已在合法 interaction position
-   → 最多推進一個 action phase
-
-3. phase 在本 tick 改變
-   → 新 phase 留到下一 tick
+footprint  → 物理占地、阻擋、承載
+slots      → 角色實際使用位置
 ```
 
-因此不再出現「這一 tick 剛走到杯旁，同一 tick 又拿杯、去水源、倒水」這種壓縮行為。
-
-## A*、occupancy 與 soft crowding
-
-A* 使用四方向移動。固定物件與 blocking furniture footprint 不可通行；濕 Tile 會提高移動成本。
-
-Agent occupancy 採 **soft crowding**，不是一格一人：
+例如雙人沙發：
 
 ```text
-其他 Agent 在某 Tile
-→ 該 Tile path cost 增加
-→ 有合理替代路線時通常會繞開
-→ 沒有替代路線時仍可穿過／共用
+sofa footprint
+├─ (9,2)
+└─ (10,2)
+
+slots
+├─ sofa:left
+└─ sofa:right
 ```
 
-因此 `physical co-location` 可以成立；多 Agent 同格只記錄到 `debug.validation.crowdingTiles`，不是 invariant violation。
+兩名角色可以使用同一件家具的不同 slot；真正 exclusive 的是 slot，而不是 furniture id。
 
-v10.4 修正了一個與此原則衝突的舊分支：如果 plan 已經有明確 `__spatialGoal`（例如預約的沙發 slot），另一名 Agent 暫時經過目的 Tile 時，該目標仍保留。Soft crowding 只增加 A* 成本，不會因為一瞬間有人站在目的地就把已預約 slot 偷換成 Zone 任意位置。
-
-真正不可達的 A* 路徑回 `[]`，不再用 `[start]` 假裝有路。
-
-目前仍不是完整多人交通系統：角色沒有協商讓路、門口 reservation、交換位置動畫或長時間 crowding 後果。
-
-## 持有物位置：單一有效來源
-
-Portable Container 同時有 `heldBy` 與 `position`，但 v10.3 起明確區分語意：
+Slot 可以提供：
 
 ```text
-heldBy == null
-→ container.position 是物件的落地／桌面位置
-
-heldBy != null
-→ 有效物理位置 = holder.position
-→ container.position 不再被視為第二份必須完全同步的真實座標
-```
-
-`SimSpatial.objectPosition(containerId)` 在持有中直接回傳持有者位置。
-
-## v10.4 Furniture：Footprint 與 Use Slot
-
-`furniture.js` 現在把「家具本身在哪裡」與「角色實際使用哪個位置」分開。
-
-家具可包含：
-
-```text
-id / name / kind / zone
-footprint[]
-displayAt
-blocksMovement
-supportsObjects
-canRest / canSleep / canExit
-restQuality
-slots[]
-```
-
-每個 slot 可包含：
-
-```text
-id
-furnitureId
-label
-position {x,y}
-allowKinds[]
 canRest
 canSleep
 mealSeat
 restQuality
+allowKinds
 ```
 
-語意區分：
+v11 中沙發允許 human / cat；因此貓休息時可以真的坐／蜷在沙發，也可以選乾燥地板並進入 `lying` posture。
+
+## 6. Interaction contract
+
+行動不再詢問：
 
 ```text
-footprint
-→ 家具的物理占地與視覺連續範圍
+Agent.location === Object.location ?
+```
 
+所有實體互動都使用：
+
+```text
+interactionPositions(target)
+bestInteractionPosition(agent, target)
+isAtInteraction(agent, target)
+```
+
+Target 類型包括：
+
+```text
+object
+source
+agent
+furniture
 slot
-→ 一個角色可以實際占用／預約的使用位置
+tile
 ```
 
-目前實例：
+因此角色和杯子即使剛好位於舊版不同 Zone 的邊界兩側，只要 Tile 上物理可互動，就可以直接拿取。
 
-- `diningTable`：2×2 footprint、blocking、可承載物件，沒有角色使用 slot。
-- 四張餐椅：每張單格 footprint + 1 個 human slot。
-- `sofa`：2 格 footprint，但仍是 1 件 furniture；有 `sofa:left`、`sofa:right` 兩個 human slot。
-- `frontDoor`：邊界上的 blocking exit furniture。
+## 7. Action lifecycle
 
-餐椅 B 已恢復 v10.1 最初的自然位置 `(7,1)`；之前移到 `(5,0)` 是為了配合單點 `mealTray` 的暫時 workaround，v10.4 已移除。
+只有 `Agent.action`。
 
-### Slot ownership / reservation
-
-角色實際坐著時：
+每個 tick 對每名 Agent 最多做一個 atomic transition：
 
 ```text
-seatedOn = furnitureId
-seatSlot = slotId
-posture = {
-  kind: 'sitting',
-  furnitureId,
-  slotId
+無 action
+→ 選擇 action，tick 結束
+
+有 action、尚未抵達
+→ A* 前進最多一格，tick 結束
+
+已抵達
+→ 推進一個 phase，tick 結束
+```
+
+沒有 getter sentinel、沒有 action guard wrapper、沒有同 tick「走到 → 拿起 → 再走向水源」。
+
+典型喝水：
+
+```text
+chooseVessel
+→ toVessel
+→ take
+→ toSource
+→ fill
+→ drink
+→ finish
+```
+
+典型短休：
+
+```text
+chooseSurface
+→ move
+→ settle
+→ resting × N ticks
+→ finish
+```
+
+典型補給：
+
+```text
+toDoor
+→ exit
+→ work × N ticks
+→ returnPantry
+→ deposit
+→ finish
+```
+
+## 8. Movement / crowding
+
+A*：
+
+- 真正不可達 → `[]`
+- 其他 Agent 所在 Tile → soft cost，不是 hard block
+- 濕地 → 額外 cost
+- 多 Agent 可以短暫共用 Tile
+
+因此：
+
+```text
+physical co-location ≠ exclusive use
+```
+
+同 Tile 合法，但同一 slot / 同一手持容器 / 同一 supply worker 不可重複 ownership。
+
+## 9. Ownership / reservation
+
+v11 刪除多份雙向 truth。
+
+### 手持容器
+
+唯一 truth：
+
+```text
+Agent.held = containerId
+```
+
+Container 不再保存 `heldBy`。`holderOf(containerId)` 由 Agent state 推導。
+
+### Slot / Object claim
+
+暫時 exclusive 使用統一放在：
+
+```text
+state.reservations
+```
+
+例如：
+
+```text
+slot:sofa:left
+object:mealTray
+```
+
+坐下後 slot occupancy 由 `Agent.posture.slotId` 表示，不需要另一份 `seatSlot / seatedOn` state。
+
+## 10. Posture
+
+```text
+Agent.posture = {
+  kind: standing | sitting | lying,
+  slotId,
+  furnitureId
 }
 ```
 
-前往座位時則用：
+- 移動會先站起來。
+- 坐 slot 才進 `sitting`。
+- 貓在合法地板休息會進 `lying`。
+- UI 不根據 action 名稱猜姿勢。
+
+## 11. Rest / recovery
+
+休息效率不再讀 Zone：
 
 ```text
-__slotTarget = slotId
+local noise
+× Rest Surface quality / floor / standing multiplier
+× Agent.recoveryRate
 ```
 
-`seatSlot` 是 exclusive use：同一 slot 同時只能有一名使用者；但同一件多座位家具可以有不同使用者。例如：
+`exertionSensitivity` 與 `recoveryRate` 仍保持分離。
+
+若局部噪音在休息初期大幅升高，角色可以重新選 Rest Surface。
+
+完整 sleep 仍未實作；`canSleep` 只是 affordance 預留。
+
+## 12. Resources / spill / wet floor
+
+地面液體直接存在：
 
 ```text
-阿真   seatSlot = sofa:left
-老周   seatSlot = sofa:right
+Tile.surface.contents
 ```
 
-是合法狀態。
+不再維護 Zone surface 相容層。
 
-## State validator：v10.4 Slot invariant
+因此：
 
-`state-validator.js` 現在檢查：
+- A* 只避開真正有液體的 Tile
+- 人只在踩到該 Tile 時做滑倒判定
+- 貓只在踩到該 Tile 時沾上 paws
+- 倒水失敗直接把液體轉移到角色所在 Tile
 
-- Agent 必須有 Tile 座標。
-- `position` 所在 Zone 必須與 `location` 一致。
-- `agent.held ↔ container.heldBy` 必須雙向一致。
-- `carrying.amount` 必須有效。
-- `seatSlot` 必須存在，角色必須真的站在該 slot position。
-- `seatedOn` 必須與 slot 的 `furnitureId` 一致。
-- 同一 slot 不可被兩名角色同時占用。
-- 同一 slot 不可被兩名角色同時預約。
-- `__eatAfterSeat / __restAfterSlot` 必須具有對應 `__slotTarget`。
-- `supply.workerId ↔ supplyTask` 必須一致，且同時最多一個補給工作。
+## 13. Supply loop
 
-同一件多座位 furniture 被多人使用本身不再是錯誤。
-
-## Meal seating
-
-`seating.js` 已改成 slot-based state machine。
-
-人類開始 `eat` plan 時：
+v9 食物勞動閉環保留，但已整合成普通 action：
 
 ```text
-hunger >= 82
-→ 不特地找座位，直接吃
-
-否則
-→ 找 mealSeat slot
-→ slot 必須目前可用
-→ 現階段還必須能從該 slot 直接和 mealTray interaction
-→ 預約 slot
-→ Spatial Grid 逐格移動到 slot
-→ 記錄 seatedOn + seatSlot
-→ 恢復原始 eat plan
+supplyFood
 ```
 
-如果當下可直接取食的 seat slot 已被占用／預約，就允許站著吃，不會等待到有位為止。
+只有 `state.supply.workerId` 是工作 ownership；移動、出門、工作、返家、走到 pantry、入庫全部走相同 action contract。
 
-### 為何四張餐椅不是四張都能坐著吃
+因此「還沒走到食物櫃就入庫」不再需要專門 Spatial patch。
 
-目前 `mealTray` 仍有單一 Tile 位置 `(5,1)`，而 `slotCanInteract()` 目前只認同同格或四方向相鄰。因此餐椅恢復自然布局後，只有真的能從座位直接碰到餐盤的 slot 才能在現有模型中「坐著取食」。
+## 14. Social commitment
 
-這是刻意留下的限制，不再以移動家具位置修補。
+目前保留簡單 `pendingInteraction` 與 action commitment：
 
-較自然的後續解法：
+- 橘子可主動找人撒嬌。
+- 人若接受「摸橘子」行動，橘子之後走開，人仍可能追上去完成。
 
-```text
-Serving / Plate
-食物來源 → 盛一份到可攜盤子 → 帶到任意座位 → 吃 → 留下空盤
-```
+`interaction commitment strength` 已列為未來設計 memo，但 v11 尚未加入距離／時間／強烈中斷正式規則。
 
-或把桌面物件的 interaction 擴展成整張 `supportId` 桌子的合法 perimeter。兩者目前都尚未實作。
+## 15. Validator
 
-## Rest Surface
+`state-validator.js` 是純檢查器，不包裝 tick，也不修正 state。
 
-v10.4 新增 `rest-surface.js`，人類短休不再只選 Zone。
+目前檢查：
 
-流程：
+- 舊 `zones / surfaces / plan / location / seatSlot / seatedOn` 不得回流
+- Agent 必須位於合法 Tile
+- Floor Tile 必須有 derived roomId
+- posture / slot / position 一致
+- 容器不可被兩人同時持有
+- reservation 指向合法資源
+- supply worker 與 action 一致
+- carrying 數值合法
+- crowding 只記 debug，不當作 error
 
-```text
-rest plan
-→ 找 canRest slot
-→ 綜合：原本 target Zone / path / 暫時 crowding / restQuality
-→ 預約 __slotTarget
-→ 逐格走到 slot
-→ seatedOn + seatSlot
-→ 恢復原本 rest plan
-→ 持續逐 tick 恢復
-```
+## 16. Regression
 
-如果預約 slot 途中變得不可用，會找另一個可用 slot；如果完全沒有 Rest Surface 可用，才退化成 standing rest。
+`tests/v11-state-regression.mjs` 包含：
 
-雙人沙發兩個 slot 獨立，因此一個人坐左側，不會把整張 sofa 宣告成已占滿；另一個人仍能使用右側。
+- 3 個 Seed × 800 tick invariant 長跑
+- deterministic replay
+- 每 tick 最多走一格
+- 舊 Zone 邊界跨界取杯
+- 貓休息必須產生正式 posture
+- 雙人沙發不同 slot
+- soft co-location
+- 無餐椅時站著吃
+- 補給必須實際走到 pantry 才入庫
+- A* 不可達回 `[]`
+- index 不可載入已刪 wrapper
 
-### Rest Surface 與恢復效率
+GitHub Actions 另對所有 `src/*.js` 執行 `node --check`。
 
-`recovery.js` 現在把休息效率拆成：
+## 17. 尚未實作／未定案
 
-```text
-baseEfficiency
-= Zone restQuality + 即時 noise
+- Serving / Plate：盛盤後帶到其他位置吃
+- 完整 sleep / bed / wake conditions
+- 自動 Room 分割後的門開關與聲音／溫度傳播
+- Activity Area / Zone 的正式用途政策
+- material / quality 對家具與 Room value 的完整資料模型
+- 火、溫度、乾燥與材質
+- 正式貨幣與經濟
+- interaction commitment strength / max distance / interrupt priority
 
-surfaceMultiplier
-= 目前 posture / Rest Surface 品質
-
-restEfficiency
-= baseEfficiency × surfaceMultiplier
-```
-
-目前人類：
-
-- 坐在 `canRest` slot 上：依 slot / furniture `restQuality` 得到約 0.9～1.15 的 surface multiplier。
-- 沒有 Rest Surface、站著休息：`surfaceMultiplier = 0.72`。
-
-貓暫時不套用人類家具的 standing penalty。
-
-完整睡眠仍未實作；沙發的 `canSleep` 目前仍只是 affordance。
-
-## Regression / CI
-
-`.github/workflows/state-regression.yml` 執行 `tests/state-regression.mjs`。
-
-目前包含：
-
-- Seed `20260911 / 7 / 42` 各 800 tick，每 tick 驗證 invariant。
-- 移動 tick 不得同時吃掉食物。
-- 拿杯子的同一 tick 不得同時取水。
-- 真正無路時 A* 必須回 `[]`。
-- 狹窄路徑只有經過其他 Agent 所在 Tile 才可通行時，A* 仍必須找到路。
-- Agent 共用 Tile 本身不算錯誤，但要出現在 crowding debug。
-- 持有物有效位置由 holder 決定。
-- 餐椅 B 必須在原始 `(7,1)`。
-- sofa 必須有左右兩個獨立 slot。
-- 兩人使用不同 sofa slot 必須合法，同一 slot 重複占用必須報錯。
-- 兩名人類同時休息時，應可分配到 sofa 左右 slot。
-- sofa seated rest 的恢復效率必須高於 standing rest。
-- 唯一直接可取食 meal slot 已占用時，另一名角色允許站著吃。
-- Spatial / Furniture UI 不再靠 `MutationObserver` 維護 Inspector selection。
-
-## Inspector selection
-
-v10.3 起主 UI 使用單一 selection state：
-
-```text
-{ type, id }
-```
-
-Tile、Furniture、Agent、Container、Source、Surface、Zone、Event 都走同一條 selection / renderInspector 流程；Spatial / Furniture UI 只提供 renderer / map enhancer。
-
-Furniture Inspector 目前仍以 furniture / footprint 為主要顯示單位；slot occupancy 尚未拆成獨立 Inspector 面板。Agent 行動標籤與 runtime validator 已能區分 slot。
-
-## Supply correctness
-
-外出補給使用精確 furniture interaction：
-
-```text
-外出
-→ 必須到 frontDoor interaction position
-→ 才進入外部工作
-
-返程
-→ 必須到 foodPantry interaction position
-→ 才能 depositFood()
-```
-
-只進入 doorway / pantry Zone 不足以完成空間 prerequisite。
-
-## Surface 過渡
-
-既有 engine 仍使用 `floor:<zone>` 聚合地面內容；Spatial Grid 同時維護 `tile.contents`。
-
-```text
-Zone surface 增加
-→ 投影到事件附近 Tile
-
-Zone surface 因清理／蒸發減少
-→ 從該 Zone 的濕 Tile 同步扣除
-```
-
-Spatial Grid 自己處理局部接觸：
-
-- A* 讀取單格濕度成本。
-- 貓踩到濕 Tile 才把液體轉到 paws。
-- 人踩到濕 Tile 才做局部滑倒檢查。
-
-後續目標仍是讓 Tile surface 成為主要物理來源，Zone 只保留 summary。
-
-## Sleep 的位置
-
-v10.4 已完成短休對 Rest Surface slot 的選擇與恢復倍率，但尚未正式加入 `sleep`。
-
-目前：
-
-```text
-short rest
-→ Rest Surface slot
-→ sitting
-→ 逐 tick fatigue recovery
-```
-
-尚未加入：
-
-```text
-sleep commitment
-bed
-sleep debt
-sleep need / efficiency
-wake conditions
-alarm / schedule
-early-riser trait
-```
-
-沙發資料具備 `canSleep`，但這仍只代表物件 affordance，不代表睡眠行為已存在。
+新增上述功能時，優先擴充既有 `Tile → affordance → action phase`，不要再新增包裝 `tick()` 的 patch module。
