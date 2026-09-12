@@ -2,9 +2,9 @@
 
 湧現式因果模擬器。用少量可組合規則觀察角色、物件、資源與環境如何自行形成因果鏈。
 
-目前版本：**v11.2・Serving / Plate**。
+目前版本：**v11.3・Portable Water Bucket**。
 
-> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 開始在這個 core 上重新增加玩法，而不再新增包裝 `tick()` 的補丁層。
+> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 起在這個 core 上重新增加玩法。v11.3 進一步要求由角色主動進行的資源轉移符合實際 interaction／持有關係，不再允許站在來源旁遠端改寫另一個容器。
 
 ## 核心方向
 
@@ -18,6 +18,41 @@ Activity Area      = 未來可選用途 overlay，不提供環境魔法加成
 ```
 
 舊版六個 `Zone` 不再負責噪音、休息品質、是否抵達物件或行動 prerequisite。局部環境由真正的 Tile、家具、液體、角色與噪音事件決定。
+
+## v11.3：Portable Water Bucket / Physical Transfer
+
+水桶現在是普通 `portable` Container，不再是固定在水龍頭旁、可以被遠端寫入內容物的特殊儲水點。
+
+補水流程：
+
+```text
+水桶水量偏低
+→ 找到水桶
+→ 預約／拿起水桶
+→ 搬到水龍頭 interaction position
+→ 在手上替水桶補水
+→ 把水桶留在實際補水位置
+```
+
+同時加入 actor-mediated resource transfer contract：角色主動把資源從 A 轉到 B 時，角色必須能實際操作來源，而且目的 Container 必須在角色手上，或本身位於角色可直接操作的位置。若來源 Container 正被別人拿著，也不能直接從對方手上的容器抽取資源。
+
+這條規則現在共用於：
+
+- 水龍頭 → 手持容器
+- 水龍頭 → 手持水桶
+- 現成食物 → 手持餐盤
+
+`transferResource()` 本身仍保留為底層物理 primitive，供灑出等不是「角色主動操作兩端」的資源轉移使用。
+
+因此以下狀況現在會被拒絕：
+
+```text
+角色只站在水龍頭旁
+＋ 水桶仍在別處／沒有拿在手上
+→ 不得增加水桶水量
+```
+
+水桶改為可攜後，橘子也不會直接喝正在被其他角色拿在手上的水桶。
 
 ## v11.2：Serving / Plate
 
@@ -101,6 +136,7 @@ docs/
 - Seeded RNG / deterministic replay
 - 食物、水、酒與通用容器
 - Serving / Plate 與可攜餐盤
+- 可攜水桶與 actor-mediated resource transfer
 - 橘子可直接吃盤中食物，但不拿盤子
 - 酒瓶可直接喝，杯子仍具較高偏好
 - A* Tile movement 與 soft crowding
@@ -144,6 +180,9 @@ Regression 包含：
 - 拿餐盤後可使用餐桌右側座位，不再受 `mealTray` 單點限制
 - 橘子可吃盤中食物，但 `held` 必須保持空
 - 沒有餐盤／非常餓時直接吃 fallback
+- 補水必須實際拿起水桶並搬到水龍頭
+- 未持有水桶時不得在水龍頭旁遠端增加水量
+- 橘子不能喝正在被別人持有的水桶
 - supply 必須實際走到 pantry 才入庫
 - A* unreachable → `[]`
 - offMap 社交目標強烈中斷
