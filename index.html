@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v10.3｜State Correctness</title>
+  <title>因果湧現模擬器 v10.4｜Furniture Slots</title>
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/mobile.css">
   <link rel="stylesheet" href="styles/spatial.css">
@@ -13,7 +13,7 @@
 <body>
 <div class="shell">
   <header class="appbar">
-    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v10.3・State Correctness</span></h1></div>
+    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v10.4・Furniture Slots</span></h1></div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
   <div class="toolbar">
@@ -22,7 +22,7 @@
   </div>
   <main class="workspace">
     <div class="maincol">
-      <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Zone 負責語意；Tile、家具與 interaction position 負責實際空間</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="map-grid"></div></div></section>
+      <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Zone 負責語意；Tile、家具 footprint 與使用 slot 負責實際空間</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="map-grid"></div></div></section>
       <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>每 tick 最多移動一格或推進一個行動階段</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
       <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>預設隱藏純移動／規劃噪音</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
     </div>
@@ -38,6 +38,7 @@
 <script src="src/furniture.js" defer></script>
 <script src="src/action-guard.js" defer></script>
 <script src="src/seating.js" defer></script>
+<script src="src/rest-surface.js" defer></script>
 <script src="src/state-validator.js" defer></script>
 <script src="src/spatial-ui.js" defer></script>
 <script src="src/furniture-ui.js" defer></script>
