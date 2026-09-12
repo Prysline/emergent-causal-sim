@@ -22,14 +22,21 @@
         else{const list=byTile.get(key(a.position))||[];list.push(a.id);byTile.set(key(a.position),list);}
       }
       if(!a.posture||!['standing','sitting','lying'].includes(a.posture.kind))add('invalid_posture',`${a.name}的 posture 無效。`,{agentId:a.id});
-      if(a.posture?.kind==='sitting'){
+      const usesSlot=!!a.posture?.slotId;
+      if(usesSlot){
         const slot=SP.getSlot(st,a.posture.slotId);
-        if(!slot)add('posture_slot_missing',`${a.name}坐在不存在的 slot ${a.posture.slotId}。`,{agentId:a.id,slotId:a.posture.slotId});
+        if(!slot)add('posture_slot_missing',`${a.name}使用不存在的 slot ${a.posture.slotId}。`,{agentId:a.id,slotId:a.posture.slotId});
         else{
-          if(!same(a.position,slot.position))add('posture_position_mismatch',`${a.name}標記坐在 ${slot.id}，但位置是 ${key(a.position)}。`,{agentId:a.id,slotId:slot.id});
+          if(!same(a.position,slot.position))add('posture_position_mismatch',`${a.name}標記使用 ${slot.id}，但位置是 ${key(a.position)}。`,{agentId:a.id,slotId:slot.id});
           if(a.posture.furnitureId!==slot.furnitureId)add('posture_furniture_mismatch',`${a.name}的 posture furniture 與 slot 不一致。`,{agentId:a.id,slotId:slot.id});
+          if(!SP.slotAllows(slot,a))add('posture_slot_kind_mismatch',`${a.name}不能使用 ${slot.id}。`,{agentId:a.id,slotId:slot.id});
+          if(a.posture.kind==='lying'&&!slot.canRest&&!slot.canSleep)add('lying_slot_unusable',`${a.name}躺在不能休息或睡眠的 slot ${slot.id}。`,{agentId:a.id,slotId:slot.id});
           const list=bySlot.get(slot.id)||[];list.push(a.id);bySlot.set(slot.id,list);
         }
+      }else if(a.posture?.kind==='sitting')add('sitting_without_slot',`${a.name}標記 sitting 卻沒有 slot。`,{agentId:a.id});
+      if(a.action?.intent==='sleep'&&a.action.phase==='sleeping'){
+        const slot=usesSlot?SP.getSlot(st,a.posture.slotId):null;
+        if(a.posture?.kind!=='lying'||!slot?.canSleep)add('sleep_posture_invalid',`${a.name}正在 sleeping，但沒有躺在可睡眠 slot。`,{agentId:a.id,slotId:a.posture?.slotId||null});
       }
       if(a.held){
         if(!st.containers[a.held])add('held_missing_container',`${a.name}持有不存在的容器 ${a.held}。`,{agentId:a.id,containerId:a.held});
