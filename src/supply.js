@@ -90,7 +90,7 @@
       pick:{id:'supplyFood',score,why:[`食物總庫存只剩 ${Math.round(stock)}`,'需要有人花時間與體力把外部食物帶回來']},
       tick:st.tick
     };
-    addSupplyEvent(`${a.name}注意到食物庫存偏低，決定外出補給。`,'warn',{action:'supplyFood',phase:'plan',target:'doorway',stock});
+    addSupplyEvent(`${a.name}注意到食物庫存偏低，決定外出補給。`,'warn',{action:'supplyFood',phase:'plan',target:'frontDoor',stock});
   }
 
   function chooseWorker(st){
@@ -105,11 +105,28 @@
     return best;
   }
 
-  function assignNativeMove(a,targetZone){
-    if(a.location===targetZone)return;
+  function preciseGoal(a,targetId,targetZone){
+    const F=window.SimFurniture;
+    if(!F?.interactionGoal)return null;
+    const goal=F.interactionGoal(targetId,a.id);
+    return goal?{...goal}:null;
+  }
+
+  function atPreciseTarget(a,targetId,fallbackZone){
+    const F=window.SimFurniture;
+    if(F?.isAtInteraction)return F.isAtInteraction(a.id,targetId);
+    return a.location===fallbackZone;
+  }
+
+  function assignNativeMove(a,targetZone,targetId){
+    const goal=preciseGoal(a,targetId,targetZone);
     const p=a.plan;
-    if(p?.__supplyMove&&p.targetZone===targetZone)return;
-    a.plan={intent:'wander',phase:'move',targetZone,oneShot:true,__supplyMove:true};
+    if(p?.__supplyMove&&p.targetZone===targetZone&&p.__supplyTarget===targetId){
+      if(goal){p.__spatialGoal=goal;p.__spatialGoalZone=targetZone;}
+      return;
+    }
+    a.plan={intent:'wander',phase:'move',targetZone,oneShot:true,__supplyMove:true,__supplyTarget:targetId};
+    if(goal){a.plan.__spatialGoal=goal;a.plan.__spatialGoalZone=targetZone;}
   }
 
   function setWorkPlan(a){
@@ -134,9 +151,9 @@
     const t=worker.supplyTask;
 
     if(t.phase==='toExit'){
-      if(worker.location==='doorway'){
+      if(atPreciseTarget(worker,'frontDoor','doorway')){
         t.phase='work';worker.plan=null;setWorkPlan(worker);
-      }else assignNativeMove(worker,'doorway');
+      }else assignNativeMove(worker,'doorway','frontDoor');
       return;
     }
     if(t.phase==='work'){
@@ -146,14 +163,16 @@
       return;
     }
     if(t.phase==='return'){
-      if(worker.location==='pantry')worker.plan=null;
-      else assignNativeMove(worker,'pantry');
+      if(atPreciseTarget(worker,'foodPantry','pantry')){
+        setWorkPlan(worker);
+      }else assignNativeMove(worker,'pantry','foodPantry');
     }
   }
 
   function depositFood(a){
     const st=E.getState(),s=initSupply(st),t=a.supplyTask,pantry=st.containers.foodPantry;
     if(!t||!pantry)return;
+    if(!atPreciseTarget(a,'foodPantry','pantry'))return;
     const carrying=a.carrying?.resource==='food'?a.carrying.amount:0;
     const used=Object.values(pantry.contents||{}).reduce((x,y)=>x+y,0);
     const room=Math.max(0,pantry.capacity-used);
@@ -162,10 +181,10 @@
     const leftover=Math.max(0,carrying-moved);
     if(leftover>.05){
       a.carrying.amount=leftover;
-      addSupplyEvent(`${a.name}把 ${moved.toFixed(1)} 單位食物放進食物櫃，但還有 ${leftover.toFixed(1)} 單位暫時放不下。`,'warn',{action:'supplyFood',phase:'deposit',resource:'food',amount:moved,leftover,location:'pantry'});
+      addSupplyEvent(`${a.name}走到食物櫃旁，把 ${moved.toFixed(1)} 單位食物放進食物櫃，但還有 ${leftover.toFixed(1)} 單位暫時放不下。`,'warn',{action:'supplyFood',phase:'deposit',resource:'food',amount:moved,leftover,location:'pantry'});
     }else{
       a.carrying=null;
-      addSupplyEvent(`${a.name}把外出帶回的 ${moved.toFixed(1)} 單位食物收進食物櫃。`,'good',{action:'supplyFood',phase:'deposit',resource:'food',amount:moved,location:'pantry',stock:foodStock(st)});
+      addSupplyEvent(`${a.name}走到食物櫃旁，把外出帶回的 ${moved.toFixed(1)} 單位食物收進食物櫃。`,'good',{action:'supplyFood',phase:'deposit',resource:'food',amount:moved,location:'pantry',stock:foodStock(st)});
     }
     s.trips++;
     s.totalProduced+=moved;
@@ -180,9 +199,9 @@
     if(!worker?.supplyTask){if(s.workerId)s.workerId=null;return;}
     const t=worker.supplyTask;
 
-    if(t.phase==='toExit'&&worker.location==='doorway'){
+    if(t.phase==='toExit'&&atPreciseTarget(worker,'frontDoor','doorway')){
       t.phase='work';worker.plan=null;
-      addSupplyEvent(`${worker.name}從出入口離開房間，開始進行外出補給。`,'normal',{action:'supplyFood',phase:'workStart',location:'doorway'});
+      addSupplyEvent(`${worker.name}走到大門，從門口離開房間並開始外出補給。`,'normal',{action:'supplyFood',phase:'workStart',location:'doorway',target:'frontDoor'});
       return;
     }
 
@@ -194,12 +213,12 @@
       if(t.workTicks>=t.requiredTicks){
         worker.carrying={resource:'food',amount:t.amount};
         t.phase='return';worker.plan=null;
-        addSupplyEvent(`${worker.name}完成外出補給，帶著 ${t.amount.toFixed(1)} 單位食物回來。`,'good',{action:'supplyFood',phase:'return',resource:'food',amount:t.amount,target:'pantry'});
+        addSupplyEvent(`${worker.name}完成外出補給，帶著 ${t.amount.toFixed(1)} 單位食物回來。`,'good',{action:'supplyFood',phase:'return',resource:'food',amount:t.amount,target:'foodPantry'});
       }
       return;
     }
 
-    if(t.phase==='return'&&worker.location==='pantry')depositFood(worker);
+    if(t.phase==='return'&&atPreciseTarget(worker,'foodPantry','pantry'))depositFood(worker);
   }
 
   function tick(){
@@ -214,7 +233,7 @@
     const st=baseReset(seed);
     initSupply(st);
     for(const a of Object.values(st.agents))delete a.supplyTask;
-    addSupplyEvent(`v9 初始化：有限食物現在會觸發外出補給工作；工作會消耗時間與體力，完成後才把食物帶回食物櫃。`,'system',{action:'supplySystem',stock:foodStock(st)});
+    addSupplyEvent(`v10.1 補給：食物不足會觸發外出補給；角色必須走到大門才算出門，回程也必須走到食物櫃互動位置才會入庫。`,'system',{action:'supplySystem',stock:foodStock(st)});
     return st;
   }
 
@@ -232,12 +251,12 @@
   E.planLabel=a=>{
     const t=a.supplyTask;
     if(!t)return basePlanLabel(a);
-    if(t.phase==='toExit')return '外出補給食物・前往出入口';
+    if(t.phase==='toExit')return '外出補給食物・前往大門';
     if(t.phase==='work')return `外出補給食物・工作中 ${t.workTicks}/${t.requiredTicks}`;
-    if(t.phase==='return')return `外出補給食物・搬運回食物櫃${a.carrying?`・${Math.round(a.carrying.amount*10)/10}`:''}`;
+    if(t.phase==='return')return `外出補給食物・搬運到食物櫃${a.carrying?`・${Math.round(a.carrying.amount*10)/10}`:''}`;
     return '外出補給食物';
   };
 
   initSupply(E.getState());
-  addSupplyEvent(`v9 勞動補給模組已啟用：食物低於 ${CONFIG.triggerFood} 時，角色可能安排外出補給。`,'system',{action:'supplySystem',stock:foodStock(E.getState())});
+  addSupplyEvent(`v10.1 補給模組已啟用：食物低於 ${CONFIG.triggerFood} 時，角色可能安排外出補給。`,'system',{action:'supplySystem',stock:foodStock(E.getState())});
 })();
