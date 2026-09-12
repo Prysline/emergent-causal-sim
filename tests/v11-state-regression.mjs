@@ -84,8 +84,31 @@ E.reset(20260911);
   const st=E.getState(),a=st.agents.zhen,start={...a.position};for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const t=SP.tileAt(st,start.x+dx,start.y+dy);if(t?.terrain==='floor')t.walkable=false;}assert.deepEqual(SP.astar(st,start,{x:2,y:2},a.id),[]);
 }
 
+E.reset(20260911);
+{
+  const st=E.getState(),target=st.agents.zhen,actor=st.agents.zhou;
+  target.offMap=true;actor.action={intent:'talk',phase:'move',targetAgent:'zhen',started:st.tick,wait:0};
+  E.tick();
+  assert.equal(actor.action,null,'互動目標離開可互動世界時應強烈中斷，而不是永久等待');
+  assert.ok(st.events.some(e=>e.text.includes('阿真已經離開可互動範圍')),'中斷原因應可從 timeline 觀察');
+  noIssues('off-map target interruption');
+}
+
+E.reset(20260911);
+{
+  const a=E.getState().agents.zhen;
+  a.action={intent:'petCat',phase:'move',targetAgent:'orange',spatialGoal:{x:5,y:4},started:0,wait:0};
+  assert.equal(E.actionLabel(a),'摸橘子・目標 (5,4)');
+  a.action={intent:'seekHuman',phase:'move',targetAgent:'zhou',spatialGoal:{x:4,y:3},started:0,wait:0};
+  assert.equal(E.actionLabel(a),'找人撒嬌・目標 (4,3)');
+  assert.ok(!E.actionLabel(a).includes('・・'),'行動標籤不得重複分隔符');
+}
+
 {
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const legacy of ['recovery.js','supply.js','action-guard.js','seating.js','rest-surface.js','spatial-ui.js','furniture-ui.js','recovery-ui.js','supply-ui.js'])assert.ok(!index.includes(legacy),`index 不應再載入 ${legacy}`);
+  const css=fs.readFileSync(new URL('../styles/app.css',import.meta.url),'utf8');
+  assert.ok(css.includes('.slot-row{display:grid;grid-template-columns:minmax(0,1fr) auto;'),'Furniture slot Inspector 應使用可收縮的兩欄 layout');
+  assert.ok(!css.includes('grid-template-columns:minmax(70px,1fr) 70px minmax(90px,1fr) minmax(90px,1fr)'),'不得恢復會讓 360px Inspector 爆版的四欄最小寬度');
 }
 console.log('v11-state-regression: ok');

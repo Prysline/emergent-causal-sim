@@ -3,6 +3,7 @@
   if(!W||!SP)return;
   const {RESOURCE_TYPES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911;
+  const MAX_INTERACTION_WAIT=6;
   let state=null,eventSeq=0;
 
   function normalizeSeed(seed){const n=Number(seed);return Number.isFinite(n)&&n!==0?(n>>>0):DEFAULT_SEED;}
@@ -81,15 +82,50 @@
   }
   function spillHeldAt(a,tile,causeIds=[]){const c=a.held&&state.containers[a.held];if(!c)return;for(const [r,amt] of Object.entries({...c.contents})){if(RESOURCE_TYPES[r]?.phase!=='liquid'||amt<=0)continue;const m=transferResource(r,c.id,tileEndpointId(tile),amt*rand(.14,.34));if(m>0){const e=addEvent(`${resourceName(r)}從${c.name}灑在 (${tile.x}, ${tile.y}) 的地面。`,'bad',causeIds,{action:'spill',resource:r,amount:m,position:tile.id});setResourceCause(tileEndpointId(tile),r,e);}}}
 
+  function targetLabel(t){if(!t)return'目標';if(t.kind==='agent')return state.agents[t.id]?.name||t.id;if(t.kind==='slot'){const s=SP.getSlot(state,t.id);return state.furniture[s?.furnitureId]?.name||'座位';}if(t.kind==='tile')return`(${t.position.x}, ${t.position.y})`;return state.containers[t.id]?.name||state.sources[t.id]?.name||state.furniture[t.id]?.name||t.id;}
+  function targetAvailability(target){
+    if(!target)return {exists:false,available:false,reason:'missing',label:'目標'};
+    if(target.kind==='agent'){
+      const obj=state.agents[target.id];if(!obj)return {exists:false,available:false,reason:'missing',label:target.id};
+      return {exists:true,available:!obj.offMap,reason:obj.offMap?'offMap':null,label:obj.name};
+    }
+    if(target.kind==='object'){
+      const obj=state.containers[target.id];if(!obj)return {exists:false,available:false,reason:'missing',label:target.id};
+      const holder=holderOf(target.id);if(holder?.offMap)return {exists:true,available:false,reason:'offMap',label:obj.name};
+      return {exists:true,available:!!SP.objectPosition(state,target.id),reason:SP.objectPosition(state,target.id)?null:'noPosition',label:obj.name};
+    }
+    if(target.kind==='source'){
+      const obj=state.sources[target.id];return obj?{exists:true,available:!!obj.position,reason:obj.position?null:'noPosition',label:obj.name}:{exists:false,available:false,reason:'missing',label:target.id};
+    }
+    if(target.kind==='furniture'){
+      const obj=state.furniture[target.id];return obj?{exists:true,available:true,reason:null,label:obj.name}:{exists:false,available:false,reason:'missing',label:target.id};
+    }
+    if(target.kind==='slot'){
+      const slot=SP.getSlot(state,target.id);return slot?{exists:true,available:true,reason:null,label:targetLabel(target)}:{exists:false,available:false,reason:'missing',label:target.id};
+    }
+    if(target.kind==='tile'){
+      const tile=SP.tileByPos(state,target.position);return tile?{exists:true,available:SP.walkable(state,target.position),reason:SP.walkable(state,target.position)?null:'blocked',label:targetLabel(target)}:{exists:false,available:false,reason:'missing',label:targetLabel(target)};
+    }
+    return {exists:false,available:false,reason:'missing',label:targetLabel(target)};
+  }
+  function interruptUnavailableTarget(a,target,status){
+    const label=status.label||targetLabel(target);
+    if(status.reason==='offMap')abortAction(a,`發現${label}已經離開可互動範圍`);
+    else if(!status.exists)abortAction(a,`找不到原本的目標${label?`「${label}」`:''}`);
+    else abortAction(a,`發現${label}目前無法互動`);
+  }
   function moveToward(a,goal,reason){
     if(!goal||a.offMap)return false;if(SP.same(a.position,goal))return true;const path=SP.astar(state,a.position,goal,a.id);if(path.length<2)return false;
     standUp(a);const next=path[1];a.position={...next};let cost=.10;if(a.held)cost+=.03;if(a.carrying)cost+=.05+Math.min(.05,(a.carrying.amount||0)*.0015);applyExertion(a,cost,a.carrying?'搬運中步行':a.held?'拿著物品步行':'步行',{thirstFactor:.18,hungerFactor:.05});onEnterTile(a);a.action.lastMoveReason=reason;a.action.lastPath=path.map(p=>({...p}));return SP.same(a.position,goal);
   }
   function moveToInteraction(a,target,reason){
-    if(SP.isAtInteraction(state,a,target))return true;const goal=SP.bestInteractionPosition(state,a,target);if(!goal){a.action.wait=(a.action.wait||0)+1;if(a.action.wait%4===1)addEvent(`${a.name}暫時找不到能接近${targetLabel(target)}的位置。`,'normal',[],{action:'wait',target:target.id});return false;}a.action.spatialGoal={...goal};moveToward(a,goal,reason);return false;
+    const status=targetAvailability(target);if(!status.exists||!status.available){interruptUnavailableTarget(a,target,status);return false;}
+    if(SP.isAtInteraction(state,a,target)){a.action.wait=0;return true;}
+    const goal=SP.bestInteractionPosition(state,a,target);
+    if(!goal){a.action.wait=(a.action.wait||0)+1;if(a.action.wait===1||a.action.wait===4)addEvent(`${a.name}暫時找不到能接近${status.label}的位置。`,'normal',[],{action:'wait',target:target.id});if(a.action.wait>=MAX_INTERACTION_WAIT)abortAction(a,`持續找不到能接近${status.label}的位置`);return false;}
+    a.action.wait=0;a.action.spatialGoal={...goal};moveToward(a,goal,reason);return false;
   }
   function moveToExact(a,p,reason){if(SP.same(a.position,p))return true;a.action.spatialGoal={...p};moveToward(a,p,reason);return false;}
-  function targetLabel(t){if(!t)return'目標';if(t.kind==='agent')return state.agents[t.id]?.name||t.id;if(t.kind==='slot'){const s=SP.getSlot(state,t.id);return state.furniture[s?.furnitureId]?.name||'座位';}if(t.kind==='tile')return`(${t.position.x}, ${t.position.y})`;return state.containers[t.id]?.name||state.sources[t.id]?.name||state.furniture[t.id]?.name||t.id;}
 
   function applyIngestion(a,r,amount,causeIds=[]){const def=RESOURCE_TYPES[r];if(!def||amount<=0)return;if(def.hungerRelief){const[lo,hi]=def.hungerRelief;a.needs.hunger=clamp(a.needs.hunger-rand(lo,hi)*Math.min(1,amount/6));}if(def.thirstRelief){const[lo,hi]=def.thirstRelief;a.needs.thirst=clamp(a.needs.thirst-rand(lo,hi)*Math.min(1,amount/6));}if(def.intoxicationFactor){a.status.intoxication=clamp(a.status.intoxication+amount*def.intoxicationFactor+rand(1,5));const e=addEvent(`${a.name}的醉酒程度上升至 ${Math.round(a.status.intoxication)}。`,'warn',causeIds,{status:'intoxication',resource:r,value:a.status.intoxication,coordination:coordination(a)});a.causes.intoxication=e;}}
   function consumeFrom(a,fromId,r,amount,label){const taken=takeResource(fromId,r,amount);if(taken<=0)return false;const e=addEvent(`${a.name}${label}`,'good',[resourceCause(fromId,r)].filter(Boolean),{action:r==='food'?'eat':r==='water'?'drinkWater':'drinkAlcohol',resource:r,from:fromId,amount:taken,position:SP.key(a.position)});applyIngestion(a,r,taken,[e]);return true;}
@@ -102,7 +138,7 @@
 
   function foodStock(){return (state.containers.mealTray.contents.food||0)+(state.containers.foodPantry.contents.food||0);}
   function wetTotal(){return Object.values(state.map.tiles).reduce((s,t)=>s+SP.tileLiquidAmount(t),0);}
-  function nearestHuman(a){return Object.values(state.agents).filter(x=>x.kind==='human').sort((x,y)=>SP.pathDistance(state,a,x.position)-SP.pathDistance(state,a,y.position))[0]||null;}
+  function nearestHuman(a){return Object.values(state.agents).filter(x=>x.kind==='human'&&!x.offMap).sort((x,y)=>SP.pathDistance(state,a,x.position)-SP.pathDistance(state,a,y.position))[0]||null;}
 
   function options(a){
     const o=[],food=state.containers.mealTray.contents.food||0,water=state.containers.waterBucket.contents.water||0,wet=wetTotal();
@@ -111,7 +147,7 @@
       o.push({id:'drinkWater',score:a.needs.thirst*1.18+10,why:['口渴','會尋找可用容器與水源']});
       if((state.containers.alcoholBottle.contents.alcohol||0)>0)o.push({id:'drinkAlcohol',score:a.needs.thirst*.42+a.traits.alcoholLike*34+(a.status.intoxication<35?6:-18),why:['口渴與飲酒偏好','酒瓶本身也可直接飲用']});
       o.push({id:'rest',score:Math.max(0,a.needs.fatigue-18)*1.25+9,why:['疲勞','會依可用 Rest Surface 與局部噪音選位置']});
-      o.push({id:'talk',score:Math.max(0,a.needs.social-18)*.9+a.traits.social*16,why:['社交需求']});
+      if(Object.values(state.agents).some(x=>x.kind==='human'&&x.id!==a.id&&!x.offMap))o.push({id:'talk',score:Math.max(0,a.needs.social-18)*.9+a.traits.social*16,why:['社交需求']});
       if(a.pendingInteraction?.type==='cat_request')o.push({id:'petCat',score:72+a.traits.animalAffinity*20,why:['橘子剛剛主動討摸','回應已形成短期社交動機']});
       else o.push({id:'petCat',score:8+a.traits.animalAffinity*18+a.needs.social*.18,why:['對橘子的親和度']});
       if(wet>.2)o.push({id:'cleanFloor',score:15+wet*.9+a.wellbeing.safety*.08,why:['附近有濕地','降低未來滑倒與沾濕風險']});
@@ -123,7 +159,7 @@
       if(food>0)o.push({id:'eat',score:a.needs.hunger*1.08+12,why:['飢餓']});
       o.push({id:'groom',score:a.needs.groomingNeed*.83+Object.values(a.contacts.paws||{}).reduce((x,y)=>x+y,0)*.9+18,why:['理毛需求','腳掌異物會提高舔毛意願']});
       o.push({id:'rest',score:Math.max(0,a.needs.fatigue-15)*1.05+8,why:['疲勞','可選沙發或安全乾燥地面']});
-      if(a.needs.social>14)o.push({id:'seekHuman',score:Math.max(0,a.needs.social-10)*.95+a.traits.social*18,why:['社交需求','會主動找附近的人']});
+      if(a.needs.social>14&&nearestHuman(a))o.push({id:'seekHuman',score:Math.max(0,a.needs.social-10)*.95+a.traits.social*18,why:['社交需求','會主動找附近的人']});
       o.push({id:'wander',score:20+a.traits.curious*25+rand(0,16),why:['探索傾向']});
       if(water>0)o.push({id:'drinkWater',score:a.needs.thirst*1.05+8,why:['口渴']});
     }
@@ -139,9 +175,9 @@
       case'drinkWater':a.action=a.kind==='cat'?{...base,phase:'move',targetObject:'waterBucket',resource:'water'}:{...base,phase:'chooseVessel',sourceObject:'waterBucket',resource:'water'};break;
       case'drinkAlcohol':a.action={...base,phase:'chooseVessel',sourceObject:'alcoholBottle',resource:'alcohol'};break;
       case'rest':a.action={...base,phase:'chooseSurface',restTicks:0};break;
-      case'talk':{const other=Object.values(state.agents).filter(x=>x.kind==='human'&&x.id!==a.id).sort((x,y)=>SP.pathDistance(state,a,x.position)-SP.pathDistance(state,a,y.position))[0];a.action={...base,phase:'move',targetAgent:other?.id};break;}
+      case'talk':{const other=Object.values(state.agents).filter(x=>x.kind==='human'&&x.id!==a.id&&!x.offMap).sort((x,y)=>SP.pathDistance(state,a,x.position)-SP.pathDistance(state,a,y.position))[0];a.action=other?{...base,phase:'move',targetAgent:other.id}:null;break;}
       case'petCat':a.action={...base,phase:'move',targetAgent:'orange',commitment:{acceptedAt:state.tick,strength:'light'}};if(a.pendingInteraction?.type==='cat_request')a.pendingInteraction.accepted=true;break;
-      case'seekHuman':{const h=nearestHuman(a);a.action={...base,phase:'move',targetAgent:h?.id};break;}
+      case'seekHuman':{const h=nearestHuman(a);a.action=h?{...base,phase:'move',targetAgent:h.id}:null;break;}
       case'cleanFloor':{const t=SP.wettestTile(state);a.action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null};break;}
       case'groom':a.action={...base,phase:'groom'};break;
       case'wander':{const t=randomFloorTile(a);a.action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null,oneShot:true};break;}
@@ -224,7 +260,8 @@
   }
 
   function stepSocial(a,p){
-    const target=state.agents[p.targetAgent];if(!target){finishAction(a,{dropHeld:false});return;}
+    const target=state.agents[p.targetAgent];if(!target){interruptUnavailableTarget(a,{kind:'agent',id:p.targetAgent},targetAvailability({kind:'agent',id:p.targetAgent}));return;}
+    if(target.offMap){interruptUnavailableTarget(a,{kind:'agent',id:target.id},targetAvailability({kind:'agent',id:target.id}));return;}
     if(p.phase==='move'){if(!moveToInteraction(a,{kind:'agent',id:target.id},p.intent==='petCat'?'去找橘子':p.intent==='seekHuman'?'去找人撒嬌':'去找人聊天'))return;p.phase='interact';return;}
     if(p.phase==='interact'){
       if(!SP.isAtInteraction(state,a,{kind:'agent',id:target.id})){p.phase='move';return;}
@@ -272,7 +309,7 @@
     return state;
   }
 
-  function actionLabel(a){const p=a.action;if(!p)return'目前沒有進行中的行動';const moveTarget=p.spatialGoal?`・目標 (${p.spatialGoal.x},${p.spatialGoal.y})`:'';switch(p.intent){case'eat':return p.phase==='toSeat'?'吃東西・前往餐椅':p.phase==='eating'?'吃東西・進食中':`吃東西${moveTarget}`;case'drinkWater':case'drinkAlcohol':return `${ZH[p.intent]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;case'petCat':return`摸橘子・${moveTarget}`;case'seekHuman':return`找人撒嬌・${moveTarget}`;case'cleanFloor':return`清理地面${moveTarget}`;case'groom':return'舔毛清潔';case'wander':return`閒晃${moveTarget}`;case'refillWater':return`補充水桶・${p.phase}`;case'refillFood':return`補充現成食物・${p.phase}`;case'supplyFood':return`外出補給・${p.phase}`;default:return ZH[p.intent]||p.intent;}}
+  function actionLabel(a){const p=a.action;if(!p)return'目前沒有進行中的行動';const moveTarget=p.spatialGoal?`・目標 (${p.spatialGoal.x},${p.spatialGoal.y})`:'';switch(p.intent){case'eat':return p.phase==='toSeat'?'吃東西・前往餐椅':p.phase==='eating'?'吃東西・進食中':`吃東西${moveTarget}`;case'drinkWater':case'drinkAlcohol':return `${ZH[p.intent]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;case'petCat':return`摸橘子${moveTarget}`;case'seekHuman':return`找人撒嬌${moveTarget}`;case'cleanFloor':return`清理地面${moveTarget}`;case'groom':return'舔毛清潔';case'wander':return`閒晃${moveTarget}`;case'refillWater':return`補充水桶・${p.phase}`;case'refillFood':return`補充現成食物・${p.phase}`;case'supplyFood':return`外出補給・${p.phase}`;default:return ZH[p.intent]||p.intent;}}
   function phaseLabel(p){return p?.phase||'';}
 
   function getEntity(type,id){if(type==='agent')return state.agents[id];if(type==='container')return state.containers[id];if(type==='source')return state.sources[id];if(type==='furniture')return state.furniture[id];if(type==='room')return state.map.rooms[id];return null;}

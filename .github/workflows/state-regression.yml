@@ -1,7 +1,7 @@
 name: State regression
 on:
   push:
-    branches: [main, refactor/v11-unified-core]
+    branches: [main, 'refactor/**', 'fix/**']
   workflow_dispatch:
 jobs:
   state-regression:
