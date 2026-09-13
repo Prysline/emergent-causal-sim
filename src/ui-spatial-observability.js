@@ -48,13 +48,15 @@
     if(section.innerHTML!==html)section.innerHTML=html;
   }
 
-  function markerFor(o){if(!o)return'';if(o.surfaceId!=='floor')return'上';if(o.covered)return'下';return'';}
+  function markerFor(type,o){if(type==='agent'&&o?.covered)return'↓';return'';}
   function syncFurnitureHandles(s,map){
     for(const f of Object.values(s.furniture||{})){
+      const spatial=SP.furnitureObservation?.(s,f.id);
+      map.querySelectorAll(`.furniture-footprint[data-entity="furniture:${f.id}"]`).forEach(seg=>seg.classList.toggle('spatial-traversable-surface',!!spatial?.surfaceId&&!!spatial?.traversable));
       if(!f.displayAt)continue;
       const tile=map.querySelector(`.sim-tile[data-tile="${f.displayAt.x},${f.displayAt.y}"]`);if(!tile||!tile.querySelector('.tile-entities .map-entity'))continue;
       let handle=tile.querySelector(`.spatial-furniture-handle[data-furniture-id="${f.id}"]`);
-      if(!handle){handle=document.createElement('button');handle.className='spatial-furniture-handle';handle.dataset.entity=`furniture:${f.id}`;handle.dataset.furnitureId=f.id;handle.title=`檢視${f.name}`;handle.setAttribute('aria-label',`檢視${f.name}`);handle.textContent=f.icon||'▰';tile.append(handle);}
+      if(!handle){handle=document.createElement('button');handle.className='spatial-furniture-handle';handle.dataset.entity=`furniture:${f.id}`;handle.dataset.furnitureId=f.id;handle.title=`檢視${f.name}空間`;handle.setAttribute('aria-label',`檢視${f.name}空間`);handle.textContent=f.icon||'▰';tile.append(handle);}
       const footprint=tile.querySelector(`.furniture-footprint[data-entity="furniture:${f.id}"]`);handle.classList.toggle('selected',!!footprint?.classList.contains('selected'));
     }
   }
@@ -63,7 +65,7 @@
     map.querySelectorAll('.map-entity[data-entity]').forEach(btn=>{
       const [type,id]=(btn.dataset.entity||'').split(':',2);let o=null;
       if(type==='agent')o=SP.agentObservation(s,id);else if(type==='container'||type==='source')o=SP.objectObservation(s,id);
-      const mark=markerFor(o),onSurface=!!o&&o.surfaceId!=='floor',underCover=!!o?.covered;
+      const mark=markerFor(type,o),onSurface=!!o&&o.surfaceId!=='floor',underCover=type==='agent'&&!!o?.covered;
       if(btn.classList.contains('spatial-on-surface')!==onSurface)btn.classList.toggle('spatial-on-surface',onSurface);
       if(btn.classList.contains('spatial-under-cover')!==underCover)btn.classList.toggle('spatial-under-cover',underCover);
       let badge=btn.querySelector('.spatial-node-mark');
