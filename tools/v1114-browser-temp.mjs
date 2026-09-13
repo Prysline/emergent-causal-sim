@@ -35,7 +35,7 @@ const contact=await page.evaluate(()=>{
   return {surface:n.surfaceId,x:n.x,y:n.y,paws:a.contacts.paws.water||0,tableWater:SP.environmentResourceAmount(st,n,'water'),floorWater:SP.environmentResourceAmount(st,SP.normalizeNode(st,{x:5,y:2},'floor'),'water'),event:st.events.find(e=>e.data?.actor==='orange'&&e.data?.action==='surfaceContact')?.data||null};
 });
 check('wet tabletop contact occurs on same Surface Cell',contact.surface==='diningTable:surface'&&contact.x===5&&contact.y===2&&contact.paws>0&&contact.tableWater<6&&contact.floorWater===0&&contact.event?.position==='room1|diningTable:surface|5,2',JSON.stringify(contact));
-await page.locator('[data-entity="agent:orange"]').click();
+await page.locator('#map .map-entity[data-entity="agent:orange"]').click();
 await page.waitForTimeout(100);
 inspector=await page.locator('#inspector').innerText();
 check('Agent Inspector shows current Spatial Environment',inspector.includes('Spatial Environment')&&inspector.includes('diningTable:surface')&&inspector.includes('液體總量'),inspector.slice(0,900));
