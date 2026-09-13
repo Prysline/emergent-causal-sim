@@ -31,3 +31,4 @@ jobs:
       - run: node tests/spatial-observability.mjs
       - run: node tests/supported-contact-audit.mjs
       - run: node tests/spatial-floor-boundaries.mjs
+      - run: node tests/surface-liquid-foundation.mjs
