@@ -123,35 +123,67 @@
   function adjacentWalkable(st,p){
     const out=[];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const q={x:p.x+dx,y:p.y+dy};if(walkable(st,q))out.push(q);}return out;
   }
-  function canInteractFrom(st,from,targetPos){return same(from,targetPos)||manhattan(from,targetPos)===1;}
-  function interactionPositions(st,target,agent){
-    if(!target)return [];
+  function dedupeWalkable(st,list){
+    const out=new Map();for(const p of list||[])if(p&&walkable(st,p))out.set(key(p),clonePos(p));
+    return [...out.values()];
+  }
+  function interactionPortPositions(st,obj){return dedupeWalkable(st,(obj?.interactionPorts||[]).map(p=>p.position));}
+  function supportReachPositions(st,supportId){
+    const f=furniture(st,supportId);if(!f)return [];
+    const out=[];
+    for(const p of f.footprint||[])out.push(...adjacentWalkable(st,p));
+    for(const slot of slotsForFurniture(st,supportId))if(slot.position)out.push(slot.position);
+    return dedupeWalkable(st,out);
+  }
+  function reachPositions(st,p,{includeSelf=true}={}){
+    if(!p)return [];
+    const out=adjacentWalkable(st,p);if(includeSelf&&walkable(st,p))out.push(clonePos(p));return dedupeWalkable(st,out);
+  }
+  function interactionGeometry(st,target,agent=null,affordance='default'){
+    if(!target)return {mode:'none',positions:[],target:null,affordance};
     if(target.kind==='slot'){
-      const slot=getSlot(st,target.id);return slot?.position&&walkable(st,slot.position)?[clonePos(slot.position)]:[];
+      const slot=getSlot(st,target.id),positions=slot?.position&&walkable(st,slot.position)?[clonePos(slot.position)]:[];
+      return {mode:'slot',positions,target,affordance,slotId:slot?.id||null};
     }
     if(target.kind==='agent'){
-      const other=st.agents?.[target.id];if(!other||other.offMap)return [];
-      const list=adjacentWalkable(st,other.position);if(walkable(st,other.position))list.push(clonePos(other.position));return list;
+      const other=st.agents?.[target.id];if(!other||other.offMap)return {mode:'socialReach',positions:[],target,affordance};
+      return {mode:'socialReach',positions:reachPositions(st,other.position),target,affordance};
     }
     if(target.kind==='furniture'){
-      const f=furniture(st,target.id);if(!f)return [];
-      const out=new Map();for(const slot of slotsForFurniture(st,f.id))if(slot.position&&walkable(st,slot.position))out.set(key(slot.position),clonePos(slot.position));
-      for(const p of f.footprint||[])for(const q of adjacentWalkable(st,p))out.set(key(q),q);
-      return [...out.values()];
+      const f=furniture(st,target.id);if(!f)return {mode:'furnitureReach',positions:[],target,affordance};
+      const out=[];for(const slot of slotsForFurniture(st,f.id))if(slot.position)out.push(slot.position);
+      for(const p of f.footprint||[])out.push(...adjacentWalkable(st,p));
+      return {mode:'furnitureReach',positions:dedupeWalkable(st,out),target,affordance,furnitureId:f.id};
     }
-    if(target.kind==='object'||target.kind==='source'){
-      const p=objectPosition(st,target.id);if(!p)return [];
-      const out=adjacentWalkable(st,p);if(walkable(st,p)&&!st.containers?.[target.id]?.supportId)out.push(clonePos(p));return out;
+    if(target.kind==='object'){
+      const c=st.containers?.[target.id];if(!c)return {mode:'none',positions:[],target,affordance};
+      const holder=holderOf(st,target.id),p=objectPosition(st,target.id);
+      if(!p)return {mode:'none',positions:[],target,affordance};
+      if(holder)return {mode:'heldReach',positions:reachPositions(st,p),target,affordance,holderId:holder.id};
+      const ports=interactionPortPositions(st,c);if(ports.length)return {mode:'port',positions:ports,target,affordance,ports:c.interactionPorts||[]};
+      if(c.supportId)return {mode:'supportReach',positions:supportReachPositions(st,c.supportId),target,affordance,supportId:c.supportId};
+      if(c.portable&&c.groundInteraction==='occupy'&&walkable(st,p))return {mode:'occupy',positions:[clonePos(p)],target,affordance};
+      return {mode:'reach',positions:reachPositions(st,p),target,affordance};
     }
-    if(target.kind==='tile')return walkable(st,target.position)?[clonePos(target.position)]:[];
-    return [];
+    if(target.kind==='source'){
+      const src=st.sources?.[target.id],p=objectPosition(st,target.id);if(!src||!p)return {mode:'none',positions:[],target,affordance};
+      const ports=interactionPortPositions(st,src);if(ports.length)return {mode:'port',positions:ports,target,affordance,ports:src.interactionPorts||[]};
+      return {mode:'reach',positions:reachPositions(st,p),target,affordance};
+    }
+    if(target.kind==='tile'){
+      const positions=walkable(st,target.position)?[clonePos(target.position)]:[];
+      return {mode:'tileContact',positions,target,affordance};
+    }
+    return {mode:'none',positions:[],target,affordance};
   }
-  function bestInteractionPosition(st,a,target){
-    const list=interactionPositions(st,target,a).map(p=>({p,d:pathDistance(st,a,p),occ:occupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
+  function canInteractFrom(st,from,targetPos){return same(from,targetPos)||manhattan(from,targetPos)===1;}
+  function interactionPositions(st,target,agent,affordance='default'){return interactionGeometry(st,target,agent,affordance).positions;}
+  function bestInteractionPosition(st,a,target,affordance='default'){
+    const list=interactionPositions(st,target,a,affordance).map(p=>({p,d:pathDistance(st,a,p),occ:occupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
     list.sort((x,y)=>x.occ-y.occ||x.d-y.d||manhattan(a.position,x.p)-manhattan(a.position,y.p));
     return list[0]?.p||null;
   }
-  function isAtInteraction(st,a,target){return interactionPositions(st,target,a).some(p=>same(p,a.position));}
+  function isAtInteraction(st,a,target,affordance='default'){return interactionPositions(st,target,a,affordance).some(p=>same(p,a.position));}
 
   function restTargets(st,a){
     const out=[];
@@ -181,8 +213,9 @@
     out.sort((x,y)=>x.score-y.score);return out;
   }
   function compatibleMealSlots(st,a,foodId='mealTray'){
-    const foodPos=objectPosition(st,foodId);if(!foodPos)return [];
-    return allSlots(st).filter(s=>s.mealSeat&&slotAllows(s,a)&&slotAvailable(st,s.id,a.id)&&canInteractFrom(st,s.position,foodPos));
+    const food=st.containers?.[foodId];if(!food)return [];
+    const foodPositions=interactionPositions(st,{kind:'object',id:foodId},a,'eat');
+    return allSlots(st).filter(s=>s.mealSeat&&slotAllows(s,a)&&slotAvailable(st,s.id,a.id)&&foodPositions.some(p=>same(p,s.position)));
   }
 
   function nearestLabel(st,p){
@@ -197,5 +230,5 @@
 
   function init(st){recomputeRooms(st);return st.map;}
 
-  window.SimSpatial={key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,canInteractFrom,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,compatibleMealSlots,describePlace,init};
+  window.SimSpatial={key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,canInteractFrom,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,compatibleMealSlots,describePlace,init};
 })();
