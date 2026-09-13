@@ -27,3 +27,4 @@ jobs:
       - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
       - run: node tests/refill-water-geometry.mjs
+      - run: node tests/spatial-traversal.mjs
