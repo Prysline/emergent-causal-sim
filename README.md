@@ -2,267 +2,158 @@
 
 湧現式因果模擬器。用少量可組合規則觀察角色、物件、資源與環境如何自行形成因果鏈。
 
-目前版本：**v11.5・Sleep / Bed**。
+目前版本：**v11.7・Core Consolidation**。
 
-> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 起在這個 core 上重新增加玩法。v11.3 把角色主動資源轉移納入物理 interaction contract；v11.4 統一負重；v11.5 再把 Sleep / Bed 正式接進同一套 Furniture Slot、posture、fatigue 與 action lifecycle。
+v11.7 不新增玩法，主要把 v11.1～v11.6 已完成的系統重新收斂成正式 core contract：World 只描述資料與 capability；Spatial 負責拓撲、阻擋與 interaction geometry；Engine 不再綁定目前場景的具體 entity ID；Validator 是純函式；UI 只讀正式 state 與 structured event refs。
 
-## 核心方向
+## 核心模型
 
 ```text
-Tile / terrain     = 物理世界
-Room               = 由牆、邊界、門的拓撲自動推導
-Furniture / object = affordance、局部舒適與互動來源
-Agent.position     = 角色位置唯一真相
-Agent.action       = 唯一行動 state machine
-Agent.posture      = standing / sitting / lying 正式世界狀態
-Activity Area      = 未來可選用途 overlay，不提供環境魔法加成
+World data
+→ Entity capability / role / policy
+
+Tile / terrain
+→ 物理移動基礎
+
+Room
+→ 由牆、邊界與門的拓撲自動推導
+
+Furniture footprint
+→ 物理占地
+
+Furniture slot
+→ 坐、躺、睡、出口等精確使用位置
+
+Interaction Geometry
+→ affordance + target data 決定操作位置
+
+Agent.position
+→ 角色位置唯一真相
+
+Agent.action
+→ 唯一 action state machine
+
+Agent.posture
+→ standing / sitting / lying 正式世界狀態
+
+state.reservations
+→ 暫時 exclusive 使用
 ```
 
-舊版六個 `Zone` 不再負責噪音、休息品質、是否抵達物件或行動 prerequisite。局部環境由真正的 Tile、家具、液體、角色與噪音事件決定。
+舊版六個環境 `Zone`、`location`、`plan`、wrapper tick 與 UI enhancer 都不再是現行架構。
 
-## v11.5：Sleep / Bed
+## v11.7 Core Consolidation
 
-睡眠現在是獨立於短休的正式 `Agent.action`，但仍直接存在單一 `engine.js` core；沒有新增 `sleep.js`、tick wrapper 或 UI 推測層。
+### Engine 不認具體場景 ID
+
+Engine 不再寫死 `waterBucket / tap / mealTray / foodPantry / orange / frontDoor` 等 entity ID。
+
+目前場景透過資料描述：
 
 ```text
-疲勞很高
-→ 選擇 sleep
-→ 尋找可用 canSleep slot
-→ 前往睡眠位置
-→ lying
-→ sleeping × N
-→ fatigue 持續恢復
-→ 滿足最低睡眠時間且恢復充分
-→ 自然醒
+roles
+restock policy
+preferredResource
+interactions[affordance]
+slot capability
+resource capability
 ```
 
-世界新增一張雙人床，具有兩個獨立 human sleep slot。每個 slot 同時具有 `canRest / canSleep`，短休可躺床，正式睡眠也可使用；真正 exclusive 的仍是 slot，不是整張家具。
-
-沙發原本保留的 `canSleep` affordance 現在正式生效，睡眠品質低於床，因此一般情況會優先選床；床位不可用時，人類可以改睡沙發。橘子不能使用人類床位，但能使用允許 `cat` 的沙發睡眠 slot。
-
-`lying` posture 也正式擴充為兩種合法狀態：
+例如補充系統不再分成特殊的「補水桶」與「補現成食物」executor，而是：
 
 ```text
-lying + slotId/furnitureId
-→ 躺在家具 slot，例如床／沙發
-
-lying + null slot
-→ 地板／非家具躺姿，例如橘子短休
+Container.restock
+→ resource
+→ low threshold
+→ strategy
+→ sourceRole
 ```
 
-因此睡眠中的床位占用、家具 Inspector 與 validator 都讀同一份正式 posture state。
+Engine 依 policy 建立 `restockContainer` action。
 
-短休與睡眠的差異目前是：
+### Interaction Geometry 真的使用 affordance
 
-- 短休可以使用一般 `canRest` 家具；早期遇到高噪音仍可能重新找休息位置。
-- 睡眠只選 `canSleep` slot，具有較強 commitment；噪音會降低 `sleepEfficiency`，但 v11.5 **不會因單次噪音自動新增吵醒規則**。
-- 同一張床、同一角色下，sleep 每 tick 的 fatigue recovery 高於 short rest。
-- 睡眠位置失效時會中止並醒來；恢復充分後會留下 `sleepWake` timeline 事件並結束 action。
-- 自然醒後角色可以仍躺在床上；下一次需要移動時，movement transition 才正式 `standUp()`。
-
-本版刻意**沒有**加入鬧鐘、固定作息、sleep debt、睡眠需求獨立數值、因飢餓／口渴醒來或完整夜間排程。這些仍是後續設計項目，不是 v11.5 已完成內容。
-
-## v11.4：Carry Load / Resource Weight
-
-負重使用內部的「負重單位」，不是公斤。重量完全由現行資料即時計算，不另外儲存會失同步的 `currentLoad`。
+同一個物件可以因不同動作使用不同距離規則：
 
 ```text
-Resource.loadPerUnit
-Container.emptyLoad
-
-containerLoad(container)
-= emptyLoad
-+ Σ(contents amount × Resource.loadPerUnit)
-
-carriedResourceLoad(agent.carrying)
-= amount × Resource.loadPerUnit
-
-effectiveCarryLoad(agent)
-= held Container load
-+ carrying Resource load
+water bucket
+pickup    → occupy
+ drinkFrom → reach
 ```
 
-因此同一套規則會自然涵蓋：
+固定設備可以使用 `interactionPorts`，桌上物件則由 `supportId` 推導 `supportReach`。
+
+### 阻擋不再 cache 在 Tile
+
+`Tile.walkable` 只代表 terrain base。家具、固定容器與 Source 是否阻擋移動，由 `SimSpatial.blockerAt()` 根據目前世界實體即時計算；固定物件移動後不會留下 stale `staticBlockedBy`。
+
+### Validator 純函式
 
 ```text
-空水桶 < 滿水桶
-空餐盤 < 裝食物的餐盤
-搬 10 單位食物 < 搬 40 單位食物
+SimValidator.validateState(state)
 ```
 
-`moveToward()` 不再分別判斷「有沒有 held」與「有沒有 carrying」，只讀 `effectiveCarryLoad()` 並把負重轉成額外 movement exertion。舊的 `carrying.amount * .0015` 專用公式與固定 held surcharge 已移除。
+只回傳 validation result，不修改 Engine namespace，也不把結果寫回 simulation state。
 
-所以現在可以形成：
+### Supply owner 單一真相
+
+不再保存 `supply.workerId`。目前補給者由：
 
 ```text
-搬更多資源／容器內容增加
-→ effectiveCarryLoad 上升
-→ 同距離步行活動成本上升
-→ fatigue / thirst / hunger 透過既有 applyExertion 鏈條受影響
-→ 後續休息、喝水、睡眠與其他需求決策改變
+Agent.action.intent === externalSupply
 ```
 
-Inspector 會顯示 Agent 的「目前負重」、Container 的「空重／目前負重」，最近一次負重步行的 exertion 也會帶當時負重。
+直接推導。
 
-目前 `Agent.carrying` 仍可代表抽象搬運中的資源，例如從 pantry 搬食物、外出補給帶食物回家；這是暫時物流表示，但它現在和手持 Container 共用完全相同的重量來源與步行成本。未來若改成籃子／箱子等真正物流 Container，可直接沿用 `containerLoad()`，不需要另一套重量系統。
+### Event 關聯使用 structured refs
 
-本版刻意**沒有**加入力量值、硬負重上限、超重禁止搬運、移動速度下降或背包 inventory。
+事件會在 `event.data.entities` 保存 `agent:* / container:* / source:* / furniture:* / slot:*` refs。Inspector 的「最近相關事件」不再靠中文字串搜尋角色名或物件名。
 
-## v11.3：Portable Water Bucket / Physical Transfer
-
-水桶現在是普通 `portable` Container，不再是固定在水龍頭旁、可以被遠端寫入內容物的特殊儲水點。
-
-補水流程：
+## 現行模組
 
 ```text
-水桶水量偏低
-→ 找到水桶
-→ 預約／拿起水桶
-→ 搬到水龍頭 interaction position
-→ 在手上替水桶補水
-→ 把水桶留在實際補水位置
-```
-
-同時加入 actor-mediated resource transfer contract：角色主動把資源從 A 轉到 B 時，角色必須能實際操作來源，而且目的 Container 必須在角色手上，或本身位於角色可直接操作的位置。若來源 Container 正被別人拿著，也不能直接從對方手上的容器抽取資源。
-
-這條規則現在共用於水龍頭 → 手持容器、水龍頭 → 手持水桶、現成食物 → 手持餐盤。`transferResource()` 本身仍保留為底層物理 primitive，供灑出等不是「角色主動操作兩端」的資源轉移使用。
-
-水桶改為可攜後，橘子也不會直接喝正在被其他角色拿在手上的水桶。
-
-## v11.2：Serving / Plate
-
-用餐不再把「食物來源」和「實際吃飯位置」綁在同一個 interaction point。
-
-```text
-想吃東西
-→ 找可用餐盤
-→ 拿起餐盤
-→ 到現成食物旁盛一份
-→ 找座位
-   ├ 餐椅優先
-   ├ 餐椅不可用時可選其他可坐家具
-   └ 沒有合適座位時站著吃
-→ 吃完
-→ 空盤留在實際用餐位置
-```
-
-餐盤是普通 portable Container，具有 `servingDish / canEatFrom / contents.food`。橘子不會主動拿餐盤，但會直接吃可接近、仍有食物且沒有被別人持有的容器內容。人類非常餓或沒有可用餐盤時仍可直接吃。
-
-家庭食物總量統計所有 Container 的 `contents.food`，避免食物從 `mealTray` 轉進餐盤後被誤判成庫存消失。
-
-## v11 / v11.1 核心狀態
-
-- 12×8 Tile map 有實體邊界牆與大門。
-- Room 由 floor topology 自動 flood fill；目前小屋自然形成一個主室。
-- `zone.baseNoise / zone.restQuality` 已移除；改用 `noiseAt(position) / comfortAt(position)`。
-- 所有互動只看合法 interaction position，不要求 Agent 與物件 `location` 相同。
-- 角色只有 `action`，每 tick 最多移動一格或推進一個 phase。
-- `posture` 是正式 state：`standing / sitting / lying`。
-- 家具 footprint 與 slot 分離；雙人沙發與雙人床都以不同 slot 處理 exclusive use。
-- 手持容器只有 `Agent.held` 一份 truth；短期 exclusive 使用統一放進 `state.reservations`。
-- 地面液體直接存在 `Tile.surface.contents`。
-- 食物外出補給保留，但整合進普通 `supplyFood` action。
-- Inspector、地圖、Room、家具 slot、補給資訊全部由單一 `ui.js` 呈現。
-- v11.1 加入 Target Lifecycle 基礎：entity missing / offMap 會強烈中斷；持續無法接近也不會永久等待。
-
-## 現行檔案
-
-```text
-index.html
 src/
-├─ world.js
-├─ spatial.js
-├─ engine.js
-├─ state-validator.js
-└─ ui.js
-styles/
-├─ app.css
-├─ spatial.css
-└─ mobile.css
-tests/
-└─ v11-state-regression.mjs
-docs/
-└─ architecture.md
+├─ world.js            世界初始資料、capability、policy、家具與角色
+├─ spatial.js          A*、Room、dynamic blocker、interaction geometry、局部環境
+├─ engine.js           唯一 tick、decision、action lifecycle、resource verbs
+├─ state-validator.js  純 invariant validation
+└─ ui.js               地圖、Inspector、時間線與操作 UI
 ```
 
-歷史 patch layer 已從現行 tree 移除，仍可由 Git history 追溯。
+沒有 action / recovery / seating / rest / sleep 專用 wrapper runtime。
 
-## 現有行為
+## 已有玩法
 
-- 人類與貓的需求與加權決策
-- Seeded RNG / deterministic replay
-- 食物、水、酒與通用容器
-- Serving / Plate 與可攜餐盤
-- 可攜水桶與 actor-mediated resource transfer
-- Resource / Container Carry Load 與負重 exertion
-- 短休與正式 Sleep / Bed action
-- 雙人床 slot、沙發睡眠 fallback、自然醒
-- 橘子可直接吃盤中食物，但不拿盤子
-- 酒瓶可直接喝，杯子仍具較高偏好
-- A* Tile movement 與 soft crowding
-- 局部濕地、滑倒、灑出、貓踩濕與舔毛攝入
-- 人類主動找貓／橘子主動撒嬌／延後回應後追貓
-- Target Lifecycle 基礎中斷
-- exertion / fatigue / recovery trait
-- 家具 slot 與 Rest Surface
-- 食物勞動補給閉環
-- 時間線、Inspector、Room / Tile debug
+- 人類與貓的需求、社交與移動。
+- 食物、水、酒與真正 Container contents。
+- 醉酒、協調、灑出、濕地、滑倒、貓腳掌沾液體與舔毛攝入。
+- Serving / Plate：人類拿盤、盛食物、找座位；貓可直接吃附近盤中食物。
+- Physical Transfer：角色必須真的接近來源／目的容器。
+- Carry Load：Container contents 與抽象 hauling 共用重量公式。
+- Rest / Sleep / Bed：短休、正式睡眠、雙人床 slot、沙發 fallback、自然醒。
+- Room / local noise / comfort。
+- 外出補給與室內 restock。
+- Seeded deterministic replay、causal timeline、Inspector。
+- Desktop / mobile RWD。
 
-## Room 與 Activity Area
+## 測試
 
-### Room
-
-物理拓撲產物。牆、邊界與門決定哪些 Floor Tile 屬於同一個房間，可用於聲音衰減、未來溫度／煙霧傳播、Room value 與房間聚合資訊。
-
-### Activity Area / Zone
-
-未來若需要，可以作為制度或用途標記，例如醫療區、餐廳、工作區、禁區或垃圾傾倒區；Area 本身不能讓一塊空地因為被標成休息區就更舒服。
-
-## 狀態與測試
-
-GitHub Actions 會執行：
+GitHub Actions 在 PR 與 `main` 上執行：
 
 ```text
 node --check src/*.js
 node tests/v11-state-regression.mjs
+node tests/interaction-geometry.mjs
+node tests/refill-water-geometry.mjs
 ```
 
-Regression 包含：
+v11.7 regression 除玩法回歸外，也直接禁止以下架構退化：
 
-- 3 Seed × 800 tick invariant 長跑
-- deterministic replay
-- atomic movement / phase
-- 跨舊 Zone 邊界取杯
-- 貓休息 posture
-- 雙人沙發短休 slot
-- **兩名人類可同時睡在雙人床不同 slot**
-- **床位不可用時可選 canSleep 沙發 fallback**
-- **同一張床：sleep recovery > short-rest recovery**
-- **單次高噪音只降低睡眠效率，不自行新增吵醒規則**
-- **睡眠會進入 sleeping phase，充分恢復後自然醒並留下 sleepWake event**
-- soft co-location
-- 盛盤、右側餐椅、橘子吃盤中食物與直接吃 fallback
-- 補水必須實際拿起水桶並搬到水龍頭
-- 未持有水桶時不得遠端增加水量
-- 橘子不能喝正在被別人持有的水桶
-- 同角色同路程：滿水桶 exertion > 空水桶
-- 搬 40 單位食物 exertion > 搬 10 單位食物
-- Container 內容量改變後 `containerLoad()` 立即跟著改變，且沒有 cached `currentLoad`
-- `effectiveCarryLoad = held Container + carrying Resource`
-- 舊 `carrying.amount * .0015` 專用公式不得回流
-- supply 必須實際走到 pantry 才入庫
-- A* unreachable → `[]`
-- offMap 社交目標強烈中斷
-- index 不可再載入舊 wrapper；Sleep 也不得回到獨立 wrapper runtime
+- Engine 出現目前世界的具體 entity ID。
+- `supply.workerId` 回流。
+- Validator 修改 Engine API 或 simulation state。
+- World 初始化以 entity ID 白名單處理 blocker。
+- `planLabel` 等 legacy compatibility alias 回流。
+- 舊 wrapper module 回流。
 
-## 下一步候選
-
-1. **Sleep Schedule / Wake Conditions**：在 v11.5 睡眠 core 上再決定固定作息、鬧鐘、sleep debt、飢餓／口渴醒來與噪音吵醒等規則；目前都尚未實作。
-2. **Logistics Container**：目前搬 pantry／外出補給食物仍使用抽象 `carrying`；未來若要增加籃子、箱子、掉落、容量與放置，可轉成真正 Container，而不重做重量系統。
-3. **Room topology**：加入真正隔間牆、可開關門，測試噪音／未來溫度跨 Room 傳播。
-4. **Dish lifecycle / cleanup**：收盤、清洗、髒污與餐具循環。
-5. **Activity Area / Material / Quality / Economy**：等底層生活與物流閉環更成熟後再決定。
-
-`interaction commitment strength / maxDistance / interruptPriority` 仍保留為未來 memo。
-
-完整狀態契約請見 [`docs/architecture.md`](docs/architecture.md)。
+詳細規則見 [`docs/architecture.md`](docs/architecture.md) 與 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。
