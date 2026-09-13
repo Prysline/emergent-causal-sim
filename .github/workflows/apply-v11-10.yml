@@ -1,0 +1,33 @@
+name: Apply v11.10 interaction patch
+
+on:
+  push:
+    branches: [v11-10-interaction-stimulus]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v11-10-interaction-stimulus
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply engine update
+        run: node tools/apply-v11-10-engine.mjs
+      - name: Syntax check
+        run: for f in src/*.js; do node --check "$f"; done
+      - name: Remove temporary patch tooling
+        run: rm -f tools/apply-v11-10-engine.mjs tools/.v11-10-engine.patch.b64.* .github/workflows/apply-v11-10.yml
+      - name: Commit patched engine
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "v11.10: make social interaction sleeper-aware"
+          git push origin HEAD:v11-10-interaction-stimulus
