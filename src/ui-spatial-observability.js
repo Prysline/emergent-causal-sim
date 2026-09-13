@@ -45,10 +45,12 @@
     map.querySelectorAll('.map-entity[data-entity]').forEach(btn=>{
       const [type,id]=(btn.dataset.entity||'').split(':',2);let o=null;
       if(type==='agent')o=SP.agentObservation(s,id);else if(type==='container'||type==='source')o=SP.objectObservation(s,id);
-      const mark=markerFor(o);btn.classList.toggle('spatial-on-surface',!!o&&o.surfaceId!=='floor');btn.classList.toggle('spatial-under-cover',!!o?.covered);
+      const mark=markerFor(o),onSurface=!!o&&o.surfaceId!=='floor',underCover=!!o?.covered;
+      if(btn.classList.contains('spatial-on-surface')!==onSurface)btn.classList.toggle('spatial-on-surface',onSurface);
+      if(btn.classList.contains('spatial-under-cover')!==underCover)btn.classList.toggle('spatial-under-cover',underCover);
       let badge=btn.querySelector('.spatial-node-mark');
       if(mark){if(!badge){badge=document.createElement('span');badge.className='spatial-node-mark';btn.append(badge);}if(badge.textContent!==mark)badge.textContent=mark;}else badge?.remove();
-      if(o){if(!btn.dataset.baseTitle)btn.dataset.baseTitle=btn.title||'';const extra=`${o.spaceLabel}・${o.surfaceLabel}${o.covered?`・${o.overhead[0]?.name||'家具'}下`:''}`;const title=`${btn.dataset.baseTitle}・${extra}`;if(btn.title!==title)btn.title=title;}
+      if(o){if(!Object.prototype.hasOwnProperty.call(btn.dataset,'baseTitle'))btn.dataset.baseTitle=btn.title||'';const extra=`${o.spaceLabel}・${o.surfaceLabel}${o.covered?`・${o.overhead[0]?.name||'家具'}下`:''}`;const title=`${btn.dataset.baseTitle}・${extra}`;if(btn.title!==title)btn.title=title;}
     });
   }
 
@@ -57,7 +59,7 @@
     host.querySelectorAll('[data-entity^="agent:"]').forEach(card=>{
       const id=card.dataset.entity.slice(6),o=SP.agentObservation(s,id),loc=card.querySelector('.action-location');if(!loc)return;
       let tag=loc.querySelector('.spatial-inline');const text=o?(o.surfaceId!=='floor'?o.surfaceLabel:o.covered?`${o.overhead[0]?.name||'家具'}下`:''):'';
-      if(text){if(!tag){tag=document.createElement('span');tag.className='spatial-inline';loc.append(tag);}tag.textContent=`・${text}`;}else tag?.remove();
+      if(text){if(!tag){tag=document.createElement('span');tag.className='spatial-inline';loc.append(tag);}const wanted=`・${text}`;if(tag.textContent!==wanted)tag.textContent=wanted;}else tag?.remove();
     });
   }
 
