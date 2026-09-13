@@ -1,17 +1,21 @@
 (() => {
-  const VERSION='11.8-logistics-container';
+  const VERSION='11.9-sleep-pressure';
   const WIDTH=12,HEIGHT=8;
   const RESOURCE_TYPES={
     food:{id:'food',name:'食物',icon:'🍲',phase:'solid',edible:true,hungerRelief:[18,30],evaporation:0,loadPerUnit:.035},
     water:{id:'water',name:'水',icon:'💧',phase:'liquid',drinkable:true,thirstRelief:[18,31],evaporation:.07,loadPerUnit:.025},
     alcohol:{id:'alcohol',name:'酒',icon:'🍺',phase:'liquid',drinkable:true,thirstRelief:[8,17],intoxicationFactor:1.35,evaporation:.11,loadPerUnit:.025}
   };
+  const SPECIES_PROFILES={
+    human:{circadianPattern:'diurnal',sleepNeedGainPerTick:.17,sleepNeedRecoveryPerTick:.24,minSleepTicks:10,maxSleepTicks:330,minimumSleepNeed:28,sleepOpportunityThreshold:55,naturalWakeSleepNeed:22,noiseWakeThreshold:30},
+    cat:{circadianPattern:'crepuscular',sleepNeedGainPerTick:.20,sleepNeedRecoveryPerTick:.32,minSleepTicks:6,maxSleepTicks:180,minimumSleepNeed:24,sleepOpportunityThreshold:52,naturalWakeSleepNeed:26,noiseWakeThreshold:26}
+  };
   const ZH={
-    hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',social:'社交需求',comfort:'舒適',safety:'安全感',groomingNeed:'理毛需求',
+    hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',sleepNeed:'睡眠需求',social:'社交需求',comfort:'舒適',safety:'安全感',groomingNeed:'理毛需求',
     eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',restockContainer:'補充資源',rest:'休息',sleep:'睡眠',talk:'找人聊天',petCat:'摸貓',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',externalSupply:'外出補給',
     intoxication:'醉酒',coordination:'動作協調',normal:'正常'
   };
-  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',carrier:'物流容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重',entities:'關聯實體'};
+  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',sleepNeed:'睡眠需求',sleepNeedRecovery:'睡眠需求恢復',circadianPattern:'日夜節律',circadianBias:'時段睡眠偏向',sleepPropensity:'睡眠傾向',wakeReason:'醒來原因',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',carrier:'物流容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重',entities:'關聯實體'};
 
   const FURNITURE_DEFS={
     diningTable:{id:'diningTable',name:'餐桌',icon:'▰',kind:'table',blocksMovement:true,supportsObjects:true,value:30,
@@ -76,9 +80,9 @@
         tap:{id:'tap',name:'水龍頭',icon:'🚰',roles:roleList('resourceSource'),resource:'water',infinite:true,position:{...OBJECT_START.tap},interactions:{fill:{mode:'port'}},interactionPorts:[{id:'tap:west',label:'水龍頭左側',position:{x:5,y:5},edge:'east',affordances:['fill']}]}
       },
       agents:{
-        zhen:{id:'zhen',name:'阿真',kind:'human',position:{...AGENT_START.zhen},needs:{hunger:34,thirst:29,fatigue:41,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},metrics:{exertionToday:0,lastExertion:null},held:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false},
-        zhou:{id:'zhou',name:'老周',kind:'human',position:{...AGENT_START.zhou},needs:{hunger:31,thirst:62,fatigue:46,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},metrics:{exertionToday:0,lastExertion:null},held:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false},
-        orange:{id:'orange',name:'橘子',kind:'cat',position:{...AGENT_START.orange},needs:{hunger:26,thirst:22,fatigue:30,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},contacts:{paws:{}},causes:{intoxication:null,contacts:{paws:{}}},traits:{curious:.7,careful:.62,social:.78,exertionSensitivity:.90,recoveryRate:1.10},metrics:{exertionToday:0,lastExertion:null},held:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false}
+        zhen:{id:'zhen',name:'阿真',kind:'human',position:{...AGENT_START.zhen},needs:{hunger:34,thirst:29,fatigue:41,sleepNeed:34,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},metrics:{exertionToday:0,lastExertion:null},held:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false},
+        zhou:{id:'zhou',name:'老周',kind:'human',position:{...AGENT_START.zhou},needs:{hunger:31,thirst:62,fatigue:46,sleepNeed:40,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},metrics:{exertionToday:0,lastExertion:null},held:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false},
+        orange:{id:'orange',name:'橘子',kind:'cat',position:{...AGENT_START.orange},needs:{hunger:26,thirst:22,fatigue:30,sleepNeed:44,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},contacts:{paws:{}},causes:{intoxication:null,contacts:{paws:{}}},traits:{curious:.7,careful:.62,social:.78,exertionSensitivity:.90,recoveryRate:1.10},metrics:{exertionToday:0,lastExertion:null},held:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false}
       },
       events:[],causes:{},thoughts:{}
     };
@@ -86,5 +90,5 @@
     return state;
   }
 
-  window.SimWorld={VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,ZH,DATA_ZH,FURNITURE_DEFS,OBJECT_START,AGENT_START,createInitialState};
+  window.SimWorld={VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,FURNITURE_DEFS,OBJECT_START,AGENT_START,createInitialState};
 })();
