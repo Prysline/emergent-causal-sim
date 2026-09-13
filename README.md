@@ -2,9 +2,9 @@
 
 湧現式因果模擬器。用少量可組合規則觀察角色、物件、資源與環境如何自行形成因果鏈。
 
-目前版本：**v11.9・Sleep Pressure / Circadian Profile**。
+目前版本：**v11.10・Sleep Social Stimulus / Response**。
 
-v11.9 延續 v11.8 的 Logistics Container，不改動既有物理物流 contract，而是把原本同時承擔「活動累」與「沒睡夠」的 `needs.fatigue` 拆開。現在 `fatigue` 主要代表活動造成的短期身體疲勞；`sleepNeed` 代表清醒時間累積的睡眠需求。短休能有效恢復 fatigue，但角色只要仍醒著，sleepNeed 就不會因此消失；真正睡眠才會降低 sleepNeed。睡眠決策與自然醒則讀取物種預設的日夜節律、Agent 個體相位偏移、sleepNeed 與少量 fatigue，而不再用固定 fatigue 門檻把睡眠當成長版休息。
+v11.10 延續 v11.9 的 `fatigue / sleepNeed / circadian` 睡眠模型，進一步把「發起社交行動」、「對睡眠中的目標造成刺激」、「目標是否醒來」與「目標是否回應」拆開。普通人類聊天不再把 sleeping 人類當成候選；摸睡著的貓與貓打擾睡著的人仍可發生，但接觸只形成可觀測的 stimulus，依睡眠需求、自然醒傾向、已睡時間與刺激強度推導喚醒機率，再用 seeded roll 決定是否醒來。醒來不等於回應；`petCat` 也不再固定宣告貓有回蹭，只有貓真正執行自己的親近行動時才會描述牠的主動反應。
 
 ## 核心模型
 
@@ -24,8 +24,13 @@ Agent.needs.fatigue
 Agent.needs.sleepNeed
 → 清醒累積的睡眠需求
 
-Derived circadianSleepBias / sleepPropensity
+Derived circadianSleepBias / sleepPropensity / naturalWakeDrive
 → 世界時間 + 物種 profile + 個體相位即時推導，不另存第二份 truth
+
+Social stimulus
+→ 發起者行動產生 touch / sound 等刺激
+→ sleeping target 依 derived wake chance + seeded roll 決定是否醒來
+→ 醒來與回應分離
 
 Tile / terrain
 → 物理移動基礎
@@ -63,6 +68,90 @@ state.reservations
 
 舊版六個環境 `Zone`、`location`、`plan`、`Agent.carrying`、wrapper tick 與 UI enhancer 都不再是現行架構。
 
+## v11.10 Sleep Social Stimulus / Response
+
+### 社交 action 不再等同雙方完整互動
+
+現行 social interaction 明確分成：
+
+```text
+initiator action
+→ 接近 target
+→ 實際發生接觸／聲音
+→ 若 target 正在 sleeping：形成 stimulus
+→ 推導 wakeChance 並 seeded roll
+→ 可能醒來，也可能繼續睡
+→ 是否回應由 target 後續 action 決定
+```
+
+因此「摸到貓」不再自動代表「貓回蹭」，「貓來撒嬌」也不再自動代表睡著的人已經醒來並接收到請求。
+
+### 普通聊天避開 sleeping target
+
+一般 `talk` 是需要雙方清醒的對話行為：
+
+- human decision 不會把正在 `sleeping` 的 human 列入普通聊天候選；
+- 若目標在發起者走過去的途中睡著，行動會中止，而不是站在床邊繼續把它當正常聊天；
+- 尚未加入 `selfTalk / mutter`。未來若需要自言自語，應是獨立 action，而不是把普通 talk 對睡著的人當 fallback。
+
+### 摸睡著的貓
+
+`petCat` 仍可選到 sleeping cat，因為「摸睡著的貓」本身是合理的物理／社交行為。
+
+```text
+人摸貓
+→ 人獲得少量 social relief
+→ 實際 touch event
+→ 若貓清醒：可得到 social / comfort 效果
+→ 若貓 sleeping：只形成較低幅度 comfort + touch stimulus
+→ wakeChance + roll
+→ 沒醒：繼續睡，明確記錄沒有明顯回應
+→ 醒來：只結束 sleep；不自動生成回蹭
+```
+
+原先固定文字「摸了摸牠；牠靠過去蹭了幾下」已移除。現在 `petCat` 只敘述發起者真的做出的摸觸；貓的主動蹭只應來自貓自己的 action 或未來明確的 response action。
+
+### 貓打擾睡著的人
+
+Cat `seekHuman` 可以把 sleeping human 當目標。貓會真的靠近、喵叫、蹭碰，這些是**貓自己的行動**，因此可以被描述；但人的反應不再預設存在。
+
+目前 `seekHuman` 使用較強的 `touch+sound` stimulus：
+
+```text
+貓靠近、喵叫、碰觸
+→ contact event
+→ 若人 sleeping：計算 wakeChance
+→ 沒醒：不建立 cat_request，記錄「沒有得到立即回應」
+→ 醒來：才建立短期 cat_request，讓人之後自行決定是否摸貓
+```
+
+所以「被打擾醒來」與「選擇回應貓」是兩件事。
+
+### Interaction wake chance 是 derived value
+
+沒有新增 persistent `sleepDepth` / `arousal` state。第一版互動喚醒機率由現有睡眠資料即時推導：
+
+```text
+wakeChance
+← stimulus intensity
+← naturalWakeDrive
+← remaining sleepNeed
+← 是否仍在最低睡眠時間以前
+```
+
+高 sleepNeed、剛入睡時，輕摸可能完全不足以叫醒；sleepNeed 已低、接近自然醒時，相同刺激更容易喚醒。實際結果使用 simulation 的 seeded RNG，因此同一 seed 可重現。
+
+互動 disturbance event 保存：
+
+```text
+stimulusIntensity
+stimulusKind
+wakeChance
+wakeRoll
+```
+
+若真的喚醒，`sleepWake` event 會把造成喚醒的接觸事件列入 causeIds，讓因果鏈可由 Inspector / event tree 追查。
+
 ## v11.9 Sleep Pressure / Circadian Profile
 
 ### Fatigue 與 Sleep Need 正式分離
@@ -78,9 +167,7 @@ sleepNeed
 → sleeping 才會降低
 ```
 
-因此角色可以「身體已經休息夠了，但仍然沒睡夠」，也可以「剛睡飽但做了大量體力活動，所以只想躺一下」。
-
-被動 fatigue drift 已大幅降低，避免把單純清醒時間重複算進 fatigue；`applyExertion()` 仍是活動疲勞的主要來源。
+因此角色可以「身體已經休息夠了，但仍然沒睡夠」，也可以「剛睡飽但做了大量體力活動，所以只想躺一下」。被動 fatigue drift 已大幅降低，避免把單純清醒時間重複算進 fatigue；`applyExertion()` 仍是活動疲勞的主要來源。
 
 ### 節律由物種提供預設，Agent 可以偏移
 
@@ -103,122 +190,19 @@ traits.sleepRecoveryRate
 
 `circadianSleepBias` 只是一個 bias，不是 hard gate；sleepNeed 足夠高時，日行性角色白天仍可能睡。
 
-### Sleep Propensity 是 derived state
+### Rest 與 Sleep
 
-```text
-sleepPropensity
-= sleepNeed
-+ circadianSleepBias
-+ 少量極端 fatigue contribution
-```
+`rest`：找 `canRest` surface → 坐／躺／蜷著清醒休息 → fatigue 降低，sleepNeed 仍累積。
 
-它不保存進 Agent state，避免建立第二份睡眠真相。日夜 bias 直接由 `state.minute`、species pattern 與 Agent phase offset 推導。
+`sleep`：sleepNeed + circadian bias 形成睡眠傾向 → 找 `canSleep` slot → sleeping 時 fatigue 與 sleepNeed 都降低 → 依 sleepNeed、時段與中斷條件自然醒。
 
-### Rest 與 Sleep 不再只是恢復速率不同
-
-`rest`：
-
-```text
-找 canRest surface
-→ 坐／躺／蜷著清醒休息
-→ fatigue 逐 tick 降低
-→ sleepNeed 仍因清醒時間增加
-→ 達到 fatigue 目標或休息上限後結束
-```
-
-`sleep`：
-
-```text
-sleepNeed + circadian bias 形成睡眠傾向
-→ 找 canSleep slot
-→ 躺下並進入 sleeping phase
-→ fatigue 降低
-→ sleepNeed 依 sleepQuality / noise / recovery profile 降低
-→ sleepNeed 足夠低且時段清醒傾向回升時自然醒
-```
-
-午睡與整段主睡眠不拆成兩種 action；同一套 sleep 規則會依 sleepNeed 與時段自然產生不同長度。
-
-### Wake conditions
-
-正式睡眠現在可以因以下條件結束：
-
-- sleepNeed 已降到自然醒範圍，且 circadian wake tendency 足夠；
-- 極端口渴；
-- 極端飢餓；
-- 強烈局部噪音；
-- species profile 的最大睡眠時間安全上限。
-
-醒來不等於起床。Sleep action 結束後 Agent 可以繼續保持 `lying` posture；只有真正開始移動時才由 movement lifecycle `standUp()`。
+Wake conditions 包含自然醒、極端口渴、極端飢餓、強烈局部噪音、最大睡眠時間與睡眠位置失效。醒來不等於起床；Sleep action 結束後仍可維持 `lying`，真正移動時才 `standUp()`。
 
 ## v11.8 Logistics Container / Basket
 
-### 物流資源必須存在真正 Container
+World 使用真正 portable `logisticsContainer` 搬運 bulk resource。室內 food restock 與外出補給都必須先取得容器，把資源實際放入 `Container.contents`，負重由 `emptyLoad + contents × loadPerUnit` 即時推導，再於目的地做 physical transfer。`Agent.carrying` 已完全移除。
 
-World 新增一般 portable `logisticsContainer`：
-
-```text
-role: logisticsContainer
-portable: true
-capacity
-emptyLoad
-transportResources
-contents
-```
-
-目前場景使用一個搬運籃，但 Engine 不認 `basket` ID，只會尋找符合 capability、資源相容、仍有容量、且未被其他 Agent 持有／預約的物流容器。
-
-### 室內補貨
-
-`mealTray` 的 food restock 不再使用抽象 `carryResource`：
-
-```text
-現成食物不足
-→ 找 foodReserve
-→ 找可搬 food 的 logisticsContainer
-→ 預約並走去拿物流籃
-→ 拿起
-→ 前往食物來源
-→ foodReserve → basket.contents.food
-→ 帶著有實際重量的籃子前往 readyFood destination
-→ basket → destination
-→ 放下空籃
-```
-
-水桶補水仍使用既有 `carryContainer`：水桶本身就是要被補充的 portable Container，因此不需要另外套物流籃。
-
-### 外出補給
-
-角色不再空手離家後憑空產生一份 `Agent.carrying`：
-
-```text
-食物總庫存不足
-→ 找 externalSupplyDestination
-→ 找可用 logisticsContainer
-→ 去拿籃子
-→ 帶著籃子走到出口
-→ 外出工作
-→ 新取得的 food 寫入 basket.contents.food
-→ 帶著裝滿食物的籃子回到出口
-→ 前往 pantry
-→ basket → pantry
-→ 放下空籃
-```
-
-若外出途中因身體狀況太差提前返回，角色仍帶著原本的物流容器回到出口；action 中止時容器會留在角色實際位置，不會瞬移或消失。
-
-### Carry Load 現在只有一條 truth
-
-```text
-Container load
-= emptyLoad
-+ Σ(contents × Resource.loadPerUnit)
-
-Agent effectiveCarryLoad
-= held Container load
-```
-
-`Agent.carrying` 與 `carriedResourceLoad()` 已移除。裝有 40 單位食物的籃子自然比裝 10 單位食物的籃子重，movement exertion 直接讀同一套 Container load。
+水桶補水仍使用 `carryContainer`：水桶本身就是可攜目的容器，因此不另外套物流籃。
 
 ## v11.7 Core Consolidation 基準仍保留
 
@@ -232,32 +216,29 @@ pickup    → occupy
 drinkFrom → reach
 ```
 
-固定設備可以使用 `interactionPorts`，桌上物件則由 `supportId` 推導 `supportReach`。
-
 ## 現行模組
 
 ```text
 src/
 ├─ world.js            世界初始資料、species profile、capability、policy、家具、容器與角色
 ├─ spatial.js          A*、Room、dynamic blocker、interaction geometry、局部環境
-├─ engine.js           唯一 tick、decision、睡眠壓力、action lifecycle、resource verbs、物流流程
+├─ engine.js           唯一 tick、decision、sleep/social derived logic、action lifecycle、resource verbs、物流流程
 ├─ state-validator.js  純 invariant validation
 └─ ui.js               地圖、Inspector、時間線與操作 UI
 ```
 
-沒有 action / recovery / seating / rest / sleep / logistics 專用 wrapper runtime。
+沒有 action / recovery / seating / rest / sleep / social-response / logistics 專用 wrapper runtime。
 
 ## 已有玩法
 
 - 人類與貓的需求、社交與移動。
 - fatigue / sleepNeed 分離，物種節律、個體相位覆寫與 derived sleep propensity。
 - 短休、正式睡眠、雙人床 slot、沙發 fallback、自然醒、口渴／飢餓／噪音喚醒。
+- 睡眠中社交刺激：摸睡著的貓、貓打擾睡著的人可能喚醒，也可能無反應。
+- 普通聊天只選清醒的人；醒來與回應分離。
 - 食物、水、酒與真正 Container contents。
 - 醉酒、協調、灑出、濕地、滑倒、貓腳掌沾液體與舔毛攝入。
-- Serving / Plate：人類拿盤、盛食物、找座位；貓可直接吃附近盤中食物。
-- Physical Transfer：角色必須真的接近來源／目的容器。
-- Carry Load：負重完全由實際 held Container 與 contents 推導。
-- Logistics Container：室內 bulk restock 與外出補給都使用真正物流容器。
+- Serving / Plate、Physical Transfer、Carry Load、Logistics Container。
 - Room / local noise / comfort。
 - Seeded deterministic replay、causal timeline、Inspector。
 - Desktop / mobile RWD。
@@ -270,21 +251,22 @@ GitHub Actions 在 PR 與 `main` 上執行：
 node --check src/*.js
 node tests/v11-state-regression.mjs
 node tests/sleep-pressure.mjs
+node tests/social-sleep-interaction.mjs
 node tests/logistics-invariants.mjs
 node tests/interaction-geometry.mjs
 node tests/refill-water-geometry.mjs
 ```
 
-v11.9 的睡眠 regression 直接驗證：
+`social-sleep-interaction` regression 直接驗證：
 
-- human 預設 diurnal、cat 預設 crepuscular；
-- nocturnal override 與 phase offset 會改變 derived circadian bias；
-- 短休降低 fatigue，但不清除 sleepNeed；
-- 高 fatigue / 低 sleepNeed 選短休；高 sleepNeed / 低 fatigue 仍能選睡眠；
-- 自然醒不要求 fatigue 降到固定值，且醒來後仍可保持躺姿；
-- 極端口渴與強烈噪音能中斷睡眠；
-- 真正 sleeping 會降低 sleepNeed。
+- 普通人類 talk 不把 sleeping human 列為候選；
+- 高 sleepNeed、剛入睡的貓可在被輕摸後繼續睡；
+- `petCat` 不再固定生成貓回蹭文字；
+- sleeping cat 未醒時會留下無回應與 wake chance / roll 的結構化事件；
+- cat 可以打擾 sleeping human；只有真的喚醒後才建立可回應的 `cat_request`；
+- 互動喚醒保留 contact event → sleepWake 的 cause chain；
+- 清醒貓被摸時也不會由 `petCat` action 自動虛構 reciprocal rub。
 
-既有 v11.8 regression 仍禁止 Engine 綁定場景 entity ID、`Agent.carrying` 回流、重複 supply owner truth、Validator mutation 與其他 legacy architecture 退化。
+既有睡眠、3 Seed × 800 tick、deterministic replay、物流守恆、Interaction Geometry、portable water restock 與 architectural regression 仍共同執行。
 
 詳細規則見 [`docs/architecture.md`](docs/architecture.md) 與 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。
