@@ -28,3 +28,4 @@ jobs:
       - run: node tests/interaction-geometry.mjs
       - run: node tests/refill-water-geometry.mjs
       - run: node tests/spatial-traversal.mjs
+      - run: node tests/spatial-observability.mjs
