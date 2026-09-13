@@ -8,7 +8,7 @@ const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.7-core-consolidation');
+assert.equal(st.version,'11.8-logistics-container');
 assert.equal(st.interactionModel,undefined);
 
 const pickup=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'pickup');
@@ -17,6 +17,10 @@ assert.deepEqual(pickup.positions,[{x:5,y:5}]);
 const drink=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'drinkFrom');
 assert.equal(drink.mode,'reach');
 assert.ok(drink.positions.some(p=>same(p,{x:4,y:5})),'同一物件的 drinkFrom 可與 pickup 使用不同 geometry');
+
+const basketPickup=SP.interactionGeometry(st,{kind:'object',id:'basket'},a,'pickup');
+assert.equal(basketPickup.mode,'occupy');
+assert.deepEqual(basketPickup.positions,[{x:3,y:2}]);
 
 const tap=SP.interactionGeometry(st,{kind:'source',id:'tap'},a,'fill');
 assert.equal(tap.mode,'port');
