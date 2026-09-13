@@ -7,8 +7,9 @@
   const overheadText=o=>o?.covered?o.overhead.map(x=>`${x.name}下（淨空 ${meters(x.clearance)}）`).join('、'):(o?.surfaceId!=='floor'?'家具表面':'一般地板');
   let pending=false;
 
+  function normalizedInspectorType(type){return type==='Resource Source'?'Source':type;}
   function sectionHtml(type,id){
-    const s=E.getState();
+    const s=E.getState();type=normalizedInspectorType(type);
     if(type==='Agent'){
       const a=s.agents[id],o=SP.agentObservation(s,id);if(!a||!o)return'';
       const goal=o.spatialGoal?nodeText(o.spatialGoal):'無';
@@ -28,18 +29,35 @@
     return'';
   }
 
+  function syncBaseObjectLocation(host,type,id){
+    type=normalizedInspectorType(type);if(type!=='Container'&&type!=='Source')return;
+    const s=E.getState(),o=SP.objectObservation(s,id);if(!o)return;
+    const first=host.querySelector('.inspect-section .kv');if(!first)return;
+    const key=[...first.querySelectorAll('.k')].find(x=>x.textContent.trim()==='位置'),value=key?.nextElementSibling;if(!value)return;
+    const wanted=SP.describePlace(s,o.node);if(value.textContent!==wanted)value.textContent=wanted;
+  }
   function syncInspector(){
     const host=document.getElementById('inspector');if(!host)return;
     const meta=host.querySelector('.inspect-title small')?.textContent?.trim();
     let section=host.querySelector('.spatial-observability-section');
     if(!meta||!meta.includes('・')){section?.remove();return;}
     const [type,id]=meta.split('・',2),html=sectionHtml(type,id);
+    syncBaseObjectLocation(host,type,id);
     if(!html){section?.remove();return;}
     if(!section){section=document.createElement('div');section.className='inspect-section spatial-observability-section';const first=host.querySelector('.inspect-section');if(first)first.insertAdjacentElement('afterend',section);else host.append(section);}
     if(section.innerHTML!==html)section.innerHTML=html;
   }
 
   function markerFor(o){if(!o)return'';if(o.surfaceId!=='floor')return'上';if(o.covered)return'下';return'';}
+  function syncFurnitureHandles(s,map){
+    for(const f of Object.values(s.furniture||{})){
+      if(!f.displayAt)continue;
+      const tile=map.querySelector(`.sim-tile[data-tile="${f.displayAt.x},${f.displayAt.y}"]`);if(!tile||!tile.querySelector('.tile-entities .map-entity'))continue;
+      let handle=tile.querySelector(`.spatial-furniture-handle[data-furniture-id="${f.id}"]`);
+      if(!handle){handle=document.createElement('button');handle.className='spatial-furniture-handle';handle.dataset.entity=`furniture:${f.id}`;handle.dataset.furnitureId=f.id;handle.title=`檢視${f.name}`;handle.setAttribute('aria-label',`檢視${f.name}`);handle.textContent=f.icon||'▰';tile.append(handle);}
+      const footprint=tile.querySelector(`.furniture-footprint[data-entity="furniture:${f.id}"]`);handle.classList.toggle('selected',!!footprint?.classList.contains('selected'));
+    }
+  }
   function syncMap(){
     const s=E.getState(),map=document.getElementById('map');if(!map)return;
     map.querySelectorAll('.map-entity[data-entity]').forEach(btn=>{
@@ -52,6 +70,7 @@
       if(mark){if(!badge){badge=document.createElement('span');badge.className='spatial-node-mark';btn.append(badge);}if(badge.textContent!==mark)badge.textContent=mark;}else badge?.remove();
       if(o){if(!Object.prototype.hasOwnProperty.call(btn.dataset,'baseTitle'))btn.dataset.baseTitle=btn.title||'';const extra=`${o.spaceLabel}・${o.surfaceLabel}${o.covered?`・${o.overhead[0]?.name||'家具'}下`:''}`;const title=`${btn.dataset.baseTitle}・${extra}`;if(btn.title!==title)btn.title=title;}
     });
+    syncFurnitureHandles(s,map);
   }
 
   function syncActions(){
@@ -59,7 +78,8 @@
     host.querySelectorAll('[data-entity^="agent:"]').forEach(card=>{
       const id=card.dataset.entity.slice(6),o=SP.agentObservation(s,id),loc=card.querySelector('.action-location');if(!loc)return;
       let tag=loc.querySelector('.spatial-inline');const text=o?(o.surfaceId!=='floor'?o.surfaceLabel:o.covered?`${o.overhead[0]?.name||'家具'}下`:''):'';
-      if(text){if(!tag){tag=document.createElement('span');tag.className='spatial-inline';loc.append(tag);}const wanted=`・${text}`;if(tag.textContent!==wanted)tag.textContent=wanted;}else tag?.remove();
+      const baseText=[...loc.childNodes].filter(n=>n!==tag).map(n=>n.textContent||'').join('');
+      if(text&&!baseText.includes(text)){if(!tag){tag=document.createElement('span');tag.className='spatial-inline';loc.append(tag);}const wanted=`・${text}`;if(tag.textContent!==wanted)tag.textContent=wanted;}else tag?.remove();
     });
   }
 
