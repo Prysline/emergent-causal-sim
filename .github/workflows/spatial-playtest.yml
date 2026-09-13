@@ -1,0 +1,42 @@
+name: Spatial browser playtest
+
+on:
+  push:
+    branches:
+      - test/v11.11.1-spatial-playtest
+
+permissions:
+  contents: read
+
+jobs:
+  playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start local server
+        run: |
+          python3 -m http.server 4173 > /tmp/spatial-playtest-server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/spatial-playtest-server.log
+          exit 1
+      - name: Run spatial browser playtest
+        run: node tools/spatial-playtest.mjs
+      - name: Upload playtest evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spatial-playtest
+          path: artifacts/spatial-playtest
+          if-no-files-found: warn
