@@ -37,7 +37,7 @@ function putToSleep(st,a,{slotId='bed:left',sleepTicks=0}={}){
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.9-sleep-pressure');
+  assert.equal(st.version,'11.10-sleep-social-stimulus');
   for(const a of Object.values(st.agents))assert.ok(Number.isFinite(a.needs.sleepNeed),'每個 Agent 都必須有正式 sleepNeed state');
   assert.equal(E.sleepProfile(st.agents.zhen).circadianPattern,'diurnal','人類預設應為日行性');
   assert.equal(E.sleepProfile(st.agents.orange).circadianPattern,'crepuscular','貓預設應為晨昏性');
@@ -154,4 +154,4 @@ E.reset(20260911);
   noIssues('sleep reduces sleep pressure');
 }
 
-console.log('v11.9 sleep pressure regression: ok');
+console.log('v11.10 sleep pressure regression: ok');
