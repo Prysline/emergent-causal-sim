@@ -74,7 +74,8 @@
   .action-card{padding:9px}
   .action-name{font-size:15px}
   .action-now{font-size:13px}
-  .need-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .need-strip{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .need-pill{padding-left:2px;padding-right:2px;font-size:9px}
 
   .timeline-head{align-items:stretch}
   .segmented{align-self:flex-start}
@@ -125,6 +126,7 @@
   .map-entity{font-size:clamp(10px,3.5vw,13px);padding:0}
   .tile-entities:has(.map-entity:nth-child(3)) .map-entity{font-size:9px}
   .furniture-symbol{font-size:10px}
+  .need-pill{font-size:8px}
   .kv{grid-template-columns:88px minmax(0,1fr);gap:5px 8px}
   .inspect-title{margin-bottom:9px}
   .inspect-section{margin:10px 0}

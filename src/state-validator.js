@@ -25,6 +25,9 @@
 
     for(const a of Object.values(st.agents||{})){
       for(const legacy of ['location','plan','seatSlot','seatedOn','__slotTarget','__eatAfterSeat','__restAfterSlot','carrying'])if(Object.prototype.hasOwnProperty.call(a,legacy))add('legacy_agent_state',`${a.name}仍含舊欄位 ${legacy}。`,{agentId:a.id,field:legacy});
+      if(!Number.isFinite(a.needs?.sleepNeed)||a.needs.sleepNeed<0||a.needs.sleepNeed>100)add('sleep_need_invalid',`${a.name}的 sleepNeed 必須是 0–100 的有限數值。`,{agentId:a.id,value:a.needs?.sleepNeed});
+      if(a.traits?.circadianPattern&&!['diurnal','nocturnal','crepuscular'].includes(a.traits.circadianPattern))add('circadian_pattern_invalid',`${a.name}的 circadianPattern 無效。`,{agentId:a.id,value:a.traits.circadianPattern});
+      if(a.traits?.circadianPhaseOffsetMinutes!==undefined&&!Number.isFinite(a.traits.circadianPhaseOffsetMinutes))add('circadian_phase_invalid',`${a.name}的 circadianPhaseOffsetMinutes 必須是有限數值。`,{agentId:a.id,value:a.traits.circadianPhaseOffsetMinutes});
       if(!a.offMap){
         if(!a.position)add('agent_position_missing',`${a.name}沒有 Tile 座標。`,{agentId:a.id});
         else if(!SP.walkable(st,a.position))add('agent_on_blocked_tile',`${a.name}位於不可通行 Tile ${SP.key(a.position)}。`,{agentId:a.id,position:SP.key(a.position),blocker:SP.blockerAt(st,a.position)});

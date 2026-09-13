@@ -11,7 +11,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.8-logistics-container');
+  assert.equal(st.version,'11.9-sleep-pressure');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
@@ -21,7 +21,7 @@ E.reset(20260911);
   assert.ok(st.containers.mealTray.restock&&st.containers.waterBucket.restock,'補充需求應存在 World policy，而不是寫死在 Engine');
   assert.equal(st.containers.mealTray.restock.strategy,'logisticsContainer','固體資源搬運應走真正物流容器');
   const basket=st.containers.basket;assert.ok(basket&&SP.hasRole(basket,'logisticsContainer'));assert.equal(basket.portable,true);assert.ok(basket.transportResources.includes('food'));assert.ok(basket.capacity>0);
-  for(const a of Object.values(st.agents))assert.equal(Object.prototype.hasOwnProperty.call(a,'carrying'),false,'Agent 不應再保存抽象 carrying truth');
+  for(const a of Object.values(st.agents)){assert.equal(Object.prototype.hasOwnProperty.call(a,'carrying'),false,'Agent 不應再保存抽象 carrying truth');assert.ok(Number.isFinite(a.needs.sleepNeed),'Agent 應保存獨立 sleepNeed');}
   assert.ok(st.sources.tap.interactions.fill&&st.sources.tap.interactionPorts.length);
   const before=JSON.stringify(st),validation=V.validateState(st),after=JSON.stringify(st);assert.equal(validation.issueCount,0);assert.equal(after,before,'Validator 必須是純函式，不得寫回 simulation state');
 }
@@ -52,8 +52,8 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:8,y:5};b.position={x:8,y:4};a.needs.fatigue=90;b.needs.fatigue=90;
-  for(const x of [a,b])x.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,minSleepTicks:18,targetFatigue:12,started:st.tick,wait:0};
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:8,y:5};b.position={x:8,y:4};a.needs.sleepNeed=90;b.needs.sleepNeed=90;
+  for(const x of [a,b])x.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,started:st.tick,wait:0};
   for(let i=0;i<12&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);
 }
 
@@ -112,4 +112,4 @@ E.reset(20260911);
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const legacy of ['recovery.js','supply.js','action-guard.js','seating.js','rest-surface.js','spatial-ui.js','furniture-ui.js','recovery-ui.js','supply-ui.js'])assert.ok(!index.includes(legacy));
 }
-console.log('v11.8 logistics container regression: ok');
+console.log('v11.9 core regression: ok');
