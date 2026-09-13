@@ -18,7 +18,7 @@ await page.evaluate(()=>{
   const E=window.SimEngine,SP=window.SimSpatial,st=E.getState();
   SP.putEnvironmentResource(st,SP.normalizeNode(st,{x:5,y:2},'diningTable:surface'),'water',6);
 });
-await page.locator('[data-entity="furniture:diningTable"]').first().click();
+await page.locator('.spatial-furniture-handle[data-furniture-id="diningTable"]').click();
 await page.waitForTimeout(100);
 let inspector=await page.locator('#inspector').innerText();
 check('Furniture Inspector exposes Surface Environment',inspector.includes('Surface Environment')&&inspector.includes('(5, 2)')&&inspector.includes('水 6'),inspector.slice(0,900));
