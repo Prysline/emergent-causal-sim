@@ -22,10 +22,11 @@ jobs:
         run: |
           for f in src/*.js; do node --check "$f"; done
           node tests/spatial-floor-boundaries.mjs
-      - name: Commit generated changes
+      - name: Commit generated source changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html src/engine.js src/spatial-v1113.js tests/spatial-floor-boundaries.mjs .github/workflows/state-regression.yml
+          git restore .github/workflows/state-regression.yml
+          git add index.html src/engine.js src/spatial-v1113.js tests/spatial-floor-boundaries.mjs
           git commit -m "v11.11.3: make floor effects and arrival node-aware"
           git push origin HEAD:feat/v11.11.3-node-aware-floor-effects
