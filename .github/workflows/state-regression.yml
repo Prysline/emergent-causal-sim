@@ -22,5 +22,6 @@ jobs:
           node-version: 22
       - run: for f in src/*.js; do node --check "$f"; done
       - run: node tests/v11-state-regression.mjs
+      - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
       - run: node tests/refill-water-geometry.mjs
