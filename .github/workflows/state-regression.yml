@@ -1,8 +1,17 @@
 name: State regression
+
 on:
   push:
-    branches: [main, 'refactor/**', 'fix/**', 'feature/**']
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+
+concurrency:
+  group: state-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   state-regression:
     runs-on: ubuntu-latest
