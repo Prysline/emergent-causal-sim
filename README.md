@@ -2,9 +2,9 @@
 
 湧現式因果模擬器。用少量可組合規則觀察角色、物件、資源與環境如何自行形成因果鏈。
 
-目前版本：**v11.4・Carry Load / Resource Weight**。
+目前版本：**v11.5・Sleep / Bed**。
 
-> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 起在這個 core 上重新增加玩法。v11.3 把角色主動資源轉移納入物理 interaction contract；v11.4 再把手持 Container 與抽象搬運 Resource 收斂成同一套即時負重計算。
+> v11 先移除 v7～v10.4 累積的 wrapper／patch，重新建立單一空間、行動與狀態契約；v11.2 起在這個 core 上重新增加玩法。v11.3 把角色主動資源轉移納入物理 interaction contract；v11.4 統一負重；v11.5 再把 Sleep / Bed 正式接進同一套 Furniture Slot、posture、fatigue 與 action lifecycle。
 
 ## 核心方向
 
@@ -14,10 +14,53 @@ Room               = 由牆、邊界、門的拓撲自動推導
 Furniture / object = affordance、局部舒適與互動來源
 Agent.position     = 角色位置唯一真相
 Agent.action       = 唯一行動 state machine
+Agent.posture      = standing / sitting / lying 正式世界狀態
 Activity Area      = 未來可選用途 overlay，不提供環境魔法加成
 ```
 
 舊版六個 `Zone` 不再負責噪音、休息品質、是否抵達物件或行動 prerequisite。局部環境由真正的 Tile、家具、液體、角色與噪音事件決定。
+
+## v11.5：Sleep / Bed
+
+睡眠現在是獨立於短休的正式 `Agent.action`，但仍直接存在單一 `engine.js` core；沒有新增 `sleep.js`、tick wrapper 或 UI 推測層。
+
+```text
+疲勞很高
+→ 選擇 sleep
+→ 尋找可用 canSleep slot
+→ 前往睡眠位置
+→ lying
+→ sleeping × N
+→ fatigue 持續恢復
+→ 滿足最低睡眠時間且恢復充分
+→ 自然醒
+```
+
+世界新增一張雙人床，具有兩個獨立 human sleep slot。每個 slot 同時具有 `canRest / canSleep`，短休可躺床，正式睡眠也可使用；真正 exclusive 的仍是 slot，不是整張家具。
+
+沙發原本保留的 `canSleep` affordance 現在正式生效，睡眠品質低於床，因此一般情況會優先選床；床位不可用時，人類可以改睡沙發。橘子不能使用人類床位，但能使用允許 `cat` 的沙發睡眠 slot。
+
+`lying` posture 也正式擴充為兩種合法狀態：
+
+```text
+lying + slotId/furnitureId
+→ 躺在家具 slot，例如床／沙發
+
+lying + null slot
+→ 地板／非家具躺姿，例如橘子短休
+```
+
+因此睡眠中的床位占用、家具 Inspector 與 validator 都讀同一份正式 posture state。
+
+短休與睡眠的差異目前是：
+
+- 短休可以使用一般 `canRest` 家具；早期遇到高噪音仍可能重新找休息位置。
+- 睡眠只選 `canSleep` slot，具有較強 commitment；噪音會降低 `sleepEfficiency`，但 v11.5 **不會因單次噪音自動新增吵醒規則**。
+- 同一張床、同一角色下，sleep 每 tick 的 fatigue recovery 高於 short rest。
+- 睡眠位置失效時會中止並醒來；恢復充分後會留下 `sleepWake` timeline 事件並結束 action。
+- 自然醒後角色可以仍躺在床上；下一次需要移動時，movement transition 才正式 `standUp()`。
+
+本版刻意**沒有**加入鬧鐘、固定作息、sleep debt、睡眠需求獨立數值、因飢餓／口渴醒來或完整夜間排程。這些仍是後續設計項目，不是 v11.5 已完成內容。
 
 ## v11.4：Carry Load / Resource Weight
 
@@ -56,7 +99,7 @@ effectiveCarryLoad(agent)
 → effectiveCarryLoad 上升
 → 同距離步行活動成本上升
 → fatigue / thirst / hunger 透過既有 applyExertion 鏈條受影響
-→ 後續休息、喝水與其他需求決策改變
+→ 後續休息、喝水、睡眠與其他需求決策改變
 ```
 
 Inspector 會顯示 Agent 的「目前負重」、Container 的「空重／目前負重」，最近一次負重步行的 exertion 也會帶當時負重。
@@ -115,7 +158,7 @@ Inspector 會顯示 Agent 的「目前負重」、Container 的「空重／目�
 - 所有互動只看合法 interaction position，不要求 Agent 與物件 `location` 相同。
 - 角色只有 `action`，每 tick 最多移動一格或推進一個 phase。
 - `posture` 是正式 state：`standing / sitting / lying`。
-- 家具 footprint 與 slot 分離；雙人沙發可同時容納兩名角色。
+- 家具 footprint 與 slot 分離；雙人沙發與雙人床都以不同 slot 處理 exclusive use。
 - 手持容器只有 `Agent.held` 一份 truth；短期 exclusive 使用統一放進 `state.reservations`。
 - 地面液體直接存在 `Tile.surface.contents`。
 - 食物外出補給保留，但整合進普通 `supplyFood` action。
@@ -152,6 +195,8 @@ docs/
 - Serving / Plate 與可攜餐盤
 - 可攜水桶與 actor-mediated resource transfer
 - Resource / Container Carry Load 與負重 exertion
+- 短休與正式 Sleep / Bed action
+- 雙人床 slot、沙發睡眠 fallback、自然醒
 - 橘子可直接吃盤中食物，但不拿盤子
 - 酒瓶可直接喝，杯子仍具較高偏好
 - A* Tile movement 與 soft crowding
@@ -189,25 +234,30 @@ Regression 包含：
 - atomic movement / phase
 - 跨舊 Zone 邊界取杯
 - 貓休息 posture
-- 雙人沙發 slot
+- 雙人沙發短休 slot
+- **兩名人類可同時睡在雙人床不同 slot**
+- **床位不可用時可選 canSleep 沙發 fallback**
+- **同一張床：sleep recovery > short-rest recovery**
+- **單次高噪音只降低睡眠效率，不自行新增吵醒規則**
+- **睡眠會進入 sleeping phase，充分恢復後自然醒並留下 sleepWake event**
 - soft co-location
 - 盛盤、右側餐椅、橘子吃盤中食物與直接吃 fallback
 - 補水必須實際拿起水桶並搬到水龍頭
 - 未持有水桶時不得遠端增加水量
 - 橘子不能喝正在被別人持有的水桶
-- **同角色同路程：滿水桶 exertion > 空水桶**
-- **搬 40 單位食物 exertion > 搬 10 單位食物**
+- 同角色同路程：滿水桶 exertion > 空水桶
+- 搬 40 單位食物 exertion > 搬 10 單位食物
 - Container 內容量改變後 `containerLoad()` 立即跟著改變，且沒有 cached `currentLoad`
 - `effectiveCarryLoad = held Container + carrying Resource`
 - 舊 `carrying.amount * .0015` 專用公式不得回流
 - supply 必須實際走到 pantry 才入庫
 - A* unreachable → `[]`
 - offMap 社交目標強烈中斷
-- index 不可再載入舊 wrapper
+- index 不可再載入舊 wrapper；Sleep 也不得回到獨立 wrapper runtime
 
 ## 下一步候選
 
-1. **Sleep / Bed**：在現有 Rest Surface、posture、fatigue 與 Carry Load 形成的活動成本上，加入較強 commitment、睡眠需求與 wake conditions。
+1. **Sleep Schedule / Wake Conditions**：在 v11.5 睡眠 core 上再決定固定作息、鬧鐘、sleep debt、飢餓／口渴醒來與噪音吵醒等規則；目前都尚未實作。
 2. **Logistics Container**：目前搬 pantry／外出補給食物仍使用抽象 `carrying`；未來若要增加籃子、箱子、掉落、容量與放置，可轉成真正 Container，而不重做重量系統。
 3. **Room topology**：加入真正隔間牆、可開關門，測試噪音／未來溫度跨 Room 傳播。
 4. **Dish lifecycle / cleanup**：收盤、清洗、髒污與餐具循環。
