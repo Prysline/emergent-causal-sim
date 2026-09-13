@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v11.7｜Core Consolidation</title>
+  <title>因果湧現模擬器 v11.8｜Logistics Container</title>
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/spatial.css">
   <link rel="stylesheet" href="styles/mobile.css">
@@ -11,7 +11,7 @@
 <body>
 <div class="shell">
   <header class="appbar">
-    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.7・Core Consolidation</span></h1></div>
+    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.8・Logistics Container</span></h1></div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
   <div class="toolbar">
@@ -20,8 +20,8 @@
   </div>
   <main class="workspace">
     <div class="maincol">
-      <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Tile 負責移動；Room 由拓撲推導；affordance、slot、support reach 與 interaction port 決定互動位置</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="spatial-map"></div></div></section>
-      <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>每 tick 最多移動一格或推進一個行動 phase</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
+      <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Tile 負責移動；Room 由拓撲推導；affordance、slot、support reach、interaction port 與實體物流容器共同決定物理互動</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="spatial-map"></div></div></section>
+      <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>每 tick 最多移動一格或推進一個行動 phase；搬運資源必須經過實際 Container</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
       <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>預設隱藏低資訊事件；關聯實體使用結構化 refs</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
     </div>
     <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>Inspector</b><small>角色、物件、家具、Room、事件與 Tile 共用單一選取狀態</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>

@@ -16,8 +16,15 @@
       if(Object.prototype.hasOwnProperty.call(t,'staticBlockedBy'))add('cached_blocker_present',`${id} 仍保存 staticBlockedBy；阻擋應由目前實體推導。`,{position:id});
     }
 
+    for(const c of Object.values(st.containers||{})){
+      if(SP.hasRole(c,'logisticsContainer')){
+        if(!c.portable)add('logistics_container_not_portable',`${c.name}是 logisticsContainer 卻不可攜帶。`,{containerId:c.id});
+        if(!Number.isFinite(c.capacity)||c.capacity<=0)add('logistics_container_capacity_invalid',`${c.name}沒有合法容量。`,{containerId:c.id});
+      }
+    }
+
     for(const a of Object.values(st.agents||{})){
-      for(const legacy of ['location','plan','seatSlot','seatedOn','__slotTarget','__eatAfterSeat','__restAfterSlot'])if(Object.prototype.hasOwnProperty.call(a,legacy))add('legacy_agent_state',`${a.name}仍含舊欄位 ${legacy}。`,{agentId:a.id,field:legacy});
+      for(const legacy of ['location','plan','seatSlot','seatedOn','__slotTarget','__eatAfterSeat','__restAfterSlot','carrying'])if(Object.prototype.hasOwnProperty.call(a,legacy))add('legacy_agent_state',`${a.name}仍含舊欄位 ${legacy}。`,{agentId:a.id,field:legacy});
       if(!a.offMap){
         if(!a.position)add('agent_position_missing',`${a.name}沒有 Tile 座標。`,{agentId:a.id});
         else if(!SP.walkable(st,a.position))add('agent_on_blocked_tile',`${a.name}位於不可通行 Tile ${SP.key(a.position)}。`,{agentId:a.id,position:SP.key(a.position),blocker:SP.blockerAt(st,a.position)});
@@ -45,8 +52,13 @@
         const owners=heldByContainer.get(a.held)||[];owners.push(a.id);heldByContainer.set(a.held,owners);
         const effective=SP.objectPosition(st,a.held);if(effective&&!a.offMap&&!SP.same(effective,a.position))add('held_position_mismatch',`${a.name}持有的 ${a.held} 有效位置與角色不一致。`,{agentId:a.id,containerId:a.held});
       }
-      if(a.carrying&&(!Number.isFinite(a.carrying.amount)||a.carrying.amount<=0))add('invalid_carrying',`${a.name}的 carrying.amount 無效。`,{agentId:a.id});
       if(a.action&&(!a.action.intent||!a.action.phase))add('invalid_action',`${a.name}的 action 缺少 intent / phase。`,{agentId:a.id});
+      if(a.action?.intent==='externalSupply'||(a.action?.intent==='restockContainer'&&a.action.strategy==='logisticsContainer')){
+        const carrier=a.action.carrierId&&st.containers[a.action.carrierId];
+        if(!carrier||!SP.hasRole(carrier,'logisticsContainer'))add('logistics_action_carrier_invalid',`${a.name}的物流行動沒有合法 logisticsContainer。`,{agentId:a.id,carrierId:a.action.carrierId||null});
+        const mustHold=['toExit','exit','work','toSource','loadCarrier','toDestination','deposit'].includes(a.action.phase);
+        if(mustHold&&carrier&&a.held!==carrier.id)add('logistics_action_not_holding_carrier',`${a.name}進入 ${a.action.phase} 階段卻沒有持有物流容器。`,{agentId:a.id,carrierId:carrier.id,phase:a.action.phase});
+      }
     }
 
     for(const [slot,ids] of bySlot)if(ids.length>1)add('slot_double_occupied',`${slot} 同時被 ${ids.join('、')} 使用。`,{slotId:slot,agentIds:ids});
