@@ -35,7 +35,7 @@ for(let i=0;i<3;i++)await page.locator('#step').click();
 state=await page.evaluate(()=>{const st=SimEngine.getState(),a=st.agents.orange;return {surface:a.position.surfaceId,x:a.position.x,y:a.position.y,paw:a.contacts.paws.water||0,floor:st.map.tiles['6,2'].surface.contents.water||0,tileContacts:st.events.filter(e=>e.data?.action==='tileContact').length};});
 check('tabletop movement ignores wet floor below',state.surface==='diningTable:surface'&&state.x===6&&state.y===2&&state.paw===0&&state.floor===12&&state.tileContacts===0,JSON.stringify(state));
 
-await page.locator('[data-entity="agent:orange"]').click();
+await page.locator('#map [data-entity="agent:orange"]').click();
 await page.waitForTimeout(80);
 const inspector=await page.locator('#inspector').innerText();
 check('Inspector shows tabletop after movement',inspector.includes('diningTable:surface')&&inspector.includes('餐桌桌面'));
