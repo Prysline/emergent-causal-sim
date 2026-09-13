@@ -1,84 +1,97 @@
-# v11.6 Interaction Geometry
+# Interaction Geometry — v11.7
 
-v11.6 不提高 12×8 pathfinding grid 的解析度，而是在 Tile 之上補一層「角色從哪裡能操作某個目標」的空間語意。
+12×8 Tile grid 仍負責真正的移動與站位；Interaction Geometry 負責回答：**這個 Agent 要用某個 affordance 操作某個 target 時，哪些 Tile 是合法操作位置？**
 
-## 核心分工
+## 正式分工
 
 ```text
 Tile / A*
-→ 角色真正的移動與站位
+→ 角色真正移動與站位
 
 Furniture footprint
-→ 家具占用哪些 Tile、是否阻擋移動
+→ 家具實際占地
 
 Furniture slot
-→ 坐、躺、睡等精確使用位置
+→ 坐、躺、睡、出口等精確使用位置
 
 Interaction port
-→ 固定設備從哪一側操作
+→ 固定設備可從哪些 Tile 操作
 
 Support reach
-→ 桌上／家具承載物從哪些外圍 Tile 可及
+→ 家具承載物從哪些外圍 Tile 可及
+
+Affordance rule
+→ 同一 target 在不同動作下可使用不同 geometry
 ```
 
-`interactionGeometry(state, target, agent, affordance)` 目前可回傳：
+## API
+
+```text
+interactionGeometry(state, target, agent, affordance)
+interactionPositions(state, target, agent, affordance)
+bestInteractionPosition(state, agent, target, affordance)
+isAtInteraction(state, agent, target, affordance)
+```
+
+目前 mode：
 
 - `occupy`：必須與目標同 Tile。
-- `reach`：同 Tile 或相鄰可走 Tile。
-- `supportReach`：由承載家具 footprint 的外圍與可用 slot 推導。
-- `port`：只允許資料明確指定的操作 Tile。
-- `slot`：精確使用家具 slot。
-- `socialReach`：角色間同格／鄰格互動。
-- `tileContact`：直接與 Tile 接觸。
+- `reach`：同 Tile或相鄰可走 Tile。
+- `supportReach`：承載家具 footprint 外圍與 slot。
+- `port`：只允許資料指定的 interaction port。
+- `slot`：精確 Furniture slot。
+- `socialReach`：Agent 間同格／鄰格互動。
+- `tileContact`：直接和 Tile 接觸。
+- `heldReach`：目標被 Agent 持有時依 holder 位置推導。
 
-## 水桶與水龍頭
+## Affordance-specific geometry
 
-水桶是第一個採用 `groundInteraction: occupy` 的較大型地面容器：
+Entity 可以直接描述：
 
-```text
-waterBucket (5,5)
-tap         (6,5)
+```js
+interactions: {
+  pickup: { mode: 'occupy' },
+  drinkFrom: { mode: 'reach' }
+}
 ```
 
-水龍頭本體不可站立，但具有：
+因此一個大水桶可以要求「拾取時走進同 Tile」，但喝水時仍允許站在旁邊。v11.6 雖然已經把 `affordance` 放進 API，v11.7 才正式讓它參與 geometry rule selection。
 
-```text
-interactionPorts:
-- tap:west
-  position: (5,5)
-  edge: east
+## Interaction port
+
+Source 可以描述：
+
+```js
+interactions: {
+  fill: { mode: 'port' }
+},
+interactionPorts: [
+  {
+    id: 'tap:west',
+    position: { x: 5, y: 5 },
+    edge: 'east',
+    affordances: ['fill']
+  }
+]
 ```
 
-因此補水流程變成：
+`edge` 仍是 interaction metadata，不是第二套 pathfinding coordinate。
 
-```text
-走到 (5,5)
-→ 拿起同 Tile 水桶
-→ 人仍在 (5,5)
-→ 透過 tap:west 操作水龍頭
-→ 補水
-→ 水桶放回 (5,5)
-```
+## Support reach
 
-不再需要拿起水桶後額外走一格。
+若 Container 有 `supportId` 且沒有更明確 affordance rule，Spatial 會從承載 Furniture 的完整 footprint 外圍與 slot 推導合法位置。桌面物件不再只認自己的單點座標。
 
-## 桌上物件
+## Dynamic blocker
 
-具有 `supportId` 的物件不再只讀自己的單點座標。`supportReach` 會讀承載家具的完整 footprint，從整個外圍推導可站位置；餐桌四側因此都可以接觸桌上的現成食物、杯子與餐盤，而不必扭曲餐椅位置來配合某一個物件座標。
+Interaction Geometry 與 pathfinding 共用同一份實體世界。Tile 本身不保存 fixed object blocker cache；`blockerAt()` 每次依目前家具、fixed Container、Source 位置推導，因此物件移動後 interaction 與 pathfinding 不會讀到不同年代的空間狀態。
 
-## 空間粒度策略
+## 空間解析度策略
 
-目前仍保留 12×8 A*。`edge` 是 interaction port 的語意資訊，不是新的 pathfinding cell，也沒有建立 Tile 內第二套碰撞／移動座標。
+目前不提高 pathfinding resolution。只有當問題已經不是「從哪裡操作」，而是：
 
-是否需要 2× pathfinding resolution，留到出現以下訊號再評估：
+- 角色站位本身無法表達桌邊多人位置；
+- 狹窄通道需要真正的擦身與堵路；
+- 家具比例持續失真；
+- 一格移動代表的實際距離過長；
 
-- 角色站位本身無法合理表達桌子四周空間。
-- 狹窄通道、擦身、堵路需要比 Tile 更細的碰撞。
-- 家具比例無論如何配置都持續失真。
-- 一格移動代表的距離過長，造成大量日常動作看起來像大跨步。
-
-在此之前，優先用 interaction geometry 解決「站在哪裡才能操作」；不要用加密整張地圖來修單一互動。
-
-## 目前尺度校準
-
-v11.6 先讓較大的水桶使用 `occupy`。杯子／餐盤等小型地面物仍保留一般 `reach`，避免在尚未確定 Tile 實際尺度前把所有物件都鎖成同一距離規則。這是資料層差異，不是 `waterBucket` ID 特判；其他物件可以用相同欄位選擇幾何模式。
+才重新評估更細的 physical grid。
