@@ -6,12 +6,12 @@ for(const file of ['world.js','spatial.js','engine.js','state-validator.js'])vm.
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 
 function noIssues(label){const v=V.validateState(E.getState());if(v.issueCount)console.error('STATE_DEBUG',label,JSON.stringify(v,null,2));assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
-function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.minute,agents:Object.fromEntries(Object.entries(st.agents).map(([id,a])=>[id,{position:a.position,needs:a.needs,status:a.status,posture:a.posture,held:a.held,carrying:a.carrying,action:a.action,offMap:a.offMap}])),containers:Object.fromEntries(Object.entries(st.containers).map(([id,c])=>[id,{position:c.position,contents:c.contents,supportId:c.supportId}])),supply:st.supply,events:st.events.slice(0,20).map(e=>[e.time,e.text,e.type,e.data?.entities])});}
+function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.minute,agents:Object.fromEntries(Object.entries(st.agents).map(([id,a])=>[id,{position:a.position,needs:a.needs,status:a.status,posture:a.posture,held:a.held,action:a.action,offMap:a.offMap}])),containers:Object.fromEntries(Object.entries(st.containers).map(([id,c])=>[id,{position:c.position,contents:c.contents,supportId:c.supportId}])),supply:st.supply,events:st.events.slice(0,20).map(e=>[e.time,e.text,e.type,e.data?.entities])});}
 
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.7-core-consolidation');
+  assert.equal(st.version,'11.8-logistics-container');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
@@ -19,6 +19,9 @@ E.reset(20260911);
   assert.equal(st.map.tiles['0,6'].terrain,'doorway');
   assert.equal(st.containers.waterBucket.portable,true);assert.equal(st.containers.waterBucket.interactions.pickup.mode,'occupy');assert.equal(st.containers.waterBucket.interactions.drinkFrom.mode,'reach');
   assert.ok(st.containers.mealTray.restock&&st.containers.waterBucket.restock,'補充需求應存在 World policy，而不是寫死在 Engine');
+  assert.equal(st.containers.mealTray.restock.strategy,'logisticsContainer','固體資源搬運應走真正物流容器');
+  const basket=st.containers.basket;assert.ok(basket&&SP.hasRole(basket,'logisticsContainer'));assert.equal(basket.portable,true);assert.ok(basket.transportResources.includes('food'));assert.ok(basket.capacity>0);
+  for(const a of Object.values(st.agents))assert.equal(Object.prototype.hasOwnProperty.call(a,'carrying'),false,'Agent 不應再保存抽象 carrying truth');
   assert.ok(st.sources.tap.interactions.fill&&st.sources.tap.interactionPorts.length);
   const before=JSON.stringify(st),validation=V.validateState(st),after=JSON.stringify(st);assert.equal(validation.issueCount,0);assert.equal(after,before,'Validator 必須是純函式，不得寫回 simulation state');
 }
@@ -31,13 +34,15 @@ E.reset(20260911);
   const st=E.getState(),a=st.agents.zhen,start={...a.position};a.action={intent:'wander',phase:'move',started:st.tick,targetTile:{x:2,y:5},wait:0};E.tick();assert.equal(Math.abs(a.position.x-start.x)+Math.abs(a.position.y-start.y),1,'一個 tick 最多移動一格');noIssues('atomic movement');
 }
 
-function oneStepLoadCase({water=null,foodCarry=null}){
-  E.reset(12345);const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;a.position={x:2,y:5};a.metrics.exertionToday=0;a.held=null;a.carrying=null;
-  if(water!==null){bucket.contents={water};bucket.position={...a.position};a.held='waterBucket';}if(foodCarry!==null)a.carrying={resource:'food',amount:foodCarry};a.action={intent:'wander',phase:'move',targetTile:{x:3,y:5},started:st.tick,wait:0};E.tick();return {exertion:a.metrics.exertionToday,load:a.metrics.lastExertion?.load||0};
+function oneStepContainerLoadCase({water=null,basketFood=null}){
+  E.reset(12345);const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket,basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;a.position={x:2,y:5};a.metrics.exertionToday=0;a.held=null;
+  if(water!==null){bucket.contents={water};bucket.position={...a.position};a.held=bucket.id;}
+  if(basketFood!==null){basket.contents={food:basketFood};basket.position={...a.position};a.held=basket.id;}
+  a.action={intent:'wander',phase:'move',targetTile:{x:3,y:5},started:st.tick,wait:0};E.tick();return {exertion:a.metrics.exertionToday,load:a.metrics.lastExertion?.load||0};
 }
 {
-  const empty=oneStepLoadCase({water:0}),full=oneStepLoadCase({water:100});assert.ok(full.load>empty.load);assert.ok(full.exertion>empty.exertion);
-  const light=oneStepLoadCase({foodCarry:10}),heavy=oneStepLoadCase({foodCarry:40});assert.ok(heavy.load>light.load);assert.ok(heavy.exertion>light.exertion);
+  const empty=oneStepContainerLoadCase({water:0}),full=oneStepContainerLoadCase({water:100});assert.ok(full.load>empty.load);assert.ok(full.exertion>empty.exertion);
+  const light=oneStepContainerLoadCase({basketFood:10}),heavy=oneStepContainerLoadCase({basketFood:40});assert.ok(heavy.load>light.load,'同一物流容器裝更多食物時負重必須更高');assert.ok(heavy.exertion>light.exertion,'裝更多食物的籃子步行必須更耗力');
 }
 
 E.reset(20260911);
@@ -64,17 +69,23 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={intent:'restockContainer',phase:'toContainer',destinationId:'waterBucket',sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual(bucket.position,{x:5,y:5});noIssues('portable restock');
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={intent:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual(bucket.position,{x:5,y:5});noIssues('portable restock');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray,pantry=st.containers.foodPantry;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;tray.contents.food=0;const before=pantry.contents.food;a.action={intent:'restockContainer',phase:'toSource',destinationId:'mealTray',sourceId:'foodPantry',sourceKind:'object',resource:'food',strategy:'carryResource',started:st.tick,wait:0};for(let i=0;i<30&&a.action;i++)E.tick();assert.ok((tray.contents.food||0)>0);assert.ok(pantry.contents.food<before);assert.equal(a.carrying,null);noIssues('resource restock');
+  const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray,pantry=st.containers.foodPantry,basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;tray.contents.food=0;basket.contents={};basket.position={x:3,y:2};const pantryBefore=pantry.contents.food;let heldBasket=false,loadedBasket=false;
+  a.action={intent:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
+  for(let i=0;i<45&&a.action;i++){E.tick();if(a.held===basket.id)heldBasket=true;if((basket.contents.food||0)>0)loadedBasket=true;noIssues(`logistics restock ${i}`);}
+  assert.equal(a.action,null,'室內補貨流程應完成');assert.equal(heldBasket,true,'角色必須真的拿起物流籃');assert.equal(loadedBasket,true,'食物必須先實際存在物流籃中');assert.ok((tray.contents.food||0)>0);assert.ok(pantry.contents.food<pantryBefore);assert.equal(basket.contents.food||0,0,'卸貨後物流籃應為空');assert.equal(a.held,null);assert.ok(SP.same(basket.position,a.position),'卸貨後空籃應留在實際卸貨位置');assert.ok(st.events.some(e=>e.data?.action==='restockContainer'&&e.data?.carrier===basket.id&&e.data?.entities?.includes(`container:${basket.id}`)));noIssues('physical logistics restock');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,door=SP.allSlots(st).find(s=>s.canExit),dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination'));st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const before=dest.contents.food;a.action={intent:'externalSupply',phase:'toExit',exitSlot:door.id,destinationId:dest.id,resource:'food',workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');for(let i=0;i<40&&a.action;i++)E.tick();assert.equal(a.action,null);assert.equal(E.supplyStatus().workerId,null);assert.ok(dest.contents.food>before);assert.equal(st.supply.workerId,undefined);noIssues('derived supply owner');
+  const st=E.getState(),a=st.agents.zhen,door=SP.allSlots(st).find(s=>s.canExit),dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination')),basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;basket.contents={};basket.position={x:3,y:2};const before=dest.contents.food;let heldBeforeExit=false,returnedLoaded=false;
+  a.action={intent:'externalSupply',phase:'toCarrier',exitSlot:door.id,destinationId:dest.id,resource:'food',carrierId:basket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
+  for(let i=0;i<55&&a.action;i++){E.tick();if(a.offMap)heldBeforeExit ||= a.held===basket.id;if(st.events.some(e=>e.data?.action==='supplyReturn'&&e.data?.carrier===basket.id&&(basket.contents.food||0)>0))returnedLoaded=true;noIssues(`external supply ${i}`);}
+  assert.equal(a.action,null);assert.equal(heldBeforeExit,true,'角色必須帶著籃子才可離家補給');assert.equal(returnedLoaded,true,'外出取得的資源必須先存在籃子裡再入庫');assert.equal(E.supplyStatus().workerId,null);assert.ok(dest.contents.food>before);assert.equal(basket.contents.food||0,0);assert.equal(a.held,null);assert.ok(SP.same(basket.position,a.position),'入庫後空籃應留在食物櫃互動位置');assert.equal(st.supply.workerId,undefined);assert.ok(st.events.some(e=>e.data?.action==='supplyExit'&&e.data?.carrier===basket.id));assert.ok(st.events.some(e=>e.data?.action==='supplyDeposit'&&e.data?.carrier===basket.id));noIssues('physical external supply');
 }
 
 E.reset(20260911);
@@ -92,11 +103,13 @@ E.reset(20260911);
   for(const id of ['waterBucket','mealTray','foodPantry','alcoholBottle','frontDoor:inside',"targetAgent:'orange'"])assert.ok(!engine.includes(id),`Engine 不得綁定具體世界 entity ID：${id}`);
   assert.ok(!engine.includes('supply.workerId'),'Engine 不得維護第二份 supply owner truth');
   assert.ok(!engine.includes('planLabel:'),'不得保留舊 planLabel compatibility alias');
+  assert.ok(!engine.includes('.carrying'),'Engine 不得重新引入 Agent.carrying 物流模型');
+  assert.ok(!engine.includes('carriedResourceLoad'),'Engine 不得保留抽象 hauling weight helper');
   const validator=fs.readFileSync(new URL('../src/state-validator.js',import.meta.url),'utf8');
   assert.ok(!validator.includes('E.validateState='));assert.ok(!validator.includes('validationStatus='));assert.ok(!validator.includes('debug.validation'));
   const world=fs.readFileSync(new URL('../src/world.js',import.meta.url),'utf8');
-  assert.ok(!world.includes("id==='mealTray'"),'World 初始化不得以 entity ID skip list 決定 blocker');
+  assert.ok(!world.includes('carrying:null'),'World 不得初始化 Agent.carrying');assert.ok(world.includes("'logisticsContainer'"),'World 應定義物流容器 capability');assert.ok(!world.includes("id==='mealTray'"),'World 初始化不得以 entity ID skip list 決定 blocker');
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const legacy of ['recovery.js','supply.js','action-guard.js','seating.js','rest-surface.js','spatial-ui.js','furniture-ui.js','recovery-ui.js','supply-ui.js'])assert.ok(!index.includes(legacy));
 }
-console.log('v11.7 core consolidation regression: ok');
+console.log('v11.8 logistics container regression: ok');
