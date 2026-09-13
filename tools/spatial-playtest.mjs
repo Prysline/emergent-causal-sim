@@ -117,8 +117,18 @@ const sourceInspector = (await page.locator('#inspector').textContent()).replace
 add('Source Inspector exposes Spatial Node section', sourceSpatialSections === 1 && sourceInspector.includes('Node Key'), `sections=${sourceSpatialSections}; ${sourceInspector.slice(0, 450)}`);
 await page.screenshot({ path: `${outDir}/06-tap-inspector.png`, fullPage: true });
 
-// Furniture observability.
-await page.locator('[data-entity="furniture:diningTable"]').first().click();
+// Furniture observability. Record whether the furniture itself is actually clickable for a player.
+const tableButton = page.locator('[data-entity="furniture:diningTable"]').first();
+let tableClickable = true;
+let tableClickError = '';
+try {
+  await tableButton.click({ timeout: 1200 });
+} catch (err) {
+  tableClickable = false;
+  tableClickError = String(err).split('\n').slice(0, 6).join(' ');
+  await tableButton.click({ force: true });
+}
+add('Dining table can be selected directly on the map', tableClickable, tableClickError || 'click succeeded');
 await page.waitForTimeout(50);
 const furnitureInspector = (await page.locator('#inspector').textContent()).replace(/\s+/g, ' ').trim();
 add('Dining table Inspector exposes spatial geometry', furnitureInspector.includes('Spatial Geometry') && furnitureInspector.includes('diningTable:surface') && furnitureInspector.includes('0.72 m'), furnitureInspector.slice(0, 500));
