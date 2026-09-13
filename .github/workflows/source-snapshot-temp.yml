@@ -1,4 +1,4 @@
-name: Source snapshot temp
+name: Apply v11.11.3 temp
 
 on:
   push:
@@ -6,21 +6,26 @@ on:
       - feat/v11.11.3-node-aware-floor-effects
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  snapshot:
+  apply:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Upload working source snapshot
-        uses: actions/upload-artifact@v4
         with:
-          name: source-snapshot-temp
-          path: |
-            index.html
-            src
-            styles
-            tests
-            .github/workflows/state-regression.yml
-          if-no-files-found: error
+          fetch-depth: 0
+      - name: Apply v11.11.3 source changes
+        run: python3 tools/apply-v1113-temp.py
+      - name: Verify changed source locally
+        run: |
+          for f in src/*.js; do node --check "$f"; done
+          node tests/spatial-floor-boundaries.mjs
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html src/engine.js src/spatial-v1113.js tests/spatial-floor-boundaries.mjs .github/workflows/state-regression.yml
+          git commit -m "v11.11.3: make floor effects and arrival node-aware"
+          git push origin HEAD:feat/v11.11.3-node-aware-floor-effects
