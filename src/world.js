@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='11.9-sleep-pressure';
+  const VERSION='11.10-interaction-stimulus';
   const WIDTH=12,HEIGHT=8;
   const RESOURCE_TYPES={
     food:{id:'food',name:'食物',icon:'🍲',phase:'solid',edible:true,hungerRelief:[18,30],evaporation:0,loadPerUnit:.035},
@@ -15,7 +15,7 @@
     eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',restockContainer:'補充資源',rest:'休息',sleep:'睡眠',talk:'找人聊天',petCat:'摸貓',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',externalSupply:'外出補給',
     intoxication:'醉酒',coordination:'動作協調',normal:'正常'
   };
-  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',sleepNeed:'睡眠需求',sleepNeedRecovery:'睡眠需求恢復',circadianPattern:'日夜節律',circadianBias:'時段睡眠偏向',sleepPropensity:'睡眠傾向',wakeReason:'醒來原因',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',carrier:'物流容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重',entities:'關聯實體'};
+  const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',sleepNeed:'睡眠需求',sleepNeedRecovery:'睡眠需求恢復',circadianPattern:'日夜節律',circadianBias:'時段睡眠偏向',sleepPropensity:'睡眠傾向',wakeReason:'醒來原因',stimulusKind:'刺激類型',stimulusIntensity:'刺激強度',wakeChance:'喚醒機率',wakeRoll:'喚醒擲骰',woke:'是否喚醒',targetWasSleeping:'目標原本在睡眠',response:'目標回應',responseChance:'回應機率',responseRoll:'回應擲骰',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',carrier:'物流容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重',entities:'關聯實體'};
 
   const FURNITURE_DEFS={
     diningTable:{id:'diningTable',name:'餐桌',icon:'▰',kind:'table',blocksMovement:true,supportsObjects:true,value:30,
