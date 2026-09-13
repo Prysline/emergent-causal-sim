@@ -1,0 +1,38 @@
+name: v11.11.4 browser temp
+
+on:
+  push:
+    branches: [feat/v11.11.4-surface-liquid-foundation]
+  workflow_dispatch:
+
+jobs:
+  playtest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start local server
+        run: |
+          python3 -m http.server 4173 >/tmp/v1114-browser.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/v1114-browser.log
+          exit 1
+      - name: Run v11.11.4 browser playtest
+        run: node tools/v1114-browser-temp.mjs
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1114-browser
+          path: artifacts/v1114-browser
+          if-no-files-found: warn
