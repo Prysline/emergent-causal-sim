@@ -65,7 +65,7 @@
   function createInitialState(seed=20260911){
     const n=(Number(seed)>>>0)||20260911;
     const state={
-      version:'11.5-sleep-bed',tick:0,day:1,minute:12*60,seed:n,rngState:n,
+      version:'11.5-sleep-bed',interactionModel:'11.6-interaction-geometry',tick:0,day:1,minute:12*60,seed:n,rngState:n,
       map:{width:WIDTH,height:HEIGHT,tiles:buildTiles(),rooms:{},roomRevision:0},
       furniture:normalizeFurniture(),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:70,workerId:null,trips:0,totalProduced:0},
@@ -74,12 +74,16 @@
         plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',capacity:12,emptyLoad:.35,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateA},supportId:'diningTable'},
         plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',capacity:12,emptyLoad:.35,contents:{},portable:true,servingDish:true,canEatFrom:true,position:{...OBJECT_START.plateB},supportId:'diningTable'},
         foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🧺',capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1,position:{...OBJECT_START.foodPantry}},
-        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,access:1,position:{...OBJECT_START.waterBucket}},
+        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,groundInteraction:'occupy',access:1,position:{...OBJECT_START.waterBucket}},
         cupA:{id:'cupA',name:'白色杯子',icon:'🥛',capacity:35,emptyLoad:.25,contents:{alcohol:20},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupA},supportId:'diningTable'},
         cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',capacity:35,emptyLoad:.25,contents:{},portable:true,canDrinkFrom:true,drinkPreference:.95,position:{...OBJECT_START.cupB},supportId:'diningTable'},
         alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,canDrinkFrom:true,drinkPreference:.28,position:{...OBJECT_START.alcoholBottle},supportId:'diningTable'}
       },
-      sources:{tap:{id:'tap',name:'水龍頭',icon:'🚰',resource:'water',infinite:true,position:{...OBJECT_START.tap}}},
+      sources:{
+        tap:{id:'tap',name:'水龍頭',icon:'🚰',resource:'water',infinite:true,position:{...OBJECT_START.tap},interactionPorts:[
+          {id:'tap:west',label:'水龍頭左側',position:{x:5,y:5},edge:'east'}
+        ]}
+      },
       agents:{
         zhen:{id:'zhen',name:'阿真',kind:'human',position:{...AGENT_START.zhen},needs:{hunger:34,thirst:29,fatigue:41,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false},
         zhou:{id:'zhou',name:'老周',kind:'human',position:{...AGENT_START.zhou},needs:{hunger:31,thirst:62,fatigue:46,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},contacts:{hands:{},feet:{}},causes:{intoxication:null,contacts:{hands:{},feet:{}}},traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},metrics:{exertionToday:0,lastExertion:null},held:null,carrying:null,pendingInteraction:null,posture:{kind:'standing',slotId:null,furnitureId:null},action:null,offMap:false},
