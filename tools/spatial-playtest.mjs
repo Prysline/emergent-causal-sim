@@ -117,21 +117,25 @@ const sourceInspector = (await page.locator('#inspector').textContent()).replace
 add('Source Inspector exposes Spatial Node section', sourceSpatialSections === 1 && sourceInspector.includes('Node Key'), `sections=${sourceSpatialSections}; ${sourceInspector.slice(0, 450)}`);
 await page.screenshot({ path: `${outDir}/06-tap-inspector.png`, fullPage: true });
 
-// Furniture observability. Record whether the furniture itself is actually clickable for a player.
-const tableButton = page.locator('[data-entity="furniture:diningTable"]').first();
-let tableClickable = true;
-let tableClickError = '';
-try {
-  await tableButton.click({ timeout: 1200 });
-} catch (err) {
-  tableClickable = false;
-  tableClickError = String(err).split('\n').slice(0, 6).join(' ');
-  await tableButton.click({ force: true });
+// Supported objects should not show a contradictory legacy floor description in their base inspector block.
+await page.locator('[data-entity="container:plateA"]').first().click();
+await page.waitForTimeout(50);
+const plateInspector = (await page.locator('#inspector').textContent()).replace(/\s+/g, ' ').trim();
+add('supported object base location agrees with Spatial Node', plateInspector.includes('位置餐桌桌面') && !plateInspector.includes('位置餐桌下'), plateInspector.slice(0, 500));
+
+// Furniture observability must remain directly reachable even when objects cover every tabletop cell.
+const tableHandle = page.locator('.spatial-furniture-handle[data-furniture-id="diningTable"]').first();
+const tableHandleCount = await tableHandle.count();
+let tableClickable = tableHandleCount === 1;
+let tableClickError = tableHandleCount === 1 ? '' : `handles=${tableHandleCount}`;
+if(tableClickable){
+  try { await tableHandle.click({ timeout: 1500 }); }
+  catch(err){ tableClickable=false; tableClickError=String(err).split('\n').slice(0,6).join(' '); }
 }
-add('Dining table can be selected directly on the map', tableClickable, tableClickError || 'click succeeded');
+add('Dining table can be selected directly on the map', tableClickable, tableClickError || 'dedicated furniture handle clicked');
 await page.waitForTimeout(50);
 const furnitureInspector = (await page.locator('#inspector').textContent()).replace(/\s+/g, ' ').trim();
-add('Dining table Inspector exposes spatial geometry', furnitureInspector.includes('Spatial Geometry') && furnitureInspector.includes('diningTable:surface') && furnitureInspector.includes('0.72 m'), furnitureInspector.slice(0, 500));
+add('Dining table Inspector exposes spatial geometry', furnitureInspector.includes('Furniture・diningTable') && furnitureInspector.includes('Spatial Geometry') && furnitureInspector.includes('diningTable:surface') && furnitureInspector.includes('0.72 m'), furnitureInspector.slice(0, 500));
 await page.screenshot({ path: `${outDir}/07-table-inspector.png`, fullPage: true });
 
 // Mobile sanity: map and inspector must remain within viewport.
