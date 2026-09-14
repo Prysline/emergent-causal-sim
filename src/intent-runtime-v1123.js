@@ -112,7 +112,7 @@
   }
   function canStartEmergency(st,a,c){return !!makeAction(st,a,c.actionKind);}
   function startEmergency(st,a,c){
-    const priorActionKind=actionKind(a),priorIntent=clone(a.activeIntent);
+    const priorActionKind=actionKind(a),priorIntent=clone(a.activeIntent),priorLabel=priorActionKind?(E.ZH?.[priorActionKind]||priorActionKind):priorIntent?`「${E.intentLabel?.(priorIntent)||priorIntent.kind}」`:'目前安排';
     cleanupForInterruption(st,a);
     a.activeIntent=null;
     const action=makeAction(st,a,c.actionKind);if(!action)return false;
@@ -120,12 +120,14 @@
     const intent=E.createIntent?E.createIntent(st,a,action):{id:`intent:${a.id}:${st.tick}:${c.intentKind}`,kind:c.intentKind,createdTick:st.tick,lifecycle:'actionBound',source:{type:'emergency',tick:st.tick}};
     intent.kind=c.intentKind;intent.lifecycle='actionBound';intent.source={type:'emergency',need:c.need,value:c.value,tick:st.tick};
     action.intentId=intent.id;a.action=action;a.activeIntent=intent;
-    E.addEvent(`${a.name}因${E.ZH?.[c.need]||c.need}過於迫切，中斷${E.ZH?.[priorActionKind]||priorActionKind}，改先處理緊急需求。`,'warn',[],{actor:a.id,action:'intentPreempt',priorActionKind,nextActionKind:c.actionKind,intentId:intent.id,intentKind:intent.kind,emergencyNeed:c.need,emergencyValue:c.value,priorIntentId:priorIntent?.id||null,position:E.positionRef(a.position)});
+    E.addEvent(`${a.name}因${E.ZH?.[c.need]||c.need}過於迫切，中斷${priorLabel}，改先處理緊急需求。`,'warn',[],{actor:a.id,action:'intentPreempt',priorActionKind:priorActionKind||null,nextActionKind:c.actionKind,intentId:intent.id,intentKind:intent.kind,emergencyNeed:c.need,emergencyValue:c.value,priorIntentId:priorIntent?.id||null,position:E.positionRef(a.position)});
     return true;
   }
   function applyEmergencyPreemption(st){
     for(const a of Object.values(st.agents||{})){
-      const kind=actionKind(a);if(!kind||!EMERGENCY_PREEMPTIBLE.has(kind))continue;
+      const kind=actionKind(a),openIntent=!a.action&&a.activeIntent?.lifecycle==='open';
+      if(kind&&!EMERGENCY_PREEMPTIBLE.has(kind))continue;
+      if(!kind&&!openIntent)continue;
       const c=emergencyChoice(st,a);if(!c)continue;
       if(a.activeIntent?.kind===c.intentKind)continue;
       if(!canStartEmergency(st,a,c))continue;
@@ -151,8 +153,8 @@
 
   E.tick=(...args)=>{
     const st=E.getState();
-    planOpenIntents(st);
     applyEmergencyPreemption(st);
+    planOpenIntents(st);
     const before=snapshotLiveActions(st),marker=st.events?.[0]?.id||null;
     const result=baseTick(...args),after=E.getState(),newEvents=newEventsSince(after,marker);
     recoverAbortedIntents(after,before,newEvents);
