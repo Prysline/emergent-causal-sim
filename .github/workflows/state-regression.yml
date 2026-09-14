@@ -39,3 +39,4 @@ jobs:
       - run: node tests/soft-reconsideration-hysteresis.mjs
       - run: node tests/episodic-memory-foundation.mjs
       - run: node tests/event-appraisal.mjs
+      - run: node tests/short-lived-affect.mjs
