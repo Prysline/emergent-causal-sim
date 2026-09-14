@@ -22,7 +22,7 @@ function petScenario(socialNeed){
   E.reset(1311);const s=E.getState();
   s.agents.zhou.position={x:5,y:5};
   s.agents.orange.position={x:5,y:6};
-  s.agents.zhen.position={x:6,y:5};
+  s.agents.zhen.position={x:6,y:6};
   s.agents.orange.needs.social=socialNeed;
   const id=E.addEvent('老周摸了橘子。','normal',[],{actor:'zhou',target:'orange',action:'petCat',position:'5,6',debugSecret:'must not enter appraisal'});
   return {st:s,id,zhou:memoryFor('zhou',id),orange:memoryFor('orange',id),zhen:memoryFor('zhen',id)};
