@@ -7,7 +7,7 @@ for(const file of ['world.js','spatial.js','spatial-v111.js','spatial-observabil
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
-const E=globalThis.SimEngine,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 
 E.reset(20260911);
@@ -44,8 +44,10 @@ noIssues('legacy compatibility migration');
 // Canonical kind works with exported helpers that still call the old core internals underneath.
 E.reset(20260911);
 st=E.getState();
-const sleeper=st.agents.zhen;
-sleeper.action={kind:'sleep',phase:'sleeping',started:st.tick,sleepTicks:3};
+const sleeper=st.agents.zhen,slot=SP.getSlot(st,'bed:left');
+sleeper.position={...slot.position};
+sleeper.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
+sleeper.action={kind:'sleep',phase:'sleeping',started:st.tick,sleepTicks:3,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}}};
 E.normalizeStateActions(st);
 assert.equal(E.isSleeping(sleeper),true,'canonical kind should drive sleep helper through the compatibility bridge');
 assert.ok(E.actionLabel(sleeper).startsWith('睡眠'),'actionLabel should read canonical kind');
