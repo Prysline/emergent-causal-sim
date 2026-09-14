@@ -35,7 +35,7 @@ noIssues('positive private affect');
 
 // Negative audited appraisal raises frustration; repeated related events can push it again but remain bounded.
 E.reset(2312);st=E.getState();
-st.agents.zhou.position={x:5,y:5};st.agents.orange.position={x:5,y:6};st.agents.zhen.position={x:9,y:9};
+st.agents.zhou.position={x:5,y:5};st.agents.orange.position={x:5,y:6};st.agents.zhen.position={x:7,y:5};
 const spill1=E.addEvent('老周把水灑在地上。','warn',[],{actor:'zhou',action:'spill',position:'5,5',amount:4});
 const first={...st.agents.orange.affect};
 assert.ok(first.valence<0,'goal-incongruent spill should produce negative valence');
