@@ -63,7 +63,9 @@
     const existing=a.episodicMemories.find(m=>m.sourceEventId===e.id);
     if(existing){existing.lastObservedTick=Math.max(existing.lastObservedTick??existing.observedTick??0,observedTick);return existing;}
     const memory={id:`memory:${a.id}:${e.id}`,kind:'episodic',sourceEventId:e.id,observedTick,lastObservedTick:observedTick,observed:observableProjection(st,e)};
-    a.episodicMemories.push(memory);pruneAgentMemories(a);return memory;
+    a.episodicMemories.push(memory);pruneAgentMemories(a);
+    if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);
+    return memory;
   }
   function observeEventForMemories(st,e,observedTick=st.tick){
     if(!isWorldObservableEvent(e))return [];
