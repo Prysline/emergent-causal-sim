@@ -14,19 +14,28 @@
     return action;
   }
   function normalizeStateActions(st){for(const a of Object.values(st?.agents||{}))if(a.action)installActionKind(a.action);return st;}
+  function normalizeEventTerminology(st){
+    for(const e of st?.events||[]){
+      if(!e?.data||!Object.prototype.hasOwnProperty.call(e.data,'intent'))continue;
+      e.data.actionKind=e.data.intent;
+      delete e.data.intent;
+    }
+    return st;
+  }
+  function normalizeRuntimeState(st){normalizeStateActions(st);normalizeEventTerminology(st);return st;}
 
   E.tick=(...args)=>{
-    normalizeStateActions(E.getState());
+    normalizeRuntimeState(E.getState());
     const result=baseTick(...args);
-    normalizeStateActions(E.getState());
+    normalizeRuntimeState(E.getState());
     return result;
   };
-  E.reset=(...args)=>normalizeStateActions(baseReset(...args));
+  E.reset=(...args)=>normalizeRuntimeState(baseReset(...args));
   E.isSleeping=(a)=>{if(a?.action)installActionKind(a.action);return baseIsSleeping(a);};
   E.interactionWakeChance=(a,...args)=>{if(a?.action)installActionKind(a.action);return baseWakeChance(a,...args);};
   E.tryWakeFromInteraction=(a,...args)=>{if(a?.action)installActionKind(a.action);return baseTryWake(a,...args);};
   E.actionLabel=(a)=>{if(a?.action)installActionKind(a.action);return baseActionLabel(a);};
 
-  normalizeStateActions(E.getState());
-  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,actionKind,installActionKind,normalizeStateActions});
+  normalizeRuntimeState(E.getState());
+  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,actionKind,installActionKind,normalizeStateActions,normalizeEventTerminology,normalizeRuntimeState});
 })();
