@@ -19,7 +19,7 @@
   function createIntent(st,a,action){
     const actionKind=E.actionKind?E.actionKind(action):action?.kind;
     const started=Number.isFinite(action?.started)?action.started:st.tick;
-    return {id:intentIdFor(a,action),kind:intentKindForAction(actionKind),createdTick:started,source:{type:'deliberation',tick:st.thoughts?.[a.id]?.tick??started}};
+    return {id:intentIdFor(a,action),kind:intentKindForAction(actionKind),createdTick:started,lifecycle:'actionBound',source:{type:'deliberation',tick:st.thoughts?.[a.id]?.tick??started}};
   }
   function ensureIntentForAction(st,a){
     const action=a?.action;if(!action)return null;
@@ -33,6 +33,7 @@
       ensureIntentForAction(st,a);
       return;
     }
+    if(a.activeIntent?.lifecycle==='open')return;
     if(a.activeIntent)a.activeIntent=null;
   }
   function reconcileIntents(st){for(const a of Object.values(st?.agents||{}))reconcileAgentIntent(st,a);return st;}
