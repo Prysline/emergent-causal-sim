@@ -56,7 +56,7 @@ noIssues('same event dedupe');
 // Plan / private cognition is not converted into bystander episodic memory.
 const beforePrivate=memories('orange').length;
 E.addEvent('老周決定做一件事。','system',[],{actor:'zhou',action:'wander',phase:'plan',position:'5,5'});
-E.addEvent('老周內心改變了主意。','normal',[],{actor:'zhou',action:'intentReconsider',position:'5,5'});
+E.addEvent('老周內心改變了主意。','normal',[],{actor:'zhou',action:'intentReconsider',position:'5,5',priorIntentId:'intent:zhou:0:explore',priorIntentKind:'explore',priorActionKind:'wander',intentId:'intent:zhou:1:satisfyHunger:soft',intentKind:'satisfyHunger',nextActionKind:'eat',challengerIntentKind:'satisfyHunger',currentUtility:10,challengerUtility:30,switchMargin:14,commitmentCost:2,switchThreshold:26});
 E.addEvent('老周停止等待。','normal',[],{actor:'zhou',action:'socialWaitEnded',visibility:'private',owner:'zhou',position:'5,5'});
 assert.equal(memories('orange').length,beforePrivate);
 assert.equal(memories('zhou').length,1,'private/plan events should not become v11.13.0 world-event memories either');
