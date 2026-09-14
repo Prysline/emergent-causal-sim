@@ -17,11 +17,11 @@
     if(!Number.isInteger(f.lastUpdatedTick)||f.lastUpdatedTick<0)f.lastUpdatedTick=tick;
     if(!Number.isInteger(f.lastDecayTick)||f.lastDecayTick<0)f.lastDecayTick=tick;
     if(f.source!=null&&typeof f.source!=='object')f.source=null;
-    if(Math.abs(f.valence)<EPSILON&&f.activation<EPSILON&&f.frustration<EPSILON){f.valence=0;f.activation=0;f.frustration=0;f.source=null;}
+    if(Math.abs(f.valence)<=EPSILON&&f.activation<=EPSILON&&f.frustration<=EPSILON){f.valence=0;f.activation=0;f.frustration=0;f.source=null;}
     return f;
   }
   function normalizeAffectState(st){for(const a of Object.values(st?.agents||{}))normalizeAgentAffect(a,st?.tick||0);return st;}
-  function shrink(v,factor,signed=false){const next=round((Number(v)||0)*factor);if(Math.abs(next)<EPSILON)return 0;return signed?clamp(next,-1,1):clamp(next,0,1);}
+  function shrink(v,factor,signed=false){const raw=(Number(v)||0)*factor;if(Math.abs(raw)<=EPSILON)return 0;const next=round(raw);return signed?clamp(next,-1,1):clamp(next,0,1);}
   function decayAgentAffect(a,nextTick){
     const f=normalizeAgentAffect(a,Math.max(0,nextTick-1));
     f.valence=shrink(f.valence,DECAY.valence,true);
