@@ -46,6 +46,7 @@ assert.equal(Object.prototype.hasOwnProperty.call(orangeMemory.observed,'debugSe
 noIssues('focused observer boundary');
 
 // Re-processing the same world event updates access metadata instead of duplicating the episode.
+st.tick=1;
 E.observeEventForMemories(st,spill,1);
 assert.equal(memories('orange').length,1);
 assert.equal(memories('orange')[0].observedTick,0);
