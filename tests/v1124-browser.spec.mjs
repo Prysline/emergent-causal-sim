@@ -12,7 +12,7 @@ async function collectErrors(page){
 async function selectAgent(page,id='zhou'){
   const agent=page.locator(`[data-entity="agent:${id}"]`).first();
   await expect(agent).toBeVisible();
-  await agent.click({force:true});
+  await agent.evaluate(el=>el.click());
 }
 
 test('desktop inspector exposes derived reconsideration without runtime errors',async({page})=>{
