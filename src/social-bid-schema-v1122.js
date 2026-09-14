@@ -17,6 +17,9 @@
   if(W.DATA_ZH){
     W.DATA_ZH.bidId='Social Bid';
     W.DATA_ZH.bidKind='Bid 類型';
+    W.DATA_ZH.bidFrom='Bid 發起者';
+    W.DATA_ZH.bidTo='Bid 對象';
+    W.DATA_ZH.perceivedByTarget='目標是否感知';
     W.DATA_ZH.responseToBid='回應 Bid';
     W.DATA_ZH.visibility='可見性';
     W.DATA_ZH.owner='Private Owner';
