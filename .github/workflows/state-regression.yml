@@ -34,3 +34,4 @@ jobs:
       - run: node tests/surface-liquid-foundation.mjs
       - run: node tests/action-terminology.mjs
       - run: node tests/active-intent-foundation.mjs
+      - run: node tests/social-bid-lifecycle.mjs
