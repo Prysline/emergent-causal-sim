@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v11.12.4｜Soft Reconsideration & Hysteresis</title>
+  <title>因果湧現模擬器 v11.13.0｜Episodic Memory Foundation</title>
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/spatial.css">
   <link rel="stylesheet" href="styles/spatial-observability.css">
@@ -12,7 +12,7 @@
 <body>
 <div class="shell">
   <header class="appbar">
-    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.12.4・Soft Reconsideration & Hysteresis</span></h1></div>
+    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.13.0・Episodic Memory Foundation</span></h1></div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
   <div class="toolbar">
@@ -22,10 +22,10 @@
   <main class="workspace">
     <div class="maincol">
       <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Surface 狀態以地圖層次呈現；選取實體後可在 Inspector 查看完整 Spatial Node / Environment</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="spatial-map"></div></div></section>
-      <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>v11.12.4 會在安全範圍內重新比較一般候選，但必須跨過 switch margin＋derived commitment cost；極端需求仍由 Emergency preemption 處理</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
-      <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>預設隱藏低資訊事件；關聯實體使用結構化 refs</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
+      <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>v11.12.4 的 Intent / replan / reconsideration 行為維持不變；v11.13.0 只新增 bounded episodic memory foundation，尚不影響決策</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
+      <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>預設隱藏低資訊事件；關聯實體使用結構化 refs，Agent memory 只保存可觀察 world event 的最小 snapshot</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
     </div>
-    <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>Inspector</b><small>角色可分別查看 Active Intent、Action / Phase、derived reconsideration 與既有 Spatial / Environment state</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
+    <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>Inspector</b><small>角色可查看 Active Intent、derived reconsideration、Episodic Memory 與既有 Spatial / Environment state</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
   </main>
 </div>
 <nav class="mobile-nav" aria-label="手機版分頁"><button data-tab="map" class="active"><span>🗺️</span>地圖</button><button data-tab="agents"><span>👥</span>行動</button><button data-tab="timeline"><span>📜</span>時間線</button><button data-tab="inspector"><span>🔎</span>檢視</button></nav>
@@ -41,6 +41,7 @@
 <script src="src/social-bid-schema-v1122.js" defer></script>
 <script src="src/interruption-schema-v1123.js" defer></script>
 <script src="src/deliberation-schema-v1124.js" defer></script>
+<script src="src/memory-schema-v1130.js" defer></script>
 <script src="src/engine.js" defer></script>
 <script src="src/engine-spatial-v1114.js" defer></script>
 <script src="src/action-runtime-v1120.js" defer></script>
@@ -48,6 +49,7 @@
 <script src="src/social-bid-runtime-v1122.js" defer></script>
 <script src="src/intent-runtime-v1123.js" defer></script>
 <script src="src/intent-runtime-v1124.js" defer></script>
+<script src="src/memory-runtime-v1130.js" defer></script>
 <script src="src/state-validator.js" defer></script>
 <script src="src/state-validator-v111.js" defer></script>
 <script src="src/state-validator-v1114.js" defer></script>
@@ -56,9 +58,11 @@
 <script src="src/state-validator-v1122.js" defer></script>
 <script src="src/state-validator-v1123.js" defer></script>
 <script src="src/state-validator-v1124.js" defer></script>
+<script src="src/state-validator-v1130.js" defer></script>
 <script src="src/ui.js" defer></script>
 <script src="src/ui-spatial-observability.js" defer></script>
 <script src="src/ui-spatial-environment.js" defer></script>
 <script src="src/ui-intent-v1121.js" defer></script>
+<script src="src/ui-memory-v1130.js" defer></script>
 </body>
 </html>
