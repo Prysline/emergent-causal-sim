@@ -14,7 +14,7 @@
     const id=meta.textContent.slice('Agent・'.length),st=E.getState(),a=st?.agents?.[id];if(!a)return;
     const memories=(a.episodicMemories||[]).slice().reverse().slice(0,6),rows=memories.length?memories.map(m=>`<div class="k">${esc(m.sourceEventId)}・Tick ${esc(m.observedTick)}</div><div>${esc(memorySummary(st,m))}</div>`).join(''):'<div class="k">Recent memories</div><div>目前沒有 episodic memory</div>';
     const section=document.createElement('div');section.className='inspect-section';section.dataset.v1130Memory='';
-    section.innerHTML=`<h3>近期情節記憶</h3><div class="kv"><div class="k">Hot memory</div><div>${a.episodicMemories?.length||0} / ${E.MAX_EPISODIC_MEMORIES}</div>${rows}</div><p class="hint">v11.13.0 只保存 Agent 實際觀察到的 world event 的 minimal snapshot；尚未加入 appraisal、情緒、salience 或 decision influence。source event 離開 hot cause state 後，memory 仍可由 snapshot 保留基本歷史語意。</p>`;
+    section.innerHTML=`<h3>近期情節記憶</h3><div class="kv"><div class="k">Hot memory</div><div>${a.episodicMemories?.length||0} / ${E.MAX_EPISODIC_MEMORIES}</div>${rows}</div><p class="hint">本區只顯示 Agent 實際觀察到的 world event minimal snapshot；若後續 appraisal extension 已啟用，主觀評估會在獨立區塊顯示。source event 離開 hot cause state 後，memory 仍可由 snapshot 保留基本歷史語意。</p>`;
     const intent=host.querySelector('[data-v1121-intent]');if(intent)intent.after(section);else{const first=host.querySelector('.inspect-section');if(first)first.after(section);else host.append(section);}
   }
 
