@@ -63,9 +63,10 @@
       const requester=st.agents[e.data.actor],target=st.agents[e.data.target],compat=target?.pendingInteraction;
       const perceived=!!(target&&compat?.type==='cat_request'&&compat.from===requester?.id);
       e.data.perceivedByTarget=perceived;
+      // Requester-private waiting follows from making the Bid, not from knowing whether the target perceived it.
+      if(requester&&!requester.action)requester.activeIntent=awaitIntent(st,requester,e);
       if(!perceived)continue;
       const ref=addObservedBid(st,target,e,st.tick);
-      if(requester&&!requester.action)requester.activeIntent=awaitIntent(st,requester,e);
       if(target.action?.kind==='petCat'&&compat?.accepted)promoteResponseIntent(st,target,e,ref.observedTick);
     }
   }
@@ -92,7 +93,7 @@
     for(const a of Object.values(st.agents||{})){
       const intent=a.activeIntent;if(intent?.kind!=='awaitResponse'||intent.lifecycle!=='open'||st.tick<intent.patienceUntilTick)continue;
       const bidId=intent.source?.bidId;
-      E.addEvent(`${a.name}等了一會兒，沒有得到立即回應，便不再等了。`,'normal',bidId?[bidId]:[],{actor:a.id,action:'socialWaitEnded',bidId,visibility:'private',owner:a.id});
+      E.addEvent(`${a.name}等了一會兒，沒有得到立即回應，便不再等了。`,'normal',bidId?[bidId]:[],{actor:a.id,action:'socialWaitEnded',bidId,intentId:intent.id,visibility:'private',owner:a.id});
       a.activeIntent=null;
     }
   }
