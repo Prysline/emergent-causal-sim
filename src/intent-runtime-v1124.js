@@ -1,7 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
   const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.12.4-soft-reconsideration';
-  const baseTick=E.tick,baseReset=E.reset;
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petCat','seekHuman','cleanFloor','groom','rest']);
 
@@ -152,8 +151,12 @@
   }
   function applySoftReconsiderations(st){for(const a of Object.values(st.agents||{}))applySoftReconsideration(st,a);}
 
-  E.tick=(...args)=>{applySoftReconsiderations(E.getState());return baseTick(...args);};
-  E.reset=(...args)=>baseReset(...args);
+  if(E.registerRuntimeHook)E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
+  else{
+    const baseTick=E.tick,baseReset=E.reset;
+    E.tick=(...args)=>{applySoftReconsiderations(E.getState());return baseTick(...args);};
+    E.reset=(...args)=>baseReset(...args);
+  }
 
   Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
 })();
