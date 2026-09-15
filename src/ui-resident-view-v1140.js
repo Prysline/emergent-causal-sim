@@ -17,7 +17,6 @@
     restockContainer:'補充容器',externalSupply:'外出補給'
   };
   const host=document.getElementById('inspector');if(!host)return;
-  const baseTick=E.tick,baseReset=E.reset;
   let currentAgentId=null,mode='resident',residentTab='overview',scheduled=false,mutating=false;
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -161,6 +160,7 @@
     if(scheduled)return;scheduled=true;
     queueMicrotask(()=>requestAnimationFrame(layerInspector));
   }
+  function resetResidentView(){currentAgentId=null;mode='resident';residentTab='overview';schedule();}
 
   new MutationObserver(()=>schedule()).observe(host,{childList:true,subtree:false});
   document.addEventListener('click',event=>{
@@ -170,8 +170,15 @@
     if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
     schedule();
   });
-  E.tick=(...args)=>{const result=baseTick(...args);schedule();return result;};
-  E.reset=(...args)=>{currentAgentId=null;mode='resident';residentTab='overview';const result=baseReset(...args);schedule();return result;};
+
+  if(E.registerRuntimeHook){
+    E.registerRuntimeHook('afterTick','residentView.schedule',schedule,1100);
+    E.registerRuntimeHook('afterReset','residentView.reset',resetResidentView,700);
+  }else{
+    const baseTick=E.tick,baseReset=E.reset;
+    E.tick=(...args)=>{const result=baseTick(...args);schedule();return result;};
+    E.reset=(...args)=>{currentAgentId=null;mode='resident';residentTab='overview';const result=baseReset(...args);schedule();return result;};
+  }
 
   E.UI_RESIDENT_VIEW_VERSION=VERSION;
   E.residentAffectLabel=affectLabel;
