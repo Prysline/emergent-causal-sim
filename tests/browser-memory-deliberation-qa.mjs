@@ -13,7 +13,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 async function setupStory(){
   await page.evaluate(()=>{
     const E=window.SimEngine,st=E.reset(11340),a=st.agents.zhen,zhou=st.agents.zhou;
-    const mei=structuredClone(zhou);mei.id='mei';mei.name='小梅';mei.position={x:7,y:5};mei.action=null;mei.activeIntent=null;mei.episodicMemories=[];mei.observedSocialBids=[];mei.pendingInteraction=null;mei.offMap=false;mei.affect={valence:0,activation:0,frustration:0,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:null};st.agents.mei=mei;
+    const mei=structuredClone(zhou);mei.id='mei';mei.name='小梅';mei.position={x:7,y:5};mei.action=null;mei.activeIntent=null;mei.episodicMemories=[];mei.observedSocialBids=[];delete mei.pendingInteraction;mei.offMap=false;mei.affect={valence:0,activation:0,frustration:0,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:null};st.agents.mei=mei;
     a.position={x:2,y:5};zhou.position={x:4,y:5};st.agents.orange.offMap=true;
     Object.assign(a.needs,{hunger:8,thirst:8,fatigue:8,sleepNeed:8,social:98});a.action=null;a.activeIntent=null;
     const make=(id,tick)=>({
@@ -50,10 +50,10 @@ async function snapshot(){
 
 await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.MEMORY_DELIBERATION_SCHEMA_VERSION==='11.13.4-memory-deliberation-influence');
-assert.ok((await page.title()).includes('v11.13.4'));
+assert.ok((await page.title()).includes('因果湧現模擬器'));
 await setupStory();
 const desktop=await snapshot();
-assert.equal(desktop.version,'11.13.4-memory-deliberation-influence');
+assert.equal(desktop.memoryDeliberationVersion,'11.13.4-memory-deliberation-influence');
 assert.equal(desktop.actionKind,'talk');
 assert.equal(desktop.actionTarget,'mei','memory-selected target must survive into actual Action');
 assert.equal(desktop.thoughtTarget,'mei','Recent Decision target must match Action target');
