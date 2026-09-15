@@ -41,7 +41,7 @@
   function addPetOffer(st,human,cat,originBidId){
     const data={
       actor:human.id,target:cat.id,action:'petOffer',position:E.positionRef?.(human.position)||`${human.position.x},${human.position.y}`,
-      socialBid:true,bidKind:'petOffer',bidFrom:human.id,bidTo:cat.id,perceivedByTarget:true
+      socialBid:true,bidKind:'petOffer',interactionKind:'pet',expectsResponse:true,bidFrom:human.id,bidTo:cat.id,perceivedByTarget:true
     };
     const causes=[];
     if(originBidId){data.responseToBid=originBidId;causes.push(originBidId);}
