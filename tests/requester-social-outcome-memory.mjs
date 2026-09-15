@@ -53,7 +53,7 @@ assert.equal(privateMemory.experienced.contextKind,'highCommitment');
 assert.equal(privateMemory.appraisal.agency.kind,'unknown','counterpart association must not become causal attribution');
 assert.equal(privateMemory.appraisal.goalCongruence,-.12);
 assert.equal(requester.affect.source?.memoryId,privateMemory.id,'private outcome appraisal should flow into existing short-lived Affect');
-assert.equal(st.events.some(e=>e.data?.responseToBid===privateMemory.experienced.bidId),false,'no-response must remain absence of responder response event');
+assert.equal(st.events.some(e=>e.data?.responseToBid===privateMemory.experienced.bidId),false,'no-response must remain absence of responder response event at wait end');
 assert.equal(st.events.some(e=>['ignoreTalk','rejectedBy','disliked'].includes(e.data?.action)),false,'no-response must not create inferred rejection world events');
 assert.ok(E.targetAssociation(st,requester,'zhen').memoryUtilityDelta<0,'private no-response experience should feed existing target-aware deliberation');
 noIssues('real no-response memory');
@@ -81,14 +81,24 @@ assert.equal(aMemory.experienced.observedResponderActionKind,null);assert.equal(
 responder.activeIntent=null;
 noIssues('private-state counterfactual');
 
-// An explicit responder outcome and private no-response outcome are mutually exclusive for the same bid.
+// If an observable response already exists at wait end, no-response private memory must not form.
 E.reset(41350);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;requester.position={x:5,y:5};responder.position={x:5,y:6};calm(requester);calm(responder);st.agents.orange.offMap=true;
 const offerId=E.addEvent('offer','normal',[],{actor:'zhen',target:'zhou',action:'talkOffer',socialBid:true,bidKind:'talkOffer',bidFrom:'zhen',bidTo:'zhou',perceivedByTarget:true});st.causes[offerId].data.bidId=offerId;
 E.addEvent('brief','normal',[offerId],{actor:'zhou',target:'zhen',action:'briefTalkReply',responseToBid:offerId,talkResponse:'brief'});
 const waitId=E.addEvent('wait','normal',[offerId],{actor:'zhen',action:'socialWaitEnded',bidId:offerId,bidKind:'talkOffer',visibility:'private',owner:'zhen',responderContextObserved:true,observedResponderActionKind:null,observedResponderPosture:'standing'});
-assert.equal(E.rememberRequesterSocialOutcome(st,st.causes[waitId]),null,'observable response must block no-response private memory');
+assert.equal(E.rememberRequesterSocialOutcome(st,st.causes[waitId]),null,'observable response present at wait end must block no-response private memory');
 assert.equal(requester.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'&&m.experienced?.bidId===offerId),false);
-noIssues('response/no-response mutual exclusion');
+noIssues('response-before-wait-end exclusion');
+
+// A response that arrives after requester patience ended is a later experience; it must not erase the earlier wait-end memory.
+E.reset(46350);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;requester.position={x:5,y:5};responder.position={x:5,y:6};calm(requester);calm(responder);st.agents.orange.offMap=true;
+const late=makeOutcome(st,requester,responder,{context:'observedAction',tick:10});
+assert.ok(late.memory,'wait-end should form private outcome before late response exists');
+st.tick=11;
+E.addEvent('late brief','normal',[late.offer.id],{actor:'zhou',target:'zhen',action:'briefTalkReply',responseToBid:late.offer.id,talkResponse:'brief'});
+assert.ok(requester.episodicMemories.includes(late.memory),'late response must not retroactively erase requester wait-end history');
+assert.equal(late.memory.observedTick,10);
+noIssues('late response coexistence');
 
 // Repeated distinct no-response episodes may lower one target preference enough to prefer a farther neutral target, without hard blacklist.
 E.reset(51350);st=E.getState();st.tick=30;requester=st.agents.zhen;responder=st.agents.zhou;requester.position={x:5,y:5};responder.position={x:5,y:6};calm(requester,{social:95});calm(responder);st.agents.orange.offMap=true;const mei=addHuman(st,'mei','小梅',{x:7,y:5});calm(mei,{social:20});
