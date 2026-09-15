@@ -1,7 +1,7 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld;if(!E||!W)return;
   const VERSION=W.ACTION_SCHEMA_VERSION||'11.12.0-action-terminology';
-  const baseTick=E.tick,baseReset=E.reset,baseIsSleeping=E.isSleeping,baseWakeChance=E.interactionWakeChance,baseTryWake=E.tryWakeFromInteraction,baseActionLabel=E.actionLabel;
+  const baseIsSleeping=E.isSleeping,baseWakeChance=E.interactionWakeChance,baseTryWake=E.tryWakeFromInteraction,baseActionLabel=E.actionLabel;
 
   function actionKind(action){return action?.kind??action?.intent??null;}
   function installActionKind(action){
@@ -24,13 +24,15 @@
   }
   function normalizeRuntimeState(st){normalizeStateActions(st);normalizeEventTerminology(st);return st;}
 
-  E.tick=(...args)=>{
-    normalizeRuntimeState(E.getState());
-    const result=baseTick(...args);
-    normalizeRuntimeState(E.getState());
-    return result;
-  };
-  E.reset=(...args)=>normalizeRuntimeState(baseReset(...args));
+  if(E.registerRuntimeHook){
+    E.registerRuntimeHook('beforeTick','action.normalize-before',()=>normalizeRuntimeState(E.getState()),1050);
+    E.registerRuntimeHook('afterTick','action.normalize-after',()=>normalizeRuntimeState(E.getState()),150);
+    E.registerRuntimeHook('afterReset','action.normalize-reset',()=>normalizeRuntimeState(E.getState()),50);
+  }else{
+    const baseTick=E.tick,baseReset=E.reset;
+    E.tick=(...args)=>{normalizeRuntimeState(E.getState());const result=baseTick(...args);normalizeRuntimeState(E.getState());return result;};
+    E.reset=(...args)=>normalizeRuntimeState(baseReset(...args));
+  }
   E.isSleeping=(a)=>{if(a?.action)installActionKind(a.action);return baseIsSleeping(a);};
   E.interactionWakeChance=(a,...args)=>{if(a?.action)installActionKind(a.action);return baseWakeChance(a,...args);};
   E.tryWakeFromInteraction=(a,...args)=>{if(a?.action)installActionKind(a.action);return baseTryWake(a,...args);};
