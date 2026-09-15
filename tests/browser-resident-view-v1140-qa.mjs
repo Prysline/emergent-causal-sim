@@ -18,7 +18,7 @@ async function openStory(){
     if(ready)break;
     await page.click('#step');
   }
-  await page.click('.action-card[data-entity="agent:zhou"]');
+  await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.click());
   await page.waitForSelector('[data-v1140-resident-root]');
 }
 async function snapshot(){
