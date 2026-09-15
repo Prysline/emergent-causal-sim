@@ -140,7 +140,7 @@
   }
   function applyFullTalk(st,requester,responder,bidId,responseId){
     const id=E.addEvent(`${requester.name}和${responder.name}聊了一會兒。`,'good',[bidId,responseId],{
-      actor:requester.id,target:responder.id,action:'talk',responseToBid:bidId,talkResponse:'engage',
+      actor:requester.id,target:responder.id,action:'talk',talkOfferId:bidId,talkResponseEventId:responseId,talkResponse:'engage',
       position:E.positionRef?.(requester.position)||`${requester.position.x},${requester.position.y}`
     });
     requester.needs.social=clamp((Number(requester.needs?.social)||0)-E.rand(12,20),0,100);
