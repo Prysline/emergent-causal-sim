@@ -14,7 +14,8 @@
         if(!m||!m.sourceEventId||seen.has(m.sourceEventId))continue;
         seen.add(m.sourceEventId);clean.push(m);
       }
-      a.episodicMemories=clean.slice(-MAX_EPISODIC_MEMORIES);
+      a.episodicMemories=clean;
+      pruneAgentMemories(st,a);
     }
     return st;
   }
@@ -53,9 +54,12 @@
     else if(p)positionRef=E.positionRef?.(p)||`${p.x},${p.y}`;
     return {action:String(d.action||''),actorId:d.actor||null,targetId:d.target||null,positionRef:positionRef||null};
   }
-  function pruneAgentMemories(a){
-    if(!Array.isArray(a?.episodicMemories))return;
-    while(a.episodicMemories.length>MAX_EPISODIC_MEMORIES)a.episodicMemories.shift();
+  function pruneAgentMemories(st,a){
+    if(!Array.isArray(a?.episodicMemories))return [];
+    if(typeof E.pruneAgentMemoriesBySalience==='function')return E.pruneAgentMemoriesBySalience(st,a);
+    const removed=[];
+    while(a.episodicMemories.length>MAX_EPISODIC_MEMORIES)removed.push(a.episodicMemories.shift());
+    return removed;
   }
   function rememberObservedEvent(st,a,e,observedTick=st.tick){
     if(!canObserveEvent(st,a,e))return null;
@@ -63,8 +67,9 @@
     const existing=a.episodicMemories.find(m=>m.sourceEventId===e.id);
     if(existing){existing.lastObservedTick=Math.max(existing.lastObservedTick??existing.observedTick??0,observedTick);return existing;}
     const memory={id:`memory:${a.id}:${e.id}`,kind:'episodic',sourceEventId:e.id,observedTick,lastObservedTick:observedTick,observed:observableProjection(st,e)};
-    a.episodicMemories.push(memory);pruneAgentMemories(a);
+    a.episodicMemories.push(memory);
     if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);
+    pruneAgentMemories(st,a);
     return memory;
   }
   function observeEventForMemories(st,e,observedTick=st.tick){
@@ -84,5 +89,5 @@
   E.reset=(...args)=>normalizeMemoryState(baseReset(...args));
 
   normalizeMemoryState(E.getState());
-  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories});
+  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories});
 })();
