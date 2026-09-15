@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v11.13.5｜Requester-Experienced Social Outcome Memory</title>
+  <title>因果湧現模擬器 v11.14.0｜Player Resident View / Debug Inspector Split</title>
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/spatial.css">
   <link rel="stylesheet" href="styles/spatial-observability.css">
   <link rel="stylesheet" href="styles/mobile.css">
   <link rel="stylesheet" href="styles/observability-v1133a.css">
+  <link rel="stylesheet" href="styles/resident-view-v1140.css">
 </head>
 <body>
 <div class="shell">
   <header class="appbar">
-    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.13.5・Requester-Experienced Social Outcome Memory</span></h1></div>
+    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.14.0・Player Resident View / Debug Inspector Split</span></h1></div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
   <div class="toolbar">
@@ -22,11 +23,11 @@
   </div>
   <main class="workspace">
     <div class="maincol">
-      <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Surface 狀態以地圖層次呈現；選取實體後可在 Inspector 查看完整 Spatial Node / Environment</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="spatial-map"></div></div></section>
+      <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Surface 狀態以地圖層次呈現；選取角色後預設開啟居民檢視，可再切換 Debug Inspector</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="spatial-map"></div></div></section>
       <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>社交候選可由 observable outcome 與 requester-private no-response experience 形成 bounded target-aware memory influence；responder score、Current Affect 與 Relationship 仍不直接讀取 Memory</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
       <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>brief reply、explicit decline 與 no-response 保持不同事實邊界；no-response private memory 不會被自動寫成故意無視</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
     </div>
-    <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>Inspector</b><small>角色可查看 Active Intent、Episodic Memory、Requester Social Outcome、derived Memory Retention、Historical Appraisal、Current Affect、Memory → Deliberation 與既有 Spatial / Environment state</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
+    <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>居民檢視 / Debug Inspector</b><small>角色預設顯示玩家可讀的概況、最近事件與記憶；Debug 保留完整 Intent、Memory、Appraisal、Affect、Deliberation、Spatial 與 Validator 資訊</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
   </main>
 </div>
 <nav class="mobile-nav" aria-label="手機版分頁"><button data-tab="map" class="active"><span>🗺️</span>地圖</button><button data-tab="agents"><span>👥</span>行動</button><button data-tab="timeline"><span>📜</span>時間線</button><button data-tab="inspector"><span>🔎</span>檢視</button></nav>
@@ -50,6 +51,7 @@
 <script src="src/human-social-response-schema-v1133a.js" defer></script>
 <script src="src/memory-deliberation-schema-v1134.js" defer></script>
 <script src="src/social-outcome-memory-schema-v1135.js" defer></script>
+<script src="src/presentation-schema-v1140.js" defer></script>
 <script src="src/engine.js" defer></script>
 <script src="src/engine-spatial-v1114.js" defer></script>
 <script src="src/action-runtime-v1120.js" defer></script>
@@ -95,5 +97,6 @@
 <script src="src/ui-memory-deliberation-v1134.js" defer></script>
 <script src="src/ui-social-outcome-memory-v1135.js" defer></script>
 <script src="src/ui-observability-controls-v1133a.js" defer></script>
+<script src="src/ui-resident-view-v1140.js" defer></script>
 </body>
 </html>
