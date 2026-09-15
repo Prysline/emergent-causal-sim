@@ -23,7 +23,7 @@ async function runScenario(scenario){
     const pet=st.events.find(e=>e.data?.action==='petCat'&&e.data?.petOfferId===offer?.id);
     const orange=st.agents.orange,zhou=st.agents.zhou;
     return {
-      version:st.version,offerId:offer?.id??null,responseAction:response?.data?.action??null,response:response?.data?.petResponse??null,petId:pet?.id??null,
+      version:st.version,socialResponseVersion:E.SOCIAL_RESPONSE_SCHEMA_VERSION,offerId:offer?.id??null,responseAction:response?.data?.action??null,response:response?.data?.petResponse??null,petId:pet?.id??null,
       orangeSocial:orange.needs.social,orangeAffect:{...orange.affect},zhouAffect:{...zhou.affect},
       validator:window.SimValidator.validateState(st),scenarioValue:document.getElementById('socialScenario')?.value??null,
       inspectorText:document.getElementById('inspector')?.innerText??'',affectVisible:!!document.querySelector('[data-v1132-affect]')?.getClientRects().length,
@@ -35,9 +35,9 @@ async function runScenario(scenario){
 }
 
 assert.ok((await page.goto('http://127.0.0.1:4173/?scenario=pet-accept',{waitUntil:'domcontentloaded'})).ok());
-assert.ok((await page.title()).includes('v11.13.2a'));
+assert.ok((await page.title()).includes('因果湧現模擬器'));
 const desktop=await runScenario('pet-accept');
-assert.equal(desktop.version,'11.13.2a-social-response-agency');
+assert.equal(desktop.socialResponseVersion,'11.13.2a-social-response-agency');
 assert.equal(desktop.scenarioValue,'pet-accept');
 assert.ok(desktop.offerId,'desktop accept: missing petOffer');
 assert.equal(desktop.responseAction,'acceptPet');
@@ -53,7 +53,7 @@ await page.screenshot({path:`${outDir}/desktop-accept.png`,fullPage:true});
 
 await page.setViewportSize({width:390,height:844});
 const mobile=await runScenario('pet-avoid');
-assert.equal(mobile.version,'11.13.2a-social-response-agency');
+assert.equal(mobile.socialResponseVersion,'11.13.2a-social-response-agency');
 assert.equal(mobile.scenarioValue,'pet-avoid');
 assert.ok(mobile.offerId,'mobile avoid: missing petOffer');
 assert.equal(mobile.responseAction,'avoidPet');
@@ -71,5 +71,5 @@ await page.screenshot({path:`${outDir}/mobile-avoid.png`,fullPage:true});
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,inspectorText:undefined},mobile:{...mobile,inspectorText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.13.2a browser social response QA: 2/2 pass');
+console.log('social response browser QA: 2/2 pass');
 await browser.close();
