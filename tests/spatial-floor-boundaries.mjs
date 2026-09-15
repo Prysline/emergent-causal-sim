@@ -27,7 +27,7 @@ assert.ok(SP.comfortAt(st,tableNode)>SP.comfortAt(st,floorNode),'floor wetness m
 
 orange.position={...floor(st,5,2)};
 orange.contacts.paws={};
-orange.action={intent:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...table(st,5,2)},oneShot:true};
+orange.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...table(st,5,2)},oneShot:true};
 for(let i=0;i<8&&orange.action;i++)E.tick();
 assert.equal(orange.action,null,'same-XY floor→tabletop move should finish');
 assert.equal(orange.position.surfaceId,'diningTable:surface','same XY must not short-circuit Surface transition');
@@ -36,7 +36,7 @@ assert.equal(orange.position.x,5);assert.equal(orange.position.y,2);
 orange.position={...table(st,5,2)};
 orange.contacts.paws={};
 const wetBefore=under.surface.contents.water;
-orange.action={intent:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...table(st,6,2)},oneShot:true};
+orange.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...table(st,6,2)},oneShot:true};
 for(let i=0;i<4&&orange.action;i++)E.tick();
 assert.equal(orange.position.surfaceId,'diningTable:surface');
 assert.equal(orange.position.x,6);assert.equal(orange.position.y,2);
@@ -46,7 +46,7 @@ assert.ok(!st.events.some(e=>e.data?.action==='tileContact'&&e.data?.position===
 
 orange.position={...floor(st,7,2)};
 orange.contacts.paws={};
-orange.action={intent:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...floor(st,6,2)},oneShot:true};
+orange.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...floor(st,6,2)},oneShot:true};
 for(let i=0;i<4&&orange.action;i++)E.tick();
 assert.equal(orange.position.surfaceId,'floor');
 assert.ok((orange.contacts.paws.water||0)>0,'actual floor traversal must still pick up liquid');
@@ -55,7 +55,7 @@ assert.ok(under.surface.contents.water<wetBefore,'actual floor contact must redu
 E.reset(20260911);st=E.getState();orange=st.agents.orange;
 st.containers.cupA.contents={water:10};
 orange.position={...table(st,6,2)};
-orange.action={intent:'drinkWater',phase:'move',started:st.tick,wait:0,targetObject:'cupA',resource:'water'};
+orange.action={kind:'drinkWater',phase:'move',started:st.tick,wait:0,targetObject:'cupA',resource:'water'};
 for(let i=0;i<4&&orange.action;i++)E.tick();
 const drinkEvent=st.events.find(e=>e.data?.actor==='orange'&&e.data?.action==='drinkWater');
 assert.ok(drinkEvent,'tabletop drink should emit event');

@@ -31,7 +31,7 @@ assert.equal(humanUnder.walkable,false,'Standing human 在相同 covered floor �
 assert.equal(humanUnder.requiredClearance,1.65);
 
 orange.position={...SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')};
-orange.action={intent:'wander',phase:'move',spatialGoal:{...SP.normalizeNode(st,{x:6,y:2},'diningTable:surface')},lastPath:[SP.normalizeNode(st,{x:4,y:2},'floor'),SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')]};
+orange.action={kind:'wander',phase:'move',spatialGoal:{...SP.normalizeNode(st,{x:6,y:2},'diningTable:surface')},lastPath:[SP.normalizeNode(st,{x:4,y:2},'floor'),SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')]};
 obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'diningTable:surface');
 assert.equal(obs.surfaceLabel,'餐桌桌面');

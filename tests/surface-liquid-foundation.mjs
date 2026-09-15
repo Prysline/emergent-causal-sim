@@ -53,7 +53,7 @@ for(let seed=1;seed<=200&&!spillEvent;seed++){
   const a=st.agents.zhen,cup=st.containers.cupA;
   a.position={...floor(st,4,3)};a.status.intoxication=100;a.needs.fatigue=100;a.traits.careful=0;
   a.held='cupA';delete cup.supportId;cup.position={...a.position};cup.contents={};
-  a.action={intent:'drinkAlcohol',phase:'fill',started:st.tick,wait:0,container:'cupA',sourceObject:'alcoholBottle',sourceKind:'object',resource:'alcohol'};
+  a.action={kind:'drinkAlcohol',phase:'fill',started:st.tick,wait:0,container:'cupA',sourceObject:'alcoholBottle',sourceKind:'object',resource:'alcohol'};
   E.tick();
   spillEvent=st.events.find(e=>e.data?.actor==='zhen'&&e.data?.action==='spill'&&e.data?.resource==='alcohol');
   if(spillEvent)spillState=st;
@@ -72,7 +72,7 @@ const orange=st.agents.orange,wetTable=table(st,5,2),floorBelow=floor(st,5,2);
 SP.putEnvironmentResource(st,wetTable,'water',10);
 const floorBefore=SP.environmentResourceAmount(st,floorBelow,'water');
 orange.position={...floor(st,4,2)};orange.contacts.paws={};
-orange.action={intent:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...wetTable},oneShot:true};
+orange.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...wetTable},oneShot:true};
 for(let i=0;i<4&&orange.action;i++)E.tick();
 assert.equal(orange.position.surfaceId,'diningTable:surface');
 assert.ok((orange.contacts.paws.water||0)>0,'cat entering wet tabletop node should contact and pick up liquid');

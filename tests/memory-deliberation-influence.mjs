@@ -111,7 +111,7 @@ a.episodicMemories=[
   memory(a,'switch-pos:1',{tick:18,relevance:1,congruence:1,actorId:'mei'}),
   memory(a,'switch-pos:2',{tick:18,relevance:1,congruence:1,actorId:'mei'})
 ];
-a.action={kind:'talk',phase:'move',targetAgent:'zhou',started:0,wait:0};E.installActionKind(a.action);
+a.action={kind:'talk',phase:'move',targetAgent:'zhou',started:0,wait:0};
 a.activeIntent={id:'intent:zhen:0:socialize:test',kind:'socialize',createdTick:0,lifecycle:'actionBound',source:{type:'test'}};a.action.intentId=a.activeIntent.id;
 const snap=E.reconsiderationSnapshot(st,a);
 assert.equal(snap.bestChallenger?.intentKind,'socialize');assert.equal(snap.bestChallenger?.targetAgent,'mei');

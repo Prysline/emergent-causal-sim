@@ -21,7 +21,7 @@ function putToSleep(st,a,slotId='sofa:left',sleepTicks=0){
   assert.ok(slot?.canSleep,`${slotId} 必須可睡眠`);
   a.position={...slot.position};
   a.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
-  a.action={intent:'sleep',phase:'sleeping',sleepTicks,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};
+  a.action={kind:'sleep',phase:'sleeping',sleepTicks,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};
   return slot;
 }
 
@@ -48,10 +48,10 @@ E.reset(20260911);
   cat.needs.sleepNeed=100;
   putToSleep(st,cat,'sofa:left',0);
   assert.equal(E.interactionWakeChance(cat,18),0,'高 sleepNeed 且剛入睡時，輕摸可以完全不足以喚醒');
-  human.action={intent:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
+  human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
   E.tick();
 
-  assert.equal(cat.action?.intent,'sleep','輕摸不一定叫醒正在深睡的貓');
+  assert.equal(cat.action?.kind,'sleep','輕摸不一定叫醒正在深睡的貓');
   const pet=st.events.find(e=>e.data?.action==='petCat');
   assert.ok(pet,'摸貓本身應記為發起者 action');
   assert.ok(!pet.text.includes('蹭了幾下'),'摸貓不得再固定虛構貓有回蹭');
@@ -68,7 +68,7 @@ E.reset(20260911);
   st.agents.zhou.offMap=true;
   human.position={x:9,y:2};
   cat.position={x:9,y:2};
-  cat.action={intent:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
+  cat.action={kind:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
   human.needs.sleepNeed=70;
   human.traits.sleepRecoveryRate=0; // 凍結本測試的 sleepNeed，避免同 tick 的正常睡眠恢復改變 wakeChance 基準。
   putToSleep(st,human,'sofa:left',0);
@@ -97,7 +97,7 @@ E.reset(20260911);
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   st.agents.zhou.offMap=true;
   human.position={...cat.position};
-  human.action={intent:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
+  human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
   E.tick();
   const pet=st.events.find(e=>e.data?.action==='petCat');
   assert.ok(pet);

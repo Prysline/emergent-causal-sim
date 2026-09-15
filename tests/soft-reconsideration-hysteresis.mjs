@@ -11,7 +11,7 @@ const E=globalThis.SimEngine,V=globalThis.SimValidator;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const eventsByAction=action=>E.getState().events.filter(e=>e.data?.action===action);
 function bind(a,actionKind,intentKind,{phase='move',createdTick=0,source={type:'test',tick:0},...extra}={}){
-  a.action={kind:actionKind,phase,started:createdTick,wait:0,...extra};E.installActionKind(a.action);
+  a.action={kind:actionKind,phase,started:createdTick,wait:0,...extra};
   a.activeIntent={id:`intent:${a.id}:${createdTick}:${intentKind}`,kind:intentKind,createdTick,lifecycle:'actionBound',source};
   a.action.intentId=a.activeIntent.id;
   return a.activeIntent.id;
@@ -110,7 +110,7 @@ st.causes[waitBidId].data.bidId=waitBidId;
 requester.activeIntent={id:`intent:orange:0:awaitResponse:${waitBidId}`,kind:'awaitResponse',createdTick:0,lifecycle:'open',source:{type:'socialBid',bidId:waitBidId},patienceUntilTick:10};
 requester.needs.thirst=72;
 responder.activeIntent={id:`intent:zhou:0:respondSocialBid:${waitBidId}`,kind:'respondSocialBid',createdTick:0,lifecycle:'actionBound',source:{type:'socialBid',bidId:waitBidId,observedTick:0}};
-responder.action={kind:'petCat',phase:'move',started:0,wait:0,targetAgent:'orange',intentId:responder.activeIntent.id};E.installActionKind(responder.action);
+responder.action={kind:'petCat',phase:'move',started:0,wait:0,targetAgent:'orange',intentId:responder.activeIntent.id};
 const responderIntentId=responder.activeIntent.id;
 assert.equal(E.applySoftReconsideration(st,requester),true);
 assert.equal(requester.activeIntent?.kind,'drinkWater');

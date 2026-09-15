@@ -24,7 +24,7 @@ function armDirectPet(social,seed=11321){
   Object.assign(human.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:65});
   Object.assign(cat.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,groomingNeed:20,social});
   human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
-  E.installActionKind?.(human.action);E.ensureIntentForAction?.(st,human);
+  E.ensureIntentForAction?.(st,human);
   assert.equal(SP.isAtInteraction(st,human,{kind:'agent',id:cat.id},'social'),true,'fixture must begin in social range');
   return st;
 }
@@ -107,7 +107,7 @@ E.reset(46321);st=E.getState();
     kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:originalBidId},patienceUntilTick:st.tick+3
   };
   human.action={kind:'petCat',phase:'interact',targetAgent:requestingCat.id,started:st.tick,wait:0};
-  E.installActionKind?.(human.action);
+  
   human.activeIntent={
     id:`intent:${human.id}:${st.tick}:respondSocialBid:${originalBidId}`,
     kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:originalBidId,observedTick:st.tick}
@@ -134,9 +134,9 @@ E.reset(51321);st=E.getState();
   sleepingCat.position={...slot.position};sleepingCat.needs.sleepNeed=100;
   sleepingCat.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
   sleepingCat.action={kind:'sleep',phase:'sleeping',sleepTicks:0,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};
-  E.installActionKind?.(sleepingCat.action);E.ensureIntentForAction?.(st,sleepingCat);
+  E.ensureIntentForAction?.(st,sleepingCat);
   human.action={kind:'petCat',phase:'interact',targetAgent:sleepingCat.id,started:st.tick,wait:0};
-  E.installActionKind?.(human.action);E.ensureIntentForAction?.(st,human);
+  E.ensureIntentForAction?.(st,human);
   E.tick();st=E.getState();
   assert.equal(st.events.some(e=>e.data?.action==='petOffer'),false,'sleeping cat must not receive conscious petOffer response flow');
   assert.ok(st.events.some(e=>e.data?.action==='petCat'),'existing sleeping-cat touch action should still occur');

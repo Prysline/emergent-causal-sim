@@ -46,7 +46,7 @@
     const st=E.reset(seed),human=st.agents?.zhou,cat=st.agents?.orange,bystander=st.agents?.zhen;if(!human||!cat)return st;
     human.position={x:5,y:5};cat.position={x:5,y:6};if(bystander)bystander.position={x:7,y:5};human.offMap=false;cat.offMap=false;
     Object.assign(human.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:65});Object.assign(cat.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,groomingNeed:20,social:mode==='pet-accept'?90:mode==='pet-tolerate'?45:5});
-    human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};E.installActionKind?.(human.action);E.ensureIntentForAction?.(st,human);return st;
+    human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};E.ensureIntentForAction?.(st,human);return st;
   }
   function settlePendingOffers(st,pending){for(const record of pending||[])resolvePendingPetOffer(st,record);}
 

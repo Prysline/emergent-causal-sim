@@ -27,7 +27,7 @@ function putToSleep(st,a,{slotId='bed:left',sleepTicks=0}={}){
   a.position={...slot.position};
   a.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
   a.action={
-    intent:'sleep',phase:'sleeping',sleepTicks,
+    kind:'sleep',phase:'sleeping',sleepTicks,
     sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},
     started:st.tick,wait:0
   };
@@ -65,7 +65,7 @@ E.reset(20260911);
   a.needs.fatigue=75;
   a.needs.sleepNeed=70;
   const fatigueBefore=a.needs.fatigue,sleepNeedBefore=a.needs.sleepNeed;
-  a.action={intent:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};
+  a.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};
 
   for(let i=0;i<40&&a.action;i++)E.tick();
 
@@ -82,7 +82,7 @@ E.reset(20260911);
   Object.assign(a.needs,{hunger:0,thirst:0,fatigue:90,sleepNeed:5,social:0});
   E.tick();
   assert.equal(st.thoughts[a.id]?.pick?.id,'rest','高活動疲勞但低 sleepNeed 應優先短休，不應因 fatigue 自動睡覺');
-  assert.equal(a.action?.intent,'rest');
+  assert.equal(a.action?.kind,'rest');
   noIssues('fatigue chooses rest');
 }
 
@@ -93,7 +93,7 @@ E.reset(20260911);
   Object.assign(a.needs,{hunger:0,thirst:0,fatigue:10,sleepNeed:90,social:0});
   E.tick();
   assert.equal(st.thoughts[a.id]?.pick?.id,'sleep','低 fatigue 但高 sleepNeed 在合適時段仍應選擇睡眠');
-  assert.equal(a.action?.intent,'sleep');
+  assert.equal(a.action?.kind,'sleep');
   noIssues('sleep pressure chooses sleep');
 }
 
@@ -150,7 +150,7 @@ E.reset(20260911);
   const before=a.needs.sleepNeed;
   for(let i=0;i<5&&a.action;i++)E.tick();
   assert.ok(a.needs.sleepNeed<before,'真正睡眠必須降低 sleepNeed');
-  assert.equal(a.action?.intent,'sleep','高 sleepNeed 的夜間睡眠不應在幾個 tick 後立刻自然醒');
+  assert.equal(a.action?.kind,'sleep','高 sleepNeed 的夜間睡眠不應在幾個 tick 後立刻自然醒');
   noIssues('sleep reduces sleep pressure');
 }
 

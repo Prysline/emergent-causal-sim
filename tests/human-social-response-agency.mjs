@@ -25,7 +25,7 @@ function armDirectTalk(social,{seed=11331,thirst=18}={}){
   Object.assign(requester.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:70});
   Object.assign(responder.needs,{hunger:18,thirst,fatigue:18,sleepNeed:18,social});
   requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};
-  E.installActionKind?.(requester.action);E.ensureIntentForAction?.(st,requester);
+  E.ensureIntentForAction?.(st,requester);
   assert.equal(SP.isAtInteraction(st,requester,{kind:'agent',id:responder.id},'social'),true);
   return st;
 }

@@ -45,7 +45,7 @@ assert.equal(Object.prototype.hasOwnProperty.call(eat,'intentId'),false,'pure co
 assert.equal(human.action,beforeAction,'factory must not assign Agent.action');
 assert.equal(human.activeIntent,beforeIntent,'factory must not create or switch Active Intent');
 assert.equal(st.events.length,beforeEvents,'factory must not emit plan/response events');
-assert.ok(!Object.keys(eat).includes('intent'),'constructed Action should expose canonical kind after Action runtime normalization');
+assert.equal(Object.prototype.hasOwnProperty.call(eat,'intent'),false,'constructed Action must use canonical kind directly');
 
 // Explicit target semantics: an explicit target is preserved; if it is invalid, do not silently fall back to another target.
 const fallbackTalk=E.buildAction(human,{id:'talk'});
@@ -89,7 +89,7 @@ noIssues('hard replan factory caller');
 // Soft reconsideration: candidate/utility policy stays local, but concrete Action construction goes through E.buildAction.
 E.reset(11240);st=E.getState();st.tick=2;human=st.agents.zhen;
 Object.assign(human.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
-human.action={kind:'wander',phase:'move',started:0,wait:0,targetTile:{x:2,y:6},oneShot:true};E.installActionKind(human.action);
+human.action={kind:'wander',phase:'move',started:0,wait:0,targetTile:{x:2,y:6},oneShot:true};
 human.activeIntent={id:'intent:zhen:0:explore:factory-test',kind:'explore',createdTick:0,lifecycle:'actionBound',source:{type:'test'}};human.action.intentId=human.activeIntent.id;
 before=buildCalls.length;
 assert.equal(E.applySoftReconsideration(st,human),true,'strong hunger should soft-switch from wander to eat');

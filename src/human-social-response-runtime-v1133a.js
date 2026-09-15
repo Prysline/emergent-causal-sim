@@ -20,7 +20,7 @@
   }
   function awaitIntent(st,a,bid){const patience=Number(E.REQUESTER_PATIENCE_TICKS)||3;return {id:`intent:${a.id}:${st.tick}:awaitResponse:${bid.id}`,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:bid.id},patienceUntilTick:st.tick+patience};}
   function responseIntent(st,a,c,sourceExtra={}){return {id:`intent:${a.id}:${st.tick}:respondSocialBid:${c.bidId}`,kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:c.bidId,observedTick:c.observedTick,...sourceExtra}};}
-  function responseAction(st,c){const action={kind:'talk',phase:'respondBid',targetAgent:c.targetAgent,responseToBid:c.bidId,started:st.tick,wait:0};E.installActionKind?.(action);return action;}
+  function responseAction(st,c){const action={kind:'talk',phase:'respondBid',targetAgent:c.targetAgent,responseToBid:c.bidId,started:st.tick,wait:0};return action;}
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
   function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
   function bindResponse(st,a,c,{softSnapshot=null}={}){
@@ -80,7 +80,7 @@
     const st=resetForScenario(seed),requester=st.agents?.zhou,responder=st.agents?.zhen,cat=st.agents?.orange;if(!requester||!responder)return st;
     requester.position={x:5,y:5};responder.position={x:5,y:6};if(cat)cat.offMap=true;requester.offMap=false;responder.offMap=false;requester.action=null;requester.activeIntent=null;responder.action=null;responder.activeIntent=null;
     Object.assign(requester.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:70});const social=mode==='talk-engage'?90:mode==='talk-brief'?35:mode==='talk-decline'?0:80;Object.assign(responder.needs,{hunger:18,thirst:mode==='talk-no-response'?95:18,fatigue:18,sleepNeed:18,social});
-    requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};E.installActionKind?.(requester.action);E.ensureIntentForAction?.(st,requester);return st;
+    requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};E.ensureIntentForAction?.(st,requester);return st;
   }
   function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);}
   function settleTick(st){resolveTalkResponses(st);E.reconcileIntents?.(st);}
