@@ -32,6 +32,7 @@
       kind:'socialNoResponse',
       bidId:bid.id,
       bidKind:bid.data?.bidKind||null,
+      interactionKind:d.interactionKind||E.socialBidInteractionKind?.(bid)||bid.data?.interactionKind||null,
       counterpartId:bid.data?.bidTo||null,
       waitedTicks:Math.max(0,(Number(st?.tick)||0)-bidTick),
       responderContextObserved:d.responderContextObserved===true,
@@ -62,7 +63,8 @@
   function rememberRequesterSocialOutcome(st,waitEvent){
     const d=waitEvent?.data||{};
     if(d.action!=='socialWaitEnded'||d.visibility!=='private'||!d.owner||d.owner!==d.actor||!d.bidId)return null;
-    const bid=E.bidEvent?.(st,d.bidId);if(!bid||bid.data?.bidKind!=='talkOffer'||bid.data?.bidFrom!==d.actor)return null;
+    const bid=E.bidEvent?.(st,d.bidId);
+    if(!bid||bid.data?.bidFrom!==d.actor||bid.data?.expectsResponse===false)return null;
     if(hasObservableResponse(st,bid.id))return null;
     const a=st.agents?.[d.actor];if(!a)return null;
     if(!Array.isArray(a.episodicMemories))a.episodicMemories=[];
