@@ -89,6 +89,42 @@ st.agents.orange.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:s
 assert.equal(E.petResponseFor(st.agents.orange),responseBeforeAffectMutation,'Affect-to-response influence belongs to a later deliberation slice');
 noIssues('affect remains decision inert');
 
+// An existing cat→human Social Bid can be answered by a nested human petOffer without collapsing private waiting truth.
+E.reset(46321);st=E.getState();
+{
+  const human=st.agents.zhou,requestingCat=st.agents.orange,bystander=st.agents.zhen;
+  human.position={x:5,y:5};requestingCat.position={x:5,y:6};bystander.position={x:7,y:5};
+  Object.assign(human.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:65});
+  Object.assign(requestingCat.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,groomingNeed:20,social:90});
+  const originalBidId=E.addEvent(`${requestingCat.name}主動找${human.name}撒嬌。`,'good',[],{
+    actor:requestingCat.id,target:human.id,action:'seekHuman',position:E.positionRef?.(requestingCat.position)||'5,6',
+    socialBid:true,bidKind:'catAffection',bidFrom:requestingCat.id,bidTo:human.id,perceivedByTarget:true
+  });
+  st.causes[originalBidId].data.bidId=originalBidId;
+  E.addObservedBid(st,human,st.causes[originalBidId],st.tick);
+  requestingCat.activeIntent={
+    id:`intent:${requestingCat.id}:${st.tick}:awaitResponse:${originalBidId}`,
+    kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:originalBidId},patienceUntilTick:st.tick+3
+  };
+  human.action={kind:'petCat',phase:'interact',targetAgent:requestingCat.id,started:st.tick,wait:0};
+  E.installActionKind?.(human.action);
+  human.activeIntent={
+    id:`intent:${human.id}:${st.tick}:respondSocialBid:${originalBidId}`,
+    kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:originalBidId,observedTick:st.tick}
+  };
+  human.action.intentId=human.activeIntent.id;
+  E.tick();st=E.getState();
+  const nestedOffer=st.events.find(e=>e.data?.action==='petOffer'&&e.data?.responseToBid===originalBidId);
+  assert.ok(nestedOffer,'human reply should become a petOffer that also responds to the original cat bid');
+  const nestedResponse=st.events.find(e=>e.data?.responseToBid===nestedOffer.id&&['acceptPet','toleratePet','avoidPet'].includes(e.data?.action));
+  assert.ok(nestedResponse,'cat should respond to the nested petOffer');
+  assert.ok(st.events.some(e=>e.data?.action==='petCat'&&e.data?.petOfferId===nestedOffer.id),'high-social cat should let the nested reply complete as petCat');
+  assert.equal((st.agents.zhou.observedSocialBids||[]).some(r=>r.bidId===originalBidId),false,'human local observed original bid ref should settle');
+  assert.notEqual(st.agents.orange.activeIntent?.source?.bidId,originalBidId,'cat requester wait should settle locally once observable response arrives');
+  assert.notEqual(st.agents.zhou.activeIntent?.source?.bidId,originalBidId,'human responder intent should complete');
+  noIssues('nested bid response flow');
+}
+
 // Sleeping cats stay on the existing touch-stimulus path rather than receiving a conscious accept/tolerate/avoid response.
 E.reset(51321);st=E.getState();
 {
