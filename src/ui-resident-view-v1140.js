@@ -1,6 +1,6 @@
 (() => {
-  const E=window.SimEngine,SP=window.SimSpatial;
-  if(!E||!SP||typeof document==='undefined')return;
+  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld;
+  if(!E||!SP||!W||typeof document==='undefined')return;
 
   const VERSION='11.14.0-player-resident-view-debug-inspector';
   const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
@@ -24,6 +24,7 @@
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const agentName=(st,id,fallback='對方')=>st?.agents?.[id]?.name||fallback;
   const actionName=action=>ACTION_LABELS[action]||E.ZH?.[action]||action||'一件事';
+  const interactionName=kind=>W.interactionLabel?.(kind)||kind||'互動';
 
   function selectedAgentFromDebug(){
     const meta=[...host.querySelectorAll('.inspect-title small')].find(x=>x.textContent?.startsWith('Agent・'));
@@ -69,12 +70,18 @@
   }
   function recentPlayerEvents(st,id,limit=6){
     const ref=`agent:${id}`;
-    return (st.events||[]).filter(e=>e?.type!=='system'&&e?.data?.visibility!=='private'&&e?.data?.entities?.includes(ref)).slice(0,limit);
+    return (st.events||[]).filter(e=>{
+      if(e?.type==='system'||!e?.data?.entities?.includes(ref))return false;
+      return e.data.visibility!=='private'||e.data.owner===id;
+    }).slice(0,limit);
   }
   function eventList(st,id){
     const events=recentPlayerEvents(st,id);
-    if(!events.length)return '<div class="resident-empty">最近沒有特別值得記下來的公開事件。</div>';
-    return `<div class="resident-life-list">${events.map(e=>`<button class="resident-life-event" data-entity="event:${esc(e.id)}"><time>${esc(e.time||'')}</time><span>${esc(e.text||'')}</span></button>`).join('')}</div>`;
+    if(!events.length)return '<div class="resident-empty">最近沒有特別值得記下來的事情。</div>';
+    return `<div class="resident-life-list">${events.map(e=>{
+      const privatePrefix=e.data?.visibility==='private'&&e.data?.owner===id?'自己的經驗・':'';
+      return `<button class="resident-life-event" data-entity="event:${esc(e.id)}"><time>${esc(e.time||'')}</time><span>${esc(privatePrefix+(e.text||''))}</span></button>`;
+    }).join('')}</div>`;
   }
   function observedMemoryText(st,m){
     const live=st.causes?.[m?.sourceEventId];
@@ -92,9 +99,9 @@
     }
   }
   function privateOutcomeMemoryText(st,m){
-    const x=m?.experienced||{},other=agentName(st,x.counterpartId);
-    if(x.bidKind==='talkOffer')return `曾找${other}聊天，但當時沒有得到回應。`;
-    return `曾向${other}發出互動，但當時沒有得到回應。`;
+    const x=m?.experienced||{},other=agentName(st,x.counterpartId),kind=x.interactionKind||null;
+    if(kind==='talk'||x.bidKind==='talkOffer')return `曾找${other}聊天，但當時沒有得到回應。`;
+    return `曾向${other}發起${interactionName(kind)}，但當時沒有得到回應。`;
   }
   function memoryText(st,m){return m?.episodeKind==='privateSocialOutcome'?privateOutcomeMemoryText(st,m):observedMemoryText(st,m);}
   function playerMemories(st,a,limit=5){
