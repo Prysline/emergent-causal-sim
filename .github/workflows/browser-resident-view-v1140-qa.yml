@@ -27,6 +27,7 @@ jobs:
           echo $! > /tmp/emergent-causal-sim-http.pid
           sleep 2
       - run: node tests/browser-resident-view-v1140-qa.mjs
+      - run: node tests/browser-runtime-hook-pipeline-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld;if(!E||!SP?.resolveEffectNode||!SP?.environmentAt)return;
-  const baseTick=E.tick,FLOOR='floor';
+  const FLOOR='floor';
   E.DATA_ZH.effectNode='效果位置';
   E.DATA_ZH.spillEndpoint='環境端點';
 
@@ -40,17 +40,26 @@
       E.addEvent(`${a.name}踩到${place}上的${E.resourceName(resource)}，${a.kind==='cat'?'腳掌':'腳部'}沾上了一些。`,'warn',cause?[cause]:[],{actor:a.id,action:'surfaceContact',resource,amount:picked,position:SP.nodeKey(st,node),effectNode:SP.nodeKey(st,node),surfaceId:node.surfaceId});
     }
   }
-
-  E.tick=(...args)=>{
-    const before=E.getState(),oldEventIds=new Set((before.events||[]).map(e=>e.id)),oldNodes={};
-    for(const a of Object.values(before.agents||{}))if(!a.offMap&&a.position)oldNodes[a.id]={...SP.nodeForAgent(before,a)};
-    const result=baseTick(...args),st=E.getState();
-    const fresh=(st.events||[]).filter(e=>!oldEventIds.has(e.id));
+  function captureSpatialTick(st){
+    const oldEventIds=new Set((st.events||[]).map(e=>e.id)),oldNodes={};
+    for(const a of Object.values(st.agents||{}))if(!a.offMap&&a.position)oldNodes[a.id]={...SP.nodeForAgent(st,a)};
+    return {oldEventIds,oldNodes};
+  }
+  function settleSpatialTick(st,snap){
+    if(!snap)return;
+    const fresh=(st.events||[]).filter(e=>!snap.oldEventIds.has(e.id));
     for(const e of fresh)relocateFailedPourSpill(st,e);
     for(const a of Object.values(st.agents||{})){
-      if(a.offMap||!a.position)continue;const prev=oldNodes[a.id],now=SP.nodeForAgent(st,a);
+      if(a.offMap||!a.position)continue;const prev=snap.oldNodes[a.id],now=SP.nodeForAgent(st,a);
       if(prev&&now&&!SP.nodeSame(st,prev,now))applySurfaceContact(st,a);
     }
-    return result;
-  };
+  }
+
+  if(E.registerRuntimeHook){
+    E.registerRuntimeHook('beforeTick','spatial.capture',(ctx)=>{ctx.locals.spatialV1114=captureSpatialTick(E.getState());},1100);
+    E.registerRuntimeHook('afterTick','spatial.effects',(ctx)=>settleSpatialTick(E.getState(),ctx.locals.spatialV1114),100);
+  }else{
+    const baseTick=E.tick;
+    E.tick=(...args)=>{const snap=captureSpatialTick(E.getState()),result=baseTick(...args);settleSpatialTick(E.getState(),snap);return result;};
+  }
 })();

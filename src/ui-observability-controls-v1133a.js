@@ -6,7 +6,7 @@
   const RESPONSE_ACTIONS=new Set(['acceptTalk','briefTalkReply','declineTalk']);
   const NEED_SHORT={hunger:'餓',thirst:'渴',fatigue:'累',sleepNeed:'睡',social:'社'};
   const recentSocialByAgent=new Map();
-  const baseAddEvent=E.addEvent,baseActionLabel=E.actionLabel,baseTick=E.tick,baseReset=E.reset;
+  const baseAddEvent=E.addEvent,baseActionLabel=E.actionLabel;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -32,9 +32,7 @@
       recentSocialByAgent.set(data.actor,{tick,role:'responder',otherId:data.target,response});
       if(data.target)recentSocialByAgent.set(data.target,{tick,role:'requester',otherId:data.actor,response});
     }
-    if(data.action==='talk'&&data.talkOfferId&&data.actor){
-      recentSocialByAgent.set(data.actor,{tick,role:'talked',otherId:data.target,response:'engage'});
-    }
+    if(data.action==='talk'&&data.talkOfferId&&data.actor)recentSocialByAgent.set(data.actor,{tick,role:'talked',otherId:data.target,response:'engage'});
   }
   E.addEvent=(text,type='normal',causeIds=[],data={})=>{
     const id=baseAddEvent(clearerSocialText(text,data),type,causeIds,data);
@@ -61,45 +59,38 @@
       const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(E.getState(),bidId),targetId=bid?.data?.bidTo;
       return `等待${agentName(targetId)}對「${interactionName(bid)}」作出回應`;
     }
-    if(!p){
-      const record=recentSocialByAgent.get(a?.id),tick=E.getState()?.tick??0;
-      if(record&&tick-record.tick<=1)return responseLabel(record);
-    }
+    if(!p){const record=recentSocialByAgent.get(a?.id),tick=E.getState()?.tick??0;if(record&&tick-record.tick<=1)return responseLabel(record);}
     return baseActionLabel(a);
   };
 
   function installTurnControls(){
-    const toolbar=document.querySelector('.toolbar');
-    if(!toolbar||document.querySelector('.turn-controls'))return;
-    const bar=document.createElement('div');
-    bar.className='turn-controls';
-    bar.setAttribute('aria-label','模擬操作');
-    for(const id of ['play','step','step10','reset']){
-      const button=document.getElementById(id);if(button)bar.appendChild(button);
-    }
-    toolbar.classList.add('toolbar-options');
-    toolbar.querySelector('.toolbar-spacer')?.remove();
-    toolbar.parentNode.insertBefore(bar,toolbar);
+    const toolbar=document.querySelector('.toolbar');if(!toolbar||document.querySelector('.turn-controls'))return;
+    const bar=document.createElement('div');bar.className='turn-controls';bar.setAttribute('aria-label','模擬操作');
+    for(const id of ['play','step','step10','reset']){const button=document.getElementById(id);if(button)bar.appendChild(button);}
+    toolbar.classList.add('toolbar-options');toolbar.querySelector('.toolbar-spacer')?.remove();toolbar.parentNode.insertBefore(bar,toolbar);
   }
   function ensureMobileSummary(){
-    let host=document.getElementById('mobileAgentSummary');
-    if(host)return host;
+    let host=document.getElementById('mobileAgentSummary');if(host)return host;
     const map=document.getElementById('map');if(!map?.parentElement)return null;
-    host=document.createElement('div');host.id='mobileAgentSummary';host.className='mobile-agent-summary';
-    map.insertAdjacentElement('afterend',host);
-    return host;
+    host=document.createElement('div');host.id='mobileAgentSummary';host.className='mobile-agent-summary';map.insertAdjacentElement('afterend',host);return host;
   }
   function renderMobileSummary(){
     const host=ensureMobileSummary(),st=E.getState();if(!host||!st)return;
     host.innerHTML=Object.values(st.agents||{}).map(a=>{
-      const where=a.offMap?'門外':SP.describePlace(st,a),needs=['hunger','thirst','fatigue','sleepNeed','social']
-        .map(k=>`${NEED_SHORT[k]} ${Math.round(clamp(Number(a.needs?.[k])||0,0,100))}`).join(' · ');
+      const where=a.offMap?'門外':SP.describePlace(st,a),needs=['hunger','thirst','fatigue','sleepNeed','social'].map(k=>`${NEED_SHORT[k]} ${Math.round(clamp(Number(a.needs?.[k])||0,0,100))}`).join(' · ');
       return `<button class="mobile-agent-row agent-${esc(a.id)}" data-entity="agent:${esc(a.id)}"><span class="mobile-agent-identity"><span>${a.kind==='cat'?'🐈':'👤'}</span><b>${esc(a.name)}</b><small>${esc(where)}</small></span><span class="mobile-agent-detail"><span class="mobile-agent-action">${esc(E.actionLabel(a))}</span><span class="mobile-agent-needs">${esc(needs)}</span></span></button>`;
     }).join('');
   }
+  function resetObservability(){recentSocialByAgent.clear();renderMobileSummary();}
 
-  E.tick=(...args)=>{const result=baseTick(...args);renderMobileSummary();return result;};
-  E.reset=(...args)=>{recentSocialByAgent.clear();const result=baseReset(...args);renderMobileSummary();return result;};
+  if(E.registerRuntimeHook){
+    E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
+    E.registerRuntimeHook('afterReset','uiObservability.reset',resetObservability,600);
+  }else{
+    const baseTick=E.tick,baseReset=E.reset;
+    E.tick=(...args)=>{const result=baseTick(...args);renderMobileSummary();return result;};
+    E.reset=(...args)=>{recentSocialByAgent.clear();const result=baseReset(...args);renderMobileSummary();return result;};
+  }
 
   installTurnControls();
   renderMobileSummary();

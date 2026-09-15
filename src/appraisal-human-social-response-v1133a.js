@@ -1,6 +1,5 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld;if(!E||!W?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||!E.APPRAISAL_SCHEMA_VERSION)return;
-  const priorMemoryCreatedHook=E.onEpisodicMemoryCreated;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
   const normNeed=v=>clamp((Number(v)||0)/100,0,1);
@@ -23,36 +22,24 @@
     if(!memory||memory.kind!=='episodic'||!['acceptTalk','talk','briefTalkReply','declineTalk'].includes(action))return memory?.appraisal||null;
     const o=memory.observed||{},base=baselineFor(a,memory),factors=[...base.factors];
     let relevance=base.relevance,goalCongruence=0;
-
     if(action==='acceptTalk'&&o.targetId===a.id){
-      const social=normNeed(a.needs?.social),extra=round(.18+.17*social),positive=round(.28+.42*social);
-      relevance=round(relevance+extra);goalCongruence=positive;
+      const social=normNeed(a.needs?.social),extra=round(.18+.17*social),positive=round(.28+.42*social);relevance=round(relevance+extra);goalCongruence=positive;
       factors.push({kind:'socialBidAccepted',key:'social',level:round(social),relevanceDelta:extra,congruenceDelta:positive});
     }else if(action==='talk'&&o.targetId===a.id){
-      const social=normNeed(a.needs?.social),extra=round(.15+.18*social),positive=round(.24+.40*social);
-      relevance=round(relevance+extra);goalCongruence=positive;
+      const social=normNeed(a.needs?.social),extra=round(.15+.18*social),positive=round(.24+.40*social);relevance=round(relevance+extra);goalCongruence=positive;
       factors.push({kind:'fullConversation',key:'social',level:round(social),relevanceDelta:extra,congruenceDelta:positive});
     }else if(SHALLOW_ACTIONS.has(action)&&o.targetId===a.id){
-      relevance=round(relevance+.13);goalCongruence=-.14;
-      factors.push({kind:'shallowSocialRejection',relevanceDelta:.13,congruenceDelta:-.14});
+      relevance=round(relevance+.13);goalCongruence=-.14;factors.push({kind:'shallowSocialRejection',relevanceDelta:.13,congruenceDelta:-.14});
     }
-
-    memory.appraisal={
-      appraisedTick:memory.observedTick,
-      ruleId:`${action}-v1`,
-      relevance:round(clamp(relevance,0,1)),
-      goalCongruence:round(clamp(goalCongruence,-1,1)),
-      agency:agencyFor(a,memory),
-      factors
-    };
+    memory.appraisal={appraisedTick:memory.observedTick,ruleId:`${action}-v1`,relevance:round(clamp(relevance,0,1)),goalCongruence:round(clamp(goalCongruence,-1,1)),agency:agencyFor(a,memory),factors};
     return memory.appraisal;
   }
 
-  E.onEpisodicMemoryCreated=(st,a,memory)=>{
-    if(typeof priorMemoryCreatedHook==='function')priorMemoryCreatedHook(st,a,memory);
-    if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(memory?.observed?.action))return appraiseHumanSocialResponseMemory(st,a,memory);
-    return memory?.appraisal||null;
-  };
+  if(E.registerRuntimeHook)E.registerRuntimeHook('episodicMemoryCreated','appraisal.human-social',(ctx)=>{if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(ctx.memory?.observed?.action))ctx.result=appraiseHumanSocialResponseMemory(ctx.state,ctx.agent,ctx.memory);},300);
+  else{
+    const priorMemoryCreatedHook=E.onEpisodicMemoryCreated;
+    E.onEpisodicMemoryCreated=(st,a,memory)=>{if(typeof priorMemoryCreatedHook==='function')priorMemoryCreatedHook(st,a,memory);if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(memory?.observed?.action))return appraiseHumanSocialResponseMemory(st,a,memory);return memory?.appraisal||null;};
+  }
 
   Object.assign(E,{HUMAN_SOCIAL_APPRAISAL_ACTIONS:Object.freeze(['acceptTalk','talk','briefTalkReply','declineTalk']),appraiseHumanSocialResponseMemory});
 })();
