@@ -25,6 +25,8 @@ async function setupStory(){
   });
   await page.click('#step');
   await page.evaluate(()=>document.querySelector('[data-entity="agent:zhen"]')?.click());
+  await page.waitForSelector('[data-v1140-resident-root]');
+  await page.click('[data-v1140-mode="debug"]');
   await page.waitForSelector('[data-v1134-memory-deliberation]');
 }
 
