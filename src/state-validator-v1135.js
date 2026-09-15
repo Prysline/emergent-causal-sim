@@ -4,6 +4,7 @@
   const CONTEXTS=new Set(['unobserved','sleeping','highCommitment','observedAction','observedIdle']);
   const FORBIDDEN_PRIVATE=['intentionalIgnore','ignored','rejected','rejectedBy','disliked','motive','responderIntent','responderUtility','responderAffect','responderMemory','relationship','responseScore','agency'];
   const FORBIDDEN_MIRRORS=['socialOutcomeMemories','noResponseMemories','rejectionScore','ignoredBy','socialOutcomeScore'];
+  const eventSequence=id=>{const m=/^e(\d+)$/.exec(String(id||''));return m?Number(m[1]):null;};
 
   function validateState(st){
     const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
@@ -28,7 +29,12 @@
         if(source&&(source.data?.action!=='socialWaitEnded'||source.data?.visibility!=='private'||source.data?.owner!==a.id||source.data?.actor!==a.id||source.data?.bidId!==x?.bidId))add('private_social_outcome_source_invalid',`${a.name} 的 private outcome source 若仍在 hot cause state，必須是自己的 socialWaitEnded。`,{agentId:a.id,memoryId:m?.id,sourceEventId:m.sourceEventId});
         const bid=E.bidEvent?.(st,x?.bidId);
         if(bid&&(bid.data?.bidKind!=='talkOffer'||bid.data?.bidFrom!==a.id||bid.data?.bidTo!==x?.counterpartId))add('private_social_outcome_bid_invalid',`${a.name} 的 private outcome 必須指向自己發出的 talkOffer。`,{agentId:a.id,memoryId:m?.id,bidId:x?.bidId});
-        const conflictingResponse=x?.bidId&&Object.values(st.causes||{}).find(e=>e?.data?.responseToBid===x.bidId&&(!Number.isInteger(e.tick)||e.tick<=m.observedTick));
+        const waitSeq=eventSequence(m.sourceEventId);
+        const conflictingResponse=x?.bidId&&Object.values(st.causes||{}).find(e=>{
+          if(e?.data?.responseToBid!==x.bidId)return false;
+          const responseSeq=eventSequence(e.id);
+          return waitSeq===null||responseSeq===null||responseSeq<=waitSeq;
+        });
         if(conflictingResponse)add('private_social_outcome_response_conflict',`${a.name} 在 wait-end 當下已存在 observable response，不得同時形成 no-response private outcome。`,{agentId:a.id,memoryId:m?.id,bidId:x.bidId,responseEventId:conflictingResponse.id});
       }
     }
