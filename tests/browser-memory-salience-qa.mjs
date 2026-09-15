@@ -22,6 +22,8 @@ async function seedRetentionStory(){
     window.__retentionQaImportantId=importantId;
     document.querySelector('[data-entity="agent:orange"]')?.click();
   });
+  await page.waitForSelector('[data-v1140-resident-root]');
+  await page.click('[data-v1140-mode="debug"]');
   await page.waitForSelector('[data-v1130-memory]');
   await page.waitForSelector('[data-v1133-retention]');
   await page.waitForSelector('[data-v1132-affect]');
