@@ -39,25 +39,6 @@
   function isDistinctTargetCandidate(st,a,intent,candidate){if(!SUPPORTED_INTENTS.has(intent?.kind)||candidate?.intentKind!==intent.kind)return false;const currentTarget=a?.action?.targetAgent;return !!(currentTarget&&candidate?.targetAgent&&candidate.targetAgent!==currentTarget);}
   function coreIntentForOption(a,option){const intentKind=ACTION_TO_INTENT[option?.id];if(!intentKind)return null;if(option.id==='petCat'&&(a?.activeIntent?.kind==='respondSocialBid'||a?.pendingInteraction?.type==='cat_request'))return null;return intentKind;}
   function adjustCoreOptions(st,a,options){const adjusted=(options||[]).map(option=>{const intentKind=coreIntentForOption(a,option);if(!intentKind)return option;const best=bestTargetEvaluation(st,a,intentKind,Number(option.score)||0);if(!best)return option;return {...option,targetAgent:best.targetAgent,score:round((Number(option.score)||0)+best.memoryUtilityDelta)};});return adjusted.sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0)||String(x.id).localeCompare(String(y.id)));}
-  function randomFloorTile(st,a){const tiles=Object.values(st.map?.tiles||{}).filter(t=>SP.walkable(st,t)),scored=tiles.map(t=>({t,d:SP.pathDistance(st,a,t)})).filter(x=>Number.isFinite(x.d)&&x.d>0);return scored.length?scored[Math.floor(E.rand(0,scored.length))]?.t||null:null;}
-  function exitSlotFor(st,a){return SP.allSlots(st).filter(s=>s.canExit&&SP.slotAllows(s,a)).map(s=>({s,d:SP.pathDistance(st,a,s.position)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.s||null;}
-  function buildCoreAction(st,a,c){
-    const base={kind:c.id,phase:'start',started:st.tick,wait:0};let action=null;
-    switch(c.id){
-      case'eat':action={...base,phase:'prepare'};break;
-      case'drinkWater':case'drinkAlcohol':{const resource=c.id==='drinkWater'?'water':'alcohol';if(a.kind==='cat'){const src=Object.values(st.containers||{}).filter(x=>x.canDrinkFrom&&(x.contents?.[resource]||0)>0&&(!E.holderOf?.(x.id)||E.holderOf(x.id)?.id===a.id)).map(x=>({x,d:SP.pathDistance(st,a,SP.bestInteractionPosition(st,a,{kind:'object',id:x.id},'drinkFrom'))})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.x||null;action=src?{...base,phase:'move',targetObject:src.id,resource}:null;}else action={...base,phase:'chooseVessel',resource};break;}
-      case'rest':action={...base,phase:'chooseSurface',restTicks:0};break;case'sleep':action={...base,phase:'chooseSurface',sleepTicks:0};break;
-      case'talk':{const t=c.targetAgent&&st.agents?.[c.targetAgent];action=t&&!t.offMap?{...base,phase:'move',targetAgent:t.id}:null;break;}
-      case'petCat':{const t=c.targetAgent&&st.agents?.[c.targetAgent];action=t&&!t.offMap?{...base,phase:'move',targetAgent:t.id}:null;break;}
-      case'seekHuman':{const t=c.targetAgent&&st.agents?.[c.targetAgent];action=t&&!t.offMap?{...base,phase:'move',targetAgent:t.id}:null;break;}
-      case'cleanFloor':{const t=SP.wettestTile?.(st);action=t?{...base,phase:'move',targetTile:{x:t.x,y:t.y}}:null;break;}
-      case'groom':action={...base,phase:'groom'};break;
-      case'wander':{const t=randomFloorTile(st,a);action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null,oneShot:true};break;}
-      case'restockContainer':{const j=c.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;}
-      case'externalSupply':{const exit=exitSlotFor(st,a);if(exit&&c.carrierId)action={...base,phase:'toCarrier',exitSlot:exit.id,destinationId:c.destinationId,resource:c.resource,carrierId:c.carrierId,workLeft:Math.floor(E.rand(7,11)),produced:0};break;}
-    }
-    if(action)E.installActionKind?.(action);return action;
-  }
   function samePick(a,b){return !!a&&!!b&&a.id===b.id&&(a.targetAgent||null)===(b.targetAgent||null);}
   function rewritePlanEvent(st,a,oldPick,newPick){const e=(st.events||[]).find(x=>x.data?.actor===a.id&&x.data?.phase==='plan'&&x.data?.action===oldPick?.id);if(!e)return;e.text=`${a.name}決定${E.ZH?.[newPick.id]||newPick.id}。`;e.data.action=newPick.id;}
   function correctInitialDeliberation(st,idleBefore){
@@ -65,7 +46,7 @@
       const a=st.agents?.[id],thought=st.thoughts?.[id];if(!a||!a.action||thought?.tick!==st.tick||a.activeIntent?.kind==='respondSocialBid')continue;
       const oldPick=thought.pick,options=adjustCoreOptions(st,a,thought.options),pick=options[0]||oldPick;thought.options=options;thought.pick=pick;if(!pick)continue;
       if(samePick(oldPick,pick)){if(pick.targetAgent&&ACTION_TO_INTENT[pick.id]&&a.action.targetAgent!==pick.targetAgent)a.action.targetAgent=pick.targetAgent;continue;}
-      const replacement=buildCoreAction(st,a,pick);if(!replacement)continue;rewritePlanEvent(st,a,oldPick,pick);a.action=replacement;a.activeIntent=null;E.ensureIntentForAction?.(st,a);
+      const replacement=E.buildAction?.(a,pick);if(!replacement)continue;rewritePlanEvent(st,a,oldPick,pick);a.action=replacement;a.activeIntent=null;E.ensureIntentForAction?.(st,a);
     }
     E.reconcileIntents?.(st);
   }
