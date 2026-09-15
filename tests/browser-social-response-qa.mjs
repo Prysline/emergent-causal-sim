@@ -16,6 +16,8 @@ async function runScenario(scenario){
   await page.click('#step');
   await page.waitForFunction(()=>window.SimEngine.getState().events.some(e=>e.data?.action==='petOffer'));
   await page.evaluate(()=>document.querySelector('[data-entity="agent:orange"]')?.click());
+  await page.waitForSelector('[data-v1140-resident-root]');
+  await page.click('[data-v1140-mode="debug"]');
   await page.waitForSelector('[data-v1132-affect]');
   return page.evaluate(()=>{
     const E=window.SimEngine,st=E.getState(),offer=st.events.find(e=>e.data?.action==='petOffer');
