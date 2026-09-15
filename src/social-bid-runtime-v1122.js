@@ -9,7 +9,6 @@
   function normalizeSocialState(st){
     for(const a of Object.values(st?.agents||{})){
       if(!Array.isArray(a.observedSocialBids))a.observedSocialBids=[];
-      delete a.pendingInteraction;
     }
     return st;
   }
@@ -25,6 +24,7 @@
   }
   function observedBidRefs(st,a){return (a?.observedSocialBids||[]).filter(ref=>ref.expiresTick>=st.tick&&bidEvent(st,ref.bidId));}
   function newestObservedCatBid(st,a){return observedBidRefs(st,a).map(ref=>({ref,bid:bidEvent(st,ref.bidId)})).filter(x=>x.bid?.data?.bidKind==='catAffection'&&x.bid.data.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;}
+  function socialBidDecisionOptions(st,a){if(a?.kind!=='human'||a.action)return[];const pick=newestObservedCatBid(st,a);if(!pick)return[];const target=st.agents?.[pick.bid?.data?.bidFrom];if(!target||target.offMap)return[];return[{id:'petCat',targetAgent:target.id,score:72+(a.traits?.animalAffinity||0)*20,why:['貓剛剛主動討摸','回應已形成短期社交動機'],socialBidId:pick.bid.id,socialBidObservedTick:pick.ref.observedTick}];}
   function awaitIntent(st,a,bid){return {id:`intent:${a.id}:${st.tick}:awaitResponse:${bid.id}`,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:bid.id},patienceUntilTick:st.tick+REQUESTER_PATIENCE_TICKS};}
   function responseIntent(st,a,bid,action,observedTick=st.tick){const started=Number.isInteger(action?.started)?action.started:st.tick;return {id:`intent:${a.id}:${started}:respondSocialBid:${bid.id}`,kind:'respondSocialBid',createdTick:started,lifecycle:'actionBound',source:{type:'socialBid',bidId:bid.id,observedTick}};}
   function promoteResponseIntent(st,a,bid,observedTick=st.tick){
@@ -37,27 +37,18 @@
       a.action={kind:'awaitResponse',phase:'waiting',started:a.activeIntent.createdTick,intentId:a.activeIntent.id,__v1122Transient:true};
     }
   }
-  function injectResponderCompatibility(st,injected){
-    for(const a of Object.values(st.agents||{})){
-      if(a.kind!=='human'||a.action)continue;const pick=newestObservedCatBid(st,a);if(!pick)continue;const from=pick.bid.data.bidFrom;
-      a.pendingInteraction={type:'cat_request',from,createdTick:pick.ref.observedTick,expiresTick:st.tick+100000,accepted:false,__v1122Transient:true};
-      injected.set(a.id,{bidId:pick.bid.id,from,observedTick:pick.ref.observedTick});
-    }
-  }
   function annotateNewBids(st,newEvents){
     for(const e of newEvents){
       if(e.data?.action!=='seekHuman'||!e.data?.actor||!e.data?.target)continue;
       e.data.socialBid=true;e.data.bidId=e.id;e.data.bidKind='catAffection';e.data.interactionKind='socialAffection';e.data.expectsResponse=true;e.data.bidFrom=e.data.actor;e.data.bidTo=e.data.target;
-      const requester=st.agents[e.data.actor],target=st.agents[e.data.target],compat=target?.pendingInteraction;
-      const perceived=!!(target&&compat?.type==='cat_request'&&compat.from===requester?.id);e.data.perceivedByTarget=perceived;
+      const requester=st.agents[e.data.actor],target=st.agents[e.data.target];
+      const perceived=e.data?.perceivedByTarget===true;e.data.perceivedByTarget=perceived;
       if(requester&&!requester.action)requester.activeIntent=awaitIntent(st,requester,e);
       if(!perceived)continue;
-      const ref=addObservedBid(st,target,e,st.tick);if(target.action?.kind==='petCat'&&compat?.accepted)promoteResponseIntent(st,target,e,ref.observedTick);
+      addObservedBid(st,target,e,st.tick);
     }
   }
-  function promoteInjectedResponses(st,injected){
-    for(const [agentId,info] of injected){const a=st.agents[agentId],bid=bidEvent(st,info.bidId);if(!a||!bid)continue;if(a.action?.kind==='petCat'&&a.action.targetAgent===info.from&&a.pendingInteraction?.accepted)promoteResponseIntent(st,a,bid,info.observedTick);}
-  }
+  function promoteChosenResponses(st){for(const a of Object.values(st.agents||{})){const pick=st.thoughts?.[a.id]?.pick,bidId=pick?.socialBidId;if(!bidId||a.action?.kind!=='petCat'||a.action.started!==st.tick)continue;const bid=bidEvent(st,bidId);if(!bid||bid.data?.bidTo!==a.id||a.action.targetAgent!==bid.data?.bidFrom)continue;promoteResponseIntent(st,a,bid,pick.socialBidObservedTick??st.tick);}}
   function annotateResponses(st,newEvents,responseBefore){
     for(const e of newEvents){
       if(e.data?.action!=='petCat'||!e.data?.actor||!e.data?.target)continue;
@@ -85,15 +76,16 @@
     }
   }
   function pruneObservedRefs(st){for(const a of Object.values(st.agents||{}))a.observedSocialBids=(a.observedSocialBids||[]).filter(ref=>ref.expiresTick>=st.tick&&bidEvent(st,ref.bidId));}
-  function removeCompatibilityState(st){for(const a of Object.values(st.agents||{}))delete a.pendingInteraction;}
   function prepareTick(st){
-    const snap={marker:st.events?.[0]?.id||null,injected:new Map(),responseBefore:new Map()};
+    const snap={marker:st.events?.[0]?.id||null,responseBefore:new Map()};
     for(const a of Object.values(st.agents||{}))if(a.activeIntent?.kind==='respondSocialBid'&&a.activeIntent.source?.bidId)snap.responseBefore.set(a.id,a.activeIntent.source.bidId);
-    removeCompatibilityState(st);injectWaitingActions(st);injectResponderCompatibility(st,snap.injected);return snap;
+    injectWaitingActions(st);return snap;
   }
   function settleTick(after,snap){
-    if(!snap)return;const newEvents=newEventsSince(after,snap.marker);annotateNewBids(after,newEvents);promoteInjectedResponses(after,snap.injected);annotateResponses(after,newEvents,snap.responseBefore);removeCompatibilityState(after);pruneObservedRefs(after);expirePrivateWaiting(after);E.reconcileIntents?.(after);
+    if(!snap)return;const newEvents=newEventsSince(after,snap.marker);annotateNewBids(after,newEvents);promoteChosenResponses(after);annotateResponses(after,newEvents,snap.responseBefore);pruneObservedRefs(after);expirePrivateWaiting(after);E.reconcileIntents?.(after);
   }
+
+  E.registerDecisionOptionProvider?.('socialBid.respond-cat-affection',socialBidDecisionOptions,100);
 
   if(E.registerRuntimeHook){
     E.registerRuntimeHook('beforeTick','socialBid.prepare',(ctx)=>{ctx.locals.socialBidV1122=prepareTick(E.getState());},900);
@@ -106,5 +98,5 @@
   }
 
   normalizeSocialState(E.getState());
-  Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,INTERACTION_BY_BID_KIND,bidEvent,socialBidInteractionKind,observedBidRefs,newestObservedCatBid,addObservedBid,canObserveSocialResponderContext:canObserveResponderContext});
+  Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,INTERACTION_BY_BID_KIND,bidEvent,socialBidInteractionKind,observedBidRefs,newestObservedCatBid,socialBidDecisionOptions,addObservedBid,canObserveSocialResponderContext:canObserveResponderContext});
 })();
