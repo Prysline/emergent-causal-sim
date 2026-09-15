@@ -32,10 +32,12 @@ assert.deepEqual(ids('beforeTick'),[
   'intent.replan-preemption',
   'socialBid.prepare',
   'intent.reconcile-before',
+  'action.normalize-before',
   'spatial.capture'
 ]);
 assert.deepEqual(ids('afterTick'),[
   'spatial.effects',
+  'action.normalize-after',
   'intent.reconcile-after',
   'socialBid.settle',
   'intent.recover-aborts',
@@ -46,6 +48,7 @@ assert.deepEqual(ids('afterTick'),[
   'socialOutcome.process'
 ]);
 assert.deepEqual(ids('afterReset'),[
+  'action.normalize-reset',
   'intent.normalize-reset',
   'socialBid.normalize-reset',
   'memory.normalize-reset',
