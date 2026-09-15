@@ -28,7 +28,7 @@ async function snapshot(){
     const timeout=st.events.find(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===offer?.id);
     return {
       version:st.version,humanSocialVersion:E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,
-      offerId:offer?.id??null,responseAction:response?.data?.action??null,talkId:talk?.id??null,
+      offerId:offer?.id??null,responseAction:response?.data?.action??null,responseCauses:response?.causes??[],talkId:talk?.id??null,talkCauses:talk?.causes??[],
       timeout:timeout?{id:timeout.id,visibility:timeout.data?.visibility??null,bidKind:timeout.data?.bidKind??null,responderContextObserved:timeout.data?.responderContextObserved??null,observedResponderActionKind:timeout.data?.observedResponderActionKind??null}:null,
       validator:window.SimValidator.validateState(st),scenarioValue:document.getElementById('socialScenario')?.value??null,
       timelineText:document.getElementById('timeline')?.innerText??'',
@@ -43,17 +43,17 @@ assert.equal(opened.version,'11.13.3a-human-social-response');
 assert.equal(opened.scenarioValue,'talk-engage');
 assert.ok((await page.title()).includes('Human Social Response Agency'));
 await step();let desktop=await snapshot();
+fs.writeFileSync(`${outDir}/desktop-state.json`,JSON.stringify(desktop,null,2));
+await page.screenshot({path:`${outDir}/desktop-engage.png`,fullPage:true});
 assert.ok(desktop.offerId,'desktop engage: talkOffer missing after first step');
-assert.equal(desktop.responseAction,null,'desktop engage: response must not precede the offer');
-assert.equal(desktop.talkId,null,'desktop engage: full talk must not be unilateral on the offer tick');
-await step();desktop=await snapshot();
-assert.equal(desktop.responseAction,'acceptTalk','desktop engage: responder should explicitly accept');
+assert.equal(desktop.responseAction,'acceptTalk','desktop engage: idle high-social responder should accept after observing offer');
 assert.ok(desktop.talkId,'desktop engage: accepted offer must produce full talk');
+assert.ok(desktop.responseCauses.includes(desktop.offerId),'desktop engage: response must cite talkOffer cause');
+assert.ok(desktop.talkCauses.includes(desktop.offerId),'desktop engage: full talk must cite talkOffer cause');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop timeline should expose the talk offer');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
-await page.screenshot({path:`${outDir}/desktop-engage.png`,fullPage:true});
 
 await page.setViewportSize({width:390,height:844});
 await openScenario('talk-no-response');
@@ -61,6 +61,8 @@ await step();
 let mobile=await snapshot();
 assert.ok(mobile.offerId,'mobile no-response: talkOffer missing');
 for(let i=0;i<6&&!mobile.timeout;i++){await step();mobile=await snapshot();}
+fs.writeFileSync(`${outDir}/mobile-state.json`,JSON.stringify(mobile,null,2));
+await page.screenshot({path:`${outDir}/mobile-no-response.png`,fullPage:true});
 assert.ok(mobile.timeout,'mobile no-response: requester timeout missing');
 assert.equal(mobile.responseAction,null,'mobile no-response: ambiguous absence must not become accept/brief/decline');
 assert.equal(mobile.talkId,null,'mobile no-response: no full talk should occur');
@@ -71,7 +73,6 @@ assert.ok(mobile.timelineText.includes('沒有得到立即回應'),'mobile timel
 assert.ok(!mobile.timelineText.includes('故意無視'),'mobile timeline must not infer intentional ignoring');
 assert.ok(mobile.docWidth<=mobile.width+1,`mobile document overflow: ${mobile.docWidth}>${mobile.width}`);
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
-await page.screenshot({path:`${outDir}/mobile-no-response.png`,fullPage:true});
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
