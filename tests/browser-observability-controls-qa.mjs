@@ -23,6 +23,8 @@ async function snapshot(){
       patchVersion:E.UI_OBSERVABILITY_CONTROLS_VERSION,
       actionText:document.getElementById('actions')?.innerText??'',
       timelineText:document.getElementById('timeline')?.innerText??'',
+      presentationOwnership:{actionLabel:E.actionLabel===E.CORE_ACTION_LABEL,resolvers:E.listActionLabelResolvers?.()||[]},
+      recentEvents:st.events.slice(0,12).map(e=>({action:e.data?.action||null,tick:e.tick,text:e.text})),
       controls:{
         exists:!!controls,
         position:controls?getComputedStyle(controls).position:null,
@@ -45,9 +47,15 @@ assert.equal(desktop.patchVersion,'11.13.3a-observability-controls');
 assert.equal(desktop.controls.exists,true,'desktop: sticky turn controls missing');
 assert.equal(desktop.controls.position,'sticky','desktop: turn controls must stay sticky');
 assert.deepEqual(desktop.controls.buttons,['play','step','step10','reset']);
+assert.equal(desktop.presentationOwnership.actionLabel,true,'desktop: UI must not replace core actionLabel');
+assert.ok(desktop.presentationOwnership.resolvers.some(x=>x.id==='uiObservability.social-status'),'desktop: social presentation resolver missing');
 await page.click('#step');
 desktop=await snapshot();
 assert.ok(desktop.actionText.includes('剛回應老周的聊天邀請・簡短回覆'),`desktop: responder recent-response state missing: ${desktop.actionText}`);
+const briefEvent=desktop.recentEvents.find(e=>e.action==='briefTalkReply');
+assert.ok(briefEvent,'desktop: canonical brief response event missing');
+assert.equal(briefEvent.tick,desktop.tick,'desktop: brief response event should carry canonical creation tick');
+assert.equal(briefEvent.text,'阿真簡短回應了老周的聊天邀請，但沒有繼續聊天。','desktop: simulation runtime must own final canonical talk response text');
 assert.ok(desktop.timelineText.includes('聊天邀請'),'desktop summary timeline should expose talkOffer');
 assert.ok(desktop.timelineText.includes('簡短回應'),'desktop summary timeline should expose brief responder event');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);

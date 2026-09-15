@@ -5,8 +5,6 @@
   const VERSION='11.13.3a-observability-controls';
   const RESPONSE_ACTIONS=new Set(['acceptTalk','briefTalkReply','declineTalk']);
   const NEED_SHORT={hunger:'餓',thirst:'渴',fatigue:'累',sleepNeed:'睡',social:'社'};
-  const recentSocialByAgent=new Map();
-  const baseAddEvent=E.addEvent,baseActionLabel=E.actionLabel;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -17,29 +15,21 @@
     const kind=E.socialBidInteractionKind?.(bid)||bid?.data?.interactionKind||null;
     return W.interactionLabel?.(kind)||kind||'互動';
   }
-  function clearerSocialText(text,data={}){
-    const actor=agentName(data.actor,'對方'),target=agentName(data.target,'對方');
-    if(data.action==='talkOffer')return `${actor}走近${target}，開口示意想聊幾句（聊天邀請）。`;
-    if(data.action==='acceptTalk')return `${actor}回應了${target}的聊天邀請，明確接下話題。`;
-    if(data.action==='briefTalkReply')return `${actor}簡短回應了${target}的聊天邀請，但沒有繼續聊天。`;
-    if(data.action==='declineTalk')return `${actor}回應了${target}的聊天邀請，明確表示這次不繼續聊天。`;
-    return text;
-  }
-  function rememberSocialEvent(data={}){
-    const st=E.getState(),tick=st?.tick??0;
-    if(RESPONSE_ACTIONS.has(data.action)&&data.actor){
-      const response=data.talkResponse||data.action;
-      recentSocialByAgent.set(data.actor,{tick,role:'responder',otherId:data.target,response});
-      if(data.target)recentSocialByAgent.set(data.target,{tick,role:'requester',otherId:data.actor,response});
+  function recentSocialRecord(st,agentId){
+    const tick=st?.tick??0;
+    for(const event of st?.events||[]){
+      if(!Number.isInteger(event?.tick))continue;
+      const age=tick-event.tick;if(age<0)continue;if(age>1)break;
+      const data=event.data||{};
+      if(data.action==='talk'&&data.talkOfferId&&data.actor===agentId)return {tick:event.tick,role:'talked',otherId:data.target,response:'engage'};
+      if(RESPONSE_ACTIONS.has(data.action)){
+        const response=data.talkResponse||data.action;
+        if(data.actor===agentId)return {tick:event.tick,role:'responder',otherId:data.target,response};
+        if(data.target===agentId)return {tick:event.tick,role:'requester',otherId:data.actor,response};
+      }
     }
-    if(data.action==='talk'&&data.talkOfferId&&data.actor)recentSocialByAgent.set(data.actor,{tick,role:'talked',otherId:data.target,response:'engage'});
+    return null;
   }
-  E.addEvent=(text,type='normal',causeIds=[],data={})=>{
-    const id=baseAddEvent(clearerSocialText(text,data),type,causeIds,data);
-    rememberSocialEvent(data);
-    return id;
-  };
-
   function responseLabel(record){
     const other=agentName(record.otherId);
     if(record.role==='talked')return `↩ 剛和${other}聊了一會兒`;
@@ -52,16 +42,18 @@
     if(record.response==='brief')return `↩ 剛回應${other}的聊天邀請・簡短回覆`;
     return `↩ 剛回應${other}的聊天邀請・這次不繼續聊`;
   }
-  E.actionLabel=(a)=>{
+  function socialActionLabel(st,a){
     const p=a?.action;
     if(p&&E.actionKind?.(p)==='talk'&&p.phase==='respondBid'&&p.responseToBid)return `回應${agentName(p.targetAgent)}的聊天邀請`;
     if(!p&&a?.activeIntent?.kind==='awaitResponse'){
-      const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(E.getState(),bidId),targetId=bid?.data?.bidTo;
+      const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(st,bidId),targetId=bid?.data?.bidTo;
       return `等待${agentName(targetId)}對「${interactionName(bid)}」作出回應`;
     }
-    if(!p){const record=recentSocialByAgent.get(a?.id),tick=E.getState()?.tick??0;if(record&&tick-record.tick<=1)return responseLabel(record);}
-    return baseActionLabel(a);
-  };
+    if(!p){const record=recentSocialRecord(st,a?.id);if(record)return responseLabel(record);}
+    return null;
+  }
+  if(!E.registerActionLabelResolver)throw new Error('ui observability requires action label resolver contract');
+  E.registerActionLabelResolver('uiObservability.social-status',socialActionLabel,100);
 
   function installTurnControls(){
     const toolbar=document.querySelector('.toolbar');if(!toolbar||document.querySelector('.turn-controls'))return;
@@ -81,7 +73,7 @@
       return `<button class="mobile-agent-row agent-${esc(a.id)}" data-entity="agent:${esc(a.id)}"><span class="mobile-agent-identity"><span>${a.kind==='cat'?'🐈':'👤'}</span><b>${esc(a.name)}</b><small>${esc(where)}</small></span><span class="mobile-agent-detail"><span class="mobile-agent-action">${esc(E.actionLabel(a))}</span><span class="mobile-agent-needs">${esc(needs)}</span></span></button>`;
     }).join('');
   }
-  function resetObservability(){recentSocialByAgent.clear();renderMobileSummary();}
+  function resetObservability(){renderMobileSummary();}
 
   if(E.registerRuntimeHook){
     E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
@@ -89,7 +81,7 @@
   }else{
     const baseTick=E.tick,baseReset=E.reset;
     E.tick=(...args)=>{const result=baseTick(...args);renderMobileSummary();return result;};
-    E.reset=(...args)=>{recentSocialByAgent.clear();const result=baseReset(...args);renderMobileSummary();return result;};
+    E.reset=(...args)=>{const result=baseReset(...args);renderMobileSummary();return result;};
   }
 
   installTurnControls();
