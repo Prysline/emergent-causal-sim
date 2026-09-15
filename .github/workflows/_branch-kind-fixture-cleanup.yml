@@ -1,0 +1,32 @@
+name: Run branch kind fixture cleanup
+on:
+  push:
+    branches: [refactor/remove-action-intent-compat]
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/remove-action-intent-compat
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply fixture cleanup and validate
+        run: |
+          node scripts/_branch_fix_kind_fixtures.cjs
+          node tests/v11-state-regression.mjs
+          node tests/action-terminology.mjs
+          node tests/action-construction.mjs
+          node tests/runtime-hook-pipeline.mjs
+      - name: Commit cleanup
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Update legacy Action fixtures to canonical kind"
+          git push origin HEAD:refactor/remove-action-intent-compat
