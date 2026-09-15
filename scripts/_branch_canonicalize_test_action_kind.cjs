@@ -4,8 +4,8 @@ const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirector
 const files=walk('tests').filter(f=>f.endsWith('.mjs')&&!f.endsWith('tests/action-terminology.mjs'));
 for(const file of files){
   let s=fs.readFileSync(file,'utf8');
-  s=s.replaceAll('.action?.intent','.action?.kind');
-  s=s.replaceAll('.action.intent','.action.kind');
+  s=s.replace(/\.action\?\.intent\b/g,'.action?.kind');
+  s=s.replace(/\.action\.intent\b/g,'.action.kind');
   s=s.replace(/(\.action\s*=\s*\{\s*)intent:/g,'$1kind:');
   s=s.replace(/(\baction\s*:\s*\{\s*)intent:/g,'$1kind:');
   fs.writeFileSync(file,s);
