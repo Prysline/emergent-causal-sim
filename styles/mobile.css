@@ -5,7 +5,7 @@
 }
 
 @media(max-width:720px){
-  html,body{max-width:100%;overflow-x:hidden}
+  html,body{max-width:100%;overflow-x:clip}
   body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
   .shell{width:100%;max-width:none;padding:8px 8px calc(74px + env(safe-area-inset-bottom))}
 
