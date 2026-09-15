@@ -31,9 +31,15 @@
     return {memoryId:m?.id||null,sourceEventId:m?.sourceEventId||null,observedTick:Number(m?.observedTick)||0,lastObservedTick:Number(m?.lastObservedTick)||Number(m?.observedTick)||0,relevance:round(relevance),goalCongruence:round(congruence),recency:round(recency),evidence:round(relevance*congruence*recency,4)};
   }
 
+  function memoryAssociatedWithTarget(m,targetId){
+    if(!m||!targetId)return false;
+    if(m?.appraisal?.agency?.kind==='other'&&m.appraisal.agency.agentId===targetId)return true;
+    return m.episodeKind==='privateSocialOutcome'&&m?.experienced?.kind==='socialNoResponse'&&m.experienced.counterpartId===targetId;
+  }
+
   function targetMemoryContributions(st,a,targetId){
     return (a?.episodicMemories||[])
-      .filter(m=>m?.appraisal?.agency?.kind==='other'&&m.appraisal.agency.agentId===targetId)
+      .filter(m=>memoryAssociatedWithTarget(m,targetId))
       .map(m=>memoryEvidence(st,a,m))
       .sort((x,y)=>Math.abs(y.evidence)-Math.abs(x.evidence)||y.lastObservedTick-x.lastObservedTick||String(x.memoryId).localeCompare(String(y.memoryId)))
       .slice(0,TOP_MEMORIES);
@@ -128,8 +134,8 @@
       case'cleanFloor':{const t=SP.wettestTile?.(st);action=t?{...base,phase:'move',targetTile:{x:t.x,y:t.y}}:null;break;}
       case'groom':action={...base,phase:'groom'};break;
       case'wander':{const t=randomFloorTile(st,a);action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null,oneShot:true};break;}
-      case'restockContainer':{const j=c.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;}
-      case'externalSupply':{const exit=exitSlotFor(st,a);if(exit&&c.carrierId)action={...base,phase:'toCarrier',exitSlot:exit.id,destinationId:c.destinationId,resource:c.resource,carrierId:c.carrierId,workLeft:Math.floor(E.rand(7,11)),produced:0};break;}
+      case'restockContainer':{const j=c.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;
+      case'externalSupply':{const exit=exitSlotFor(st,a);if(exit&&c.carrierId)action={...base,phase:'toCarrier',exitSlot:exit.id,destinationId:c.destinationId,resource:c.resource,carrierId:c.carrierId,workLeft:Math.floor(E.rand(7,11)),produced:0};break;
     }
     if(action)E.installActionKind?.(action);return action;
   }
@@ -178,5 +184,5 @@
     return result;
   };
   E.reset=(...args)=>baseReset(...args);
-  Object.assign(E,{MEMORY_DELIBERATION_SCHEMA_VERSION:VERSION,MEMORY_DELIBERATION_TOP_MEMORIES:TOP_MEMORIES,MEMORY_DELIBERATION_MAX_DELTA:MAX_DELTA,targetMemoryContributions,targetAssociation,targetEvaluation,targetEvaluations,bestMemoryTargetEvaluation:bestTargetEvaluation,currentSocialTargetEvaluations,adjustInitialDeliberation:correctInitialDeliberation});
+  Object.assign(E,{MEMORY_DELIBERATION_SCHEMA_VERSION:VERSION,MEMORY_DELIBERATION_TOP_MEMORIES:TOP_MEMORIES,MEMORY_DELIBERATION_MAX_DELTA:MAX_DELTA,memoryAssociatedWithTarget,targetMemoryContributions,targetAssociation,targetEvaluation,targetEvaluations,bestMemoryTargetEvaluation:bestTargetEvaluation,currentSocialTargetEvaluations,adjustInitialDeliberation:correctInitialDeliberation});
 })();
