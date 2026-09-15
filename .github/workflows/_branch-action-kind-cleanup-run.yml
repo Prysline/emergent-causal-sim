@@ -18,6 +18,7 @@ jobs:
           node-version: 22
       - name: Apply cleanup and focused regressions
         run: |
+          node scripts/_branch_action_kind_prep.cjs
           node scripts/_branch_action_kind_cleanup.cjs
           node --check src/engine.js
           node --check src/action-runtime-v1120.js
