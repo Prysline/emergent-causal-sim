@@ -1,7 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld;if(!E||!W)return;
   const VERSION=W.INTENT_SCHEMA_VERSION||'11.12.1-active-intent-foundation';
-  const baseTick=E.tick,baseReset=E.reset;
   const INTENT_BY_ACTION={
     eat:'satisfyHunger',drinkWater:'drinkWater',drinkAlcohol:'drinkAlcohol',rest:'recoverFatigue',sleep:'sleep',
     talk:'socialize',petCat:'interactWithCat',seekHuman:'seekSocialContact',cleanFloor:'removeHazard',groom:'groom',
@@ -29,22 +28,21 @@
     return a.activeIntent;
   }
   function reconcileAgentIntent(st,a){
-    if(a.action){
-      ensureIntentForAction(st,a);
-      return;
-    }
+    if(a.action){ensureIntentForAction(st,a);return;}
     if(a.activeIntent?.lifecycle==='open')return;
     if(a.activeIntent)a.activeIntent=null;
   }
   function reconcileIntents(st){for(const a of Object.values(st?.agents||{}))reconcileAgentIntent(st,a);return st;}
 
-  E.tick=(...args)=>{
-    reconcileIntents(E.getState());
-    const result=baseTick(...args);
-    reconcileIntents(E.getState());
-    return result;
-  };
-  E.reset=(...args)=>reconcileIntents(baseReset(...args));
+  if(E.registerRuntimeHook){
+    E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>reconcileIntents(E.getState()),1000);
+    E.registerRuntimeHook('afterTick','intent.reconcile-after',()=>reconcileIntents(E.getState()),200);
+    E.registerRuntimeHook('afterReset','intent.normalize-reset',()=>reconcileIntents(E.getState()),100);
+  }else{
+    const baseTick=E.tick,baseReset=E.reset;
+    E.tick=(...args)=>{reconcileIntents(E.getState());const result=baseTick(...args);reconcileIntents(E.getState());return result;};
+    E.reset=(...args)=>reconcileIntents(baseReset(...args));
+  }
 
   reconcileIntents(E.getState());
   Object.assign(E,{INTENT_SCHEMA_VERSION:VERSION,INTENT_BY_ACTION,INTENT_ZH,intentKindForAction,intentLabel,intentIdFor,createIntent,ensureIntentForAction,reconcileIntents});
