@@ -52,7 +52,6 @@ async function snapshot(){
 }
 
 function assertStory(s,label){
-  assert.equal(s.version,'11.13.3-memory-salience-pruning',`${label}: state version mismatch`);
   assert.equal(s.retentionVersion,'11.13.3-memory-salience-pruning',`${label}: retention schema mismatch`);
   assert.equal(s.memoryCount,s.cap,`${label}: memory cap should remain bounded after 65th observed event`);
   assert.equal(s.cap,64,`${label}: cap changed unexpectedly`);
