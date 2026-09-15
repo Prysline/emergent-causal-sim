@@ -19,6 +19,7 @@ async function openScenario(scenario){
   }));
 }
 async function step(){await page.click('#step');}
+async function showFullTimeline(){await page.click('[data-logmode="full"]');}
 async function snapshot(){
   return page.evaluate(()=>{
     const E=window.SimEngine,st=E.getState();
@@ -44,6 +45,7 @@ const opened=await openScenario('talk-engage');
 assert.equal(opened.version,'11.13.3a-human-social-response');
 assert.equal(opened.scenarioValue,'talk-engage');
 assert.ok((await page.title()).includes('Human Social Response Agency'));
+await showFullTimeline();
 await step();let desktop=await snapshot();
 fs.writeFileSync(`${outDir}/desktop-state.json`,JSON.stringify(desktop,null,2));
 await page.screenshot({path:`${outDir}/desktop-engage.png`,fullPage:true});
@@ -54,12 +56,13 @@ assert.ok(desktop.talkId,'desktop engage: accepted offer must produce full talk'
 assert.equal(desktop.talkOfferId,desktop.offerId,'desktop engage: full talk must preserve originating talkOffer');
 assert.equal(desktop.talkResponseEventId,desktop.responseId,'desktop engage: full talk must preserve the explicit responder event');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
-assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop timeline should expose the talk offer');
+assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop full timeline should expose the talk offer');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 
 await page.setViewportSize({width:390,height:844});
 await openScenario('talk-no-response');
+await showFullTimeline();
 await step();
 let mobile=await snapshot();
 assert.ok(mobile.offerId,'mobile no-response: talkOffer missing');
@@ -72,7 +75,7 @@ assert.equal(mobile.talkId,null,'mobile no-response: no full talk should occur')
 assert.equal(mobile.timeout.visibility,'private');
 assert.equal(mobile.timeout.bidKind,'talkOffer');
 assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);
-assert.ok(mobile.timelineText.includes('沒有得到立即回應'),'mobile timeline should describe only the lack of immediate response');
+assert.ok(mobile.timelineText.includes('沒有得到立即回應'),'mobile full timeline should describe only the lack of immediate response');
 assert.ok(!mobile.timelineText.includes('故意無視'),'mobile timeline must not infer intentional ignoring');
 assert.ok(mobile.docWidth<=mobile.width+1,`mobile document overflow: ${mobile.docWidth}>${mobile.width}`);
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
