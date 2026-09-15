@@ -34,11 +34,13 @@
         if(d.responseToBid){const list=responsesByOffer.get(d.responseToBid)||[];list.push(e);responsesByOffer.set(d.responseToBid,list);}
         for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship','intentionalIgnore'])if(own(d,key))add('talk_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
       }
-      if(d.action==='talk'&&d.responseToBid){
-        const offer=E.bidEvent?.(st,d.responseToBid);
-        if(!offer||offer.data?.bidKind!=='talkOffer')add('talk_success_offer_missing',`talk ${e.id} 引用的 talkOffer ${d.responseToBid} 不存在。`,{eventId:e.id,bidId:d.responseToBid});
+      if(d.action==='talk'&&d.talkOfferId){
+        const offer=E.bidEvent?.(st,d.talkOfferId),response=st.causes?.[d.talkResponseEventId];
+        if(!offer||offer.data?.bidKind!=='talkOffer')add('talk_success_offer_missing',`talk ${e.id} 引用的 talkOffer ${d.talkOfferId} 不存在。`,{eventId:e.id,bidId:d.talkOfferId});
+        if(!response||response.data?.action!=='acceptTalk'||response.data?.responseToBid!==d.talkOfferId)add('talk_success_response_missing',`talk ${e.id} 必須引用同一 talkOffer 的 acceptTalk response。`,{eventId:e.id,responseId:d.talkResponseEventId,bidId:d.talkOfferId});
         if(d.talkResponse!=='engage')add('talk_success_response_invalid',`由 talkOffer 形成的 full talk ${e.id} 必須是 engage outcome。`,{eventId:e.id,talkResponse:d.talkResponse});
-        const list=talksByOffer.get(d.responseToBid)||[];list.push(e);talksByOffer.set(d.responseToBid,list);
+        if(offer&&d.actor!==offer.data.bidFrom||offer&&d.target!==offer.data.bidTo)add('talk_success_direction_mismatch',`full talk ${e.id} 應保持 requester→responder 方向，而不是冒充 responseToBid。`,{eventId:e.id,bidId:d.talkOfferId});
+        const list=talksByOffer.get(d.talkOfferId)||[];list.push(e);talksByOffer.set(d.talkOfferId,list);
       }
       if(d.action==='socialWaitEnded'&&d.bidKind==='talkOffer'){
         for(const key of ['ignored','intentionalIgnore','disliked','rejectedBy'])if(own(d,key))add('talk_no_response_intent_inference_forbidden',`no-response private outcome ${e.id} 不得直接保存 ${key} 等意圖推定。`,{eventId:e.id,field:key});
