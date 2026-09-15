@@ -48,7 +48,7 @@
     return out;
   }
   function addTalkOffer(st,requester,responder,position){
-    const id=E.addEvent(`${requester.name}走近${responder.name}，開口示意想聊幾句。`,'normal',[],{actor:requester.id,target:responder.id,action:'talkOffer',position,socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true});
+    const id=E.addEvent(`${requester.name}走近${responder.name}，開口示意想聊幾句（聊天邀請）。`,'normal',[],{actor:requester.id,target:responder.id,action:'talkOffer',position,socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true});
     const event=st.causes?.[id];if(event?.data)event.data.bidId=id;return id;
   }
   function emitTalkOffers(st,records){
@@ -62,7 +62,7 @@
   function settleRequesterWait(requester,bidId){if(requester?.activeIntent?.kind==='awaitResponse'&&requester.activeIntent.source?.bidId===bidId)requester.activeIntent=null;}
   function addTalkResponse(st,responder,requester,bidId,response){
     const action=response==='engage'?'acceptTalk':response==='brief'?'briefTalkReply':'declineTalk';
-    const text=response==='engage'?`${responder.name}停下來，明確接住了${requester.name}的話題。`:response==='brief'?`${responder.name}回了${requester.name}一句，但沒有繼續聊下去。`:`${responder.name}表示這次不繼續聊，沒有接下${requester.name}的話題。`;
+    const text=response==='engage'?`${responder.name}回應了${requester.name}的聊天邀請，明確接下話題。`:response==='brief'?`${responder.name}簡短回應了${requester.name}的聊天邀請，但沒有繼續聊天。`:`${responder.name}回應了${requester.name}的聊天邀請，明確表示這次不繼續聊天。`;
     return E.addEvent(text,response==='engage'?'good':'normal',[bidId],{actor:responder.id,target:requester.id,action,responseToBid:bidId,talkResponse:response,position:E.positionRef?.(responder.position)||`${responder.position.x},${responder.position.y}`});
   }
   function applyFullTalk(st,requester,responder,bidId,responseId){const id=E.addEvent(`${requester.name}和${responder.name}聊了一會兒。`,'good',[bidId,responseId],{actor:requester.id,target:responder.id,action:'talk',talkOfferId:bidId,talkResponseEventId:responseId,talkResponse:'engage',position:E.positionRef?.(requester.position)||`${requester.position.x},${requester.position.y}`});requester.needs.social=clamp((Number(requester.needs?.social)||0)-E.rand(12,20),0,100);responder.needs.social=clamp((Number(responder.needs?.social)||0)-E.rand(8,15),0,100);E.addNoise?.(requester.position,8,2,'talk');return id;}
