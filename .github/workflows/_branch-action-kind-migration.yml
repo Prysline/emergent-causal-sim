@@ -1,0 +1,92 @@
+name: Branch action.kind cleanup
+on:
+  push:
+    branches: [refactor/remove-action-intent-compat]
+permissions:
+  contents: write
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/remove-action-intent-compat
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rewrite Action terminology to canonical kind only
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const must=(s,oldText,newText,label)=>{
+            if(!s.includes(oldText))throw new Error(`missing expected text: ${label}`);
+            return s.replace(oldText,newText);
+          };
+
+          let p='src/engine.js',s=fs.readFileSync(p,'utf8');
+          s=must(s,"a?.action?.intent==='sleep'","a?.action?.kind==='sleep'",'isSleeping');
+          s=must(s,"a=>a.action?.intent==='externalSupply'","a=>a.action?.kind==='externalSupply'",'activeSupplyActor');
+          s=must(s,"const base={intent:choice.id,phase:'start',started:state.tick,wait:0};","const base={kind:choice.id,phase:'start',started:state.tick,wait:0};",'buildAction base');
+          s=must(s,"    if(action&&window.SimEngine?.installActionKind)window.SimEngine.installActionKind(action);return action;","    return action;",'buildAction compatibility install');
+          s=must(s,"{actor:a.id,action:'abort',intent:a.action?.intent||''}","{actor:a.id,action:'abort',actionKind:a.action?.kind||''}",'abort event metadata');
+          s=s.replaceAll('p.intent','p.kind');
+          s=must(s,"a.action?.intent!=='externalSupply'","a.action?.kind!=='externalSupply'",'offMap guard');
+          if(/\baction\?\.intent\b|\bp\.intent\b|\baction\.intent\b/.test(s))throw new Error('engine still contains Action intent lexical dependency');
+          fs.writeFileSync(p,s);
+
+          p='src/action-runtime-v1120.js';
+          fs.writeFileSync(p,`(() => {\n  const E=window.SimEngine,W=window.SimWorld;if(!E||!W)return;\n  const VERSION=W.ACTION_SCHEMA_VERSION||'11.12.0-action-terminology';\n  function actionKind(action){return action?.kind??null;}\n  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,actionKind});\n})();\n`);
+
+          p='src/intent-runtime-v1121.js';s=fs.readFileSync(p,'utf8');
+          s=s.replace("    if(E.installActionKind)E.installActionKind(action);\n",'');
+          fs.writeFileSync(p,s);
+
+          p='src/intent-runtime-v1123.js';s=fs.readFileSync(p,'utf8');
+          s=s.replaceAll('E.installActionKind?.(action);','');
+          fs.writeFileSync(p,s);
+
+          p='src/intent-runtime-v1124.js';s=fs.readFileSync(p,'utf8');
+          s=s.replace('    E.installActionKind?.(nextAction);\n','');
+          fs.writeFileSync(p,s);
+
+          p='src/state-validator-v1120.js';
+          fs.writeFileSync(p,`(() => {\n  const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.actionKind)return;\n  const baseValidate=V.validateState;\n\n  function validateState(st){\n    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});\n    for(const a of Object.values(st?.agents||{})){\n      const action=a.action;if(!action)continue;\n      if(!action.kind)add('action_kind_missing',\`${'${a.name}'} 的 action 缺少 canonical kind。\`,{agentId:a.id});\n      if(Object.prototype.hasOwnProperty.call(action,'intent'))add('legacy_action_intent_present',\`${'${a.name}'} 的 action 仍含有已廢除的 intent 欄位；Action type 只能使用 kind。\`,{agentId:a.id});\n    }\n    return {...base,issueCount:issues.length,issues,ok:issues.length===0};\n  }\n\n  V.validateState=validateState;\n})();\n`);
+
+          p='tests/action-terminology.mjs';
+          fs.writeFileSync(p,`import fs from 'node:fs';\nimport vm from 'node:vm';\nimport assert from 'node:assert/strict';\n\nglobalThis.window=globalThis;\nfor(const file of ['world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js','action-schema-v1120.js','engine.js','engine-spatial-v1114.js','action-runtime-v1120.js','state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js']){\n  vm.runInThisContext(fs.readFileSync(new URL(\`../src/${'${file}'}\`,import.meta.url),'utf8'),{filename:file});\n}\n\nconst E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;\nconst noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,\`${'${label}'}: ${'${v.issues.map(x=>x.code+\': \'+x.message).join(\' | \')}'}\`);};\n\nE.reset(20260911);\nlet st=E.getState();\nassert.equal(st.version,'11.12.0-action-terminology');\nassert.equal(E.VERSION,'11.12.0-action-terminology');\nassert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');\nnoIssues('reset');\n\n// Engine-created actions persist canonical kind only. No compatibility alias is installed.\nfor(let i=0;i<20&&!Object.values(st.agents).some(a=>a.action);i++)E.tick();\nconst active=Object.values(st.agents).find(a=>a.action);\nassert.ok(active?.action,'simulation should create an action');\nassert.ok(active.action.kind,'action must persist canonical kind');\nassert.equal(Object.prototype.hasOwnProperty.call(active.action,'intent'),false,'Action must not expose legacy intent property');\nassert.ok(Object.keys(active.action).includes('kind'),'kind must be part of persistent action state');\nassert.ok(!JSON.stringify(active.action).includes('\\"intent\\"'),'serialized action must not store legacy intent');\nassert.equal(E.actionKind(active.action),active.action.kind,'actionKind accessor reads canonical kind only');\nnoIssues('engine-created action');\n\n// Legacy injected Action is invalid rather than migrated; there is no save/session migration contract.\nE.reset(20260911);\nst=E.getState();\nconst legacy=st.agents.orange;\nlegacy.action={intent:'wander',phase:'move',started:st.tick,wait:0,targetTile:{x:3,y:6}};\nassert.equal(E.actionKind(legacy.action),null,'actionKind must not fall back to removed intent terminology');\nlet validation=V.validateState(st);\nassert.ok(validation.issues.some(x=>x.code==='action_kind_missing'),'legacy-only action must fail missing-kind validation');\nassert.ok(validation.issues.some(x=>x.code==='legacy_action_intent_present'),'legacy intent property must be rejected, not migrated');\nlegacy.action=null;\nnoIssues('legacy state removed');\n\n// Canonical kind directly drives core sleep and labels without an alias layer.\nE.reset(20260911);\nst=E.getState();\nconst sleeper=st.agents.zhen,slot=SP.getSlot(st,'bed:left');\nsleeper.position={...slot.position};\nsleeper.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};\nsleeper.action={kind:'sleep',phase:'sleeping',started:st.tick,sleepTicks:3,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}}};\nassert.equal(E.isSleeping(sleeper),true,'canonical kind should directly drive sleep helper');\nassert.ok(E.actionLabel(sleeper).startsWith('睡眠'),'actionLabel should directly read canonical kind');\nassert.equal(Object.prototype.hasOwnProperty.call(sleeper.action,'intent'),false);\nnoIssues('canonical helper');\n\n// Abort metadata uses actionKind directly; no runtime event normalization is required.\nE.reset(20260911);\nst=E.getState();\nconst actor=st.agents.zhen;\nactor.action={kind:'talk',phase:'move',started:st.tick,wait:0,targetAgent:'missing-agent'};\nE.tick();\nconst abort=st.events.find(e=>e.data?.action==='abort');\nassert.ok(abort,'invalid target should produce an abort event');\nassert.equal(abort.data.actionKind,'talk');\nassert.equal(Object.prototype.hasOwnProperty.call(abort.data,'intent'),false,'abort event must not use overloaded intent key');\nnoIssues('event terminology');\n\n// Long-run state remains valid and every live action stays kind-only.\nE.reset(77);\nfor(let i=0;i<500;i++){\n  E.tick();\n  for(const a of Object.values(E.getState().agents))if(a.action){\n    assert.ok(a.action.kind,\`${'${a.name}'} live action missing kind at tick ${'${E.getState().tick}'}\`);\n    assert.equal(Object.prototype.hasOwnProperty.call(a.action,'intent'),false,\`${'${a.name}'} live action exposed legacy intent at tick ${'${E.getState().tick}'}\`);\n  }\n  noIssues(\`tick ${'${i+1}'}\`);\n}\n\nconsole.log('v11.12.0 canonical action.kind terminology regression: ok');\n`);
+
+          p='tests/action-construction.mjs';s=fs.readFileSync(p,'utf8');
+          s=s.replace("assert.ok(!Object.keys(eat).includes('intent'),'constructed Action should expose canonical kind after Action runtime normalization');","assert.equal(Object.prototype.hasOwnProperty.call(eat,'intent'),false,'constructed Action must use canonical kind directly');");
+          s=s.replace("human.action={kind:'wander',phase:'move',started:0,wait:0,targetTile:{x:2,y:6},oneShot:true};E.installActionKind(human.action);","human.action={kind:'wander',phase:'move',started:0,wait:0,targetTile:{x:2,y:6},oneShot:true};");
+          fs.writeFileSync(p,s);
+
+          p='tests/runtime-hook-pipeline.mjs';s=fs.readFileSync(p,'utf8');
+          s=s.replace("  'intent.reconcile-before',\n  'action.normalize-before',\n  'spatial.capture'","  'intent.reconcile-before',\n  'spatial.capture'");
+          s=s.replace("  'spatial.effects',\n  'action.normalize-after',\n  'intent.reconcile-after'","  'spatial.effects',\n  'intent.reconcile-after'");
+          s=s.replace("assert.deepEqual(ids('afterReset'),[\n  'action.normalize-reset',\n  'intent.normalize-reset',","assert.deepEqual(ids('afterReset'),[\n  'intent.normalize-reset',");
+          fs.writeFileSync(p,s);
+
+          // Architecture guard: no runtime source may depend on the removed compatibility installer.
+          const srcFiles=fs.readdirSync('src').filter(f=>f.endsWith('.js'));
+          const installerRefs=[];
+          for(const f of srcFiles){const t=fs.readFileSync(`src/${'${f}'}`,'utf8');if(t.includes('installActionKind'))installerRefs.push(f);}
+          if(installerRefs.length)throw new Error(`installActionKind remains in: ${'${installerRefs.join(", ")}'}`);
+          NODE
+
+          rm .github/workflows/_branch-action-kind-migration.yml
+          node --check src/engine.js
+          node --check src/action-runtime-v1120.js
+          node tests/action-terminology.mjs
+          node tests/action-construction.mjs
+          node tests/runtime-hook-pipeline.mjs
+      - name: Commit transformed branch
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Refactor Action runtime to canonical kind only"
+          git push origin HEAD:refactor/remove-action-intent-compat
