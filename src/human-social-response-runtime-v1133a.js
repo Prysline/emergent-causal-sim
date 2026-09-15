@@ -106,7 +106,8 @@
   function addTalkOffer(st,requester,responder,position){
     const id=E.addEvent(`${requester.name}走近${responder.name}，開口示意想聊幾句。`,'normal',[],{
       actor:requester.id,target:responder.id,action:'talkOffer',position,
-      socialBid:true,bidKind:'talkOffer',bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true
+      socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,
+      bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true
     });
     const event=st.causes?.[id];if(event?.data)event.data.bidId=id;
     return id;
@@ -168,24 +169,6 @@
     }
   }
 
-  function canObserveResponderContext(st,requester,responder){
-    if(!requester||!responder||requester.offMap||responder.offMap||E.isSleeping?.(requester)||!requester.position||!responder.position)return false;
-    const rr=SP.roomAt?.(st,requester.position),tr=SP.roomAt?.(st,responder.position);if(rr&&tr&&rr!==tr)return false;
-    return (SP.manhattan?.(requester.position,responder.position)??Infinity)<=4;
-  }
-  function newEventsSince(st,marker){const out=[];for(const e of st.events||[]){if(marker&&e.id===marker)break;out.push(e);}return out;}
-  function annotateNoResponseContexts(st,marker){
-    for(const e of newEventsSince(st,marker)){
-      if(e.data?.action!=='socialWaitEnded'||!e.data?.bidId)continue;
-      const bid=E.bidEvent?.(st,e.data.bidId);if(!bid||bid.data?.bidKind!=='talkOffer')continue;
-      e.data.bidKind='talkOffer';
-      const requester=st.agents?.[e.data.actor],responder=st.agents?.[bid.data.bidTo];
-      if(!canObserveResponderContext(st,requester,responder)){e.data.responderContextObserved=false;continue;}
-      e.data.responderContextObserved=true;
-      e.data.observedResponderActionKind=actionKind(responder);
-      e.data.observedResponderPosture=responder?.posture?.kind||null;
-    }
-  }
   function noResponseInterpretationWeight(waitEvent){
     const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;
     if(d.responderContextObserved!==true)return .22;
@@ -209,11 +192,10 @@
   }
 
   E.tick=(...args)=>{
-    const before=E.getState(),marker=before.events?.[0]?.id||null,pendingOffers=capturePendingTalkOffers(before);
+    const before=E.getState(),pendingOffers=capturePendingTalkOffers(before);
     emitTalkOffers(before,pendingOffers);
     promoteTalkResponses(before);
     const result=baseTick(...args),after=E.getState();
-    annotateNoResponseContexts(after,marker);
     resolveTalkResponses(after);
     E.reconcileIntents?.(after);
     return result;

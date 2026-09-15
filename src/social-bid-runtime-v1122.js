@@ -1,8 +1,10 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld;if(!E||!W)return;
+  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
   const VERSION=W.SOCIAL_BID_SCHEMA_VERSION||'11.12.2-social-bid-lifecycle';
   const baseTick=E.tick,baseReset=E.reset;
   const BID_MEMORY_TICKS=6,REQUESTER_PATIENCE_TICKS=3;
+  const INTERACTION_BY_BID_KIND=Object.freeze({talkOffer:'talk',catAffection:'socialAffection',petOffer:'pet'});
+  const actionKind=a=>E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;
   if(E.INTENT_ZH){E.INTENT_ZH.awaitResponse='等待社交回應';E.INTENT_ZH.respondSocialBid='回應社交邀請';}
 
   function normalizeSocialState(st){
@@ -13,6 +15,7 @@
     return st;
   }
   function bidEvent(st,bidId){const e=st?.causes?.[bidId];return e?.data?.socialBid===true?e:null;}
+  function socialBidInteractionKind(bid){return bid?.data?.interactionKind||INTERACTION_BY_BID_KIND[bid?.data?.bidKind]||null;}
   function newEventsSince(st,marker){const out=[];for(const e of st.events||[]){if(marker&&e.id===marker)break;out.push(e);}return out;}
   function addObservedBid(st,a,bid,observedTick=st.tick){
     if(!a||!bid)return null;
@@ -59,7 +62,7 @@
   function annotateNewBids(st,newEvents){
     for(const e of newEvents){
       if(e.data?.action!=='seekHuman'||!e.data?.actor||!e.data?.target)continue;
-      e.data.socialBid=true;e.data.bidId=e.id;e.data.bidKind='catAffection';e.data.bidFrom=e.data.actor;e.data.bidTo=e.data.target;
+      e.data.socialBid=true;e.data.bidId=e.id;e.data.bidKind='catAffection';e.data.interactionKind='socialAffection';e.data.expectsResponse=true;e.data.bidFrom=e.data.actor;e.data.bidTo=e.data.target;
       const requester=st.agents[e.data.actor],target=st.agents[e.data.target],compat=target?.pendingInteraction;
       const perceived=!!(target&&compat?.type==='cat_request'&&compat.from===requester?.id);
       e.data.perceivedByTarget=perceived;
@@ -89,11 +92,28 @@
       if(requester?.activeIntent?.kind==='awaitResponse'&&requester.activeIntent.source?.bidId===bidId)requester.activeIntent=null;
     }
   }
+  function canObserveResponderContext(st,requester,responder){
+    if(!requester||!responder||requester.offMap||responder.offMap||E.isSleeping?.(requester)||!requester.position||!responder.position)return false;
+    const rr=SP.roomAt?.(st,requester.position),tr=SP.roomAt?.(st,responder.position);if(rr&&tr&&rr!==tr)return false;
+    return (SP.manhattan?.(requester.position,responder.position)??Infinity)<=4;
+  }
+  function privateWaitData(st,a,intent,bid){
+    const data={actor:a.id,action:'socialWaitEnded',bidId:bid?.id||intent.source?.bidId||null,intentId:intent.id,visibility:'private',owner:a.id};
+    if(!bid)return data;
+    data.bidKind=bid.data?.bidKind||null;
+    data.interactionKind=socialBidInteractionKind(bid);
+    const responder=bid.data?.bidTo&&st.agents?.[bid.data.bidTo];
+    if(!canObserveResponderContext(st,a,responder)){data.responderContextObserved=false;return data;}
+    data.responderContextObserved=true;
+    data.observedResponderActionKind=actionKind(responder);
+    data.observedResponderPosture=responder?.posture?.kind||null;
+    return data;
+  }
   function expirePrivateWaiting(st){
     for(const a of Object.values(st.agents||{})){
       const intent=a.activeIntent;if(intent?.kind!=='awaitResponse'||intent.lifecycle!=='open'||st.tick<intent.patienceUntilTick)continue;
-      const bidId=intent.source?.bidId;
-      E.addEvent(`${a.name}等了一會兒，沒有得到立即回應，便不再等了。`,'normal',bidId?[bidId]:[],{actor:a.id,action:'socialWaitEnded',bidId,intentId:intent.id,visibility:'private',owner:a.id});
+      const bidId=intent.source?.bidId,bid=bidId&&bidEvent(st,bidId);
+      E.addEvent(`${a.name}等了一會兒，沒有得到立即回應，便不再等了。`,'normal',bidId?[bidId]:[],privateWaitData(st,a,intent,bid));
       a.activeIntent=null;
     }
   }
@@ -121,5 +141,5 @@
   E.reset=(...args)=>normalizeSocialState(baseReset(...args));
 
   normalizeSocialState(E.getState());
-  Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,bidEvent,observedBidRefs,newestObservedCatBid,addObservedBid});
+  Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,INTERACTION_BY_BID_KIND,bidEvent,socialBidInteractionKind,observedBidRefs,newestObservedCatBid,addObservedBid,canObserveSocialResponderContext:canObserveResponderContext});
 })();

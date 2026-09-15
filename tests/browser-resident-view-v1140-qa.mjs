@@ -86,6 +86,8 @@ await page.click('[data-v1140-tab="recent"]');
 const recent=await snapshot();
 assert.equal(recent.activeTab,'recent');
 assert.ok(recent.residentText.includes('最近發生的事'));
+assert.ok(recent.residentText.includes('自己的經驗・老周等了一會兒，沒有得到立即回應，便不再等了。'),'requester-private wait end should be visible only as the resident own experience');
+assert.ok(!recent.residentText.includes('故意忽略'),'private recent experience must not invent responder intent');
 assert.ok(recent.docWidth<=recent.width+1,`desktop overflow: ${recent.docWidth}>${recent.width}`);
 
 await page.setViewportSize({width:390,height:844});
@@ -96,8 +98,20 @@ assert.equal(mobile.residentVisible,true);
 assert.equal(mobile.inspectorActive,true,'mobile Agent selection should open inspector view');
 assert.equal(mobile.navActive,true,'mobile inspector nav should be active');
 assert.ok(mobile.residentText.includes('疲勞')&&mobile.residentText.includes('睡意'));
+const mobileStateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+await page.click('[data-v1140-mode="debug"]');
+await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
+const mobileDebug=await snapshot();
+const mobileStateAfterDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');
+assert.equal(mobileDebug.activeMode,'debug');
+assert.equal(mobileDebug.debugVisible,true);
+assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');
+await page.click('[data-v1140-mode="resident"]');
 await page.click('[data-v1140-tab="memory"]');
 mobile=await snapshot();
+const mobileStateAfterMemory=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+assert.equal(mobileStateAfterMemory,mobileStateBefore,'mobile Resident tab switch must not mutate simulation state');
 assert.ok(mobile.residentText.includes('當時沒有得到回應'));
 assert.ok(!mobile.residentText.includes('故意忽略'));
 assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);
@@ -105,8 +119,46 @@ assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>$
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
 await page.screenshot({path:`${outDir}/mobile-resident-memory.png`,fullPage:true});
 
+await page.evaluate(()=>{
+  const E=window.SimEngine,st=E.getState(),cat=st.agents.orange,human=st.agents.zhou;
+  cat.offMap=false;cat.position={x:5,y:5};human.offMap=false;human.position={x:5,y:6};cat.episodicMemories=[];
+  const bidId=E.addEvent('橘子主動靠近老周，想和他親近。','normal',[],{
+    actor:cat.id,target:human.id,action:'seekHuman',socialBid:true,bidKind:'catAffection',interactionKind:'socialAffection',expectsResponse:true,
+    bidFrom:cat.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef?.(cat.position)||null
+  });
+  st.causes[bidId].data.bidId=bidId;
+  const waitId=E.addEvent('橘子等了一會兒，沒有得到立即回應，便不再等了。','normal',[bidId],{
+    actor:cat.id,action:'socialWaitEnded',bidId,bidKind:'catAffection',interactionKind:'socialAffection',visibility:'private',owner:cat.id,
+    responderContextObserved:true,observedResponderActionKind:null,observedResponderPosture:'standing'
+  });
+  E.rememberRequesterSocialOutcome(st,st.causes[waitId]);
+  document.querySelector('[data-entity="agent:orange"]')?.click();
+});
+await page.waitForFunction(()=>document.querySelector('[data-v1140-resident-view]')?.innerText.includes('橘子'));
+await page.click('[data-v1140-tab="recent"]');
+const catRecent=await snapshot();
+assert.ok(catRecent.residentText.includes('自己的經驗・橘子等了一會兒，沒有得到立即回應，便不再等了。'),'animal requester private wait end should appear in own recent view');
+await page.click('[data-v1140-tab="memory"]');
+const catMemory=await snapshot();
+assert.ok(catMemory.residentText.includes('曾向老周發起親近互動，但當時沒有得到回應。'),`animal requester memory should use interaction semantics: ${catMemory.residentText}`);
+assert.ok(!catMemory.residentText.includes('故意忽略'),'animal memory must not invent intentional ignoring');
+assert.ok(!catMemory.residentText.includes('聊天邀請'),'animal memory must not be mislabeled as human chat');
+assert.equal(catMemory.validator.issueCount,0,`animal mobile validator: ${catMemory.validator.issues.map(x=>x.code).join(', ')}`);
+await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPage:true});
+
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
-fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.14.0 browser resident view QA: desktop/mobile pass');
+fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({
+  ok:true,
+  desktop:{...desktop,residentText:undefined,debugText:undefined},
+  debug:{...debug,residentText:undefined,debugText:undefined},
+  memoryView:{...memoryView,residentText:undefined,debugText:undefined},
+  recent:{...recent,residentText:undefined,debugText:undefined},
+  mobile:{...mobile,residentText:undefined,debugText:undefined},
+  mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},
+  catRecent:{...catRecent,residentText:undefined,debugText:undefined},
+  catMemory:{...catMemory,residentText:undefined,debugText:undefined},
+  pageErrors,consoleErrors
+},null,2));
+console.log('v11.14.0 browser resident view QA: desktop/mobile state-inert + animal private experience pass');
 await browser.close();

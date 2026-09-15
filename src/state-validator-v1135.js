@@ -15,7 +15,7 @@
         if(m?.episodeKind!=='privateSocialOutcome')continue;
         const x=m.experienced;
         if(!x||typeof x!=='object'||x.kind!=='socialNoResponse')add('private_social_outcome_projection_invalid',`${a.name} 的 private social outcome 缺少 experienced projection。`,{agentId:a.id,memoryId:m?.id});
-        if(!x?.bidId||x.bidKind!=='talkOffer'||!x.counterpartId||x.counterpartId===a.id)add('private_social_outcome_identity_invalid',`${a.name} 的 private social outcome bid/counterpart 無效。`,{agentId:a.id,memoryId:m?.id,experienced:x});
+        if(!x?.bidId||!x?.interactionKind||!x.counterpartId||x.counterpartId===a.id)add('private_social_outcome_identity_invalid',`${a.name} 的 private social outcome bid / interaction / counterpart 無效。`,{agentId:a.id,memoryId:m?.id,experienced:x});
         if(!Number.isInteger(x?.waitedTicks)||x.waitedTicks<0)add('private_social_outcome_wait_invalid',`${a.name} 的 private social outcome waitedTicks 無效。`,{agentId:a.id,memoryId:m?.id,waitedTicks:x?.waitedTicks});
         if(typeof x?.responderContextObserved!=='boolean'||!CONTEXTS.has(x?.contextKind))add('private_social_outcome_context_invalid',`${a.name} 的 private social outcome context 無效。`,{agentId:a.id,memoryId:m?.id,experienced:x});
         if(x?.responderContextObserved!==true&&(x?.observedResponderActionKind!=null||x?.observedResponderPosture!=null))add('private_social_outcome_unobserved_leak',`${a.name} 看不到 responder context 時不應保存 responder action/posture。`,{agentId:a.id,memoryId:m?.id});
@@ -27,8 +27,8 @@
         if(Number.isFinite(expected)&&Math.abs((Number(p?.goalCongruence)||0)-expected)>.001)add('private_social_outcome_congruence_mismatch',`${a.name} 的 no-response appraisal 應只依 audited observable-context band。`,{agentId:a.id,memoryId:m?.id,expected,actual:p?.goalCongruence});
         const source=st.causes?.[m.sourceEventId];
         if(source&&(source.data?.action!=='socialWaitEnded'||source.data?.visibility!=='private'||source.data?.owner!==a.id||source.data?.actor!==a.id||source.data?.bidId!==x?.bidId))add('private_social_outcome_source_invalid',`${a.name} 的 private outcome source 若仍在 hot cause state，必須是自己的 socialWaitEnded。`,{agentId:a.id,memoryId:m?.id,sourceEventId:m.sourceEventId});
-        const bid=E.bidEvent?.(st,x?.bidId);
-        if(bid&&(bid.data?.bidKind!=='talkOffer'||bid.data?.bidFrom!==a.id||bid.data?.bidTo!==x?.counterpartId))add('private_social_outcome_bid_invalid',`${a.name} 的 private outcome 必須指向自己發出的 talkOffer。`,{agentId:a.id,memoryId:m?.id,bidId:x?.bidId});
+        const bid=E.bidEvent?.(st,x?.bidId),interactionKind=E.socialBidInteractionKind?.(bid)||bid?.data?.interactionKind||null;
+        if(bid&&(bid.data?.bidFrom!==a.id||bid.data?.bidTo!==x?.counterpartId||bid.data?.expectsResponse===false||interactionKind!==x?.interactionKind))add('private_social_outcome_bid_invalid',`${a.name} 的 private outcome 必須指向自己發出的、期待回應且 interaction semantics 一致的 Social Bid。`,{agentId:a.id,memoryId:m?.id,bidId:x?.bidId});
         const waitSeq=eventSequence(m.sourceEventId);
         const conflictingResponse=x?.bidId&&Object.values(st.causes||{}).find(e=>{
           if(e?.data?.responseToBid!==x.bidId)return false;

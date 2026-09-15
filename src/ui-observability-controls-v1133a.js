@@ -1,6 +1,6 @@
 (() => {
-  const E=window.SimEngine,SP=window.SimSpatial;
-  if(!E||!SP)return;
+  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld;
+  if(!E||!SP||!W)return;
 
   const VERSION='11.13.3a-observability-controls';
   const RESPONSE_ACTIONS=new Set(['acceptTalk','briefTalkReply','declineTalk']);
@@ -12,6 +12,10 @@
 
   function agentName(id,fallback='對方'){
     return E.getState()?.agents?.[id]?.name||fallback;
+  }
+  function interactionName(bid){
+    const kind=E.socialBidInteractionKind?.(bid)||bid?.data?.interactionKind||null;
+    return W.interactionLabel?.(kind)||kind||'互動';
   }
   function clearerSocialText(text,data={}){
     const actor=agentName(data.actor,'對方'),target=agentName(data.target,'對方');
@@ -55,7 +59,7 @@
     if(p&&E.actionKind?.(p)==='talk'&&p.phase==='respondBid'&&p.responseToBid)return `回應${agentName(p.targetAgent)}的聊天邀請`;
     if(!p&&a?.activeIntent?.kind==='awaitResponse'){
       const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(E.getState(),bidId),targetId=bid?.data?.bidTo;
-      return `等待${agentName(targetId)}回應聊天邀請`;
+      return `等待${agentName(targetId)}對「${interactionName(bid)}」作出回應`;
     }
     if(!p){
       const record=recentSocialByAgent.get(a?.id),tick=E.getState()?.tick??0;
