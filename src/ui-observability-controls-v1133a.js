@@ -8,7 +8,7 @@
   const recentSocialByAgent=new Map();
   const baseAddEvent=E.addEvent,baseActionLabel=E.actionLabel,baseTick=E.tick,baseReset=E.reset;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   function agentName(id,fallback='對方'){
     return E.getState()?.agents?.[id]?.name||fallback;
