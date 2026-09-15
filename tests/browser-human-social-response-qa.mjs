@@ -19,7 +19,11 @@ async function openScenario(scenario){
   }));
 }
 async function step(){await page.click('#step');}
-async function showFullTimeline(){await page.click('[data-logmode="full"]');}
+async function showFullTimeline(){
+  const mobileTimeline=page.locator('.mobile-nav [data-tab="timeline"]');
+  if(await mobileTimeline.isVisible())await mobileTimeline.click();
+  await page.click('[data-logmode="full"]');
+}
 async function snapshot(){
   return page.evaluate(()=>{
     const E=window.SimEngine,st=E.getState();
