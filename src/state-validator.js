@@ -46,7 +46,7 @@
           const list=bySlot.get(slot.id)||[];list.push(a.id);bySlot.set(slot.id,list);
         }
       }else if(a.posture?.kind==='sitting')add('sitting_without_slot',`${a.name}標記 sitting 卻沒有 slot。`,{agentId:a.id});
-      if(a.action?.intent==='sleep'&&a.action.phase==='sleeping'){
+      if(a.action?.kind==='sleep'&&a.action.phase==='sleeping'){
         const slot=usesSlot?SP.getSlot(st,a.posture.slotId):null;
         if(a.posture?.kind!=='lying'||!slot?.canSleep)add('sleep_posture_invalid',`${a.name}正在 sleeping，但沒有躺在可睡眠 slot。`,{agentId:a.id,slotId:a.posture?.slotId||null});
       }
@@ -55,8 +55,8 @@
         const owners=heldByContainer.get(a.held)||[];owners.push(a.id);heldByContainer.set(a.held,owners);
         const effective=SP.objectPosition(st,a.held);if(effective&&!a.offMap&&!SP.same(effective,a.position))add('held_position_mismatch',`${a.name}持有的 ${a.held} 有效位置與角色不一致。`,{agentId:a.id,containerId:a.held});
       }
-      if(a.action&&(!a.action.intent||!a.action.phase))add('invalid_action',`${a.name}的 action 缺少 intent / phase。`,{agentId:a.id});
-      if(a.action?.intent==='externalSupply'||(a.action?.intent==='restockContainer'&&a.action.strategy==='logisticsContainer')){
+      if(a.action&&(!a.action.kind||!a.action.phase))add('invalid_action',`${a.name}的 action 缺少 kind / phase。`,{agentId:a.id});
+      if(a.action?.kind==='externalSupply'||(a.action?.kind==='restockContainer'&&a.action.strategy==='logisticsContainer')){
         const carrier=a.action.carrierId&&st.containers[a.action.carrierId];
         if(!carrier||!SP.hasRole(carrier,'logisticsContainer'))add('logistics_action_carrier_invalid',`${a.name}的物流行動沒有合法 logisticsContainer。`,{agentId:a.id,carrierId:a.action.carrierId||null});
         const mustHold=['toExit','exit','work','toSource','loadCarrier','toDestination','deposit'].includes(a.action.phase);
@@ -72,7 +72,7 @@
       if(rkey.startsWith('object:')){const oid=rkey.slice(7);if(!st.containers[oid]&&!st.sources[oid])add('reservation_object_missing',`${rkey} 指向不存在的物件。`,{objectId:oid});}
     }
 
-    const supplyActors=Object.values(st.agents||{}).filter(a=>a.action?.intent==='externalSupply');
+    const supplyActors=Object.values(st.agents||{}).filter(a=>a.action?.kind==='externalSupply');
     if(supplyActors.length>1)add('multiple_supply_workers','同時存在多名外出補給者。',{agentIds:supplyActors.map(a=>a.id)});
     const crowdingTiles=[];for(const [position,ids] of byTile)if(ids.length>1)crowdingTiles.push({position,agentIds:[...ids],count:ids.length});
     return {tick:st.tick,issueCount:issues.length,issues,crowdingTiles,ok:issues.length===0};

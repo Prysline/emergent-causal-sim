@@ -17,48 +17,46 @@ assert.equal(E.VERSION,'11.12.0-action-terminology');
 assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
 noIssues('reset');
 
-// Engine-created actions persist canonical kind, while legacy intent survives only as a non-enumerable compatibility alias.
+// Engine-created actions persist canonical kind only. No compatibility alias is installed.
 for(let i=0;i<20&&!Object.values(st.agents).some(a=>a.action);i++)E.tick();
 const active=Object.values(st.agents).find(a=>a.action);
 assert.ok(active?.action,'simulation should create an action');
 assert.ok(active.action.kind,'action must persist canonical kind');
-assert.equal(active.action.intent,active.action.kind,'legacy reads should resolve through compatibility alias');
-assert.ok(!Object.keys(active.action).includes('intent'),'legacy intent alias must not be enumerable/persistent');
+assert.equal(Object.prototype.hasOwnProperty.call(active.action,'intent'),false,'Action must not expose legacy intent property');
 assert.ok(Object.keys(active.action).includes('kind'),'kind must be part of persistent action state');
-assert.ok(!JSON.stringify(active.action).includes('"intent"'),'serialized action must not store duplicate intent truth');
+assert.ok(!JSON.stringify(active.action).includes('"intent"'),'serialized action must not store legacy intent');
+assert.equal(E.actionKind(active.action),active.action.kind,'actionKind accessor reads canonical kind only');
 noIssues('engine-created action');
 
-// Legacy injected action is migrated at the runtime boundary before the base engine executes it.
+// Legacy injected Action is invalid rather than migrated; there is no save/session migration contract.
 E.reset(20260911);
 st=E.getState();
 const legacy=st.agents.orange;
 legacy.action={intent:'wander',phase:'move',started:st.tick,wait:0,targetTile:{x:3,y:6}};
-E.tick();
-if(legacy.action){
-  assert.equal(legacy.action.kind,'wander');
-  assert.equal(legacy.action.intent,'wander');
-  assert.ok(!Object.keys(legacy.action).includes('intent'));
-}
-noIssues('legacy compatibility migration');
+assert.equal(E.actionKind(legacy.action),null,'actionKind must not fall back to removed intent terminology');
+let validation=V.validateState(st);
+assert.ok(validation.issues.some(x=>x.code==='action_kind_missing'),'legacy-only action must fail missing-kind validation');
+assert.ok(validation.issues.some(x=>x.code==='legacy_action_intent_present'),'legacy intent property must be rejected, not migrated');
+legacy.action=null;
+noIssues('legacy state removed');
 
-// Canonical kind works with exported helpers that still call the old core internals underneath.
+// Canonical kind directly drives core sleep and labels without an alias layer.
 E.reset(20260911);
 st=E.getState();
 const sleeper=st.agents.zhen,slot=SP.getSlot(st,'bed:left');
 sleeper.position={...slot.position};
 sleeper.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
 sleeper.action={kind:'sleep',phase:'sleeping',started:st.tick,sleepTicks:3,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}}};
-E.normalizeStateActions(st);
-assert.equal(E.isSleeping(sleeper),true,'canonical kind should drive sleep helper through the compatibility bridge');
-assert.ok(E.actionLabel(sleeper).startsWith('睡眠'),'actionLabel should read canonical kind');
-assert.ok(!Object.keys(sleeper.action).includes('intent'));
-noIssues('canonical helper compatibility');
+assert.equal(E.isSleeping(sleeper),true,'canonical kind should directly drive sleep helper');
+assert.ok(E.actionLabel(sleeper).startsWith('睡眠'),'actionLabel should directly read canonical kind');
+assert.equal(Object.prototype.hasOwnProperty.call(sleeper.action,'intent'),false);
+noIssues('canonical helper');
 
-// Event metadata also stops persisting the overloaded intent key.
+// Abort metadata uses actionKind directly; no runtime event normalization is required.
 E.reset(20260911);
 st=E.getState();
 const actor=st.agents.zhen;
-actor.action={intent:'talk',phase:'move',started:st.tick,wait:0,targetAgent:'missing-agent'};
+actor.action={kind:'talk',phase:'move',started:st.tick,wait:0,targetAgent:'missing-agent'};
 E.tick();
 const abort=st.events.find(e=>e.data?.action==='abort');
 assert.ok(abort,'invalid target should produce an abort event');
@@ -72,9 +70,9 @@ for(let i=0;i<500;i++){
   E.tick();
   for(const a of Object.values(E.getState().agents))if(a.action){
     assert.ok(a.action.kind,`${a.name} live action missing kind at tick ${E.getState().tick}`);
-    assert.ok(!Object.keys(a.action).includes('intent'),`${a.name} persisted legacy intent at tick ${E.getState().tick}`);
+    assert.equal(Object.prototype.hasOwnProperty.call(a.action,'intent'),false,`${a.name} live action exposed legacy intent at tick ${E.getState().tick}`);
   }
   noIssues(`tick ${i+1}`);
 }
 
-console.log('v11.12.0 action terminology regression: ok');
+console.log('v11.12.0 canonical action.kind terminology regression: ok');

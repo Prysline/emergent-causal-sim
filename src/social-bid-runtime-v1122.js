@@ -34,7 +34,7 @@
   function injectWaitingActions(st){
     for(const a of Object.values(st.agents||{})){
       if(a.action||a.activeIntent?.kind!=='awaitResponse'||a.activeIntent.lifecycle!=='open')continue;
-      a.action={kind:'awaitResponse',phase:'waiting',started:a.activeIntent.createdTick,intentId:a.activeIntent.id,__v1122Transient:true};E.installActionKind?.(a.action);
+      a.action={kind:'awaitResponse',phase:'waiting',started:a.activeIntent.createdTick,intentId:a.activeIntent.id,__v1122Transient:true};
     }
   }
   function injectResponderCompatibility(st,injected){

@@ -22,7 +22,6 @@
   }
   function ensureIntentForAction(st,a){
     const action=a?.action;if(!action)return null;
-    if(E.installActionKind)E.installActionKind(action);
     if(!a.activeIntent)a.activeIntent=createIntent(st,a,action);
     if(!action.intentId)action.intentId=a.activeIntent.id;
     return a.activeIntent;

@@ -33,7 +33,7 @@ cat.needs.hunger=5;cat.needs.thirst=5;cat.needs.fatigue=20;cat.needs.sleepNeed=1
 human.needs.hunger=5;human.needs.thirst=5;human.needs.fatigue=60;human.needs.sleepNeed=10;human.needs.social=5;
 human.action={kind:'rest',phase:'resting',started:st.tick,wait:0,restTicks:0,targetFatigue:0,restTarget:{kind:'standing',position:{...human.position},quality:.18,posture:'standing'}};
 cat.action={kind:'seekHuman',phase:'interact',started:st.tick,wait:0,targetAgent:'zhou'};
-E.normalizeStateActions(st);E.reconcileIntents(st);
+E.reconcileIntents(st);
 E.tick();
 st=E.getState();
 const bid=latestBid();
@@ -82,7 +82,7 @@ noIssues('independent requester timeout');
 // The requester can remain nearby doing something else; the already-formed responder Intent may still complete later.
 cat.needs.fatigue=70;
 cat.action={kind:'rest',phase:'resting',started:st.tick,wait:0,restTicks:0,targetFatigue:0,restTarget:{kind:'standing',position:{...cat.position},quality:.18,posture:'standing'}};
-E.normalizeStateActions(st);E.reconcileIntents(st);
+E.reconcileIntents(st);
 let response=null;
 for(let i=0;i<30&&!response;i++){E.tick();response=responseFor(bid.id);}
 assert.ok(response,'responder should be able to complete a late physical response after requester stopped waiting');
@@ -104,7 +104,7 @@ raceCat.activeIntent={id:`intent:orange:0:awaitResponse:${raceBidId}`,kind:'awai
 raceHuman.observedSocialBids=[{bidId:raceBidId,observedTick:0,expiresTick:6}];
 raceHuman.activeIntent={id:`intent:zhou:0:respondSocialBid:${raceBidId}`,kind:'respondSocialBid',createdTick:0,lifecycle:'actionBound',source:{type:'socialBid',bidId:raceBidId,observedTick:0}};
 raceHuman.action={kind:'petCat',phase:'interact',started:0,wait:0,targetAgent:'orange',intentId:raceHuman.activeIntent.id};
-E.installActionKind(raceHuman.action);
+
 noIssues('race setup');
 E.tick();
 st=E.getState();

@@ -38,7 +38,7 @@ E.reset(20260911);
 st=E.getState();
 const eater=st.agents.zhen;
 eater.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};
-E.normalizeStateActions(st);
+
 E.reconcileIntents(st);
 assert.equal(eater.activeIntent.kind,'satisfyHunger');
 assert.equal(eater.action.kind,'eat');
@@ -51,7 +51,7 @@ E.reset(20260911);
 st=E.getState();
 const cat=st.agents.orange;
 cat.action={kind:'groom',phase:'groom',started:st.tick,wait:0};
-E.normalizeStateActions(st);
+
 E.tick();
 assert.equal(cat.action,null,'groom should finish');
 assert.equal(cat.activeIntent,null,'finished action must not leave stale Active Intent in the 1:1 foundation');
@@ -63,7 +63,7 @@ st=E.getState();
 const walker=st.agents.orange;
 walker.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{x:9,y:6}};
 walker.needs.thirst=99;
-E.normalizeStateActions(st);
+
 E.tick();
 if(walker.action){
   assert.equal(walker.action.kind,'wander','v11.12.1 must not introduce emergency preemption yet');
