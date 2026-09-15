@@ -94,7 +94,7 @@ assert.equal(a.relationships,undefined,'v11.13.4 must not create Relationship st
 noIssues('affect and responder-score boundary');
 
 // Strong social need and only one target must not become a hard blacklist.
-E.reset(31340);st=E.getState();a=st.agents.zhen;calm(a,{social:96});st.agents.orange.offMap=true;st.agents.zhou.position={x:5,y:6};a.position={x:5,y:5};
+E.reset(31340);st=E.getState();st.tick=2;a=st.agents.zhen;calm(a,{social:96});st.agents.orange.offMap=true;st.agents.zhou.position={x:5,y:6};a.position={x:5,y:5};
 a.episodicMemories=[
   memory(a,'only-neg:1',{tick:0,relevance:1,congruence:-1,actorId:'zhou'}),
   memory(a,'only-neg:2',{tick:1,relevance:1,congruence:-1,actorId:'zhou'}),
