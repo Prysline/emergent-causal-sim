@@ -90,25 +90,13 @@
     return cost;
   }
   function buildAction(st,a,c){
-    const base={kind:c.actionKind,phase:'start',started:st.tick,wait:0};
-    switch(c.actionKind){
-      case'eat':return {...base,phase:'prepare'};
-      case'drinkWater':case'drinkAlcohol':{
-        const resource=c.actionKind==='drinkWater'?'water':'alcohol';
-        if(a.kind==='cat'){
-          const src=drinkableContainer(st,a,resource);return src?{...base,phase:'move',targetObject:src.id,resource}:null;
-        }
-        return {...base,phase:'chooseVessel',resource};
-      }
-      case'rest':return {...base,phase:'chooseSurface',restTicks:0};
-      case'sleep':return {...base,phase:'chooseSurface',sleepTicks:0};
-      case'talk':{const other=c.targetAgent?st.agents?.[c.targetAgent]:nearestAgent(st,a,'human',{awakeOnly:true});return other&&!other.offMap?{...base,phase:'move',targetAgent:other.id}:null;}
-      case'petCat':{const cat=c.targetAgent?st.agents?.[c.targetAgent]:nearestAgent(st,a,'cat');return cat&&!cat.offMap?{...base,phase:'move',targetAgent:cat.id}:null;}
-      case'seekHuman':{const human=c.targetAgent?st.agents?.[c.targetAgent]:nearestAgent(st,a,'human');return human&&!human.offMap?{...base,phase:'move',targetAgent:human.id}:null;}
-      case'cleanFloor':{const t=SP.wettestTile?.(st);return t?{...base,phase:'move',targetTile:{x:t.x,y:t.y}}:null;}
-      case'groom':return {...base,phase:'groom'};
-      default:return null;
+    if(!E.buildAction)return null;
+    const choice={id:c.actionKind};
+    if(c.targetAgent)choice.targetAgent=c.targetAgent;
+    if((c.actionKind==='drinkWater'||c.actionKind==='drinkAlcohol')&&a.kind==='cat'){
+      const resource=c.actionKind==='drinkWater'?'water':'alcohol',src=drinkableContainer(st,a,resource);if(!src)return null;choice.targetObject=src.id;
     }
+    return E.buildAction(a,choice);
   }
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
   function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
