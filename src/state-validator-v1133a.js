@@ -14,7 +14,8 @@
       }
       for(const m of a.episodicMemories||[]){
         const source=st.causes?.[m.sourceEventId];
-        if(source?.data?.action==='socialWaitEnded')add('no_response_memory_boundary_violation',`${a.name} 不應把 private socialWaitEnded 直接當成 episodic world memory。`,{agentId:a.id,memoryId:m.id,eventId:m.sourceEventId});
+        const validPrivateOutcome=E.SOCIAL_OUTCOME_MEMORY_SCHEMA_VERSION&&m?.episodeKind==='privateSocialOutcome'&&m?.experienced?.kind==='socialNoResponse';
+        if(source?.data?.action==='socialWaitEnded'&&!validPrivateOutcome)add('no_response_memory_boundary_violation',`${a.name} 不應把 private socialWaitEnded 直接當成 episodic world memory。`,{agentId:a.id,memoryId:m.id,eventId:m.sourceEventId});
       }
     }
 

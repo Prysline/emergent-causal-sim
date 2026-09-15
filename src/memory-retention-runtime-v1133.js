@@ -10,6 +10,10 @@
   const round=v=>Math.round(v*1000)/1000;
 
   function memorySignature(m){
+    if(m?.episodeKind==='privateSocialOutcome'){
+      const x=m.experienced||{};
+      return `privateSocialOutcome|${x.kind||''}|${x.counterpartId||''}`;
+    }
     const o=m?.observed||{};
     return `${o.action||''}|${o.actorId||''}|${o.targetId||''}`;
   }

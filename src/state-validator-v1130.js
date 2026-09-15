@@ -19,8 +19,14 @@
         if(sources.has(m.sourceEventId))add('episodic_memory_duplicate_source',`${a.name} 對同一 source event 不應保存多筆 episodic memory。`,{agentId:a.id,sourceEventId:m.sourceEventId});sources.add(m.sourceEventId);
         if(!Number.isInteger(m.observedTick)||m.observedTick<0||m.observedTick>st.tick)add('episodic_memory_observed_tick_invalid',`${a.name} 的 observedTick 無效。`,{agentId:a.id,memoryId:m.id,observedTick:m.observedTick});
         if(!Number.isInteger(m.lastObservedTick)||m.lastObservedTick<m.observedTick||m.lastObservedTick>st.tick)add('episodic_memory_last_observed_tick_invalid',`${a.name} 的 lastObservedTick 無效。`,{agentId:a.id,memoryId:m.id,lastObservedTick:m.lastObservedTick});
-        const o=m.observed;if(!o||typeof o!=='object'||typeof o.action!=='string'||!o.action)add('episodic_memory_projection_invalid',`${a.name} 的 episodic memory 缺少 minimal observable projection。`,{agentId:a.id,memoryId:m.id});
-        if(o&&Object.prototype.hasOwnProperty.call(o,'data'))add('episodic_memory_event_data_copied',`${a.name} 的 memory 不應複製整份 event.data。`,{agentId:a.id,memoryId:m.id});
+        const isPrivateSocialOutcome=E.SOCIAL_OUTCOME_MEMORY_SCHEMA_VERSION&&m.episodeKind==='privateSocialOutcome';
+        const o=m.observed;
+        if(isPrivateSocialOutcome){
+          if(o!=null)add('episodic_private_outcome_fake_observation',`${a.name} 的 private social outcome 不應偽裝成 observable world-event projection。`,{agentId:a.id,memoryId:m.id});
+        }else{
+          if(!o||typeof o!=='object'||typeof o.action!=='string'||!o.action)add('episodic_memory_projection_invalid',`${a.name} 的 episodic memory 缺少 minimal observable projection。`,{agentId:a.id,memoryId:m.id});
+          if(o&&Object.prototype.hasOwnProperty.call(o,'data'))add('episodic_memory_event_data_copied',`${a.name} 的 memory 不應複製整份 event.data。`,{agentId:a.id,memoryId:m.id});
+        }
         for(const key of ['text','causeIds','affect','salience','utilityInfluence'])if(Object.prototype.hasOwnProperty.call(m,key))add('episodic_memory_out_of_scope_field',`${a.name} 的 v11.13.0 memory 不應提前保存 ${key}。`,{agentId:a.id,memoryId:m.id,key});
         if(Object.prototype.hasOwnProperty.call(m,'appraisal')&&!E.APPRAISAL_SCHEMA_VERSION)add('episodic_memory_out_of_scope_field',`${a.name} 的 v11.13.0 memory 不應提前保存 appraisal。`,{agentId:a.id,memoryId:m.id,key:'appraisal'});
       }

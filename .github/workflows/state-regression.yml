@@ -44,3 +44,4 @@ jobs:
       - run: node tests/memory-salience-pruning.mjs
       - run: node tests/human-social-response-agency.mjs
       - run: node tests/memory-deliberation-influence.mjs
+      - run: node tests/requester-social-outcome-memory.mjs

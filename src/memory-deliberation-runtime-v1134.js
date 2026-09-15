@@ -31,9 +31,15 @@
     return {memoryId:m?.id||null,sourceEventId:m?.sourceEventId||null,observedTick:Number(m?.observedTick)||0,lastObservedTick:Number(m?.lastObservedTick)||Number(m?.observedTick)||0,relevance:round(relevance),goalCongruence:round(congruence),recency:round(recency),evidence:round(relevance*congruence*recency,4)};
   }
 
+  function memoryAssociatedWithTarget(m,targetId){
+    if(!m||!targetId)return false;
+    if(m?.appraisal?.agency?.kind==='other'&&m.appraisal.agency.agentId===targetId)return true;
+    return m.episodeKind==='privateSocialOutcome'&&m?.experienced?.kind==='socialNoResponse'&&m.experienced.counterpartId===targetId;
+  }
+
   function targetMemoryContributions(st,a,targetId){
     return (a?.episodicMemories||[])
-      .filter(m=>m?.appraisal?.agency?.kind==='other'&&m.appraisal.agency.agentId===targetId)
+      .filter(m=>memoryAssociatedWithTarget(m,targetId))
       .map(m=>memoryEvidence(st,a,m))
       .sort((x,y)=>Math.abs(y.evidence)-Math.abs(x.evidence)||y.lastObservedTick-x.lastObservedTick||String(x.memoryId).localeCompare(String(y.memoryId)))
       .slice(0,TOP_MEMORIES);
@@ -178,5 +184,5 @@
     return result;
   };
   E.reset=(...args)=>baseReset(...args);
-  Object.assign(E,{MEMORY_DELIBERATION_SCHEMA_VERSION:VERSION,MEMORY_DELIBERATION_TOP_MEMORIES:TOP_MEMORIES,MEMORY_DELIBERATION_MAX_DELTA:MAX_DELTA,targetMemoryContributions,targetAssociation,targetEvaluation,targetEvaluations,bestMemoryTargetEvaluation:bestTargetEvaluation,currentSocialTargetEvaluations,adjustInitialDeliberation:correctInitialDeliberation});
+  Object.assign(E,{MEMORY_DELIBERATION_SCHEMA_VERSION:VERSION,MEMORY_DELIBERATION_TOP_MEMORIES:TOP_MEMORIES,MEMORY_DELIBERATION_MAX_DELTA:MAX_DELTA,memoryAssociatedWithTarget,targetMemoryContributions,targetAssociation,targetEvaluation,targetEvaluations,bestMemoryTargetEvaluation:bestTargetEvaluation,currentSocialTargetEvaluations,adjustInitialDeliberation:correctInitialDeliberation});
 })();
