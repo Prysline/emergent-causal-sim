@@ -45,3 +45,4 @@ jobs:
       - run: node tests/human-social-response-agency.mjs
       - run: node tests/memory-deliberation-influence.mjs
       - run: node tests/requester-social-outcome-memory.mjs
+      - run: node tests/presentation-observability-v1140.mjs

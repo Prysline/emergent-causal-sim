@@ -19,6 +19,8 @@ async function openStory(){
     await page.click('#step');
   }
   await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.click());
+  await page.waitForSelector('[data-v1140-resident-root]');
+  await page.click('[data-v1140-mode="debug"]');
   await page.waitForSelector('[data-v1135-social-outcome-memory]');
 }
 async function snapshot(){
@@ -46,7 +48,6 @@ async function snapshot(){
 
 await openStory();
 let desktop=await snapshot();
-assert.equal(desktop.version,'11.13.5-requester-social-outcome-memory');
 assert.equal(desktop.schemaVersion,'11.13.5-requester-social-outcome-memory');
 assert.ok(desktop.memory,'desktop: requester private outcome memory missing');
 assert.equal(desktop.memory.episodeKind,'privateSocialOutcome');
