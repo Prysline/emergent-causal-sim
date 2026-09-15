@@ -1,0 +1,30 @@
+name: Fix branch action.kind cleanup workflow
+on:
+  push:
+    branches: [refactor/remove-action-intent-compat]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/remove-action-intent-compat
+      - name: Patch temporary transformer
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/workflows/_branch-action-kind-migration.yml')
+          s=p.read_text()
+          s=s.replace("fs.readFileSync(`src/${'${f}'}`,'utf8')", "fs.readFileSync('src/'+f,'utf8')")
+          s=s.replace("throw new Error(`installActionKind remains in: ${'${installerRefs.join(\", \")}'}`)", "throw new Error('installActionKind remains in: '+installerRefs.join(', '))")
+          p.write_text(s)
+          PY
+          rm .github/workflows/_fix-branch-action-kind-workflow.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Fix temporary Action cleanup transformer"
+          git push origin HEAD:refactor/remove-action-intent-compat
