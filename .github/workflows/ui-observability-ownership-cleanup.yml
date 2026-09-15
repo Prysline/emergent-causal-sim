@@ -7,6 +7,7 @@ permissions:
   contents: write
 jobs:
   cleanup:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,39 +60,40 @@ jobs:
           start=s.find("  function clearerSocialText")
           end=s.find("  function responseLabel(record){")
           if start<0 or end<0 or end<=start: raise SystemExit('clearerSocialText decorator block not found')
-          recent="""  function recentSocialRecord(st,agentId){
-    const tick=st?.tick??0;
-    for(const event of st?.events||[]){
-      if(!Number.isInteger(event?.tick))continue;
-      const age=tick-event.tick;if(age<0)continue;if(age>1)break;
-      const data=event.data||{};
-      if(data.action==='talk'&&data.talkOfferId&&data.actor===agentId)return {tick:event.tick,role:'talked',otherId:data.target,response:'engage'};
-      if(RESPONSE_ACTIONS.has(data.action)){
-        const response=data.talkResponse||data.action;
-        if(data.actor===agentId)return {tick:event.tick,role:'responder',otherId:data.target,response};
-        if(data.target===agentId)return {tick:event.tick,role:'requester',otherId:data.actor,response};
-      }
-    }
-    return null;
-  }
-"""
+          recent=(
+            "  function recentSocialRecord(st,agentId){\n"
+            "    const tick=st?.tick??0;\n"
+            "    for(const event of st?.events||[]){\n"
+            "      if(!Number.isInteger(event?.tick))continue;\n"
+            "      const age=tick-event.tick;if(age<0)continue;if(age>1)break;\n"
+            "      const data=event.data||{};\n"
+            "      if(data.action==='talk'&&data.talkOfferId&&data.actor===agentId)return {tick:event.tick,role:'talked',otherId:data.target,response:'engage'};\n"
+            "      if(RESPONSE_ACTIONS.has(data.action)){\n"
+            "        const response=data.talkResponse||data.action;\n"
+            "        if(data.actor===agentId)return {tick:event.tick,role:'responder',otherId:data.target,response};\n"
+            "        if(data.target===agentId)return {tick:event.tick,role:'requester',otherId:data.actor,response};\n"
+            "      }\n"
+            "    }\n"
+            "    return null;\n"
+            "  }\n"
+          )
           p.write_text(s[:start]+recent+s[end:])
           s=p.read_text(); start=s.find("  E.actionLabel=(a)=>{"); end=s.find("  function installTurnControls(){")
           if start<0 or end<0 or end<=start: raise SystemExit('actionLabel decorator block not found')
-          resolver="""  function socialActionLabel(st,a){
-    const p=a?.action;
-    if(p&&E.actionKind?.(p)==='talk'&&p.phase==='respondBid'&&p.responseToBid)return `回應${agentName(p.targetAgent)}的聊天邀請`;
-    if(!p&&a?.activeIntent?.kind==='awaitResponse'){
-      const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(st,bidId),targetId=bid?.data?.bidTo;
-      return `等待${agentName(targetId)}對「${interactionName(bid)}」作出回應`;
-    }
-    if(!p){const record=recentSocialRecord(st,a?.id);if(record)return responseLabel(record);}
-    return null;
-  }
-  if(!E.registerActionLabelResolver)throw new Error('ui observability requires action label resolver contract');
-  E.registerActionLabelResolver('uiObservability.social-status',socialActionLabel,100);
-
-"""
+          resolver=(
+            "  function socialActionLabel(st,a){\n"
+            "    const p=a?.action;\n"
+            "    if(p&&E.actionKind?.(p)==='talk'&&p.phase==='respondBid'&&p.responseToBid)return `回應${agentName(p.targetAgent)}的聊天邀請`;\n"
+            "    if(!p&&a?.activeIntent?.kind==='awaitResponse'){\n"
+            "      const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(st,bidId),targetId=bid?.data?.bidTo;\n"
+            "      return `等待${agentName(targetId)}對「${interactionName(bid)}」作出回應`;\n"
+            "    }\n"
+            "    if(!p){const record=recentSocialRecord(st,a?.id);if(record)return responseLabel(record);}\n"
+            "    return null;\n"
+            "  }\n"
+            "  if(!E.registerActionLabelResolver)throw new Error('ui observability requires action label resolver contract');\n"
+            "  E.registerActionLabelResolver('uiObservability.social-status',socialActionLabel,100);\n\n"
+          )
           p.write_text(s[:start]+resolver+s[end:])
           replace_once(ui,
             "  function resetObservability(){recentSocialByAgent.clear();renderMobileSummary();}\n",
