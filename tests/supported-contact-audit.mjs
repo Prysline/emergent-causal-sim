@@ -59,7 +59,7 @@ E.reset(20260911);
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   a.needs.hunger=60;
   const before=tray.contents.food;
-  a.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};
+  a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};
   for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`serving meal ${i}`);}
   assert.equal(a.action,null,'局部 pickup / serve contact 下用餐流程仍應完成');
   assert.ok((tray.contents.food||0)<before,'盛盤流程應真的從 mealTray 取走食物');
@@ -73,7 +73,7 @@ E.reset(20260911);
   cupA.contents={};cupB.contents={};bottle.contents={alcohol:120};
   a.position={...floor(st,7,3)};
   a.needs.thirst=82;
-  a.action={intent:'drinkAlcohol',phase:'chooseVessel',resource:'alcohol',started:st.tick,wait:0};
+  a.action={kind:'drinkAlcohol',phase:'chooseVessel',resource:'alcohol',started:st.tick,wait:0};
   for(let i=0;i<60&&a.action;i++){E.tick();noIssues(`tabletop bottle fill ${i}`);}
   assert.equal(a.action,null,'拿杯子並從桌面酒瓶裝酒的流程應完成');
   assert.ok(st.events.some(e=>e.data?.action==='pour'&&e.data?.from==='alcoholBottle'),'裝酒必須實際從酒瓶發生 pour');
@@ -87,7 +87,7 @@ E.reset(20260911);
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};
   const before=pantry.contents.food;
-  a.action={intent:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
+  a.action={kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
   for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`mealTray local deposit ${i}`);}
   assert.equal(a.action,null,'mealTray local deposit / receive contact 下室內補貨仍應完成');
   assert.ok((tray.contents.food||0)>0,'物流籃應把食物卸到 mealTray');

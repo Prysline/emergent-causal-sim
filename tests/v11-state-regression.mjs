@@ -31,14 +31,14 @@ E.reset(77);for(let i=0;i<300;i++)E.tick();const d1=digest(E.getState());E.reset
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,start={...a.position};a.action={intent:'wander',phase:'move',started:st.tick,targetTile:{x:2,y:5},wait:0};E.tick();assert.equal(Math.abs(a.position.x-start.x)+Math.abs(a.position.y-start.y),1,'一個 tick 最多移動一格');noIssues('atomic movement');
+  const st=E.getState(),a=st.agents.zhen,start={...a.position};a.action={kind:'wander',phase:'move',started:st.tick,targetTile:{x:2,y:5},wait:0};E.tick();assert.equal(Math.abs(a.position.x-start.x)+Math.abs(a.position.y-start.y),1,'一個 tick 最多移動一格');noIssues('atomic movement');
 }
 
 function oneStepContainerLoadCase({water=null,basketFood=null}){
   E.reset(12345);const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket,basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;a.position={x:2,y:5};a.metrics.exertionToday=0;a.held=null;
   if(water!==null){bucket.contents={water};bucket.position={...a.position};a.held=bucket.id;}
   if(basketFood!==null){basket.contents={food:basketFood};basket.position={...a.position};a.held=basket.id;}
-  a.action={intent:'wander',phase:'move',targetTile:{x:3,y:5},started:st.tick,wait:0};E.tick();return {exertion:a.metrics.exertionToday,load:a.metrics.lastExertion?.load||0};
+  a.action={kind:'wander',phase:'move',targetTile:{x:3,y:5},started:st.tick,wait:0};E.tick();return {exertion:a.metrics.exertionToday,load:a.metrics.lastExertion?.load||0};
 }
 {
   const empty=oneStepContainerLoadCase({water:0}),full=oneStepContainerLoadCase({water:100});assert.ok(full.load>empty.load);assert.ok(full.exertion>empty.exertion);
@@ -47,35 +47,35 @@ function oneStepContainerLoadCase({water=null,basketFood=null}){
 
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange;cat.needs.fatigue=75;cat.action={intent:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};for(let i=0;i<6&&cat.posture.kind==='standing';i++)E.tick();assert.ok(['lying','sitting'].includes(cat.posture.kind));noIssues('cat rest posture');
+  const st=E.getState(),cat=st.agents.orange;cat.needs.fatigue=75;cat.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};for(let i=0;i<6&&cat.posture.kind==='standing';i++)E.tick();assert.ok(['lying','sitting'].includes(cat.posture.kind));noIssues('cat rest posture');
 }
 
 E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:8,y:5};b.position={x:8,y:4};a.needs.sleepNeed=90;b.needs.sleepNeed=90;
-  for(const x of [a,b])x.action={intent:'sleep',phase:'chooseSurface',sleepTicks:0,started:st.tick,wait:0};
+  for(const x of [a,b])x.action={kind:'sleep',phase:'chooseSurface',sleepTicks:0,started:st.tick,wait:0};
   for(let i=0;i<12&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.containers.mealTray.contents.food;a.needs.hunger=60;a.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood');assert.ok(serve);assert.ok(st.containers.mealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
+  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.containers.mealTray.contents.food;a.needs.hunger=60;a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood');assert.ok(serve);assert.ok(st.containers.mealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,plate=st.containers.plateA;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.containers.mealTray.contents.food=0;plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={intent:'eat',phase:'prepare',started:st.tick,wait:0};const before=plate.contents.food;for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null);}assert.ok((plate.contents.food||0)<before);noIssues('cat eats plate');
+  const st=E.getState(),cat=st.agents.orange,plate=st.containers.plateA;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.containers.mealTray.contents.food=0;plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};const before=plate.contents.food;for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null);}assert.ok((plate.contents.food||0)<before);noIssues('cat eats plate');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={intent:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual(bucket.position,{x:5,y:5});noIssues('portable restock');
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={kind:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual(bucket.position,{x:5,y:5});noIssues('portable restock');
 }
 
 E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray,pantry=st.containers.foodPantry,basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;tray.contents.food=0;basket.contents={};basket.position={x:3,y:2};const pantryBefore=pantry.contents.food;let heldBasket=false,loadedBasket=false;
-  a.action={intent:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
+  a.action={kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
   for(let i=0;i<45&&a.action;i++){E.tick();if(a.held===basket.id)heldBasket=true;if((basket.contents.food||0)>0)loadedBasket=true;noIssues(`logistics restock ${i}`);}
   assert.equal(a.action,null,'室內補貨流程應完成');assert.equal(heldBasket,true,'角色必須真的拿起物流籃');assert.equal(loadedBasket,true,'食物必須先實際存在物流籃中');assert.ok((tray.contents.food||0)>0);assert.ok(pantry.contents.food<pantryBefore);assert.equal(basket.contents.food||0,0,'卸貨後物流籃應為空');assert.equal(a.held,null);assert.ok(SP.same(basket.position,a.position),'卸貨後空籃應留在實際卸貨位置');assert.ok(st.events.some(e=>e.data?.action==='restockContainer'&&e.data?.carrier===basket.id&&e.data?.entities?.includes(`container:${basket.id}`)));noIssues('physical logistics restock');
 }
@@ -83,19 +83,19 @@ E.reset(20260911);
 E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,door=SP.allSlots(st).find(s=>s.canExit),dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination')),basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;basket.contents={};basket.position={x:3,y:2};const before=dest.contents.food;let heldBeforeExit=false,returnedLoaded=false;
-  a.action={intent:'externalSupply',phase:'toCarrier',exitSlot:door.id,destinationId:dest.id,resource:'food',carrierId:basket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
+  a.action={kind:'externalSupply',phase:'toCarrier',exitSlot:door.id,destinationId:dest.id,resource:'food',carrierId:basket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
   for(let i=0;i<55&&a.action;i++){E.tick();if(a.offMap)heldBeforeExit ||= a.held===basket.id;if(st.events.some(e=>e.data?.action==='supplyReturn'&&e.data?.carrier===basket.id&&(basket.contents.food||0)>0))returnedLoaded=true;noIssues(`external supply ${i}`);}
   assert.equal(a.action,null);assert.equal(heldBeforeExit,true,'角色必須帶著籃子才可離家補給');assert.equal(returnedLoaded,true,'外出取得的資源必須先存在籃子裡再入庫');assert.equal(E.supplyStatus().workerId,null);assert.ok(dest.contents.food>before);assert.equal(basket.contents.food||0,0);assert.equal(a.held,null);assert.ok(SP.same(basket.position,a.position),'入庫後空籃應留在食物櫃互動位置');assert.equal(st.supply.workerId,undefined);assert.ok(st.events.some(e=>e.data?.action==='supplyExit'&&e.data?.carrier===basket.id));assert.ok(st.events.some(e=>e.data?.action==='supplyDeposit'&&e.data?.carrier===basket.id));noIssues('physical external supply');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),target=st.agents.zhen,actor=st.agents.zhou;target.offMap=true;actor.action={intent:'talk',phase:'move',targetAgent:target.id,started:st.tick,wait:0};E.tick();assert.equal(actor.action,null);assert.ok(st.events.some(e=>e.text.includes(`${target.name}已經離開可互動範圍`)));noIssues('target interruption');
+  const st=E.getState(),target=st.agents.zhen,actor=st.agents.zhou;target.offMap=true;actor.action={kind:'talk',phase:'move',targetAgent:target.id,started:st.tick,wait:0};E.tick();assert.equal(actor.action,null);assert.ok(st.events.some(e=>e.text.includes(`${target.name}已經離開可互動範圍`)));noIssues('target interruption');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,cat=st.agents.orange;a.action={intent:'petCat',phase:'move',targetAgent:cat.id,spatialGoal:{x:5,y:4},started:0,wait:0};assert.equal(E.actionLabel(a),`摸${cat.name}・目標 (5,4)`);assert.ok(!E.actionLabel(a).includes('・・'));
+  const st=E.getState(),a=st.agents.zhen,cat=st.agents.orange;a.action={kind:'petCat',phase:'move',targetAgent:cat.id,spatialGoal:{x:5,y:4},started:0,wait:0};assert.equal(E.actionLabel(a),`摸${cat.name}・目標 (5,4)`);assert.ok(!E.actionLabel(a).includes('・・'));
 }
 
 {

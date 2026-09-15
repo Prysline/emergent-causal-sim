@@ -65,7 +65,7 @@ E.reset(20260911);
   a.needs.fatigue=75;
   a.needs.sleepNeed=70;
   const fatigueBefore=a.needs.fatigue,sleepNeedBefore=a.needs.sleepNeed;
-  a.action={intent:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};
+  a.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};
 
   for(let i=0;i<40&&a.action;i++)E.tick();
 
