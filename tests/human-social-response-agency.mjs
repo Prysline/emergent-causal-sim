@@ -42,25 +42,25 @@ assert.equal(E.talkResponseUtility(responder),utilityBefore,'Current Affect must
 responder.affect=neutralAffect;
 noIssues('deterministic human response bands');
 
-// Engage: talk is no longer unilateral. Offer first, responder accepts, only then full talk occurs.
+// Engage: once initiator has physically arrived, offer becomes observable before responder deliberation in the same tick.
 st=armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
 assert.equal(st.version,'11.13.3a-human-social-response');
 const engageOffer=latestAction('talkOffer');
 assert.ok(engageOffer?.data?.socialBid,'engage fixture must create observable talkOffer');
 assert.equal(engageOffer.data.bidKind,'talkOffer');assert.equal(engageOffer.data.bidFrom,'zhou');assert.equal(engageOffer.data.bidTo,'zhen');
-assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.responseToBid===engageOffer.id),false,'offer tick must not already force full talk');
-E.tick();st=E.getState();
 const accept=st.events.find(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer.id);
 const talk=st.events.find(e=>e.data?.action==='talk'&&e.data?.responseToBid===engageOffer.id);
-assert.ok(accept,'high-social responder should explicitly accept');assert.ok(talk,'accept must produce one full talk');
+assert.ok(accept,'high-social responder should explicitly accept after observing the offer');assert.ok(talk,'accept must produce one full talk');
 assert.equal(talk.data.talkResponse,'engage');
+assert.ok((accept.causes||[]).includes(engageOffer.id),'accept response must cite the talkOffer cause');
+assert.ok((talk.causes||[]).includes(engageOffer.id),'full talk must cite the talkOffer cause');
 const requesterAcceptMemory=memoryFor('zhou',accept.id),responderTalkMemory=memoryFor('zhen',talk.id);
 assert.ok(requesterAcceptMemory?.appraisal?.goalCongruence>0,'requester should appraise explicit acceptance positively');
 assert.ok(responderTalkMemory?.appraisal?.goalCongruence>0,'responder should appraise full conversation positively');
 noIssues('engage flow');
 
 // Brief reply and explicit decline remain different world facts, but first-pass requester appraisal is the same shallow rejection strength.
-st=armDirectTalk(35,{seed:31331});E.tick();const briefOffer=latestAction('talkOffer');E.tick();st=E.getState();
+st=armDirectTalk(35,{seed:31331});E.tick();st=E.getState();const briefOffer=latestAction('talkOffer');
 const brief=st.events.find(e=>e.data?.action==='briefTalkReply'&&e.data?.responseToBid===briefOffer.id);
 assert.ok(brief,'mid-social responder should give a brief reply');
 assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.responseToBid===briefOffer.id),false,'brief reply must not create full talk');
@@ -68,7 +68,7 @@ const briefMemory=memoryFor('zhou',brief.id);assert.equal(briefMemory?.appraisal
 assert.ok(briefMemory.appraisal.goalCongruence<0,'brief non-continuation is a shallow negative outcome for requester');
 noIssues('brief reply flow');
 
-st=armDirectTalk(0,{seed:41331});E.tick();const declineOffer=latestAction('talkOffer');E.tick();st=E.getState();
+st=armDirectTalk(0,{seed:41331});E.tick();st=E.getState();const declineOffer=latestAction('talkOffer');
 const decline=st.events.find(e=>e.data?.action==='declineTalk'&&e.data?.responseToBid===declineOffer.id);
 assert.ok(decline,'low-social responder should explicitly decline');
 assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.responseToBid===declineOffer.id),false,'decline must not create full talk');
@@ -80,6 +80,7 @@ noIssues('decline flow');
 
 // No response is absence, not an implicit decline. A stronger physiological candidate can keep the responder occupied past requester patience.
 st=armDirectTalk(80,{seed:51331,thirst:95});E.tick();const noResponseOffer=latestAction('talkOffer');
+assert.ok(noResponseOffer,'no-response fixture must still produce an observable offer');
 for(let i=0;i<5&&!latestAction('socialWaitEnded');i++)E.tick();st=E.getState();
 const waitEnded=st.events.find(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===noResponseOffer.id);
 assert.ok(waitEnded,'requester should eventually stop waiting when no response event arrives');
