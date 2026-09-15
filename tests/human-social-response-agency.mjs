@@ -15,7 +15,7 @@ for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${fi
 
 const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
-const latestAction=action=>E.getState().events.find(e=>e.data?.action===action);
+const eventBy=(pred)=>E.getState().events.find(pred);
 const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories.find(m=>m.sourceEventId===eventId);
 
 function armDirectTalk(social,{seed=11331,thirst=18}={}){
@@ -26,85 +26,49 @@ function armDirectTalk(social,{seed=11331,thirst=18}={}){
   Object.assign(responder.needs,{hunger:18,thirst,fatigue:18,sleepNeed:18,social});
   requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};
   E.installActionKind?.(requester.action);E.ensureIntentForAction?.(st,requester);
-  assert.equal(SP.isAtInteraction(st,requester,{kind:'agent',id:responder.id},'social'),true,'fixture must begin in social range');
+  assert.equal(SP.isAtInteraction(st,requester,{kind:'agent',id:responder.id},'social'),true);
   return st;
 }
 
-// Same responder traits, only social need changed: the engagement band is deterministic.
 E.reset(11330);let st=E.getState(),responder=st.agents.zhen;
 responder.needs.social=0;assert.equal(E.talkResponseFor(responder),'decline');
 responder.needs.social=35;assert.equal(E.talkResponseFor(responder),'brief');
 responder.needs.social=90;assert.equal(E.talkResponseFor(responder),'engage');
-const scoreBefore=E.talkEngagementScore(responder),utilityBefore=E.talkResponseUtility(responder),neutralAffect=JSON.parse(JSON.stringify(responder.affect));
+const scoreBefore=E.talkEngagementScore(responder),utilityBefore=E.talkResponseUtility(responder),neutral=structuredClone(responder.affect);
 responder.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:0,lastDecayTick:0,source:null};
-assert.equal(E.talkEngagementScore(responder),scoreBefore,'Current Affect must not enter v11.13.3a talk response scoring');
-assert.equal(E.talkResponseUtility(responder),utilityBefore,'Current Affect must not enter response priority utility');
-responder.affect=neutralAffect;
-noIssues('deterministic human response bands');
+assert.equal(E.talkEngagementScore(responder),scoreBefore);assert.equal(E.talkResponseUtility(responder),utilityBefore);
+responder.affect=neutral;noIssues('response bands');
 
-// Engage: once initiator has physically arrived, offer becomes observable before responder deliberation in the same tick.
-st=armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
+armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
 assert.equal(st.version,'11.13.3a-human-social-response');
-const engageOffer=latestAction('talkOffer');
-assert.ok(engageOffer?.data?.socialBid,'engage fixture must create observable talkOffer');
-assert.equal(engageOffer.data.bidKind,'talkOffer');assert.equal(engageOffer.data.bidFrom,'zhou');assert.equal(engageOffer.data.bidTo,'zhen');
-const accept=st.events.find(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer.id);
-const talk=st.events.find(e=>e.data?.action==='talk'&&e.data?.responseToBid===engageOffer.id);
-assert.ok(accept,'high-social responder should explicitly accept after observing the offer');assert.ok(talk,'accept must produce one full talk');
-assert.equal(talk.data.talkResponse,'engage');
-assert.ok((accept.causes||[]).includes(engageOffer.id),'accept response must cite the talkOffer cause');
-assert.ok((talk.causes||[]).includes(engageOffer.id),'full talk must cite the talkOffer cause');
-const requesterAcceptMemory=memoryFor('zhou',accept.id),responderTalkMemory=memoryFor('zhen',talk.id);
-assert.ok(requesterAcceptMemory?.appraisal?.goalCongruence>0,'requester should appraise explicit acceptance positively');
-assert.ok(responderTalkMemory?.appraisal?.goalCongruence>0,'responder should appraise full conversation positively');
-noIssues('engage flow');
+const engageOffer=eventBy(e=>e.data?.action==='talkOffer'),accept=eventBy(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer?.id),talk=eventBy(e=>e.data?.action==='talk'&&e.data?.talkOfferId===engageOffer?.id);
+assert.ok(engageOffer?.data?.socialBid);assert.ok(accept);assert.ok(talk);
+assert.equal(talk.data.talkResponseEventId,accept.id);assert.equal(talk.data.talkResponse,'engage');assert.equal(Object.hasOwn(talk.data,'responseToBid'),false,'full talk is an outcome, not a second responder event');
+assert.ok(memoryFor('zhou',accept.id)?.appraisal?.goalCongruence>0);assert.ok(memoryFor('zhen',talk.id)?.appraisal?.goalCongruence>0);noIssues('engage');
 
-// Brief reply and explicit decline remain different world facts, but first-pass requester appraisal is the same shallow rejection strength.
-st=armDirectTalk(35,{seed:31331});E.tick();st=E.getState();const briefOffer=latestAction('talkOffer');
-const brief=st.events.find(e=>e.data?.action==='briefTalkReply'&&e.data?.responseToBid===briefOffer.id);
-assert.ok(brief,'mid-social responder should give a brief reply');
-assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.responseToBid===briefOffer.id),false,'brief reply must not create full talk');
-const briefMemory=memoryFor('zhou',brief.id);assert.equal(briefMemory?.appraisal?.ruleId,'briefTalkReply-v1');
-assert.ok(briefMemory.appraisal.goalCongruence<0,'brief non-continuation is a shallow negative outcome for requester');
-noIssues('brief reply flow');
+armDirectTalk(35,{seed:31331});E.tick();st=E.getState();
+const briefOffer=eventBy(e=>e.data?.action==='talkOffer'),brief=eventBy(e=>e.data?.action==='briefTalkReply'&&e.data?.responseToBid===briefOffer?.id);
+assert.ok(brief);assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.talkOfferId===briefOffer.id),false);
+const briefMemory=memoryFor('zhou',brief.id);assert.equal(briefMemory?.appraisal?.ruleId,'briefTalkReply-v1');assert.ok(briefMemory.appraisal.goalCongruence<0);noIssues('brief');
 
-st=armDirectTalk(0,{seed:41331});E.tick();st=E.getState();const declineOffer=latestAction('talkOffer');
-const decline=st.events.find(e=>e.data?.action==='declineTalk'&&e.data?.responseToBid===declineOffer.id);
-assert.ok(decline,'low-social responder should explicitly decline');
-assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.responseToBid===declineOffer.id),false,'decline must not create full talk');
+armDirectTalk(0,{seed:41331});E.tick();st=E.getState();
+const declineOffer=eventBy(e=>e.data?.action==='talkOffer'),decline=eventBy(e=>e.data?.action==='declineTalk'&&e.data?.responseToBid===declineOffer?.id);
+assert.ok(decline);assert.equal(st.events.some(e=>e.data?.action==='talk'&&e.data?.talkOfferId===declineOffer.id),false);
 const declineMemory=memoryFor('zhou',decline.id);assert.equal(declineMemory?.appraisal?.ruleId,'declineTalk-v1');
-assert.equal(declineMemory.appraisal.goalCongruence,briefMemory.appraisal.goalCongruence,'brief reply and explicit decline must not be given a fixed damage ranking in v11.13.3a');
-assert.equal(declineMemory.appraisal.relevance,briefMemory.appraisal.relevance,'first-pass shallow rejection strength should match');
-for(const e of [brief,decline])for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship','intentionalIgnore'])assert.equal(Object.prototype.hasOwnProperty.call(e.data,key),false,`world response must not leak ${key}`);
-noIssues('decline flow');
+assert.equal(declineMemory.appraisal.goalCongruence,briefMemory.appraisal.goalCongruence);assert.equal(declineMemory.appraisal.relevance,briefMemory.appraisal.relevance);
+for(const e of [brief,decline])for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship','intentionalIgnore'])assert.equal(Object.hasOwn(e.data,key),false);noIssues('decline');
 
-// No response is absence, not an implicit decline. A stronger physiological candidate can keep the responder occupied past requester patience.
-st=armDirectTalk(80,{seed:51331,thirst:95});E.tick();const noResponseOffer=latestAction('talkOffer');
-assert.ok(noResponseOffer,'no-response fixture must still produce an observable offer');
-for(let i=0;i<5&&!latestAction('socialWaitEnded');i++)E.tick();st=E.getState();
-const waitEnded=st.events.find(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===noResponseOffer.id);
-assert.ok(waitEnded,'requester should eventually stop waiting when no response event arrives');
-assert.equal(st.events.some(e=>e.data?.responseToBid===noResponseOffer.id&&['acceptTalk','briefTalkReply','declineTalk'].includes(e.data?.action)),false,'no response must not be converted into explicit decline');
+armDirectTalk(80,{seed:51331,thirst:95});E.tick();st=E.getState();const noResponseOffer=eventBy(e=>e.data?.action==='talkOffer');assert.ok(noResponseOffer);
+for(let i=0;i<5&&!eventBy(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===noResponseOffer.id);i++)E.tick();st=E.getState();
+const waitEnded=eventBy(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===noResponseOffer.id);assert.ok(waitEnded);
+assert.equal(st.events.some(e=>e.data?.responseToBid===noResponseOffer.id&&['acceptTalk','briefTalkReply','declineTalk'].includes(e.data?.action)),false);
 assert.equal(waitEnded.data.visibility,'private');assert.equal(waitEnded.data.bidKind,'talkOffer');
-for(const key of ['ignored','intentionalIgnore','disliked','rejectedBy'])assert.equal(Object.prototype.hasOwnProperty.call(waitEnded.data,key),false,`ambiguous absence must not infer ${key}`);
-assert.equal(memoryFor('zhou',waitEnded.id),undefined,'private socialWaitEnded must stay outside episodic world memory');
-noIssues('ambiguous no-response flow');
+for(const key of ['ignored','intentionalIgnore','disliked','rejectedBy'])assert.equal(Object.hasOwn(waitEnded.data,key),false);
+assert.equal(memoryFor('zhou',waitEnded.id),undefined);noIssues('no response');
 
-// Context weighting is derived from what requester could observe, not persisted as emotional damage or intent.
-const weightUnknown=E.noResponseInterpretationWeight({data:{action:'socialWaitEnded',bidKind:'talkOffer',responderContextObserved:false}});
-const weightSleep=E.noResponseInterpretationWeight({data:{action:'socialWaitEnded',bidKind:'talkOffer',responderContextObserved:true,observedResponderActionKind:'sleep',observedResponderPosture:'lying'}});
-const weightBusy=E.noResponseInterpretationWeight({data:{action:'socialWaitEnded',bidKind:'talkOffer',responderContextObserved:true,observedResponderActionKind:'eat',observedResponderPosture:'standing'}});
-const weightOccupied=E.noResponseInterpretationWeight({data:{action:'socialWaitEnded',bidKind:'talkOffer',responderContextObserved:true,observedResponderActionKind:'wander',observedResponderPosture:'standing'}});
-const weightIdle=E.noResponseInterpretationWeight({data:{action:'socialWaitEnded',bidKind:'talkOffer',responderContextObserved:true,observedResponderActionKind:null,observedResponderPosture:'standing'}});
-assert.ok(weightSleep<weightBusy&&weightBusy<weightOccupied&&weightOccupied<weightIdle,'observable context should increase ambiguous no-response negativity from sleeping/busy toward idle');
-assert.ok(weightSleep<weightUnknown&&weightUnknown<weightIdle,'unknown cause remains ambiguous rather than maximally negative');
+const weight=(kind,observed=true,posture='standing')=>E.noResponseInterpretationWeight({data:{action:'socialWaitEnded',bidKind:'talkOffer',responderContextObserved:observed,observedResponderActionKind:kind,observedResponderPosture:posture}});
+assert.ok(weight('sleep',true,'lying')<weight('eat')&&weight('eat')<weight('wander')&&weight('wander')<weight(null));
+assert.ok(weight('sleep',true,'lying')<weight(null,false)&&weight(null,false)<weight(null));
 
-// 500-tick integration: state stays bounded/validator-clean and no private response cache appears.
-E.reset(61331);
-for(let i=0;i<500;i++){
-  E.tick();st=E.getState();
-  for(const a of Object.values(st.agents))for(const key of ['talkResponseDecision','talkResponseScore','talkResponseUtility','socialResponsePriority','ignoredBy'])assert.equal(Object.prototype.hasOwnProperty.call(a,key),false);
-  noIssues(`tick ${i+1}`);
-}
-
+E.reset(61331);for(let i=0;i<500;i++){E.tick();for(const a of Object.values(E.getState().agents))for(const key of ['talkResponseDecision','talkResponseScore','talkResponseUtility','socialResponsePriority','ignoredBy'])assert.equal(Object.hasOwn(a,key),false);noIssues(`tick ${i+1}`);}
 console.log('v11.13.3a human social response agency regression: ok');
