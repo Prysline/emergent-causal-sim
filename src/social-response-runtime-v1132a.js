@@ -57,10 +57,10 @@
   function addCatResponse(st,human,cat,offerId,response){
     const action=response==='accept'?'acceptPet':response==='tolerate'?'toleratePet':'avoidPet';
     const text=response==='accept'
-      ?`${cat.name}沒有避開，反而主動把身體湊向${human.name}的手。`
+      ?`${cat.name}沒有避開，反而主動把身體湊向${human.name}想摸牠的手。`
       :response==='tolerate'
-        ?`${cat.name}沒有迎上去，也沒有避開，留在原地讓${human.name}靠近。`
-        :`${cat.name}把身體側開，避開了${human.name}伸來的手。`;
+        ?`${cat.name}沒有迎上去，也沒有避開，留在原地讓${human.name}摸。`
+        :`${cat.name}把身體側開，避開了${human.name}想摸牠的手。`;
     return E.addEvent(text,response==='avoid'?'normal':'good',[offerId],{
       actor:cat.id,target:human.id,action,responseToBid:offerId,petResponse:response,
       position:E.positionRef?.(cat.position)||`${cat.position.x},${cat.position.y}`
