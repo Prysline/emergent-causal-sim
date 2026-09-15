@@ -41,7 +41,7 @@ async function snapshot(){
 
 await openScenario('talk-brief');
 let desktop=await snapshot();
-assert.equal(desktop.version,'11.13.3a-human-social-response');
+assert.equal(desktop.patchVersion,'11.13.3a-observability-controls');
 assert.equal(desktop.controls.exists,true,'desktop: sticky turn controls missing');
 assert.equal(desktop.controls.position,'sticky','desktop: turn controls must stay sticky');
 assert.deepEqual(desktop.controls.buttons,['play','step','step10','reset']);
