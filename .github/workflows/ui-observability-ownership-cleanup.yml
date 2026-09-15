@@ -1,0 +1,131 @@
+name: UI observability ownership cleanup
+on:
+  push:
+    branches: [refactor/ui-observability-event-label-ownership]
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/ui-observability-event-label-ownership
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Replace presentation decorators with explicit resolver contract
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path); s=p.read_text()
+              if old not in s:
+                  raise SystemExit(f'missing replacement in {path}: {old[:140]!r}')
+              p.write_text(s.replace(old,new,1))
+
+          engine='src/engine.js'
+          replace_once(engine,
+            "  const decisionOptionProviders=[];\n",
+            "  const decisionOptionProviders=[];\n  const actionLabelResolvers=[];\n")
+          replace_once(engine,
+            "  function listDecisionOptionProviders(){return decisionOptionProviders.map(({id,order})=>({id,order}));}\n",
+            "  function listDecisionOptionProviders(){return decisionOptionProviders.map(({id,order})=>({id,order}));}\n  function registerActionLabelResolver(id,resolver,order=0){if(!id||typeof resolver!=='function')throw new Error('action label resolver requires id + function');if(actionLabelResolvers.some(x=>x.id===id))throw new Error(`duplicate action label resolver: ${id}`);const entry={id,resolver,order:Number(order)||0};actionLabelResolvers.push(entry);actionLabelResolvers.sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));return entry;}\n  function listActionLabelResolvers(){return actionLabelResolvers.map(({id,order})=>({id,order}));}\n  function resolveActionLabel(a){for(const entry of actionLabelResolvers){const label=entry.resolver(state,a);if(typeof label==='string'&&label)return label;}return null;}\n")
+          replace_once(engine,
+            "e={id,time:timeStr(),text,type,",
+            "e={id,tick:state.tick,time:timeStr(),text,type,")
+          replace_once(engine,
+            "  function actionLabel(a){const p=a.action;",
+            "  function actionLabel(a){const extension=resolveActionLabel(a);if(extension)return extension;const p=a.action;")
+          replace_once(engine,
+            "holderOf,buildAction,registerDecisionOptionProvider,listDecisionOptionProviders};",
+            "holderOf,buildAction,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};")
+
+          human='src/human-social-response-runtime-v1133a.js'
+          replace_once(human,
+            "const id=E.addEvent(`${requester.name}走近${responder.name}，開口示意想聊幾句。`,'normal',[],",
+            "const id=E.addEvent(`${requester.name}走近${responder.name}，開口示意想聊幾句（聊天邀請）。`,'normal',[],")
+          replace_once(human,
+            "const text=response==='engage'?`${responder.name}停下來，明確接住了${requester.name}的話題。`:response==='brief'?`${responder.name}回了${requester.name}一句，但沒有繼續聊下去。`:`${responder.name}表示這次不繼續聊，沒有接下${requester.name}的話題。`;",
+            "const text=response==='engage'?`${responder.name}回應了${requester.name}的聊天邀請，明確接下話題。`:response==='brief'?`${responder.name}簡短回應了${requester.name}的聊天邀請，但沒有繼續聊天。`:`${responder.name}回應了${requester.name}的聊天邀請，明確表示這次不繼續聊天。`;")
+
+          ui='src/ui-observability-controls-v1133a.js'
+          replace_once(ui,
+            "  const NEED_SHORT={hunger:'餓',thirst:'渴',fatigue:'累',sleepNeed:'睡',social:'社'};\n  const recentSocialByAgent=new Map();\n  const baseAddEvent=E.addEvent,baseActionLabel=E.actionLabel;\n",
+            "  const NEED_SHORT={hunger:'餓',thirst:'渴',fatigue:'累',sleepNeed:'睡',social:'社'};\n")
+          p=Path(ui); s=p.read_text()
+          start=s.find("  function clearerSocialText")
+          end=s.find("  function responseLabel(record){")
+          if start<0 or end<0 or end<=start: raise SystemExit('clearerSocialText decorator block not found')
+          recent="""  function recentSocialRecord(st,agentId){
+    const tick=st?.tick??0;
+    for(const event of st?.events||[]){
+      if(!Number.isInteger(event?.tick))continue;
+      const age=tick-event.tick;if(age<0)continue;if(age>1)break;
+      const data=event.data||{};
+      if(data.action==='talk'&&data.talkOfferId&&data.actor===agentId)return {tick:event.tick,role:'talked',otherId:data.target,response:'engage'};
+      if(RESPONSE_ACTIONS.has(data.action)){
+        const response=data.talkResponse||data.action;
+        if(data.actor===agentId)return {tick:event.tick,role:'responder',otherId:data.target,response};
+        if(data.target===agentId)return {tick:event.tick,role:'requester',otherId:data.actor,response};
+      }
+    }
+    return null;
+  }
+"""
+          p.write_text(s[:start]+recent+s[end:])
+          s=p.read_text(); start=s.find("  E.actionLabel=(a)=>{"); end=s.find("  function installTurnControls(){")
+          if start<0 or end<0 or end<=start: raise SystemExit('actionLabel decorator block not found')
+          resolver="""  function socialActionLabel(st,a){
+    const p=a?.action;
+    if(p&&E.actionKind?.(p)==='talk'&&p.phase==='respondBid'&&p.responseToBid)return `回應${agentName(p.targetAgent)}的聊天邀請`;
+    if(!p&&a?.activeIntent?.kind==='awaitResponse'){
+      const bidId=a.activeIntent.source?.bidId,bid=bidId&&E.bidEvent?.(st,bidId),targetId=bid?.data?.bidTo;
+      return `等待${agentName(targetId)}對「${interactionName(bid)}」作出回應`;
+    }
+    if(!p){const record=recentSocialRecord(st,a?.id);if(record)return responseLabel(record);}
+    return null;
+  }
+  if(!E.registerActionLabelResolver)throw new Error('ui observability requires action label resolver contract');
+  E.registerActionLabelResolver('uiObservability.social-status',socialActionLabel,100);
+
+"""
+          p.write_text(s[:start]+resolver+s[end:])
+          replace_once(ui,
+            "  function resetObservability(){recentSocialByAgent.clear();renderMobileSummary();}\n",
+            "  function resetObservability(){renderMobileSummary();}\n")
+          replace_once(ui,
+            "    E.reset=(...args)=>{recentSocialByAgent.clear();const result=baseReset(...args);renderMobileSummary();return result;};\n",
+            "    E.reset=(...args)=>{const result=baseReset(...args);renderMobileSummary();return result;};\n")
+
+          presentation='tests/presentation-observability-v1140.mjs'
+          replace_once(presentation,
+            "assert.equal(st.version,'11.14.0-player-resident-view-debug-inspector');\n\nconst forbiddenState=",
+            "assert.equal(st.version,'11.14.0-player-resident-view-debug-inspector');\nassert.equal(E.addEvent,E.CORE_ADD_EVENT,'core addEvent ownership must remain stable');\nassert.equal(E.actionLabel,E.CORE_ACTION_LABEL,'core actionLabel ownership must remain stable');\nassert.deepEqual(E.listActionLabelResolvers(),[],'headless simulation should start without presentation label resolvers');\nconst probeEventId=E.addEvent('presentation event tick probe','system',[],{action:'presentationProbe'});\nassert.equal(st.causes[probeEventId]?.tick,st.tick,'canonical events must preserve creation tick for derived presentation recency');\nE.registerActionLabelResolver('qa.presentation-label',(state,a)=>a?.id==='qa-probe'?'QA presentation label':null,10);\nassert.deepEqual(E.listActionLabelResolvers(),[{id:'qa.presentation-label',order:10}]);\nassert.equal(E.actionLabel({id:'qa-probe',action:null}),'QA presentation label');\nassert.equal(E.actionLabel,E.CORE_ACTION_LABEL,'registering a resolver must not replace core actionLabel');\nassert.throws(()=>E.registerActionLabelResolver('qa.presentation-label',()=>null,20),/duplicate action label resolver/);\n\nconst forbiddenState=")
+
+          browser='tests/browser-observability-controls-qa.mjs'
+          replace_once(browser,
+            "      actionText:document.getElementById('actions')?.innerText??'',\n      timelineText:document.getElementById('timeline')?.innerText??'',\n      controls:{",
+            "      actionText:document.getElementById('actions')?.innerText??'',\n      timelineText:document.getElementById('timeline')?.innerText??'',\n      corePresentationOwnership:{addEvent:E.addEvent===E.CORE_ADD_EVENT,actionLabel:E.actionLabel===E.CORE_ACTION_LABEL,resolvers:E.listActionLabelResolvers?.()||[]},\n      recentEvents:st.events.slice(0,12).map(e=>({action:e.data?.action||null,tick:e.tick,text:e.text})),\n      controls:{")
+          replace_once(browser,
+            "assert.deepEqual(desktop.controls.buttons,['play','step','step10','reset']);\nawait page.click('#step');",
+            "assert.deepEqual(desktop.controls.buttons,['play','step','step10','reset']);\nassert.equal(desktop.corePresentationOwnership.addEvent,true,'desktop: UI must not replace core addEvent');\nassert.equal(desktop.corePresentationOwnership.actionLabel,true,'desktop: UI must not replace core actionLabel');\nassert.ok(desktop.corePresentationOwnership.resolvers.some(x=>x.id==='uiObservability.social-status'),'desktop: social presentation resolver missing');\nawait page.click('#step');")
+          replace_once(browser,
+            "assert.ok(desktop.actionText.includes('剛回應老周的聊天邀請・簡短回覆'),`desktop: responder recent-response state missing: ${desktop.actionText}`);\nassert.ok(desktop.timelineText.includes('聊天邀請'),'desktop summary timeline should expose talkOffer');",
+            "assert.ok(desktop.actionText.includes('剛回應老周的聊天邀請・簡短回覆'),`desktop: responder recent-response state missing: ${desktop.actionText}`);\nconst briefEvent=desktop.recentEvents.find(e=>e.action==='briefTalkReply');\nassert.ok(briefEvent,'desktop: canonical brief response event missing');\nassert.equal(briefEvent.tick,desktop.tick,'desktop: brief response event should carry canonical creation tick');\nassert.equal(briefEvent.text,'阿真簡短回應了老周的聊天邀請，但沒有繼續聊天。','desktop: simulation runtime must own final canonical talk response text');\nassert.ok(desktop.timelineText.includes('聊天邀請'),'desktop summary timeline should expose talkOffer');")
+
+      - name: Focused regressions
+        run: |
+          for f in src/*.js; do node --check "$f"; done
+          node tests/presentation-observability-v1140.mjs
+          node tests/human-social-response-agency.mjs
+          node tests/runtime-hook-pipeline.mjs
+      - name: Commit cleanup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/engine.js src/human-social-response-runtime-v1133a.js src/ui-observability-controls-v1133a.js tests/presentation-observability-v1140.mjs tests/browser-observability-controls-qa.mjs
+          git commit -m "refactor: restore core event and action-label ownership [ui-observability-ownership]"
+          git push origin HEAD:refactor/ui-observability-event-label-ownership
