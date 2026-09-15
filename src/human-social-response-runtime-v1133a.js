@@ -210,10 +210,10 @@
 
   E.tick=(...args)=>{
     const before=E.getState(),marker=before.events?.[0]?.id||null,pendingOffers=capturePendingTalkOffers(before);
+    emitTalkOffers(before,pendingOffers);
     promoteTalkResponses(before);
     const result=baseTick(...args),after=E.getState();
     annotateNoResponseContexts(after,marker);
-    emitTalkOffers(after,pendingOffers);
     resolveTalkResponses(after);
     E.reconcileIntents?.(after);
     return result;
