@@ -19,4 +19,15 @@ for(const file of files){
   s=s.replace(/E\.normalizeStateActions\(st\);/g,'');
   fs.writeFileSync(file,s);
 }
+
+// The original base validator predates Action Terminology and must no longer require the removed alias.
+{
+  const file='src/state-validator.js';
+  let s=fs.readFileSync(file,'utf8');
+  s=s.replaceAll('a.action?.intent','a.action?.kind');
+  s=s.replace("if(a.action&&(!a.action.intent||!a.action.phase))add('invalid_action',`${a.name}的 action 缺少 intent / phase。`,{agentId:a.id});","if(a.action&&(!a.action.kind||!a.action.phase))add('invalid_action',`${a.name}的 action 缺少 kind / phase。`,{agentId:a.id});");
+  if(s.includes('a.action.intent'))throw new Error('base validator still reads action.intent');
+  fs.writeFileSync(file,s);
+}
+
 fs.unlinkSync(__filename);
