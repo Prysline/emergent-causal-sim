@@ -26,7 +26,7 @@ function memory(agent,eventId,{tick=0,last=tick,relevance=.8,congruence=0,action
   };
 }
 function addHuman(st,id,name,position){
-  const clone=structuredClone(st.agents.zhou);clone.id=id;clone.name=name;clone.position={...position};clone.action=null;clone.activeIntent=null;clone.episodicMemories=[];clone.affect={valence:0,activation:0,frustration:0,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:null};clone.observedSocialBids=[];clone.pendingInteraction=null;clone.offMap=false;st.agents[id]=clone;return clone;
+  const clone=structuredClone(st.agents.zhou);clone.id=id;clone.name=name;clone.position={...position};clone.action=null;clone.activeIntent=null;clone.episodicMemories=[];clone.affect={valence:0,activation:0,frustration:0,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:null};clone.observedSocialBids=[];delete clone.pendingInteraction;clone.offMap=false;st.agents[id]=clone;return clone;
 }
 function calm(a,{social=55}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue:8,sleepNeed:8,social});a.action=null;a.activeIntent=null;a.offMap=false;}
 function socialCandidate(st,a){return E.candidateIntents(st,a).find(c=>c.intentKind==='socialize')||null;}
