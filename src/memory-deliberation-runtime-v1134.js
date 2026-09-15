@@ -134,8 +134,8 @@
       case'cleanFloor':{const t=SP.wettestTile?.(st);action=t?{...base,phase:'move',targetTile:{x:t.x,y:t.y}}:null;break;}
       case'groom':action={...base,phase:'groom'};break;
       case'wander':{const t=randomFloorTile(st,a);action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null,oneShot:true};break;}
-      case'restockContainer':{const j=c.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;
-      case'externalSupply':{const exit=exitSlotFor(st,a);if(exit&&c.carrierId)action={...base,phase:'toCarrier',exitSlot:exit.id,destinationId:c.destinationId,resource:c.resource,carrierId:c.carrierId,workLeft:Math.floor(E.rand(7,11)),produced:0};break;
+      case'restockContainer':{const j=c.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;}
+      case'externalSupply':{const exit=exitSlotFor(st,a);if(exit&&c.carrierId)action={...base,phase:'toCarrier',exitSlot:exit.id,destinationId:c.destinationId,resource:c.resource,carrierId:c.carrierId,workLeft:Math.floor(E.rand(7,11)),produced:0};break;}
     }
     if(action)E.installActionKind?.(action);return action;
   }
