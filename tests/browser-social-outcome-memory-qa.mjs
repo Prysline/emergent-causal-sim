@@ -62,7 +62,7 @@ assert.equal(desktop.sectionVisible,true);
 assert.ok(desktop.inspectorText.includes('Requester 社交結果記憶'));
 assert.ok(desktop.inspectorText.includes('沒有得到回應'));
 assert.ok(desktop.inspectorText.includes('agency unknown'));
-assert.ok(!desktop.inspectorText.includes('故意忽略'));
+assert.ok(desktop.inspectorText.includes('不代表對方故意忽略'),'Inspector must explain that counterpart association is not intentional ignoring');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 await page.screenshot({path:`${outDir}/desktop.png`,fullPage:true});
