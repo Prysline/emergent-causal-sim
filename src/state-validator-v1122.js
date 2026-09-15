@@ -7,7 +7,7 @@
     const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
 
     for(const a of Object.values(st?.agents||{})){
-      if(own(a,'pendingInteraction'))add('legacy_pending_interaction_persistent',`${a.name} 仍保存 legacy pendingInteraction；v11.12.2 只允許 runtime transient compatibility。`,{agentId:a.id});
+      if(own(a,'pendingInteraction'))add('legacy_pending_interaction_persistent',`${a.name} 仍保存已移除的 legacy pendingInteraction；Social Bid responder 必須直接由 observedSocialBids / decision option contract 形成。`,{agentId:a.id});
 
       if(!Array.isArray(a.observedSocialBids))add('observed_social_bids_invalid',`${a.name} 的 observedSocialBids 必須是 array。`,{agentId:a.id});
       else{

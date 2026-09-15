@@ -17,6 +17,7 @@ E.reset(20260911);
 let st=E.getState();
 assert.equal(st.version,'11.12.2-social-bid-lifecycle');
 assert.equal(E.SOCIAL_BID_SCHEMA_VERSION,'11.12.2-social-bid-lifecycle');
+assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='socialBid.respond-cat-affection'),'Social Bid responder option provider must be registered');
 for(const a of Object.values(st.agents)){
   assert.deepEqual(a.observedSocialBids,[]);
   assert.equal(Object.prototype.hasOwnProperty.call(a,'pendingInteraction'),false,'legacy pendingInteraction must not persist after reset');
@@ -24,7 +25,7 @@ for(const a of Object.values(st.agents)){
 noIssues('reset');
 
 // Real seekHuman interaction becomes an immutable world Bid. Requester waiting is private;
-// responder observation is a local reference, while legacy pendingInteraction is removed again after the tick.
+// responder observation is a local reference; no pendingInteraction compatibility state is created.
 E.reset(20260911);
 st=E.getState();
 const cat=st.agents.orange,human=st.agents.zhou;
@@ -54,12 +55,19 @@ noIssues('world Bid + private requester waiting');
 // is an explicit world-state change; it does not modify the requester private waiting state.
 human.action=null;human.activeIntent=null;human.position={x:10,y:6};
 const requesterPos={...cat.position};
+const responseChoices=E.socialBidDecisionOptions(st,human);
+assert.equal(responseChoices.length,1,'observed cat Bid should produce one responder candidate');
+assert.equal(responseChoices[0].id,'petCat');
+assert.equal(responseChoices[0].targetAgent,'orange');
+assert.equal(responseChoices[0].socialBidId,bid.id);
 E.tick();
 st=E.getState();
 assert.equal(human.activeIntent?.kind,'respondSocialBid','idle responder should be able to form a local response Intent from its observed Bid');
 assert.equal(human.activeIntent?.source?.bidId,bid.id);
 assert.equal(human.action?.kind,'petCat');
 assert.equal(human.action?.targetAgent,'orange');
+assert.equal(st.thoughts?.zhou?.pick?.socialBidId,bid.id,'core chooser should preserve Social Bid provenance on the chosen candidate');
+assert.equal(Object.prototype.hasOwnProperty.call(human,'pendingInteraction'),false);
 assert.equal(cat.activeIntent?.kind,'awaitResponse');
 noIssues('delayed responder Intent');
 
@@ -112,6 +120,22 @@ assert.ok(responseFor(raceBidId),'physical response should occur on the deadline
 assert.equal(waitEndFor(raceBidId),undefined,'same-tick physical response must settle before requester timeout');
 assert.equal(raceCat.activeIntent,null);
 noIssues('same-tick response before timeout');
+
+// Responder option remains a normal candidate: urgent core needs may still win instead of forcing a response.
+E.reset(31415);
+st=E.getState();
+const competingHuman=st.agents.zhou,competingCat=st.agents.orange;
+competingHuman.position={x:4,y:6};competingCat.position={x:4,y:6};
+const competingBidId=E.addEvent('橘子發出一次測試用社交邀請。','good',[],{actor:'orange',target:'zhou',action:'seekHuman',socialBid:true,bidKind:'catAffection',interactionKind:'socialAffection',expectsResponse:true,bidFrom:'orange',bidTo:'zhou',perceivedByTarget:true});
+st.causes[competingBidId].data.bidId=competingBidId;
+competingHuman.observedSocialBids=[{bidId:competingBidId,observedTick:st.tick,expiresTick:st.tick+6}];
+competingHuman.action=null;competingHuman.activeIntent=null;competingHuman.needs.hunger=0;competingHuman.needs.thirst=100;competingHuman.needs.fatigue=0;competingHuman.needs.sleepNeed=0;competingHuman.needs.social=0;
+E.tick();
+st=E.getState();
+assert.equal(st.agents.zhou.action?.kind,'drinkWater','urgent thirst should be able to beat the Social Bid response candidate');
+assert.notEqual(st.agents.zhou.activeIntent?.kind,'respondSocialBid','Social Bid provider must not force responder policy');
+assert.ok(st.agents.zhou.observedSocialBids.some(x=>x.bidId===competingBidId),'unselected observed Bid should remain available within its bounded lifetime');
+noIssues('responder candidate competes with urgent core need');
 
 // Long-run integration keeps active Social Bid state bounded and never restores shared pending request truth.
 E.reset(77);
