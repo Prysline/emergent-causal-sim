@@ -72,7 +72,7 @@ function assertStory(s,label){
 
 await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.MEMORY_RETENTION_SCHEMA_VERSION==='11.13.3-memory-salience-pruning');
-assert.ok((await page.title()).includes('v11.13.3'));
+assert.ok((await page.title()).includes('因果湧現模擬器'));
 await seedRetentionStory();
 const desktop=await snapshot();assertStory(desktop,'desktop');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);

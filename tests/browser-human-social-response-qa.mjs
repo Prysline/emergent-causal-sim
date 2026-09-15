@@ -15,6 +15,7 @@ async function openScenario(scenario){
   await page.waitForFunction(()=>window.SimEngine?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION==='11.13.3a-human-social-response');
   return page.evaluate(()=>({
     version:window.SimEngine.getState().version,
+    humanSocialVersion:window.SimEngine.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,
     scenarioValue:document.getElementById('socialScenario')?.value??null
   }));
 }
@@ -46,9 +47,9 @@ async function snapshot(){
 }
 
 const opened=await openScenario('talk-engage');
-assert.equal(opened.version,'11.13.3a-human-social-response');
+assert.equal(opened.humanSocialVersion,'11.13.3a-human-social-response');
 assert.equal(opened.scenarioValue,'talk-engage');
-assert.ok((await page.title()).includes('Human Social Response Agency'));
+assert.ok((await page.title()).includes('因果湧現模擬器'));
 await showFullTimeline();
 await step();let desktop=await snapshot();
 fs.writeFileSync(`${outDir}/desktop-state.json`,JSON.stringify(desktop,null,2));

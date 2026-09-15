@@ -69,7 +69,9 @@
       const h=nearestAgent(st,a,'human');if((a.needs?.social||0)>14&&h)push('seekSocialContact','seekHuman',{targetAgent:h.id});
       push('drinkWater','drinkWater');
     }
-    return out.sort((x,y)=>y.utility-x.utility||x.intentKind.localeCompare(y.intentKind));
+    const hook=window.SimMemoryDeliberation?.adjustIntentCandidates;
+    const adjusted=hook?hook(st,a,out):out;
+    return adjusted.sort((x,y)=>y.utility-x.utility||((y.targetPreference||0)-(x.targetPreference||0))||x.intentKind.localeCompare(y.intentKind));
   }
   function reservationCount(st,a){return Object.values(st.reservations||{}).filter(owner=>owner===a.id).length;}
   function derivedCommitmentCost(st,a){
@@ -121,9 +123,16 @@
     if(age<MIN_INTENT_HOLD_TICKS)return {ok:false,reason:'minimum-hold',holdRemaining:MIN_INTENT_HOLD_TICKS-age};
     return {ok:true,reason:'eligible'};
   }
+  function sameCurrentCandidate(st,a,intent,c){
+    if(c.intentKind!==intent?.kind)return false;
+    const hook=window.SimMemoryDeliberation?.isDistinctTargetCandidate;
+    return !(hook&&hook(st,a,intent,c));
+  }
   function reconsiderationSnapshot(st,a){
-    const intent=a.activeIntent,eligibility=softEligible(st,a),commitment=derivedCommitmentCost(st,a),currentUtility=intent?utilityForIntent(st,a,intent.kind,{intent}):0;
-    const candidates=candidateIntents(st,a).filter(c=>c.intentKind!==intent?.kind),best=candidates[0]||null,threshold=currentUtility+SOFT_SWITCH_MARGIN+(Number.isFinite(commitment)?commitment:0);
+    const intent=a.activeIntent,eligibility=softEligible(st,a),commitment=derivedCommitmentCost(st,a),baseCurrentUtility=intent?utilityForIntent(st,a,intent.kind,{intent}):0;
+    const adjustCurrent=window.SimMemoryDeliberation?.adjustCurrentIntentUtility;
+    const currentUtility=adjustCurrent&&intent?adjustCurrent(st,a,intent,baseCurrentUtility):baseCurrentUtility;
+    const candidates=candidateIntents(st,a).filter(c=>!sameCurrentCandidate(st,a,intent,c)),best=candidates[0]||null,threshold=currentUtility+SOFT_SWITCH_MARGIN+(Number.isFinite(commitment)?commitment:0);
     return {...eligibility,currentUtility,commitmentCost:commitment,switchMargin:SOFT_SWITCH_MARGIN,switchThreshold:threshold,bestChallenger:best};
   }
   function freshIntent(st,a,c,priorIntent){
