@@ -51,7 +51,7 @@ E.reset(20260911);
   human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
   E.tick();
 
-  assert.equal(cat.action?.intent,'sleep','輕摸不一定叫醒正在深睡的貓');
+  assert.equal(cat.action?.kind,'sleep','輕摸不一定叫醒正在深睡的貓');
   const pet=st.events.find(e=>e.data?.action==='petCat');
   assert.ok(pet,'摸貓本身應記為發起者 action');
   assert.ok(!pet.text.includes('蹭了幾下'),'摸貓不得再固定虛構貓有回蹭');

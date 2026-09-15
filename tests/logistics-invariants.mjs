@@ -30,7 +30,7 @@ function startIndoorFoodRestock(st,a){
   basket.contents={};
   basket.position={x:3,y:2};
   a.action={
-    intent:'restockContainer',phase:'toCarrier',destinationId:tray.id,
+    kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,
     sourceId:pantry.id,sourceKind:'object',resource:'food',
     strategy:'logisticsContainer',carrierId:basket.id,
     started:st.tick,wait:0
@@ -70,7 +70,7 @@ E.reset(20260911);
   basket.contents={};
   st.reservations[`object:${basket.id}`]=owner.id;
   actor.action={
-    intent:'restockContainer',phase:'toCarrier',destinationId:tray.id,
+    kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,
     sourceId:pantry.id,sourceKind:'object',resource:'food',
     strategy:'logisticsContainer',carrierId:basket.id,
     started:st.tick,wait:0
@@ -119,7 +119,7 @@ E.reset(20260911);
   basket.position={x:3,y:2};
   const destinationBefore=foodOf(dest);
   a.action={
-    intent:'externalSupply',phase:'toCarrier',exitSlot:door.id,
+    kind:'externalSupply',phase:'toCarrier',exitSlot:door.id,
     destinationId:dest.id,resource:'food',carrierId:basket.id,
     workLeft:1,produced:0,started:st.tick,wait:0
   };
