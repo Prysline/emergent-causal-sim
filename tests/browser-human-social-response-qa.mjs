@@ -24,11 +24,13 @@ async function snapshot(){
     const E=window.SimEngine,st=E.getState();
     const offer=st.events.find(e=>e.data?.action==='talkOffer');
     const response=st.events.find(e=>e.data?.responseToBid===offer?.id&&['acceptTalk','briefTalkReply','declineTalk'].includes(e.data?.action));
-    const talk=st.events.find(e=>e.data?.action==='talk'&&e.data?.responseToBid===offer?.id);
+    const talk=st.events.find(e=>e.data?.action==='talk'&&e.data?.talkOfferId===offer?.id);
     const timeout=st.events.find(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===offer?.id);
     return {
       version:st.version,humanSocialVersion:E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,
-      offerId:offer?.id??null,responseAction:response?.data?.action??null,responseCauses:response?.causes??[],talkId:talk?.id??null,talkCauses:talk?.causes??[],
+      offerId:offer?.id??null,
+      responseId:response?.id??null,responseAction:response?.data?.action??null,responseToBid:response?.data?.responseToBid??null,
+      talkId:talk?.id??null,talkOfferId:talk?.data?.talkOfferId??null,talkResponseEventId:talk?.data?.talkResponseEventId??null,
       timeout:timeout?{id:timeout.id,visibility:timeout.data?.visibility??null,bidKind:timeout.data?.bidKind??null,responderContextObserved:timeout.data?.responderContextObserved??null,observedResponderActionKind:timeout.data?.observedResponderActionKind??null}:null,
       validator:window.SimValidator.validateState(st),scenarioValue:document.getElementById('socialScenario')?.value??null,
       timelineText:document.getElementById('timeline')?.innerText??'',
@@ -47,9 +49,10 @@ fs.writeFileSync(`${outDir}/desktop-state.json`,JSON.stringify(desktop,null,2));
 await page.screenshot({path:`${outDir}/desktop-engage.png`,fullPage:true});
 assert.ok(desktop.offerId,'desktop engage: talkOffer missing after first step');
 assert.equal(desktop.responseAction,'acceptTalk','desktop engage: idle high-social responder should accept after observing offer');
+assert.equal(desktop.responseToBid,desktop.offerId,'desktop engage: responder outcome must point back to talkOffer');
 assert.ok(desktop.talkId,'desktop engage: accepted offer must produce full talk');
-assert.ok(desktop.responseCauses.includes(desktop.offerId),'desktop engage: response must cite talkOffer cause');
-assert.ok(desktop.talkCauses.includes(desktop.offerId),'desktop engage: full talk must cite talkOffer cause');
+assert.equal(desktop.talkOfferId,desktop.offerId,'desktop engage: full talk must preserve originating talkOffer');
+assert.equal(desktop.talkResponseEventId,desktop.responseId,'desktop engage: full talk must preserve the explicit responder event');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop timeline should expose the talk offer');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
