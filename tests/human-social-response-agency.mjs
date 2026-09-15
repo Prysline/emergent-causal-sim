@@ -35,10 +35,11 @@ E.reset(11330);let st=E.getState(),responder=st.agents.zhen;
 responder.needs.social=0;assert.equal(E.talkResponseFor(responder),'decline');
 responder.needs.social=35;assert.equal(E.talkResponseFor(responder),'brief');
 responder.needs.social=90;assert.equal(E.talkResponseFor(responder),'engage');
-const scoreBefore=E.talkEngagementScore(responder),utilityBefore=E.talkResponseUtility(responder);
+const scoreBefore=E.talkEngagementScore(responder),utilityBefore=E.talkResponseUtility(responder),neutralAffect=JSON.parse(JSON.stringify(responder.affect));
 responder.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:0,lastDecayTick:0,source:null};
 assert.equal(E.talkEngagementScore(responder),scoreBefore,'Current Affect must not enter v11.13.3a talk response scoring');
 assert.equal(E.talkResponseUtility(responder),utilityBefore,'Current Affect must not enter response priority utility');
+responder.affect=neutralAffect;
 noIssues('deterministic human response bands');
 
 // Engage: talk is no longer unilateral. Offer first, responder accepts, only then full talk occurs.
