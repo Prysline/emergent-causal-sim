@@ -44,6 +44,7 @@ jobs:
       - run: node tests/short-lived-affect.mjs
       - run: node tests/memory-event-observation-timing.mjs
       - run: node tests/memory-spatial-event-enrichment.mjs
+      - run: node tests/memory-resource-transfer-consequence-policy.mjs
       - run: node tests/pet-response-observation-timing.mjs
       - run: node tests/social-response-agency.mjs
       - run: node tests/memory-salience-pruning.mjs
