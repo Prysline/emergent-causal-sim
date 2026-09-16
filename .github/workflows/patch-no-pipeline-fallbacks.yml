@@ -1,0 +1,51 @@
+name: Patch legacy no-pipeline runtime
+
+on:
+  push:
+    branches: [refactor/remove-no-pipeline-fallbacks]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/remove-no-pipeline-fallbacks
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply production-pipeline migration
+        run: python3 .github/scripts/remove-no-pipeline-fallbacks.py
+      - name: Syntax check
+        run: for f in src/*.js; do node --check "$f"; done
+      - name: Focused migrated tests
+        run: |
+          for f in \
+            action-terminology.mjs active-intent-foundation.mjs animal-social-outcome-memory.mjs episodic-memory-foundation.mjs \
+            event-appraisal.mjs human-social-response-agency.mjs intent-replan-preemption.mjs legacy-pending-interaction-cleanup.mjs \
+            memory-deliberation-influence.mjs memory-salience-pruning.mjs presentation-observability-v1140.mjs requester-social-outcome-memory.mjs \
+            short-lived-affect.mjs social-bid-lifecycle.mjs social-response-agency.mjs soft-reconsideration-hysteresis.mjs surface-liquid-foundation.mjs; do
+            node "tests/$f"
+          done
+      - name: Full non-browser Node regression
+        run: |
+          for f in tests/*.mjs; do
+            case "$(basename "$f")" in browser-*) continue ;; esac
+            node "$f"
+          done
+      - name: Verify no fallback owner remains
+        run: |
+          python3 .github/scripts/audit-no-pipeline.py
+          grep -q 'potential fallback owner files: **0**' no-pipeline-audit.md
+          grep -q 'still no-pipeline: **0**' no-pipeline-audit.md
+      - name: Commit product migration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src tests docs/architecture.md
+          git commit -m 'Remove legacy no-pipeline runtime fallbacks'
+          git push origin HEAD:refactor/remove-no-pipeline-fallbacks
