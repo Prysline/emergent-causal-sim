@@ -103,25 +103,25 @@
     if(thought.tick!==action.started||pick.id!==action.kind)return '';
     if(a?.activeIntent?.kind==='respondSocialBid')return '';
     switch(pick.id){
-      case 'eat': return '因為飢餓感已經變得明顯。';
+      case 'eat': return '因為肚子餓了。';
       case 'drinkWater': return '因為口渴。';
-      case 'drinkAlcohol': return '因為口渴，而且現在也有喝酒的傾向。';
-      case 'rest': return '因為活動疲勞累積得比較明顯。';
-      case 'sleep': return '因為睡眠需求已經變得明顯。';
-      case 'talk': return '因為社交需求已經變得比較明顯。';
-      case 'petCat': return '因為現在有社交需求，也對貓有親近感。';
-      case 'seekHuman': return '因為社交需求已經變得比較明顯。';
+      case 'drinkAlcohol': return '因為口渴，而且現在想喝點酒。';
+      case 'rest': return '因為累了。';
+      case 'sleep': return '因為想睡了。';
+      case 'talk': return '因為想找人說說話。';
+      case 'petCat': return '因為想找點陪伴，也對貓有親近感。';
+      case 'seekHuman': return '因為想找點陪伴。';
       case 'cleanFloor': return '因為附近有濕滑的地面需要處理。';
       case 'groom': {
         const residue=Object.values(a?.contacts?.paws||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
-        return residue>.05?'因為腳掌或毛上沾了需要清理的東西。':'因為理毛需求累積得比較明顯。';
+        return residue>.05?'因為腳掌或毛上沾了需要清理的東西。':'因為身上有點需要整理了。';
       }
       case 'restockContainer': {
         const dest=containerName(st,action.destinationId,'室內容器'),resource=resourceName(action.resource);
         return `因為${dest}裡的${resource}已經不多了。`;
       }
-      case 'externalSupply': return `因為家裡的${resourceName(action.resource)}庫存已經不足。`;
-      case 'wander': return a.kind==='cat'?'因為目前沒有更迫切的需求，而且牠有探索傾向。':'目前沒有其他更迫切的需求。';
+      case 'externalSupply': return `因為家裡的${resourceName(action.resource)}快不夠了。`;
+      case 'wander': return '因為現在沒有更急著要做的事。';
       default: return '';
     }
   }
