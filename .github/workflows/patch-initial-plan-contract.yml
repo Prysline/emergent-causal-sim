@@ -1,0 +1,36 @@
+name: Patch initial plan normalization contract
+
+on:
+  push:
+    branches: [contract/initial-plan-normalization]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: contract/initial-plan-normalization
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply initial plan contract patch
+        run: python3 .github/scripts/patch-initial-plan-contract.py
+      - name: Syntax and focused regression
+        run: |
+          node --check src/engine.js
+          node --check src/memory-deliberation-runtime-v1134.js
+          node tests/memory-deliberation-influence.mjs
+      - name: Architecture regression
+        run: node tests/runtime-hook-pipeline.mjs
+      - name: Commit product patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/engine.js src/memory-deliberation-runtime-v1134.js tests/memory-deliberation-influence.mjs docs/architecture.md
+          git commit -m 'Harden provisional initial plan normalization contract'
+          git push origin HEAD:contract/initial-plan-normalization
