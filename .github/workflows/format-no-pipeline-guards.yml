@@ -1,0 +1,42 @@
+name: Format no-pipeline guards
+
+on:
+  push:
+    branches: [refactor/remove-no-pipeline-fallbacks]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/remove-no-pipeline-fallbacks
+      - name: Normalize top-level guard indentation
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          changed=0
+          old='\n    if(!E.registerRuntimeHook)throw new Error('
+          new='\n  if(!E.registerRuntimeHook)throw new Error('
+          for path in Path('src').glob('*.js'):
+              text=path.read_text()
+              count=text.count(old)
+              if count:
+                  path.write_text(text.replace(old,new))
+                  changed+=count
+          if changed != 17:
+              raise SystemExit(f'expected 17 guard indentation fixes, got {changed}')
+          PY
+          for f in src/*.js; do node --check "$f"; done
+          node tests/runtime-hook-pipeline.mjs
+      - name: Commit formatting cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src
+          git commit -m 'Normalize runtime hook guard formatting'
+          git push origin HEAD:refactor/remove-no-pipeline-fallbacks
