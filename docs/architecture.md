@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.14.3-natural-player-explanations`。
+目前 runtime marker：`11.14.4-entity-readable-view`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -225,7 +225,7 @@ Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud f
 
 上述清單是 architecture view；精確 implementation hook ID / owner / order 對照請查 `docs/tick-pipeline.md`。
 
-UI / Resident View 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
+UI / readable Inspector 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
 
 Runtime hook extension 不再保留「沒有 pipeline 時 fallback wrapper」。任何需要 `registerRuntimeHook` 的 extension 若未先載入 `runtime-hook-pipeline.js` 必須 loud failure；focused Node test 也必須在 `engine.js` 後、任何 hook extension 前載入同一 production pipeline。正常 app 與 test 不再存在第二套 wrapper-stacking lifecycle。
 
@@ -333,7 +333,7 @@ Core 保持 `E.actionLabel` ownership。Presentation 若要補 readable status�
 
 ### Resident current-activity semantic layers
 
-Resident View 的「現在」固定分成三層 read-only projection：
+Agent readable view 的「現在」固定分成三層 read-only projection：
 
 - **Action＝角色現在具體在做什麼。** 來源是 live Action；Resident 可以把 raw phase ID、工程座標等轉成玩家可讀文字，但 Debug 仍保留完整 Action phase / spatial goal。
 - **Intent＝這個行動服務的短期目的。** 來源是 canonical `activeIntent.kind`；Resident label 必須覆蓋正式 Intent kind，不得另造 `satisfyThirst / cleanEnvironment / restockFood` 之類 presentation-only 假 kind 來猜測目的。
@@ -342,9 +342,21 @@ Resident View 的「現在」固定分成三層 read-only projection：
 
 三層都不能寫回 simulation state，也不能成為 Deliberation / Memory / Affect 的輸入。完整 candidate score、utility、switch threshold、commitment cost、Memory delta、raw phase / coordinates 等工程資訊留在 Debug Inspector。
 
+### Entity Readable View
+
+Player-readable Inspector 不再只覆蓋 Agent。現行 selectable entity 的 readable surface 包含 `agent / container / source / furniture / tile / room / event`；所有 readable 內容都只從當下 authoritative state / canonical event 即時投影，與 Debug Inspector 共享同一份 truth。
+
+- **Container：** 玩家層可顯示名稱、可理解位置／持有人／承載家具、內容物、容量與已存在 capability；raw entity ID、Tile 座標、empty/current load、restock strategy 等工程欄位留在 Debug。
+- **Source：** 顯示資源來源名稱、位置、提供的資源與可理解供應狀態；roles、interaction Port、raw ID 留在 Debug。
+- **Furniture：** 顯示位置、可理解用途、**實際正在使用的 Agent**、承載物件與聚合後的表面內容；Footprint、Surface cell、slot position / raw ID 與 reservation 留在 Debug。`slotReservedBy` 是行動規劃／reservation truth，不等同「正在使用」，不得在玩家層誤寫成已發生事實。
+- **Tile / Room：** 顯示地形／房間名稱、是否可通行、當前 occupants / furniture、可理解的表面內容或空間摘要；raw coordinate、blocker provenance、noise/comfort diagnostic、derived topology metrics 留在 Debug。
+- **Event：** 玩家層以 canonical event text / time 與可解析的相關實體為主；raw event data、entity refs、cause tree 等 causal/debug provenance 留在 Debug。
+
+Readable View 不保存 `playerContents / readableFurnitureState / entityReadableState` 等 mirror，不得回寫 simulation state，也不能成為 decision / Memory / Affect input。若 authoritative state 沒有足夠資訊，就省略該描述，而不是補造用途、心理狀態或因果敘事。
+
 ### Inspector render / decorator lifecycle
 
-Player Resident View 與 Debug Inspector 都是同一 authoritative simulation state 的 projection。View / tab switch 必須 state-inert。
+Player-readable Entity View 與 Debug Inspector 都是同一 authoritative simulation state 的 projection。View / tab / readable-debug switch 必須 state-inert。
 
 Base `ui.js` 是 `#inspector` 的唯一 render owner。它先提交 base Inspector DOM，再同步執行 `window.SimUI.registerInspectorDecorator(id, handler, order)` 註冊的 presentation decorators；decorator 不得以 `MutationObserver` 或 catch-all document click 猜測 Inspector 何時重畫完成。
 
@@ -361,11 +373,14 @@ Base `ui.js` 是 `#inspector` 的唯一 render owner。它先提交 base Inspect
 800  Memory → Deliberation
 900  Requester Social Outcome Memory
 1000 Resident View / Debug Layer
+1050 Entity Readable / Debug Layer
 ```
 
 這些數字只表示 **Inspector composition order**，不是 simulation Runtime Hook Pipeline 的 phase/order；Architecture 圖仍應以 lifecycle responsibility 描述，不把 UI section 名稱提升為 simulation stage。
 
-Resident View 是最後一層 presentation decorator：它直接接收 base UI 傳入的 selected entity context，將已完成 decorators 的 Debug Inspector 包入 Resident/Debug shell，不再解析 `.inspect-title` 找 Agent，也不再以 `MutationObserver` 搬運重建後的 DOM。afterTick 1100 `residentView.schedule` / afterReset 700 `residentView.reset` 仍只負責 presentation refresh/reset，不取得 simulation lifecycle ownership。
+Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Action / Intent / Explanation；order 1050 Entity Readable layer 對 Agent 不建立第二個 shell，只統一玩家入口標籤。Container / Source / Furniture / Tile / Room / Event 則由 order 1050 將已完成 decorators 的 base Inspector DOM 包入 Readable / Debug shell。兩層都直接使用 base UI 傳入的 `selected` context，不解析 `.inspect-title` 猜 entity，也不以 `MutationObserver` 搬運重建後的 DOM。
+
+Resident afterTick 1100 `residentView.schedule` / afterReset 700 `residentView.reset` 仍只負責 Agent presentation refresh/reset，不取得 simulation lifecycle ownership；非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
 
 `ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
 
@@ -419,18 +434,19 @@ Regression 優先鎖：
 
 Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂。後續不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。
 
-Resident View / Debug Inspector 原本的 DOM shell / MutationObserver coupling 已由 explicit Inspector render/decorator lifecycle 收斂。Current invariant：
+Readable Entity View / Debug Inspector 的 presentation ownership 維持 explicit Inspector render/decorator lifecycle。Current invariant：
 
 - `ui.js` 是 Inspector base render owner；extension 只註冊具名 presentation decorator；
 - Inspector decorator order 必須 deterministic，且不依賴 script observer race / DOM title parsing；
-- Resident / Debug 仍是同一 authoritative state 的 projection，mode/tab switch 必須 state-inert；
-- presentation state 不得寫回 canonical simulation state；
+- Agent Resident layer 與非 Agent Entity Readable layer都只投影同一 authoritative state；readable/debug mode/tab switch 必須 state-inert；
+- presentation state 不得寫回 canonical simulation state，也不得建立物品／家具的第二份玩家 mirror state；
+- Furniture reservation、raw geometry、raw IDs 與 causal provenance 留在 Debug，不因「好讀」而被重解釋成玩家事實；
 - map/actions 等其他 derived DOM observer 不得重新擴張成 Inspector ownership；
-- 本次 cleanup 不改 responder scoring、Relationship、Memory influence 或 gameplay policy。
+- 本次 presentation slice 不改 responder scoring、Relationship、Memory influence 或 gameplay policy。
 
-此 presentation debt 完成後，不在本文件提前指定下一個產品／玩法 slice；後續工作應重新以 Current Integration Debt 與 subsystem Active Design 為準。
+此 presentation slice 完成後，不在本文件提前指定下一個產品／玩法 slice；後續工作應重新以 Current Integration Debt 與 subsystem Active Design 為準。
 
-## 9. Validator rule ownership
+## 12. Validator rule ownership
 
 `src/state-validator.js` 是唯一 `validateState` aggregator owner。Versioned validator extension 不得捕捉或覆寫 `V.validateState`；每一層 invariant 使用 `V.registerValidationLayer(id, handler, order)` 以唯一 ID 與 explicit order 註冊。
 
