@@ -87,7 +87,7 @@
 
   E.registerDecisionOptionProvider?.('socialBid.respond-cat-affection',socialBidDecisionOptions,100);
 
-    if(!E.registerRuntimeHook)throw new Error('social-bid-runtime-v1122.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('social-bid-runtime-v1122.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','socialBid.prepare',(ctx)=>{ctx.locals.socialBidV1122=prepareTick(E.getState());},900);
   E.registerRuntimeHook('afterTick','socialBid.settle',(ctx)=>settleTick(E.getState(),ctx.locals.socialBidV1122),300);
   E.registerRuntimeHook('afterReset','socialBid.normalize-reset',()=>normalizeSocialState(E.getState()),200);

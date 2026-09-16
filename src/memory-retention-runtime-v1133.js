@@ -36,7 +36,7 @@
   }
   function normalizeRetentionState(st){for(const a of Object.values(st?.agents||{}))pruneAgentMemoriesBySalience(st,a);return st;}
 
-    if(!E.registerRuntimeHook)throw new Error('memory-retention-runtime-v1133.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('memory-retention-runtime-v1133.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterReset','memoryRetention.normalize-reset',()=>normalizeRetentionState(E.getState()),500);
 
   normalizeRetentionState(E.getState());

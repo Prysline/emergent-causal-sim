@@ -75,7 +75,7 @@
   }
   function resetObservability(){renderMobileSummary();}
 
-    if(!E.registerRuntimeHook)throw new Error('ui-observability-controls-v1133a.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('ui-observability-controls-v1133a.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
   E.registerRuntimeHook('afterReset','uiObservability.reset',resetObservability,600);
 

@@ -85,7 +85,7 @@
   function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);}
   function settleTick(st){resolveTalkResponses(st);E.reconcileIntents?.(st);}
 
-    if(!E.registerRuntimeHook)throw new Error('human-social-response-runtime-v1133a.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('human-social-response-runtime-v1133a.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
   E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 

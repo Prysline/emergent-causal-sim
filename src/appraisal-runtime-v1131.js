@@ -42,7 +42,7 @@
     const appraisal={appraisedTick:memory.observedTick,ruleId:rule?`${action}-v1`:'baseline-v1',relevance:round(clamp(ctx.relevance,0,1)),goalCongruence:round(clamp(ctx.goalCongruence,-1,1)),agency:agencyFor(a,memory),factors:ctx.factors};memory.appraisal=appraisal;return appraisal;
   }
 
-    if(!E.registerRuntimeHook)throw new Error('appraisal-runtime-v1131.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('appraisal-runtime-v1131.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','appraisal.base',(ctx)=>{ctx.result=appraiseEpisodicMemory(ctx.state,ctx.agent,ctx.memory);},100);
 
   Object.assign(E,{APPRAISAL_SCHEMA_VERSION:VERSION,APPRAISAL_RULES,appraiseEpisodicMemory});

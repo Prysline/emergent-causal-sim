@@ -35,7 +35,7 @@
     return memory.appraisal;
   }
 
-    if(!E.registerRuntimeHook)throw new Error('appraisal-human-social-response-v1133a.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('appraisal-human-social-response-v1133a.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','appraisal.human-social',(ctx)=>{if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(ctx.memory?.observed?.action))ctx.result=appraiseHumanSocialResponseMemory(ctx.state,ctx.agent,ctx.memory);},300);
 
   Object.assign(E,{HUMAN_SOCIAL_APPRAISAL_ACTIONS:Object.freeze(['acceptTalk','talk','briefTalkReply','declineTalk']),appraiseHumanSocialResponseMemory});

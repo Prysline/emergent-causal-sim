@@ -169,7 +169,7 @@
     if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
   });
 
-    if(!E.registerRuntimeHook)throw new Error('ui-resident-view-v1140.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('ui-resident-view-v1140.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','residentView.schedule',schedule,1100);
   E.registerRuntimeHook('afterReset','residentView.reset',resetResidentView,700);
 

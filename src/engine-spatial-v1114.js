@@ -55,7 +55,7 @@
     }
   }
 
-    if(!E.registerRuntimeHook)throw new Error('engine-spatial-v1114.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('engine-spatial-v1114.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','spatial.capture',(ctx)=>{ctx.locals.spatialV1114=captureSpatialTick(E.getState());},1100);
   E.registerRuntimeHook('afterTick','spatial.effects',(ctx)=>settleSpatialTick(E.getState(),ctx.locals.spatialV1114),100);
 })();

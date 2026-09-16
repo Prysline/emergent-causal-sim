@@ -25,7 +25,7 @@
     return memory.appraisal;
   }
 
-    if(!E.registerRuntimeHook)throw new Error('appraisal-social-response-v1132a.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('appraisal-social-response-v1132a.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','appraisal.social-response',(ctx)=>{if(ctx.memory?.observed?.action==='avoidPet')ctx.result=appraiseAvoidPetMemory(ctx.state,ctx.agent,ctx.memory);},200);
 
   Object.assign(E,{SOCIAL_RESPONSE_APPRAISAL_RULE_ID:'avoidPet-v1',appraiseAvoidPetMemory});
