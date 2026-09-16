@@ -14,50 +14,55 @@ const files=[
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,V=globalThis.SimValidator;
-const ids=phase=>E.listRuntimeHooks(phase).map(x=>x.id);
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
+
+const EXPECTED_HOOKS={
+  beforeTick:[
+    {id:'socialOutcome.capture-events',order:100},
+    {id:'memoryDeliberation.capture-idle',order:200},
+    {id:'humanSocial.prepare',order:300},
+    {id:'socialResponse.capture-pet-offers',order:400},
+    {id:'affect.decay',order:500},
+    {id:'memory.capture-events',order:600},
+    {id:'intent.soft-reconsideration',order:700},
+    {id:'intent.replan-preemption',order:800},
+    {id:'socialBid.prepare',order:900},
+    {id:'intent.reconcile-before',order:1000},
+    {id:'spatial.capture',order:1100}
+  ],
+  afterTick:[
+    {id:'spatial.effects',order:100},
+    {id:'intent.reconcile-after',order:200},
+    {id:'socialBid.settle',order:300},
+    {id:'intent.recover-aborts',order:400},
+    {id:'memory.process-events',order:500},
+    {id:'socialResponse.resolve-pet-offers',order:600},
+    {id:'humanSocial.resolve',order:700},
+    {id:'memoryDeliberation.correct-initial',order:800},
+    {id:'socialOutcome.process',order:900}
+  ],
+  afterReset:[
+    {id:'intent.normalize-reset',order:100},
+    {id:'socialBid.normalize-reset',order:200},
+    {id:'memory.normalize-reset',order:300},
+    {id:'affect.normalize-reset',order:400},
+    {id:'memoryRetention.normalize-reset',order:500}
+  ],
+  episodicMemoryCreated:[
+    {id:'appraisal.base',order:100},
+    {id:'appraisal.social-response',order:200},
+    {id:'appraisal.human-social',order:300},
+    {id:'affect.from-appraisal',order:400}
+  ]
+};
 
 assert.equal(E.RUNTIME_HOOK_PIPELINE_VERSION,'runtime-hook-pipeline-1');
 assert.equal(E.tick,E.RUNTIME_PIPELINE_TICK,'simulation runtimes must not replace the pipeline tick dispatcher');
 assert.equal(E.reset,E.RUNTIME_PIPELINE_RESET,'simulation runtimes must not replace the pipeline reset dispatcher');
 
-assert.deepEqual(ids('beforeTick'),[
-  'socialOutcome.capture-events',
-  'memoryDeliberation.capture-idle',
-  'humanSocial.prepare',
-  'socialResponse.capture-pet-offers',
-  'affect.decay',
-  'memory.capture-events',
-  'intent.soft-reconsideration',
-  'intent.replan-preemption',
-  'socialBid.prepare',
-  'intent.reconcile-before',
-  'spatial.capture'
-]);
-assert.deepEqual(ids('afterTick'),[
-  'spatial.effects',
-  'intent.reconcile-after',
-  'socialBid.settle',
-  'intent.recover-aborts',
-  'memory.process-events',
-  'socialResponse.resolve-pet-offers',
-  'humanSocial.resolve',
-  'memoryDeliberation.correct-initial',
-  'socialOutcome.process'
-]);
-assert.deepEqual(ids('afterReset'),[
-  'intent.normalize-reset',
-  'socialBid.normalize-reset',
-  'memory.normalize-reset',
-  'affect.normalize-reset',
-  'memoryRetention.normalize-reset'
-]);
-assert.deepEqual(ids('episodicMemoryCreated'),[
-  'appraisal.base',
-  'appraisal.social-response',
-  'appraisal.human-social',
-  'affect.from-appraisal'
-]);
+for(const [phase,expected] of Object.entries(EXPECTED_HOOKS)){
+  assert.deepEqual(E.listRuntimeHooks(phase),expected,`${phase} hook ids/orders are architecture semantics and must remain explicit`);
+}
 
 assert.throws(()=>E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>{},999),/Duplicate runtime hook/,'duplicate hook ids must fail loudly');
 assert.throws(()=>E.registerRuntimeHook('unknownPhase','bad',()=>{}),/Unknown runtime hook phase/,'unknown phases must fail loudly');
