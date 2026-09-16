@@ -136,12 +136,8 @@
   }
   function applySoftReconsiderations(st){for(const a of Object.values(st.agents||{}))applySoftReconsideration(st,a);}
 
-  if(E.registerRuntimeHook)E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
-  else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{applySoftReconsiderations(E.getState());return baseTick(...args);};
-    E.reset=(...args)=>baseReset(...args);
-  }
+  if(!E.registerRuntimeHook)throw new Error('intent-runtime-v1124.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
 
   Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
 })();

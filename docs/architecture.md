@@ -223,7 +223,7 @@ Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud f
 
 UI / Resident View 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
 
-為 isolated legacy test harness 保留的「沒有 pipeline 時 fallback wrapper」不代表正常 app contract；正常 app 不得退回以 wrapper stacking 決定 lifecycle。
+Runtime hook extension 不再保留「沒有 pipeline 時 fallback wrapper」。任何需要 `registerRuntimeHook` 的 extension 若未先載入 `runtime-hook-pipeline.js` 必須 loud failure；focused Node test 也必須在 `engine.js` 後、任何 hook extension 前載入同一 production pipeline。正常 app 與 test 不再存在第二套 wrapper-stacking lifecycle。
 
 ## 7. Event creation / observation ownership
 

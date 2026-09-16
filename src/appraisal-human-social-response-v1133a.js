@@ -35,11 +35,8 @@
     return memory.appraisal;
   }
 
-  if(E.registerRuntimeHook)E.registerRuntimeHook('episodicMemoryCreated','appraisal.human-social',(ctx)=>{if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(ctx.memory?.observed?.action))ctx.result=appraiseHumanSocialResponseMemory(ctx.state,ctx.agent,ctx.memory);},300);
-  else{
-    const priorMemoryCreatedHook=E.onEpisodicMemoryCreated;
-    E.onEpisodicMemoryCreated=(st,a,memory)=>{if(typeof priorMemoryCreatedHook==='function')priorMemoryCreatedHook(st,a,memory);if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(memory?.observed?.action))return appraiseHumanSocialResponseMemory(st,a,memory);return memory?.appraisal||null;};
-  }
+  if(!E.registerRuntimeHook)throw new Error('appraisal-human-social-response-v1133a.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('episodicMemoryCreated','appraisal.human-social',(ctx)=>{if(['acceptTalk','talk','briefTalkReply','declineTalk'].includes(ctx.memory?.observed?.action))ctx.result=appraiseHumanSocialResponseMemory(ctx.state,ctx.agent,ctx.memory);},300);
 
   Object.assign(E,{HUMAN_SOCIAL_APPRAISAL_ACTIONS:Object.freeze(['acceptTalk','talk','briefTalkReply','declineTalk']),appraiseHumanSocialResponseMemory});
 })();

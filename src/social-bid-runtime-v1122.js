@@ -87,15 +87,10 @@
 
   E.registerDecisionOptionProvider?.('socialBid.respond-cat-affection',socialBidDecisionOptions,100);
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','socialBid.prepare',(ctx)=>{ctx.locals.socialBidV1122=prepareTick(E.getState());},900);
-    E.registerRuntimeHook('afterTick','socialBid.settle',(ctx)=>settleTick(E.getState(),ctx.locals.socialBidV1122),300);
-    E.registerRuntimeHook('afterReset','socialBid.normalize-reset',()=>normalizeSocialState(E.getState()),200);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const snap=prepareTick(E.getState()),result=baseTick(...args);settleTick(E.getState(),snap);return result;};
-    E.reset=(...args)=>normalizeSocialState(baseReset(...args));
-  }
+  if(!E.registerRuntimeHook)throw new Error('social-bid-runtime-v1122.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','socialBid.prepare',(ctx)=>{ctx.locals.socialBidV1122=prepareTick(E.getState());},900);
+  E.registerRuntimeHook('afterTick','socialBid.settle',(ctx)=>settleTick(E.getState(),ctx.locals.socialBidV1122),300);
+  E.registerRuntimeHook('afterReset','socialBid.normalize-reset',()=>normalizeSocialState(E.getState()),200);
 
   normalizeSocialState(E.getState());
   Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,INTERACTION_BY_BID_KIND,bidEvent,socialBidInteractionKind,observedBidRefs,newestObservedCatBid,socialBidDecisionOptions,addObservedBid,canObserveSocialResponderContext:canObserveResponderContext});

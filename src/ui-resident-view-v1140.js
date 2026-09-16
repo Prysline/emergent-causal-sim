@@ -169,14 +169,9 @@
     if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
   });
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('afterTick','residentView.schedule',schedule,1100);
-    E.registerRuntimeHook('afterReset','residentView.reset',resetResidentView,700);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const result=baseTick(...args);schedule();return result;};
-    E.reset=(...args)=>{currentAgentId=null;mode='resident';residentTab='overview';const result=baseReset(...args);schedule();return result;};
-  }
+  if(!E.registerRuntimeHook)throw new Error('ui-resident-view-v1140.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('afterTick','residentView.schedule',schedule,1100);
+  E.registerRuntimeHook('afterReset','residentView.reset',resetResidentView,700);
 
   E.UI_RESIDENT_VIEW_VERSION=VERSION;
   E.residentAffectLabel=affectLabel;

@@ -85,14 +85,9 @@
   function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);}
   function settleTick(st){resolveTalkResponses(st);E.reconcileIntents?.(st);}
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
-    E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{prepareTick(E.getState());const result=baseTick(...args);settleTick(E.getState());return result;};
-    E.reset=(...args)=>baseReset(...args);
-  }
+  if(!E.registerRuntimeHook)throw new Error('human-social-response-runtime-v1133a.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
+  E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 
   Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,HIGH_COMMITMENT_ACTIONS,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
   try{const scenario=typeof location!=='undefined'?new URLSearchParams(location.search||'').get('scenario'):null;if(['talk-engage','talk-brief','talk-decline','talk-no-response'].includes(scenario))prepareHumanTalkScenario(scenario);}catch{}

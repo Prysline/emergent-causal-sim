@@ -33,15 +33,10 @@
   }
   function reconcileIntents(st){for(const a of Object.values(st?.agents||{}))reconcileAgentIntent(st,a);return st;}
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>reconcileIntents(E.getState()),1000);
-    E.registerRuntimeHook('afterTick','intent.reconcile-after',()=>reconcileIntents(E.getState()),200);
-    E.registerRuntimeHook('afterReset','intent.normalize-reset',()=>reconcileIntents(E.getState()),100);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{reconcileIntents(E.getState());const result=baseTick(...args);reconcileIntents(E.getState());return result;};
-    E.reset=(...args)=>reconcileIntents(baseReset(...args));
-  }
+  if(!E.registerRuntimeHook)throw new Error('intent-runtime-v1121.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>reconcileIntents(E.getState()),1000);
+  E.registerRuntimeHook('afterTick','intent.reconcile-after',()=>reconcileIntents(E.getState()),200);
+  E.registerRuntimeHook('afterReset','intent.normalize-reset',()=>reconcileIntents(E.getState()),100);
 
   reconcileIntents(E.getState());
   Object.assign(E,{INTENT_SCHEMA_VERSION:VERSION,INTENT_BY_ACTION,INTENT_ZH,intentKindForAction,intentLabel,intentIdFor,createIntent,ensureIntentForAction,reconcileIntents});

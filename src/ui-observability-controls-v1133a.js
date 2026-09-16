@@ -75,14 +75,9 @@
   }
   function resetObservability(){renderMobileSummary();}
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
-    E.registerRuntimeHook('afterReset','uiObservability.reset',resetObservability,600);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const result=baseTick(...args);renderMobileSummary();return result;};
-    E.reset=(...args)=>{const result=baseReset(...args);renderMobileSummary();return result;};
-  }
+  if(!E.registerRuntimeHook)throw new Error('ui-observability-controls-v1133a.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
+  E.registerRuntimeHook('afterReset','uiObservability.reset',resetObservability,600);
 
   installTurnControls();
   renderMobileSummary();

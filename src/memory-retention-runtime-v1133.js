@@ -36,8 +36,8 @@
   }
   function normalizeRetentionState(st){for(const a of Object.values(st?.agents||{}))pruneAgentMemoriesBySalience(st,a);return st;}
 
-  if(E.registerRuntimeHook)E.registerRuntimeHook('afterReset','memoryRetention.normalize-reset',()=>normalizeRetentionState(E.getState()),500);
-  else{const baseReset=E.reset;E.reset=(...args)=>normalizeRetentionState(baseReset(...args));}
+  if(!E.registerRuntimeHook)throw new Error('memory-retention-runtime-v1133.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('afterReset','memoryRetention.normalize-reset',()=>normalizeRetentionState(E.getState()),500);
 
   normalizeRetentionState(E.getState());
   Object.assign(E,{MEMORY_RETENTION_SCHEMA_VERSION:VERSION,MEMORY_SALIENCE_WEIGHTS:WEIGHTS,MEMORY_RECENCY_HALF_LIFE:RECENCY_HALF_LIFE,MEMORY_RECURRENCE_RELEVANCE_MIN:RECURRENCE_RELEVANCE_MIN,MEMORY_RECURRENCE_FULL_COUNT:RECURRENCE_FULL_COUNT,memorySignature,memoryRetentionComponents,memoryRetentionScore,isMemoryRetentionProtected:activeAffectSource,compareMemoryEviction:(st,a,x,y)=>evictionCompare(st,a,x,y),pruneAgentMemoriesBySalience,normalizeMemoryRetentionState:normalizeRetentionState});
