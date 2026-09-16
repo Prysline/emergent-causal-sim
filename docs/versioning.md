@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.14.2-resident-action-intent-explanation-alignment`
+`11.14.3-natural-player-explanations`
 
-玩家可見標題使用短版 `v11.14.2`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION` 與 Resident View 的 UI version 使用完整 marker。
+玩家可見標題使用短版 `v11.14.3`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION` 與 Resident View 的 UI version 使用完整 marker。
 
 ## 何時必須升版
 
@@ -37,7 +37,7 @@
 
 - `major`：專案世代／大規模不相容重構；目前為 11。
 - `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split。
-- `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意。
+- `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意、11.14.3 將 Explanation 的玩家文案收斂為自然直接的原因描述。
 - `slug`：描述 current marker 的主要辨識功能，不是完整 changelog。
 
 不是每個 PR 都需要版本號。PR 編號、Git commit 與 runtime version 是不同維度：一個版本可以包含多個 refactor/docs PR；反之，一個真正改變 current contract 的 PR 必須同時處理版本更新。
@@ -65,4 +65,4 @@
 
 ## Historical correction
 
-PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 simulation policy，因此不補造中間 release version；PR #58 為 docs-only，也不升版。PR #57 改變 canonical plan event 的 structured contract，但這次不回補虛構的歷史 release；其 contract hardening 保留在 Git history / Architecture Current。PR #59 實際新增玩家可見的 player-readable action explanation，因此 current line 從 `11.14.0-player-resident-view-debug-inspector` 校正為 `11.14.1-player-readable-action-explanations`。其後 Resident View 的 Action / Intent / Explanation presentation semantics 再以 11.14.2 獨立升版，不把玩家可見語意修正混入純版本校正 PR。
+PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 simulation policy，因此不補造中間 release version；PR #58 為 docs-only，也不升版。PR #57 改變 canonical plan event 的 structured contract，但這次不回補虛構的歷史 release；其 contract hardening 保留在 Git history / Architecture Current。PR #59 實際新增玩家可見的 player-readable action explanation，因此 current line 從 `11.14.0-player-resident-view-debug-inspector` 校正為 `11.14.1-player-readable-action-explanations`。其後 Resident View 的 Action / Intent / Explanation presentation semantics 以 11.14.2 獨立升版；11.14.3 再把 Explanation 的玩家文案規則收斂成「同一 evidence 能用自然日常語言表達時，不暴露需求 threshold / engine 強度術語」，仍不改 simulation policy。
