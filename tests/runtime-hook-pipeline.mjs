@@ -23,7 +23,6 @@ const EXPECTED_HOOKS={
     {id:'humanSocial.prepare',order:300},
     {id:'socialResponse.capture-pet-offers',order:400},
     {id:'affect.decay',order:500},
-    {id:'memory.capture-events',order:600},
     {id:'intent.soft-reconsideration',order:700},
     {id:'intent.replan-preemption',order:800},
     {id:'socialBid.prepare',order:900},
@@ -59,6 +58,8 @@ const EXPECTED_HOOKS={
 assert.equal(E.RUNTIME_HOOK_PIPELINE_VERSION,'runtime-hook-pipeline-1');
 assert.equal(E.tick,E.RUNTIME_PIPELINE_TICK,'simulation runtimes must not replace the pipeline tick dispatcher');
 assert.equal(E.reset,E.RUNTIME_PIPELINE_RESET,'simulation runtimes must not replace the pipeline reset dispatcher');
+assert.equal(E.addEvent,E.CORE_ADD_EVENT,'simulation runtimes must not replace the core event creator');
+assert.deepEqual(E.listEventCreatedListeners(),[{id:'memory.episodic-observation',order:100}],'Memory must consume the core event-created lifecycle through a named listener');
 
 for(const [phase,expected] of Object.entries(EXPECTED_HOOKS)){
   assert.deepEqual(E.listRuntimeHooks(phase),expected,`${phase} hook ids/orders are architecture semantics and must remain explicit`);

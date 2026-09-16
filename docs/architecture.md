@@ -65,7 +65,7 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 Concrete Action construction 由 core `E.buildAction(agent, choice)` 統一持有。Initial deliberation、hard replan、soft reconsideration 與 Memory→Deliberation correction 不得再保存平行的 Action construction switch。
 
-Factory 只建立 Action shape；candidate utility、target policy、Intent lifecycle、plan event、responder scoring不屬於 factory 責任。
+Factory 只建立 Action shape；candidate utility、target policy、Intent lifecycle、plan event、responder scoring 不屬於 factory 責任。
 
 Caller 已明確選定的 `targetAgent / targetObject / targetTile / job / destination / carrier` 必須優先保留；不得因 factory fallback 靜默換掉 explicit social target。
 
@@ -104,7 +104,7 @@ World Event: Social Bid
 - brief reply、explicit decline、no response 是不同事實；
 - no response 不得推論 intentional ignore / dislike / rejection。
 
-Human talk response 與 Pet response 都由 responder 自己的 state 決定。目前 responder scoring 尚未直接讀 Current Affect、Relationship 或 target-specific Memory influence。
+Human talk response 與目前 Pet response 都由 responder 自己的 state 決定。目前 responder scoring 尚未直接讀 Current Affect、Relationship 或 target-specific Memory influence。
 
 ## 5. Memory / Appraisal / Affect
 
@@ -120,7 +120,7 @@ Generic observed-event memory 保存最小 provenance / projection，例如：
 - `actorId / targetId`
 - `positionRef`
 
-不複製完整 raw event data，不把 debug、utility、另一個 Agent 的 private state帶進 memory。
+不複製完整 raw event data，不把 debug、utility、另一個 Agent 的 private state 帶進 memory。
 
 同一 Agent 對同一 `sourceEventId` 只建立一個 episode；再次處理更新 access metadata，不重複建立 historical event memory。
 
@@ -131,11 +131,13 @@ Appraisal 是 Agent-private historical annotation。第一次形成後，不因�
 `episodicMemoryCreated` 正式 hook ordering：
 
 ```text
-appraisal.base
-→ appraisal.social-response
-→ appraisal.human-social
-→ affect.from-appraisal
+Base Appraisal
+→ Social Response Appraisal
+→ Human Social Appraisal
+→ Affect Update
 ```
+
+精確 implementation hook ID 仍由 runtime registry / `docs/tick-pipeline.md` 記錄。
 
 ### Current Affect
 
@@ -151,7 +153,7 @@ Memory influence 不保存成另一份 persistent relationship truth。
 
 `socialWaitEnded` 是 requester-private lifecycle event，generic observable Memory 刻意排除它。`social-outcome-memory-runtime-v1135.js` 將合法 no-response experience 建成 `privateSocialOutcome`，再做 requester-private appraisal / affect / retention。
 
-這條路徑不是 generic World Event observation，後續 event-observation cleanup 不得順手把兩者混成同一 truth boundary。
+這條路徑不是 generic World Event observation，不得和 generic event-created observation 合併成同一 truth boundary。
 
 ## 6. Runtime Hook Pipeline
 
@@ -184,9 +186,8 @@ Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud f
 300  Human Social Prepare
 400  Social Response Prepare
 500  Affect Decay
-600  Memory Observation Checkpoint
 700  Soft Reconsideration
-800  Replan - Preemption
+800  Replan / Preemption
 900  Social Bid Prepare
 1000 Intent Reconcile
 1100 Spatial Capture
@@ -208,119 +209,99 @@ Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud f
 900 Private Social Outcome Process
 ```
 
+上述清單是 architecture view；精確 implementation hook ID / owner / order 對照請查 `docs/tick-pipeline.md`。
+
 UI / Resident View 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
 
 為 isolated legacy test harness 保留的「沒有 pipeline 時 fallback wrapper」不代表正常 app contract；正常 app 不得退回以 wrapper stacking 決定 lifecycle。
 
 ## 7. Event creation / observation ownership
 
-這是目前仍未完成的主要 integration debt。
-
 ### 7.1 Canonical event creation
 
-Core `engine.js` 的 event creator 會建立 canonical event 並寫入：
+Core `engine.js` 持有唯一 canonical event creator。正式 invariant：
+
+```text
+E.addEvent === E.CORE_ADD_EVENT
+```
+
+`addEvent` 先建立單一 World Event 並寫入：
 
 ```text
 state.events
 state.causes
 ```
 
-PR #42 後 canonical event envelope 保存 `event.tick`，表示事件建立時的 simulation tick。
+Event envelope 保存 creation `event.tick`。事件 commit 後，core 才發送 event-created notification；extension 可以消費通知，但不得取代 event creator 或建立第二份 persistent event truth。
 
-Presentation 不得覆寫 `E.addEvent` 來改 canonical event text。Event text / data 應由真正產生事件的 simulation subsystem 負責。
+Core 提供具名 event-created listener registry；這是 runtime integration mechanism，不是 canonical state。
 
-### 7.2 現行 hybrid observation model
+### 7.2 Memory delivery contract
 
-目前 generic Memory 有兩條 event-observation path：
-
-1. **exported API wrapper**
-   - `memory-runtime-v1130.js` 暫時包住 `E.addEvent`。
-   - extension 呼叫 `E.addEvent(...)` 後會同步 `observeEventForMemories(...)`。
-
-2. **marker sweep**
-   - `memory.capture-events`：beforeTick order 600 保存當時 newest event marker。
-   - `memory.process-events`：afterTick order 500 掃描 marker 之後的新 events。
-   - core 內部呼叫 closure lexical `addEvent(...)`，不經 exported wrapper，因此主要靠 sweep 被 generic Memory 看見。
-
-這兩條路徑目前互補，而非完全重複。
-
-### 7.3 Observation window
-
-#### Pre-capture exported event
-
-`humanSocial.prepare` 在 beforeTick 300，可建立 `talkOffer`。
-
-它早於 `memory.capture-events` 600。若只刪除 wrapper，capture 時 `talkOffer` 已經存在並可能成為 marker，後面的 sweep 不會再處理它。
-
-所以這類事件目前是 **wrapper-only observation**。
-
-#### Capture → process window
-
-Marker capture 之後、`memory.process-events` 500 之前的事件可被 sweep 涵蓋，例如：
-
-- core tick 內的 lexical world events；
-- `spatial.effects`（afterTick 100）；
-- `socialBid.settle`（300；private event仍受 Memory filter 排除）；
-- `intent.recover-aborts`（400）。
-
-Exported `E.addEvent` event 若在這段先被 wrapper observe，sweep 再遇到時由 `sourceEventId` dedupe，不能重複建立 episode / appraisal / Affect。
-
-#### Post-process exported event
-
-`memory.process-events` 500 之後仍有正式 event producer：
-
-- `socialResponse.resolve-pet-offers`（600）
-- `humanSocial.resolve`（700）
-
-這裡會產生 `petOffer / acceptPet / toleratePet / avoidPet / petCat` 與 `acceptTalk / briefTalkReply / declineTalk / talk`。
-
-它們目前依賴 wrapper 立即形成 Memory / Appraisal / Affect。若只刪 wrapper，下一 tick 的 capture 會在這些事件已存在的情況下重新設 marker，因此不是保證「晚一 tick 才記住」，而可能完全漏掉 generic observation。
-
-#### Tick 外 direct API
-
-Memory / Appraisal focused regression 也會直接呼叫 `E.addEvent(...)`，並立刻 assertion Memory / Appraisal。這表示 isolated harness 現在同樣具有同步 observation behavior。
-
-### 7.4 Timing 不是 API implementation detail
-
-core `tick()` 會先 `state.tick++`，再逐一執行 Agent。
-
-因此：
-
-- pre-core event 可能使用舊 tick；
-- core / afterTick event 使用新 tick；
-- `event.tick` 是 creation-time provenance。
-
-若未來 observation 改為 queue / checkpoint 後才處理，不得直接用較晚的 processing `state.tick` 偷換事件發生時間。
-
-更重要的是，**不能簡單把所有 core event 都改成立即 Memory observe**。Core Agent 在同一 tick 中依序執行；若第一個 Agent 的 lexical event 立刻觸發 Memory → Appraisal → Affect，後面的 Agent 可能讀到舊 runtime 要到 core 完成後才出現的心理 state，導致同 tick decision semantics 改變。
-
-反過來，把所有 observation 都延到 tick 尾端也不等價。Social responses 現在在 afterTick 600/700 建立後即可形成 Memory / Appraisal / Affect，而 `memoryDeliberation.correct-initial` 位於 800。
-
-### 7.5 Cleanup target
-
-下一個 integration slice 應先建立 deterministic timing regression，至少涵蓋：
+Memory 註冊具名 consumer：
 
 ```text
-pre-core exported event
-a core lexical event
-post-process exported event
-tick 外 direct E.addEvent
-event.tick → observedTick provenance
-same-event dedupe / one appraisal / one Affect application
+memory.episodic-observation
 ```
 
-之後再決定正式機制。可以評估 core-owned event-created notification + controlled observation queue/checkpoint，或其他等價設計；目前 **沒有**預先決定「所有 eventCreated 都立即執行 Memory」就是答案。
+Event-created notification **不代表所有 event 都立即造成心理 side effect**。正式分界是事件是否在 sequential core Agent loop 中產生：
 
-Done condition：
+```text
+canonical event created
+        │
+        ├─ outside core Agent loop
+        │    → Memory synchronous observation
+        │    → episodicMemoryCreated
+        │    → Appraisal → Affect
+        │
+        └─ during core Agent loop
+             → enqueue event reference in Memory-local FIFO
+             → afterTick 500 Memory Observation Process
+             → episodicMemoryCreated
+             → Appraisal → Affect
+```
 
-- Memory 不再 `E.addEvent = ...`；
-- event creation API ownership 穩定；
-- pre/core/post/direct 四種 producer 都不漏 observation；
-- 不重複建立 memory / appraisal / Affect；
-- preserve current same-tick semantics；
-- deferred observation 保留 canonical `event.tick` provenance；
-- `privateSocialOutcome` 仍保持 requester-private 專用路徑；
-- State regression + Memory / Social Browser QA 全綠。
+這保留兩個重要事實：
+
+1. beforeTick / afterTick extension 與 tick 外 direct `E.addEvent` 仍可在原本時點形成 Memory / Appraisal / Affect；
+2. core Agent 依序執行時，前一個 Agent 的 event 不會突然在 loop 中更新心理 state，讓後面的 Agent 讀到舊 runtime 原本要等 core 結束後才可見的心理結果。
+
+### 7.3 Core-loop deferred FIFO
+
+Deferred queue 只保存尚待 Memory observation 的 event reference：
+
+- runtime-local；
+- ephemeral；
+- FIFO；
+- reset 時清空；
+- 不寫入 simulation state；
+- 不建立第二份 World Event truth。
+
+`Memory Observation Process`（afterTick 500）只 flush 這個 queue，不再掃描 `state.events` 猜測哪些 event 是新事件。
+
+因此舊的：
+
+- Memory `E.addEvent = ...` wrapper；
+- beforeTick `memory.capture-events` marker；
+- newest-event marker sweep；
+
+都不再是 Current runtime contract。
+
+### 7.4 Timing compatibility
+
+PR #45 / #46 建立的 deterministic timing baseline 是這個 lifecycle 的 compatibility contract：
+
+- tick 外 direct `E.addEvent`：同步 observation；
+- pre-core Human social offer：core 執行前已合法形成 Memory；
+- core-loop event：before afterTick 500 不得形成心理 projection，500 後才可見；
+- Social Response Resolve 600：response event 的合法 Memory / Appraisal / Affect 在後續 650 probe 前完成；
+- Human Social Resolve 700：response event 的合法 Memory / Appraisal / Affect 在 750 probe 前完成，且早於 Memory-to-Deliberation Correction 800；
+- deferred path 使用 canonical `event.tick` 保存 creation-time provenance；
+- same-source event 對同一 Agent 仍 exactly-once 建立 episode / Appraisal / Affect。
+
+### 7.5 Private social outcome boundary
+
+`privateSocialOutcome` 仍是 requester-private experience path，不是 generic World Event observation。Event-created lifecycle cleanup 不改這條 truth boundary。
 
 ## 8. Presentation ownership
 
@@ -340,7 +321,7 @@ Core 保持 `E.actionLabel` ownership。Presentation 若要補 readable status�
 
 Player Resident View 與 Debug Inspector 都是同一 authoritative simulation state 的 projection。View / tab switch 必須 state-inert。
 
-Resident View 目前仍使用 DOM shell / MutationObserver 將既有 Inspector surfaces 組成 player/debug presentation；這是獨立 presentation architecture debt，不與 Memory event-observation cleanup 混成同一 slice。
+Resident View 目前仍使用 DOM shell / MutationObserver 將既有 Inspector surfaces 組成 player/debug presentation；這是獨立 presentation architecture debt，不與 event-observation lifecycle 混成同一 slice。
 
 ## 9. Spatial / resources / sleep invariants
 
@@ -377,6 +358,7 @@ Regression 優先鎖：
 - canonical Action terminology / construction；
 - Intent interruption semantics；
 - Social Bid requester / responder agency；
+- event creation ownership / event-created consumer registry；
 - event / memory provenance；
 - bounded Memory / retention；
 - Appraisal historical stability；
@@ -389,15 +371,11 @@ Regression 優先鎖：
 
 ## 11. Current integration priority
 
-目前最高優先度的架構整合債是 **Memory event observation / event-created lifecycle contract**。
+Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂。後續不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。
 
-在完成 timing regression 與正式 event observation ownership 前，不要：
+下一個仍明確存在、但與本次 simulation lifecycle 分離的 architecture debt 是 **Resident View / Debug Inspector 的 DOM shell / MutationObserver presentation coupling**。處理它時應維持：
 
-- 直接刪除 Memory `E.addEvent` wrapper；
-- 把所有 core event 改成立即 psychological observation；
-- 把所有 observation 無條件延到 tick 尾端；
-- 把 `privateSocialOutcome` 混入 generic observable-event memory；
-- 順手重寫 Resident View DOM architecture；
-- 順手把 Current Affect / Relationship / Memory 接進 responder scoring。
-
-這些是不同 contract，應分開驗證與合併。
+- simulation truth / lifecycle 不變；
+- Resident / Debug 仍是同一 authoritative state 的 projection；
+- 不把 presentation state 寫回 canonical simulation state；
+- 不順手改 responder scoring、Relationship、Memory influence 或 gameplay policy。

@@ -14,6 +14,11 @@ const files=[
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
+const memoryRuntimeSource=fs.readFileSync(new URL('../src/memory-runtime-v1130.js',import.meta.url),'utf8');
+assert.doesNotMatch(memoryRuntimeSource,/E\.addEvent\s*=/,'Memory runtime must not replace core addEvent');
+assert.equal(E.addEvent,E.CORE_ADD_EVENT,'core addEvent ownership must remain stable after Memory loads');
+assert.deepEqual(E.listEventCreatedListeners(),[{id:'memory.episodic-observation',order:100}],'Memory must register one named event-created listener');
+assert.throws(()=>E.registerEventCreatedListener('memory.episodic-observation',()=>{},200),/duplicate event-created listener/);
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const eventBy=pred=>E.getState().events.find(pred);
 const memoryFor=(agentId,eventId)=>E.getState().agents[agentId]?.episodicMemories?.find(m=>m.sourceEventId===eventId)||null;
@@ -48,7 +53,7 @@ function snapshotMemory(agentId,event){
   }:null;
 }
 
-E.registerRuntimeHook('beforeTick','test.memory-timing-pre-capture',()=>{
+E.registerRuntimeHook('beforeTick','test.memory-timing-pre-core',()=>{
   if(mode!=='preCapture')return;
   const offer=eventBy(e=>e.data?.action==='talkOffer');
   if(offer)preCaptureSnapshot=snapshotMemory('zhen',offer);
@@ -118,19 +123,19 @@ assert.equal(createdFor('orange',directId).length,1,'re-observing the same sourc
 assert.equal(JSON.stringify(st.agents.orange.affect),directAffectBefore,'same-event re-observation must not reapply Affect');
 noIssues('direct exported event');
 
-// 2) beforeTick 300 talkOffer is observed before memory.capture-events at 600.
+// 2) beforeTick 300 talkOffer is synchronously observed before core execution.
 resetProbes('preCapture');
 armDirectTalk(80,{seed:45200,thirst:95});
 E.tick();st=E.getState();
 const preOffer=eventBy(e=>e.data?.action==='talkOffer');
-assert.ok(preOffer&&preCaptureSnapshot,'talkOffer probe must see the offer between humanSocial.prepare and memory.capture-events');
+assert.ok(preOffer&&preCaptureSnapshot,'talkOffer probe must see the offer after humanSocial.prepare and before core execution');
 assert.equal(preCaptureSnapshot.eventId,preOffer.id);
-assert.equal(preCaptureSnapshot.hasMemory,true,'pre-capture exported event is currently wrapper-observed immediately');
+assert.equal(preCaptureSnapshot.hasMemory,true,'pre-core exported event must be synchronously observed through the event-created listener');
 assert.equal(preCaptureSnapshot.eventTick,0,'pre-core talkOffer is created before core increments state.tick');
 assert.equal(preCaptureSnapshot.observedTick,preCaptureSnapshot.eventTick,'pre-capture Memory must preserve creation tick');
-assert.equal(createdFor('zhen',preOffer.id).length,1,'capture marker must not cause a duplicate talkOffer episode');
+assert.equal(createdFor('zhen',preOffer.id).length,1,'event-created delivery must create exactly one talkOffer episode');
 assert.equal(st.tick,1);
-noIssues('pre-capture exported event');
+noIssues('pre-core exported event');
 
 // 3) Core lexical event exists before memory.process-events and becomes Memory only after the sweep.
 resetProbes('coreLexical');

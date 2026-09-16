@@ -5,6 +5,8 @@
 目前 runtime marker：`11.14.0-player-resident-view-debug-inspector`。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
+>
+> 表示層規則：**主流程圖描述 lifecycle responsibility，不把 implementation hook ID 或具體玩法動作當成架構階段名稱。** 精確 hook ID 只保留在 registry 表、source 與 regression；圖上的名稱應能在未來加入新互動類型時仍成立。
 
 ## 1. 一個 `E.tick()` 的主流程
 
@@ -15,14 +17,13 @@ flowchart TD
     B200 --> B300[300 Human Social Prepare]
     B300 --> B400[400 Social Response Prepare]
     B400 --> B500[500 Affect Decay]
-    B500 --> B600[600 Memory Observation Checkpoint]
-    B600 --> B700[700 Soft Reconsideration]
+    B500 --> B700[700 Soft Reconsideration]
     B700 --> B800[800 Replan - Preemption]
     B800 --> B900[900 Social Bid Prepare]
     B900 --> B1000[1000 Intent Reconcile]
     B1000 --> B1100[1100 Spatial Capture]
 
-    B1100 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical lexical core events]
+    B1100 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical world events]
 
     CORE --> A100[afterTick 100\nSpatial Effects]
     A100 --> A200[200 Intent Reconcile]
@@ -37,18 +38,17 @@ flowchart TD
     A1000 --> A1100[1100 Resident View Schedule]
     A1100 --> END[return core tick result]
 
-    WRAP[[目前 legacy integration debt\nMemory 暫時 wrapper E.addEvent]] -. exported event 建立時同步 observe .-> MEM[observeEventForMemories]
+    EVENT[[Core-owned Event Creation\nevent-created notification]] -. non-core producer: immediate .-> MEM[Memory Observation Consumer]
+    EVENT -. during core loop: enqueue .-> QUEUE[Deferred Core-event FIFO]
+    QUEUE -. afterTick 500 flush .-> MEM
     MEM --> EMC[episodicMemoryCreated pipeline]
-    A500 -. sweep 建立新 memory .-> EMC
-    A600 -. wrapper 可同步建立 memory .-> EMC
-    A700 -. wrapper 可同步建立 memory .-> EMC
+    A600 -. non-core event: immediate observation .-> EMC
+    A700 -. non-core event: immediate observation .-> EMC
 ```
 
-圖中的 `E.addEvent` Memory wrapper **不屬於正式 runtime-hook phase**；它是目前為了補足 event-observation window 而存在的 active integration debt，刻意以虛線旁路表示。
+主流程圖使用的是**責任名稱**；下方表格的 `Implementation Hook ID` 才對應實際 registry。兩者不可混為同一抽象層。
 
-### Diagram abstraction
-
-The main Mermaid diagram uses lifecycle responsibility labels. Concrete implementation hook IDs stay in the registry tables below; action-specific names must not become architecture stage names.
+`E.addEvent` 現由 core 保持 ownership。Event-created notification 本身同步發出；Memory consumer 對非 core-loop producer 立即 observe，對 core-loop producer 則放入 ephemeral FIFO，於 afterTick 500 flush。沒有第二份 persistent World Event state。
 
 ## 2. beforeTick
 
@@ -56,23 +56,24 @@ The main Mermaid diagram uses lifecycle responsibility labels. Concrete implemen
 |---:|---|---|---|---|
 | 100 | `socialOutcome.capture-events` | Social Outcome Memory | 保存本 tick requester-private outcome 掃描 marker | 必須早於可能產生 wait-end / response 的後續 lifecycle |
 | 200 | `memoryDeliberation.capture-idle` | Memory → Deliberation | 記住 core 前真正 idle 的 Agent | afterTick 800 只應 correction 本來由 core 新做初始 deliberation 的 Agent |
-| 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder | `talkOffer` 發生在 Memory marker 600 之前，因此目前依賴 `E.addEvent` wrapper 才不漏 generic observation |
-| 400 | `socialResponse.capture-pet-offers` | Pet Response | 捕捉 core 前已達 interaction phase 的 pet offer | afterTick 600 只 settle 這批 pre-core snapshot |
+| 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder | 非 core-loop event 經 core event-created notification 同步形成合法 observation |
+| 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 500 | `affect.decay` | Affect | 將 current Affect decay 到即將進入的新 tick | core decision 讀到的是 decay 後的 current Affect |
-| 600 | `memory.capture-events` | Episodic Memory | 保存 newest event marker | 定義 generic event sweep 的起點 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
 | 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
 | 900 | `socialBid.prepare` | Social Bid | waiting action injection、response provenance snapshot | 為 afterTick settlement 保留本 tick 之前的 responder/requester 狀態 |
 | 1000 | `intent.reconcile-before` | Active Intent | Action ↔ Intent linkage 收斂 | core tick 前避免 live Action / Intent linkage 漂移 |
 | 1100 | `spatial.capture` | Spatial Effects | 保存 core 前位置與 event snapshot | afterTick 100 用來判斷本 tick movement / spill effects |
 
+`memory.capture-events` / beforeTick 600 marker 已不再存在；Memory 不再掃 `state.events` 推斷哪些事件「剛發生」。
+
 ## 3. Core tick
 
 Runtime pipeline 只呼叫 canonical core `tick()` **一次**。
 
-Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Action / decision。這裡建立的 lexical core events 不會經過後來被 Memory 包住的 exported `E.addEvent`，所以現行 generic Memory 主要靠 afterTick 500 的 marker sweep 看見它們。
+Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Action / decision。Canonical event creator 仍是同一個 core `addEvent`；event-created notification 會標示 `duringCoreTick`。Memory 對這類事件只排入 runtime-local ephemeral FIFO，不在 Agent loop 中立即形成心理 state，並於 afterTick 500 統一 flush。
 
-這一段必須保持為同一個明確 checkpoint：若把 core lexical event 改成 event-created 時立即觸發全部 Memory → Appraisal → Affect，後執行 Agent 可能在同一 core tick 提前讀到舊 runtime 原本還不可見的心理 state，會改變 emergent decision semantics。
+這一段必須保持為同一個明確 checkpoint：若把 core-loop event 改成 event-created 時立即觸發全部 Memory → Appraisal → Affect，後執行 Agent 可能在同一 core tick 提前讀到舊 runtime 原本還不可見的心理 state，會改變 emergent decision semantics。
 
 ## 4. afterTick
 
@@ -81,12 +82,12 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 100 | `spatial.effects` | Spatial Effects | 根據 pre-core snapshot 套用 movement / contact / spill 衍生效果 | 要先把物理結果寫回世界，再讓後續 lifecycle 看到正式 world state |
 | 200 | `intent.reconcile-after` | Active Intent | core Action 結果後先收斂 Intent linkage | 後續 Social Bid / abort recovery 應讀一致 linkage |
 | 300 | `socialBid.settle` | Social Bid | annotate new bids/responses、promote response Intent、timeout | same-tick response-before-timeout 的主要 ordering contract |
-| 400 | `intent.recover-aborts` | Intent / Interruption | 從本 tick abort event 恢復仍有效的 open Intent | 必須在 generic Memory process 前完成本 tick interruption lifecycle |
-| 500 | `memory.process-events` | Episodic Memory | 掃描 beforeTick 600 marker 後的新 canonical events | 定義 generic Memory sweep 的終點；600/700 social response 已在此之後，因此目前需 wrapper |
-| 600 | `socialResponse.resolve-pet-offers` | Pet Response | 建立 `petOffer / acceptPet / toleratePet / avoidPet / petCat` | 事件在 Memory sweep 後建立；現況同一步內靠 `E.addEvent` wrapper 形成 Memory/Appraisal/Affect |
-| 700 | `humanSocial.resolve` | Human Social Response | 建立 `acceptTalk / briefTalkReply / declineTalk / talk` | 同樣位於 sweep 後，且結果需在 800 前可被目前心理層看見 |
+| 400 | `intent.recover-aborts` | Intent / Interruption | 從本 tick abort event 恢復仍有效的 open Intent | 必須在 Memory Observation Process 前完成本 tick interruption lifecycle |
+| 500 | `memory.process-events` | Episodic Memory | FIFO flush core-loop event-created notifications | 保留 core event 在 Agent loop 結束後才形成 Memory/Appraisal/Affect 的既有語義 |
+| 600 | `socialResponse.resolve-pet-offers` | Social Response | settle captured response interaction，建立對應 world events | 非 core-loop event 經 event-created consumer 同步形成 Memory/Appraisal/Affect；hook ID 只是目前 implementation owner |
+| 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見 |
 | 800 | `memoryDeliberation.correct-initial` | Memory → Deliberation | 修正本 tick core 初始 social target / utility choice | 因此 600/700 的 psychological update 若延後到 800 之後會改變現況 |
-| 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome` | 這是 private experience path，不是 generic observable Memory sweep |
+| 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome` | 這是 private experience path，不是 generic observable World Event observation |
 | 1000 | `uiObservability.render-mobile-summary` | Presentation | 更新 mobile derived summary | presentation-only；不得回寫 simulation truth |
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render | presentation-only；不得影響 simulation ordering |
 
@@ -96,20 +97,20 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 
 ```mermaid
 flowchart LR
-    M[episodic memory created] --> P100[100 appraisal.base]
-    P100 --> P200[200 appraisal.social-response]
-    P200 --> P300[300 appraisal.human-social]
-    P300 --> P400[400 affect.from-appraisal]
+    M[episodic memory created] --> P100[100 Base Appraisal]
+    P100 --> P200[200 Social Response Appraisal]
+    P200 --> P300[300 Human Social Appraisal]
+    P300 --> P400[400 Affect Update]
 ```
 
 | Order | Implementation Hook ID | Owner | 責任 |
 |---:|---|---|---|
 | 100 | `appraisal.base` | Appraisal | 建立 baseline / semantic appraisal |
-| 200 | `appraisal.social-response` | Pet Response Appraisal | 覆蓋／補充 `avoidPet` 等 pet-response appraisal |
-| 300 | `appraisal.human-social` | Human Social Appraisal | 處理 `acceptTalk / talk / briefTalkReply / declineTalk` |
+| 200 | `appraisal.social-response` | Social Response Appraisal | 覆蓋／補充目前 response-specific appraisal |
+| 300 | `appraisal.human-social` | Human Social Appraisal | 處理 Human social response appraisal |
 | 400 | `affect.from-appraisal` | Affect | 由完成的 historical appraisal 更新 current Affect |
 
-這條支線**不是 afterTick 固定第 N 步**。它何時發生，取決於是哪一條 observation path 建立了 memory：目前可能來自 `E.addEvent` wrapper，也可能來自 `memory.process-events` sweep。
+這條支線**不是 afterTick 固定第 N 步**。它何時發生取決於 Memory consumer 的 delivery：非 core-loop event 可同步建立 memory；core-loop event 則在 afterTick 500 FIFO flush 時建立。
 
 ## 6. afterReset
 
@@ -117,48 +118,51 @@ flowchart LR
 |---:|---|---|---|
 | 100 | `intent.normalize-reset` | Active Intent | 收斂 Action ↔ Intent linkage |
 | 200 | `socialBid.normalize-reset` | Social Bid | 初始化／清理 `observedSocialBids` |
-| 300 | `memory.normalize-reset` | Episodic Memory | 初始化／dedupe／prune memory state |
+| 300 | `memory.normalize-reset` | Episodic Memory | 清空 deferred FIFO，初始化／dedupe／prune memory state |
 | 400 | `affect.normalize-reset` | Affect | 正規化 current Affect |
 | 500 | `memoryRetention.normalize-reset` | Memory Retention | 套用 bounded retention / salience cap |
 | 600 | `uiObservability.reset` | Presentation | 重畫 mobile summary |
 | 700 | `residentView.reset` | Presentation | 重設／排程 Resident View |
 
-## 7. Memory event-observation window
+## 7. Event-created / Memory observation lifecycle
 
-現況仍是 hybrid model：
+PR #45 / #46 先把舊 hybrid wrapper + marker-sweep 的可見時點鎖成 deterministic baseline；目前正式 lifecycle 改為：
 
 ```text
-exported E.addEvent
-  └─ Memory wrapper → immediate observeEventForMemories
-
-beforeTick 600 memory.capture-events
-  ↓ marker
-core tick + afterTick 100/200/300/400
-  ↓
-afterTick 500 memory.process-events
-  └─ sweep marker 後的新 events
+core addEvent
+  ├─ commit canonical event to state.events / state.causes
+  └─ dispatch event-created notification
+       ├─ outside core Agent loop → Memory observes synchronously
+       └─ during core Agent loop  → Memory queues event reference
+                                  ↓
+                         afterTick 500 Memory Observation Process
+                                  ↓ FIFO flush
+                         Memory → Appraisal → Affect
 ```
 
-所以 event producer 目前分成：
+- **Event creation ownership**：`E.addEvent === E.CORE_ADD_EVENT`；Memory 不得再以 `E.addEvent = ...` 攔截 core API。
+- **Listener contract**：Memory 使用具名 `memory.episodic-observation` event-created listener。Listener registry 是 runtime extension mechanism，不是 simulation state。
+- **Non-core producers**：beforeTick / afterTick extension 與 tick 外 direct API 維持同步 observation；`event.tick` 作 creation-time provenance。
+- **Core-loop producers**：event-created notification 仍在建立時發出，但 Memory 只 queue，不立即改心理 state；FIFO 在 afterTick 500 flush，保留同 tick Agent sequential decision boundary。
+- **Exactly once**：同一 source event 仍只產生一個 Agent-local episode；重複 delivery / re-observation 不得重複 Appraisal / Affect。
+- **No persistent mirror**：deferred queue 是 Memory runtime-local ephemeral integration state，不寫入 canonical simulation state。
+- **No marker sweep**：`memory.capture-events` 與 newest-event marker 已移除；Memory 不再掃 `state.events` 推斷「哪些事件剛發生」。
+- **Private outcome remains separate**：`privateSocialOutcome` 仍是 requester-private experience path，不折進 generic World Event observation。
 
-- **pre-capture / wrapper-only**：例如 `humanSocial.prepare` 300 的 `talkOffer`。
-- **capture → process / sweep-covered**：core lexical events、Spatial 100、部分 Social Bid / Intent events。
-- **post-process / wrapper-only**：Pet response 600、Human response 700。
-- **tick 外 direct `E.addEvent`**：focused Memory / Appraisal harness 現在也是同步 observation。
+PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contract：tick 外 direct API、pre-core Human social offer、core-loop world event、Social Response Resolve 600、Human Social Resolve 700 都必須維持原有心理可見時點與 `event.tick → observedTick` provenance。
 
-這也是為什麼目前不能直接刪 Memory 的 `E.addEvent` override。
-
-## 8. 哪些 order 變更必須視為 semantic change
+## 8. 哪些 order / boundary 變更必須視為 semantic change
 
 至少以下調整不得當成純 refactor：
 
-1. `humanSocial.prepare` 穿越 `memory.capture-events` 600。
-2. 任一 observable event producer 穿越 `memory.process-events` 500。
-3. `socialBid.settle` 相對 requester timeout / response annotation 的位置改變。
-4. Pet/Human response 600/700 與 `memoryDeliberation.correct-initial` 800 的相對位置改變。
-5. Affect decay 移到 core tick 後，或 Appraisal/Affect 支線順序改變。
-6. `intent.soft-reconsideration / replan-preemption / reconcile-before` 的相對順序改變。
+1. 任一 observable event producer 從 core-loop 移到非 core-loop（或反向），因為會改變 Memory delivery mode。
+2. `Memory Observation Process` 500 相對 core tick / downstream decision hooks 的位置改變。
+3. `Social Bid Settle` 相對 requester timeout / response annotation 的位置改變。
+4. `Social Response Resolve` 600 / `Human Social Resolve` 700 與 `Memory-to-Deliberation Correction` 800 的相對位置改變。
+5. Affect Decay 移到 core tick 後，或 Appraisal/Affect 支線順序改變。
+6. Soft Reconsideration / Replan-Preemption / Intent Reconcile 的相對順序改變。
 7. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
+8. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
 
 這些變更都應同步更新：
 
@@ -169,9 +173,11 @@ afterTick 500 memory.process-events
 
 ## 9. Source of truth / regression
 
-- runtime source of truth：各 subsystem 的 `registerRuntimeHook(phase, id, handler, order)`。
-- registry：`E.listRuntimeHooks(phase)`。
-- architecture guard：`tests/runtime-hook-pipeline.mjs` 應鎖定 simulation phases 的 `{ id, order }`，而不只鎖相對 ID 排列。
+- runtime source of truth：各 subsystem 的 `registerRuntimeHook(phase, id, handler, order)` 與 core event-created listener registration。
+- hook registry：`E.listRuntimeHooks(phase)`。
+- event-created consumer registry：`E.listEventCreatedListeners()`。
+- architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 simulation phases 的 `{ id, order }`、core `addEvent` ownership 與 Memory named listener。
+- timing compatibility：`tests/memory-event-observation-timing.mjs`、`tests/pet-response-observation-timing.mjs`。
 - full-app presentation tail 另由 Browser QA 驗證；simulation test harness 不載入 UI scripts，因此不應假裝 `1000/1100` 是 headless simulation hook。
 
 若 source、regression 與本文件不一致，以 repo `main` source + regression 為準，並把文件視為 stale debt 立即修正。
