@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.MEMORY_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),owners=new WeakMap();
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),owners=new WeakMap();
     for(const a of Object.values(st?.agents||{})){
       const memories=a.episodicMemories;
       if(!Array.isArray(memories)){add('episodic_memories_missing',`${a.name} 缺少 episodicMemories array。`,{agentId:a.id});continue;}
@@ -33,5 +32,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('memory.episodic',validateLayer,800);
 })();

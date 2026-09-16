@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.DELIBERATION_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const a of Object.values(st?.agents||{})){
       if(Object.prototype.hasOwnProperty.call(a,'commitmentCost')||Object.prototype.hasOwnProperty.call(a,'currentUtility'))add('derived_deliberation_state_persisted',`${a.name} 不應保存 commitment / utility 的 persistent mirror。`,{agentId:a.id});
       const intent=a.activeIntent;
@@ -26,5 +25,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('deliberation',validateLayer,700);
 })();

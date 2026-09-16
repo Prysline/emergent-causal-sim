@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.MEMORY_RETENTION_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     if(st?.memoryRetention!==undefined||st?.memoryArchive!==undefined)add('global_memory_retention_registry_forbidden','v11.13.3 不應建立 global memory retention / archive registry。');
     for(const a of Object.values(st?.agents||{})){
       const memories=a.episodicMemories||[];
@@ -21,5 +20,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('memory-retention',validateLayer,1200);
 })();

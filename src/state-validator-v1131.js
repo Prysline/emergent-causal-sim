@@ -1,10 +1,9 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.APPRAISAL_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
   const AGENCY_KINDS=new Set(['self','other','environment','unknown']);
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const a of Object.values(st?.agents||{}))for(const m of a.episodicMemories||[]){
       const p=m?.appraisal;
       if(!p||typeof p!=='object'){add('episodic_appraisal_missing',`${a.name} 的 episodic memory 缺少 v11.13.1 appraisal。`,{agentId:a.id,memoryId:m?.id});continue;}
@@ -26,5 +25,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('appraisal',validateLayer,900);
 })();

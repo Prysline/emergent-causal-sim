@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,SP=window.SimSpatial;if(!V||!SP?.nodeWalkable)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),byNode=new Map();
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),byNode=new Map();
     for(const a of Object.values(st?.agents||{})){
       if(a.offMap||!a.position)continue;
       const node=SP.normalizeNode(st,a.position),key=SP.nodeKey(st,node),list=byNode.get(key)||[];list.push(a.id);byNode.set(key,list);
@@ -19,5 +18,5 @@
     return {...base,issueCount:issues.length,issues,crowdingTiles:crowdingNodes,crowdingNodes,ok:issues.length===0};
   }
 
-  V.validateState=validateState;
+  V.registerValidationLayer('spatial.node',validateLayer,100);
 })();

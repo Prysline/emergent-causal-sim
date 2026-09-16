@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.INTERRUPTION_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const a of Object.values(st?.agents||{})){
       const intent=a.activeIntent;
       if(!intent)continue;
@@ -38,5 +37,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('interruption',validateLayer,600);
 })();

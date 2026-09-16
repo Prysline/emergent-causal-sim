@@ -1,13 +1,12 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.SOCIAL_OUTCOME_MEMORY_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
   const CONTEXTS=new Set(['unobserved','sleeping','highCommitment','observedAction','observedIdle']);
   const FORBIDDEN_PRIVATE=['intentionalIgnore','ignored','rejected','rejectedBy','disliked','motive','responderIntent','responderUtility','responderAffect','responderMemory','relationship','responseScore','agency'];
   const FORBIDDEN_MIRRORS=['socialOutcomeMemories','noResponseMemories','rejectionScore','ignoredBy','socialOutcomeScore'];
   const eventSequence=id=>{const m=/^e(\d+)$/.exec(String(id||''));return m?Number(m[1]):null;};
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const key of ['socialOutcomeMemories','privateSocialOutcomeRegistry','noResponseRegistry'])if(st?.[key]!==undefined)add('global_social_outcome_registry_forbidden',`${key} 不應成為第二份 historical truth。`,{key});
     for(const a of Object.values(st?.agents||{})){
       for(const key of FORBIDDEN_MIRRORS)if(Object.prototype.hasOwnProperty.call(a,key))add('agent_social_outcome_mirror_forbidden',`${a.name} 不應 persistent 保存 ${key}。`,{agentId:a.id,key});
@@ -40,5 +39,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('social-outcome-memory',validateLayer,1500);
 })();

@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,SP=window.SimSpatial,W=window.SimWorld;if(!V||!SP?.surfaceEntry||!SP?.environmentAt)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const f of Object.values(st?.furniture||{})){
       const surface=f.spatial?.surface;if(!surface?.cells)continue;
       for(const cell of surface.cells){
@@ -17,5 +16,5 @@
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
 
-  V.validateState=validateState;
+  V.registerValidationLayer('spatial.environment',validateLayer,200);
 })();

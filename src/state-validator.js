@@ -1,7 +1,7 @@
 (() => {
   const SP=window.SimSpatial;if(!SP)return;
 
-  function validateState(st){
+  function validateBaseState(st){
     const issues=[],add=(code,message,data={})=>issues.push({code,message,...data}),byTile=new Map(),bySlot=new Map(),heldByContainer=new Map();
     if(!st)return {tick:null,issueCount:1,issues:[{code:'state_missing',message:'沒有可驗證的 simulation state。'}],crowdingTiles:[],ok:false};
     if(st.zones)add('legacy_zones_present','v11 state 不應再含有舊 zones。');
@@ -78,5 +78,45 @@
     return {tick:st.tick,issueCount:issues.length,issues,crowdingTiles,ok:issues.length===0};
   }
 
-  window.SimValidator={validateState};
+  const validationLayers=new Map();
+  let finalizedExpectedIds=null;
+
+  function sortedValidationLayers(){return [...validationLayers.values()].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));}
+  function registerValidationLayer(id,handler,order){
+    if(finalizedExpectedIds)throw new Error(`Validator registry is finalized; cannot register ${id}.`);
+    if(typeof id!=='string'||!id)throw new Error('Validator layer id must be a non-empty string.');
+    if(typeof handler!=='function')throw new Error(`Validator layer ${id} must provide a handler.`);
+    if(!Number.isFinite(order))throw new Error(`Validator layer ${id} must provide a finite order.`);
+    if(validationLayers.has(id))throw new Error(`Duplicate validator layer id: ${id}`);
+    const orderOwner=sortedValidationLayers().find(layer=>layer.order===order);
+    if(orderOwner)throw new Error(`Duplicate validator layer order ${order}: ${orderOwner.id} / ${id}`);
+    validationLayers.set(id,{id,handler,order});
+  }
+  function listValidationLayers(){return sortedValidationLayers().map(({id,order})=>({id,order}));}
+  function assertValidationLayers(expectedIds){
+    if(!Array.isArray(expectedIds)||!expectedIds.length)throw new Error('Expected validator layer manifest must be a non-empty array.');
+    const expected=[...expectedIds],expectedSet=new Set(expected);
+    if(expectedSet.size!==expected.length)throw new Error('Expected validator layer manifest contains duplicate ids.');
+    const actual=listValidationLayers().map(layer=>layer.id),actualSet=new Set(actual);
+    const missing=expected.filter(id=>!actualSet.has(id)),unexpected=actual.filter(id=>!expectedSet.has(id));
+    if(missing.length||unexpected.length)throw new Error(`Validator layer manifest mismatch; missing=[${missing.join(', ')}], unexpected=[${unexpected.join(', ')}].`);
+    return actual;
+  }
+  function finalizeValidationLayers(expectedIds){
+    if(finalizedExpectedIds)throw new Error('Validator registry is already finalized.');
+    assertValidationLayers(expectedIds);
+    finalizedExpectedIds=Object.freeze([...expectedIds]);
+    return listValidationLayers();
+  }
+  function validateState(st){
+    let result=validateBaseState(st);
+    for(const layer of sortedValidationLayers()){
+      const next=layer.handler(st,result);
+      if(!next||!Array.isArray(next.issues))throw new Error(`Validator layer ${layer.id} returned an invalid validation result.`);
+      result=next;
+    }
+    return result;
+  }
+
+  window.SimValidator={validateState,validateBaseState,registerValidationLayer,listValidationLayers,assertValidationLayers,finalizeValidationLayers,isValidationRegistryFinalized:()=>!!finalizedExpectedIds};
 })();
