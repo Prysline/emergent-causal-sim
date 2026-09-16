@@ -153,7 +153,7 @@
     }
     return action;
   }
-  function startAction(a,choice){a.action=buildAction(a,choice);if(a.action)addEvent(`${a.name}決定${ZH[choice.id]||choice.id}。`,'system',[],{actor:a.id,action:choice.id,phase:'plan',position:positionRef(a.position)});}
+  function startAction(a,choice){a.action=buildAction(a,choice);if(a.action)addEvent(`${a.name}決定${ZH[choice.id]||choice.id}。`,'system',[],{actor:a.id,action:choice.id,phase:'plan',planLifecycle:'initialProvisional',position:positionRef(a.position)});}
   function finishAction(a,{dropHeld=true}={}){releaseAgentReservations(a);if(dropHeld&&a.held)releaseHeld(a);a.action=null;}
   function abortAction(a,reason){addEvent(`${a.name}${reason}，放棄目前的行動。`,'normal',[],{actor:a.id,action:'abort',actionKind:a.action?.kind||''});finishAction(a);}
 

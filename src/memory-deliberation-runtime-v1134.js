@@ -40,7 +40,7 @@
   function coreIntentForOption(a,option){const intentKind=ACTION_TO_INTENT[option?.id];if(!intentKind)return null;if(option.id==='petCat'&&a?.activeIntent?.kind==='respondSocialBid')return null;return intentKind;}
   function adjustCoreOptions(st,a,options){const adjusted=(options||[]).map(option=>{const intentKind=coreIntentForOption(a,option);if(!intentKind)return option;const best=bestTargetEvaluation(st,a,intentKind,Number(option.score)||0);if(!best)return option;return {...option,targetAgent:best.targetAgent,score:round((Number(option.score)||0)+best.memoryUtilityDelta)};});return adjusted.sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0)||String(x.id).localeCompare(String(y.id)));}
   function samePick(a,b){return !!a&&!!b&&a.id===b.id&&(a.targetAgent||null)===(b.targetAgent||null);}
-  function rewritePlanEvent(st,a,oldPick,newPick){const e=(st.events||[]).find(x=>x.data?.actor===a.id&&x.data?.phase==='plan'&&x.data?.action===oldPick?.id);if(!e)return;e.text=`${a.name}決定${E.ZH?.[newPick.id]||newPick.id}。`;e.data.action=newPick.id;}
+  function rewritePlanEvent(st,a,oldPick,newPick){const e=(st.events||[]).find(x=>x.tick===st.tick&&x.type==='system'&&x.data?.actor===a.id&&x.data?.phase==='plan'&&x.data?.planLifecycle==='initialProvisional'&&x.data?.action===oldPick?.id);if(!e)return;e.text=`${a.name}決定${E.ZH?.[newPick.id]||newPick.id}。`;e.data.action=newPick.id;}
   function correctInitialDeliberation(st,idleBefore){
     for(const id of idleBefore||[]){
       const a=st.agents?.[id],thought=st.thoughts?.[id];if(!a||!a.action||thought?.tick!==st.tick||a.activeIntent?.kind==='respondSocialBid')continue;

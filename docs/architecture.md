@@ -159,6 +159,8 @@ Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memo
 
 Memory influence 不保存成另一份 persistent relationship truth。
 
+Initial core chooser 建立的 `system + phase:'plan'` event 是**同 tick provisional private-cognition plan**，以 `data.planLifecycle='initialProvisional'` 明示其 creation payload 尚可能在 afterTick 800 Memory-to-Deliberation Correction 被 normalization。Correction 只能改寫同一 tick、同 actor、`type:'system'`、同 lifecycle marker 且 action 對應 initial pick 的既有 canonical plan event；不得新增第二筆 correction event，也不得回頭改寫較舊 plan 或其他 plan-shaped event。Event ID / cause identity 保持不變，event-created consumer 若讀取 creation payload 必須把它視為 provisional，而不是 immutable final plan。Plan event 仍屬 private cognition / non-episodic，不進 generic Episodic Memory。
+
 ### Private Social Outcome
 
 `socialWaitEnded` 是 requester-private lifecycle event，generic observable Memory 刻意排除它。`social-outcome-memory-runtime-v1135.js` 將合法 no-response experience 建成 `privateSocialOutcome`，再做 requester-private appraisal / affect / retention。

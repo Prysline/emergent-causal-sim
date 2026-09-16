@@ -133,6 +133,46 @@ assert.equal(a.action.targetAgent,'mei','initial deliberation must carry the mem
 assert.equal(st.thoughts.zhen.pick.targetAgent,'mei','Recent Decision should agree with actual target');
 noIssues('initial target-aware deliberation');
 
+// Initial plan event is provisional private-cognition provenance: same-tick correction normalizes exactly that canonical event, not a decoy or a second event.
+E.reset(56340);st=E.getState();st.tick=42;a=st.agents.zhen;calm(a,{social:60});a.position={x:5,y:5};st.agents.zhou.position={x:5,y:6};st.agents.orange.offMap=true;
+a.episodicMemories=[
+  memory(a,'plan-pos:1',{tick:40,last:40,relevance:1,congruence:1,actorId:'zhou',action:'talk'}),
+  memory(a,'plan-pos:2',{tick:41,last:41,relevance:1,congruence:1,actorId:'zhou',action:'acceptTalk'}),
+  memory(a,'plan-pos:3',{tick:42,last:42,relevance:1,congruence:1,actorId:'zhou',action:'talk'})
+];
+const oldPick={id:'wander',score:20},socialPick={id:'talk',score:10};
+a.action=E.buildAction(a,oldPick);a.activeIntent=null;st.thoughts[a.id]={options:[oldPick,socialPick],pick:oldPick,tick:st.tick};
+const creationSnapshots=[];
+E.registerEventCreatedListener('test.initial-plan-provisional',({event})=>{if(event.data?.actor===a.id&&event.data?.phase==='plan')creationSnapshots.push({id:event.id,tick:event.tick,type:event.type,action:event.data.action,planLifecycle:event.data.planLifecycle});},900);
+const currentPlanId=E.addEvent(`${a.name}決定${E.ZH?.wander||'wander'}。`,'system',[],{actor:a.id,action:'wander',phase:'plan',planLifecycle:'initialProvisional',position:E.positionRef(a.position)}),currentPlan=st.causes[currentPlanId];
+st.tick=41;
+const olderPlanId=E.addEvent(`${a.name}決定${E.ZH?.wander||'wander'}。`,'system',[],{actor:a.id,action:'wander',phase:'plan',planLifecycle:'initialProvisional',position:E.positionRef(a.position)}),olderPlan=st.causes[olderPlanId];
+st.tick=42;
+const normalDecoyId=E.addEvent('decoy plan event','normal',[],{actor:a.id,action:'wander',phase:'plan',planLifecycle:'initialProvisional',position:E.positionRef(a.position)}),normalDecoy=st.causes[normalDecoyId];
+const eventCountBeforeCorrection=st.events.length;
+assert.equal(E.episodicPolicyForEvent(st,currentPlan).episodic,false,'initial plan event must remain non-episodic private cognition');
+assert.equal(E.episodicPolicyForEvent(st,normalDecoy).episodic,false,'plan phase remains non-episodic even for non-system decoy fixtures');
+E.adjustInitialDeliberation(st,[a.id]);
+assert.equal(E.actionKind(a.action),'talk','positive target history should make the correction choose talk');
+assert.equal(a.action.targetAgent,'zhou','corrected social action should keep the memory-selected target');
+assert.equal(st.events.length,eventCountBeforeCorrection,'correction must normalize one canonical plan event rather than append a second correction event');
+assert.equal(st.causes[currentPlanId],currentPlan,'canonical plan cause identity must remain stable across normalization');
+assert.equal(currentPlan.data.action,'talk','same-tick provisional system plan must normalize to the final adopted action');
+assert.equal(currentPlan.data.planLifecycle,'initialProvisional','lifecycle marker records provisional-origin provenance after normalization');
+assert.equal(olderPlan.data.action,'wander','an older same-actor plan event must not be rewritten');
+assert.equal(normalDecoy.data.action,'wander','a same-tick non-system plan-shaped event must not be rewritten');
+assert.equal(creationSnapshots.find(x=>x.id===currentPlanId)?.action,'wander','event-created consumers see the explicitly provisional creation payload before same-tick normalization');
+assert.equal(creationSnapshots.find(x=>x.id===currentPlanId)?.planLifecycle,'initialProvisional');
+for(const agent of Object.values(st.agents)){
+  assert.equal((agent.episodicMemories||[]).some(m=>[currentPlanId,olderPlanId,normalDecoyId].includes(m.sourceEventId)),false,'plan lifecycle events must not become episodic memories');
+}
+const engineSource=fs.readFileSync(new URL('../src/engine.js',import.meta.url),'utf8');
+assert.ok(engineSource.includes("phase:'plan',planLifecycle:'initialProvisional'"),'core initial plan producer must label provisional lifecycle explicitly');
+const memoryDeliberationSource=fs.readFileSync(new URL('../src/memory-deliberation-runtime-v1134.js',import.meta.url),'utf8');
+assert.ok(memoryDeliberationSource.includes("x.tick===st.tick&&x.type==='system'"),'plan normalization must be restricted to same-tick system event provenance');
+assert.ok(memoryDeliberationSource.includes("x.data?.planLifecycle==='initialProvisional'"),'plan normalization must require the explicit provisional lifecycle marker');
+noIssues('initial plan provisional normalization contract');
+
 // Long-run integration remains bounded and stores no memory influence mirrors.
 E.reset(61340);
 const forbidden=['memoryPreference','socialMemoryBias','targetAssociation','memoryUtilityDelta','targetPreference','memoryInfluenceScore'];
