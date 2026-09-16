@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.14.1・Player-readable Action Explanations**（`11.14.1-player-readable-action-explanations`）。
+目前 runtime marker：**v11.14.2・Resident Action / Intent / Explanation Alignment**（`11.14.2-resident-action-intent-explanation-alignment`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -60,7 +60,10 @@
 ### Presentation
 
 - Player Resident View 與 Debug Inspector 共用同一 authoritative simulation state。
-- Resident View 的「現在」可在 final decision evidence 與 live Action 對齊時顯示保守的 player-readable action explanation；stale / mismatch evidence 不顯示，raw utility / score / threshold / Memory delta 仍留在 Debug。
+- Resident View 的「現在」分成三層：Action 表示角色正在具體做什麼；Intent 表示這個行動服務的短期目的；Explanation 只在 final decision evidence 與 live Action 對齊時說明為什麼此刻選了它。
+- Resident Action 會把 raw phase 名稱與工程座標轉成玩家可讀描述；完整 phase / spatial goal 仍留在 Debug。
+- Resident Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
+- stale / mismatch decision evidence 不顯示 Explanation，raw utility / score / threshold / Memory delta 仍留在 Debug。
 - UI 不得改寫 canonical event text。
 - core 保有 `E.actionLabel` ownership；presentation 透過 action-label resolver 派生 readable status。
 - recent social presentation 直接從 bounded canonical events + event creation `tick` 推導，不保存第二份 `recentSocialByAgent` lifecycle cache。
@@ -107,7 +110,7 @@ State regression 目前涵蓋：
 - Human / Pet responder agency；
 - Memory → Deliberation / requester social outcome；
 - Runtime Hook Pipeline；
-- presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency。
+- presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency 與 Resident Action / Intent / Explanation semantic boundary。
 
 另有 Chromium Browser QA 驗證 Social Response、Human Social Response、Memory、Resident View、mobile controls 與 UI state-inert behavior。Regression 優先鎖 authoritative state、truth boundary、causal linkage 與 deterministic invariants，而不是要求 emergent simulation 每次都走唯一固定劇情。
 

@@ -7,11 +7,14 @@
   if(!VERSION)throw new Error('Resident View requires presentation schema version');
   const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
   const INTENT_LABELS={
-    satisfyHunger:'想找東西吃',satisfyThirst:'想喝點東西',recoverFatigue:'想休息一下',sleep:'想睡覺',
-    socialize:'想找人聊聊',interactWithCat:'想和貓互動',seekSocialContact:'想找人互動',awaitResponse:'正在等對方回應',
-    respondSocialBid:'準備回應互動',explore:'想到處看看',cleanEnvironment:'想整理環境',groom:'想整理自己',
-    restockFood:'想補充食物',restockWater:'想補充飲水'
+    satisfyHunger:'填飽肚子',drinkWater:'補充水分',drinkAlcohol:'解渴／喝點酒',recoverFatigue:'緩解活動疲勞',sleep:'補足睡眠',
+    socialize:'找人聊聊',interactWithCat:'和貓互動',seekSocialContact:'找人親近',awaitResponse:'等待對方回應',
+    respondSocialBid:'回應對方的互動',explore:'探索附近',removeHazard:'處理濕滑地面',groom:'整理毛髮與身體',
+    restockResource:'補充室內資源',replenishSupply:'補足家中庫存'
   };
+  const REQUIRED_INTENT_LABELS=[...new Set([...Object.values(E.INTENT_BY_ACTION||{}),'awaitResponse','respondSocialBid'])];
+  const MISSING_INTENT_LABELS=REQUIRED_INTENT_LABELS.filter(kind=>!INTENT_LABELS[kind]);
+  if(MISSING_INTENT_LABELS.length)throw new Error(`Resident View missing canonical Intent labels: ${MISSING_INTENT_LABELS.join(', ')}`);
   const ACTION_LABELS={
     talk:'聊天',talkOffer:'聊天邀請',acceptTalk:'接受聊天',briefTalkReply:'簡短回應聊天',declineTalk:'沒有繼續聊天',
     petCat:'摸貓',acceptPet:'接受撫摸',toleratePet:'容忍撫摸',avoidPet:'避開撫摸',drinkWater:'喝水',drinkAlcohol:'喝酒',
@@ -26,6 +29,8 @@
   const agentName=(st,id,fallback='對方')=>st?.agents?.[id]?.name||fallback;
   const actionName=action=>ACTION_LABELS[action]||E.ZH?.[action]||action||'一件事';
   const interactionName=kind=>W.interactionLabel?.(kind)||kind||'互動';
+  const resourceName=id=>W.RESOURCE_TYPES?.[id]?.name||id||'資源';
+  const containerName=(st,id,fallback='容器')=>st?.containers?.[id]?.name||E.endpointName?.(id)||fallback;
 
   function needText(value){
     const v=clamp(Number(value)||0,0,100);
@@ -53,28 +58,70 @@
   }
   function intentText(a){
     const kind=a?.activeIntent?.kind;
-    return INTENT_LABELS[kind]||E.ZH?.[kind]||'照自己的步調行動';
+    if(!kind)return '目前沒有明確的短期目的';
+    return INTENT_LABELS[kind]||E.intentLabel?.(kind)||'目前沒有可顯示的短期目的';
+  }
+  function restockActionText(st,p){
+    const dest=containerName(st,p?.destinationId,'室內容器'),resource=resourceName(p?.resource),carrier=containerName(st,p?.carrierId,'搬運容器');
+    switch(p?.phase){
+      case 'toContainer': return `前往${dest}，準備補充${resource}`;
+      case 'takeContainer': return `拿起${dest}，準備補充${resource}`;
+      case 'toCarrier': return `前往${carrier}，準備搬運${resource}`;
+      case 'takeCarrier': return `拿起${carrier}，準備搬運${resource}`;
+      case 'toSource': return `前往資源來源，準備取得${resource}`;
+      case 'loadCarrier': return `把${resource}裝進${carrier}`;
+      case 'toDestination': return `把${resource}帶回${dest}`;
+      case 'deposit': return `把${resource}補進${dest}`;
+      case 'fill': return `替${dest}補充${resource}`;
+      default: return `補充${dest}的${resource}`;
+    }
+  }
+  function externalSupplyActionText(st,p){
+    const dest=containerName(st,p?.destinationId,'家中庫存'),resource=resourceName(p?.resource),carrier=containerName(st,p?.carrierId,'搬運容器');
+    switch(p?.phase){
+      case 'toCarrier': return `前往${carrier}，準備外出補給`;
+      case 'takeCarrier': return `拿起${carrier}，準備外出補給`;
+      case 'toExit': return `帶著${carrier}前往出口`;
+      case 'exit': return `準備離開家門補給${resource}`;
+      case 'work': return `正在外出補給${resource}`;
+      case 'toDestination': return `帶著補給回到${dest}`;
+      case 'deposit': return `把補給的${resource}放進${dest}`;
+      default: return `外出補給${resource}`;
+    }
+  }
+  function residentActionText(st,a){
+    const p=a?.action;
+    if(!p)return '目前沒有進行中的行動';
+    if(p.kind==='wander')return a?.kind==='cat'?'四處探索':'四處走走';
+    if(p.kind==='restockContainer')return restockActionText(st,p);
+    if(p.kind==='externalSupply')return externalSupplyActionText(st,p);
+    return String(E.actionLabel(a)||'').replace(/・目標 \(-?\d+,-?\d+\)/g,'');
   }
   function playerActionExplanation(st,a){
     const thought=st?.thoughts?.[a?.id],action=a?.action,pick=thought?.pick;
     if(!thought||!action||!pick)return '';
     if(thought.tick!==action.started||pick.id!==action.kind)return '';
     if(a?.activeIntent?.kind==='respondSocialBid')return '';
-    const targetId=pick.targetAgent||action.targetAgent,target=targetId?agentName(st,targetId,''):'';
     switch(pick.id){
-      case 'eat': return '因為肚子餓，所以去找東西吃。';
-      case 'drinkWater': return '因為口渴，所以去找水喝。';
-      case 'drinkAlcohol': return '因為口渴，也有飲酒偏好，所以去找酒。';
-      case 'rest': return '因為有些累，所以想休息一下。';
-      case 'sleep': return '因為睡意變得明顯，所以去找地方睡覺。';
-      case 'talk': return target?`因為想找人聊聊，所以主動去找${target}。`:'因為想找人聊聊，所以主動去找人互動。';
-      case 'petCat': return target?`因為想和${target}互動，所以主動去找牠。`:'因為想和貓互動，所以主動去找牠。';
-      case 'seekHuman': return target?`因為想找人親近，所以去找${target}。`:'因為想找人親近，所以去找人互動。';
-      case 'cleanFloor': return '因為附近有液體灑出，所以想把環境整理乾淨。';
-      case 'groom': return '因為想整理自己，所以開始理毛。';
-      case 'restockContainer': return '因為有物資快不夠了，所以正在補充。';
-      case 'externalSupply': return '因為家裡的物資不足，所以準備外出補給。';
-      case 'wander': return a.kind==='cat'?'現在比較想四處探索。':'目前沒有更迫切的事，所以四處走走。';
+      case 'eat': return '因為飢餓感已經變得明顯。';
+      case 'drinkWater': return '因為口渴。';
+      case 'drinkAlcohol': return '因為口渴，而且現在也有喝酒的傾向。';
+      case 'rest': return '因為活動疲勞累積得比較明顯。';
+      case 'sleep': return '因為睡眠需求已經變得明顯。';
+      case 'talk': return '因為社交需求已經變得比較明顯。';
+      case 'petCat': return '因為現在有社交需求，也對貓有親近感。';
+      case 'seekHuman': return '因為社交需求已經變得比較明顯。';
+      case 'cleanFloor': return '因為附近有濕滑的地面需要處理。';
+      case 'groom': {
+        const residue=Object.values(a?.contacts?.paws||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
+        return residue>.05?'因為腳掌或毛上沾了需要清理的東西。':'因為理毛需求累積得比較明顯。';
+      }
+      case 'restockContainer': {
+        const dest=containerName(st,action.destinationId,'室內容器'),resource=resourceName(action.resource);
+        return `因為${dest}裡的${resource}已經不多了。`;
+      }
+      case 'externalSupply': return `因為家裡的${resourceName(action.resource)}庫存已經不足。`;
+      case 'wander': return a.kind==='cat'?'因為目前沒有更迫切的需求，而且牠有探索傾向。':'目前沒有其他更迫切的需求。';
       default: return '';
     }
   }
@@ -137,7 +184,7 @@
     return `<div class="resident-memory-list">${memories.map(m=>`<div class="resident-memory-item"><span>◦</span><p>${esc(memoryText(st,m))}</p></div>`).join('')}</div><p class="resident-footnote">這裡只把角色已保存的 episodic memory 翻成較容易閱讀的文字；不額外推定好惡、動機或關係。</p>`;
   }
   function overview(st,a){
-    const where=a.offMap?'門外':SP.describePlace(st,a),held=heldText(st,a),action=E.actionLabel(a),affect=affectLabel(a.affect),explanation=playerActionExplanation(st,a);
+    const where=a.offMap?'門外':SP.describePlace(st,a),held=heldText(st,a),action=residentActionText(st,a),affect=affectLabel(a.affect),explanation=playerActionExplanation(st,a);
     return `<section class="resident-hero"><div class="resident-avatar">${a.kind==='cat'?'🐈':'👤'}</div><div><h2>${esc(a.name)}</h2><p>📍 ${esc(where)}・${esc(postureText(st,a))}${held?`・拿著 ${esc(held)}`:''}</p></div></section><section class="resident-card resident-now"><h3>現在</h3><strong>${esc(action)}</strong><p>${esc(intentText(a))}</p>${explanation?`<p class="resident-footnote" data-v1140-player-explanation><b>原因</b> ${esc(explanation)}</p>`:''}</section><section class="resident-card"><h3>狀態</h3><div class="resident-needs">${needCards(a)}</div></section><section class="resident-card resident-mood"><h3>心情</h3><strong>${esc(affect)}</strong><p>這是由目前的短期 Affect 轉成保守描述，不代表長期性格或關係。</p></section>`;
   }
   function residentBody(st,a){
@@ -200,6 +247,8 @@
   E.UI_RESIDENT_VIEW_VERSION=VERSION;
   E.residentAffectLabel=affectLabel;
   E.residentNeedLabel=needText;
+  E.residentIntentLabel=intentText;
+  E.residentActionText=residentActionText;
   E.residentActionExplanation=playerActionExplanation;
   schedule();
 })();

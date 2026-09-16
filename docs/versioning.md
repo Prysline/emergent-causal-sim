@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.14.1-player-readable-action-explanations`
+`11.14.2-resident-action-intent-explanation-alignment`
 
-玩家可見標題使用短版 `v11.14.1`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION` 與 Resident View 的 UI version 使用完整 marker。
+玩家可見標題使用短版 `v11.14.2`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION` 與 Resident View 的 UI version 使用完整 marker。
 
 ## 何時必須升版
 
@@ -37,14 +37,14 @@
 
 - `major`：專案世代／大規模不相容重構；目前為 11。
 - `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split。
-- `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations。
+- `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意。
 - `slug`：描述 current marker 的主要辨識功能，不是完整 changelog。
 
 不是每個 PR 都需要版本號。PR 編號、Git commit 與 runtime version 是不同維度：一個版本可以包含多個 refactor/docs PR；反之，一個真正改變 current contract 的 PR 必須同時處理版本更新。
 
 ### 檔名 / workflow family 不是 current release marker
 
-像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`browser-resident-view-v1140-qa` 這類名稱代表 11.14 這條 subsystem / test family，可以跨 11.14.x patch 延續，不需要每個 patch 都複製／改名整組檔案與 workflow。判斷目前版本時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準，而不是從檔名或 workflow display name反推 current release。
+像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`browser-resident-view-v1140-qa` 這類名稱代表 11.14 這條 subsystem / test family，可以跨 11.14.x patch 延續，不需要每個 patch 都複製／改名整組檔案與 workflow。判斷目前版本時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準，而不是從檔名或 workflow display name 反推 current release。
 
 若未來 minor 升級代表新的 subsystem generation、舊 family 名稱會造成實質誤導，再另行 rename；單純 patch bump 不要求 rename。
 
@@ -65,4 +65,4 @@
 
 ## Historical correction
 
-PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 simulation policy，因此不補造中間 release version；PR #58 為 docs-only，也不升版。PR #57 改變 canonical plan event 的 structured contract，但這次不回補虛構的歷史 release；其 contract hardening 保留在 Git history / Architecture Current。PR #59 實際新增玩家可見的 player-readable action explanation，因此 current line 從 `11.14.0-player-resident-view-debug-inspector` 校正為 `11.14.1-player-readable-action-explanations`。
+PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 simulation policy，因此不補造中間 release version；PR #58 為 docs-only，也不升版。PR #57 改變 canonical plan event 的 structured contract，但這次不回補虛構的歷史 release；其 contract hardening 保留在 Git history / Architecture Current。PR #59 實際新增玩家可見的 player-readable action explanation，因此 current line 從 `11.14.0-player-resident-view-debug-inspector` 校正為 `11.14.1-player-readable-action-explanations`。其後 Resident View 的 Action / Intent / Explanation presentation semantics 再以 11.14.2 獨立升版，不把玩家可見語意修正混入純版本校正 PR。

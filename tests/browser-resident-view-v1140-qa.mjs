@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.14.1-player-readable-action-explanations';
+const CURRENT_VERSION='11.14.2-resident-action-intent-explanation-alignment';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -71,6 +71,39 @@ assert.ok(!desktop.residentText.includes('Agent・zhou'));
 assert.equal(desktop.affectLabels.neutral,'平穩');
 assert.equal(desktop.affectLabels.frustrated,'明顯煩躁');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
+
+const semanticLayers=await page.evaluate(()=>{
+  const E=window.SimEngine,st=E.getState();
+  const dest=Object.values(st.containers).find(c=>Object.prototype.hasOwnProperty.call(c.contents||{},'water'))||Object.values(st.containers)[0];
+  const destId=dest.id,destName=dest.name;
+  const intent=kind=>E.residentIntentLabel({activeIntent:{kind}});
+  const restockAction=E.residentActionText(st,{kind:'human',action:{kind:'restockContainer',phase:'toContainer',destinationId:destId,resource:'water'}});
+  const wanderAction=E.residentActionText(st,{kind:'human',action:{kind:'wander',spatialGoal:{x:10,y:6}}});
+  const wander={id:'qa-wander',kind:'human',activeIntent:{kind:'explore'},action:{kind:'wander',started:77,spatialGoal:{x:10,y:6}}};
+  const wanderState={...st,thoughts:{...st.thoughts,[wander.id]:{tick:77,pick:{id:'wander'}}}};
+  const restock={id:'qa-restock',kind:'human',activeIntent:{kind:'restockResource'},action:{kind:'restockContainer',phase:'toContainer',started:88,destinationId:destId,resource:'water'}};
+  const restockState={...st,thoughts:{...st.thoughts,[restock.id]:{tick:88,pick:{id:'restockContainer'}}}};
+  return {
+    destName,
+    drinkWaterIntent:intent('drinkWater'),
+    drinkAlcoholIntent:intent('drinkAlcohol'),
+    restockIntent:intent('restockResource'),
+    wanderIntent:intent('explore'),
+    restockAction,wanderAction,
+    wanderExplanation:E.residentActionExplanation(wanderState,wander),
+    restockExplanation:E.residentActionExplanation(restockState,restock)
+  };
+});
+assert.equal(semanticLayers.drinkWaterIntent,'補充水分');
+assert.equal(semanticLayers.drinkAlcoholIntent,'解渴／喝點酒');
+assert.equal(semanticLayers.restockIntent,'補充室內資源');
+assert.equal(semanticLayers.wanderIntent,'探索附近');
+assert.ok(!semanticLayers.restockAction.includes('toContainer'),'Resident Action must not expose raw restock phase names');
+assert.ok(semanticLayers.restockAction.includes(semanticLayers.destName)&&semanticLayers.restockAction.includes('水'),'Resident restock Action should describe the concrete player-readable task');
+assert.equal(semanticLayers.wanderAction,'四處走走');
+assert.ok(!semanticLayers.wanderAction.includes('(10,6)'),'Resident Action must not expose raw spatial coordinates');
+assert.equal(semanticLayers.wanderExplanation,'目前沒有其他更迫切的需求。','Explanation should state why wander won instead of repeating explore Intent');
+assert.equal(semanticLayers.restockExplanation,`因為${semanticLayers.destName}裡的水已經不多了。`,'Restock explanation should state the resource pressure rather than repeat the task');
 
 const stateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1140-mode="debug"]');
@@ -181,9 +214,10 @@ fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({
   recent:{...recent,residentText:undefined,debugText:undefined},
   mobile:{...mobile,residentText:undefined,debugText:undefined},
   mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},
+  semanticLayers,
   catRecent:{...catRecent,residentText:undefined,debugText:undefined},
   catMemory:{...catMemory,residentText:undefined,debugText:undefined},
   pageErrors,consoleErrors
 },null,2));
-console.log('v11.14.1 browser resident view QA: desktop/mobile state-inert + animal private experience pass');
+console.log('v11.14.2 browser resident view QA: action/intent/explanation semantics + desktop/mobile state-inert pass');
 await browser.close();

@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.14.1-player-readable-action-explanations';
+const CURRENT_VERSION='11.14.2-resident-action-intent-explanation-alignment';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
@@ -15,7 +15,7 @@ const files=[
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
-E.reset(11401);
+E.reset(11402);
 let st=E.getState();
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
@@ -30,17 +30,29 @@ const baseUiSource=fs.readFileSync(new URL('../src/ui.js',import.meta.url),'utf8
 assert.match(baseUiSource,/registerInspectorDecorator/,'base UI must own explicit Inspector decorator lifecycle');
 const residentUiSource=fs.readFileSync(new URL('../src/ui-resident-view-v1140.js',import.meta.url),'utf8');
 assert.match(residentUiSource,/const VERSION=W\.PRESENTATION_SCHEMA_VERSION;/,'Resident View must inherit the canonical current runtime marker instead of hardcoding a second version');
+assert.match(residentUiSource,/REQUIRED_INTENT_LABELS/,'Resident View must verify canonical Intent label coverage');
+assert.match(residentUiSource,/drinkWater:'補充水分'/,'drinkWater Intent must describe the goal instead of echoing the Action label');
+assert.match(residentUiSource,/drinkAlcohol:'解渴／喝點酒'/,'drinkAlcohol Intent must describe the goal instead of echoing the Action label');
+assert.match(residentUiSource,/restockResource:'補充室內資源'/,'restockResource Intent must use the canonical Intent kind');
+assert.match(residentUiSource,/removeHazard:'處理濕滑地面'/,'removeHazard Intent must use the canonical Intent kind');
+assert.doesNotMatch(residentUiSource,/satisfyThirst:|cleanEnvironment:|restockFood:|restockWater:/,'Resident labels must not keep obsolete/non-canonical Intent keys');
+assert.match(residentUiSource,/function residentActionText\(st,a\)/,'Resident View must own a player-readable Action projection');
+assert.match(residentUiSource,/replace\(\/・目標 \\?/,'Resident Action projection must remove raw spatial-goal coordinates');
 assert.match(residentUiSource,/function playerActionExplanation\(st,a\)/,'Resident View must derive player-readable explanations at render time');
 assert.match(residentUiSource,/thought\.tick!==action\.started\|\|pick\.id!==action\.kind/,'player explanation must reject stale or action-mismatched decision evidence');
 assert.match(residentUiSource,/activeIntent\?\.kind==='respondSocialBid'\)return ''/,'responder actions must not be mislabeled as autonomous motives');
+assert.match(residentUiSource,/case 'wander': return a\.kind==='cat'\?'因為目前沒有更迫切的需求，而且牠有探索傾向。':'目前沒有其他更迫切的需求。'/,'wander explanation must explain selection pressure instead of repeating the explore Intent');
 assert.match(residentUiSource,/data-v1140-player-explanation/,'trusted explanation must render only as a Resident presentation element');
 assert.doesNotMatch(residentUiSource,/\.(?:currentReason|actionExplanation|playerStory|causalTrace)\s*=/,'Resident View must not persist explanation or causal-trace mirror state');
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.14\.1・Player-readable Action Explanations/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.14\.2・Resident Action \/ Intent \/ Explanation Alignment/,'app shell must expose the current short version and feature label');
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
 const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
 assert.ok(architectureSource.includes(CURRENT_VERSION),'architecture current runtime marker must match the canonical version');
+assert.match(architectureSource,/Action＝角色現在具體在做什麼/,'Architecture must define the Resident Action layer');
+assert.match(architectureSource,/Intent＝這個行動服務的短期目的/,'Architecture must define the Resident Intent layer');
+assert.match(architectureSource,/Explanation＝為什麼此刻選這個行動/,'Architecture must define the Resident Explanation layer');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
@@ -79,4 +91,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.14.1 presentation observability + version consistency regression: ok');
+console.log('v11.14.2 presentation observability + Resident semantic alignment regression: ok');
