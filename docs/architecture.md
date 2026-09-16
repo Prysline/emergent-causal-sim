@@ -172,22 +172,24 @@ episodicMemoryCreated
 
 Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud failure。
 
+**Pipeline abstraction rule:** Architecture diagrams and ordering summaries use lifecycle responsibility labels. Concrete implementation hook IDs stay in source, the exact registry tables in `docs/tick-pipeline.md`, and `tests/runtime-hook-pipeline.mjs`; action-specific names must not become architecture stage names.
+
 ### Current simulation ordering
 
 `beforeTick`：
 
 ```text
-100  socialOutcome.capture-events
-200  memoryDeliberation.capture-idle
-300  humanSocial.prepare
-400  socialResponse.capture-pet-offers
-500  affect.decay
-600  memory.capture-events
-700  intent.soft-reconsideration
-800  intent.replan-preemption
-900  socialBid.prepare
-1000 intent.reconcile-before
-1100 spatial.capture
+100  Requester Outcome Capture
+200  Memory-to-Deliberation Baseline Capture
+300  Human Social Prepare
+400  Social Response Prepare
+500  Affect Decay
+600  Memory Observation Checkpoint
+700  Soft Reconsideration
+800  Replan - Preemption
+900  Social Bid Prepare
+1000 Intent Reconcile
+1100 Spatial Capture
 ```
 
 接著只執行一次 core `tick()`。
@@ -195,15 +197,15 @@ Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud f
 `afterTick`：
 
 ```text
-100 spatial.effects
-200 intent.reconcile-after
-300 socialBid.settle
-400 intent.recover-aborts
-500 memory.process-events
-600 socialResponse.resolve-pet-offers
-700 humanSocial.resolve
-800 memoryDeliberation.correct-initial
-900 socialOutcome.process
+100 Spatial Effects
+200 Intent Reconcile
+300 Social Bid Settle
+400 Abort Recovery
+500 Memory Observation Process
+600 Social Response Resolve
+700 Human Social Resolve
+800 Memory-to-Deliberation Correction
+900 Private Social Outcome Process
 ```
 
 UI / Resident View 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
