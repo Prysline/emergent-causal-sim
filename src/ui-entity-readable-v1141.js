@@ -13,7 +13,6 @@
   const sum=o=>Object.values(o||{}).reduce((a,b)=>a+(Number(b)||0),0);
   const resourceName=id=>W.RESOURCE_TYPES?.[id]?.name||E.resourceName?.(id)||id||'資源';
   const roomName=(st,id)=>st?.map?.rooms?.[id]?.name||id||'未命名區域';
-  const agentName=(st,id)=>st?.agents?.[id]?.name||id||'某位居民';
   const amount=v=>Math.round((Number(v)||0)*10)/10;
 
   function contentsEntries(contents){return Object.entries(contents||{}).filter(([,v])=>(Number(v)||0)>.05);}
@@ -105,7 +104,7 @@
     const occupants=SP.occupantsAt(st,t)||[],furniture=SP.furnitureAt(st,t)||[],surface=t.surface?.contents||{};
     return `${hero(t.terrain==='wall'?'🧱':t.terrain==='doorway'?'🚪':'▫️',terrain,roomName(st,t.roomId))}${factCard('目前狀況',[
       fact('通行',SP.walkable(st,t)?'可以通行':'無法通行'),
-      contentsEntries(surface).length?fact('地面／表面',contentsText(surface)):'',
+      contentsEntries(surface).length?fact('地面／表面',contentsText(surface)):''
     ])}${occupants.length?chipsCard('這裡的人',occupants.map(a=>entityChip('agent',a.id,a.name,a.kind==='cat'?'🐈':'👤'))):''}${furniture.length?chipsCard('這裡的家具',furniture.map(f=>entityChip('furniture',f.id,f.name,f.icon||'▰'))):''}`;
   }
   function roomView(st,id){
@@ -132,7 +131,7 @@
     const e=st.causes?.[id];if(!e)return '';
     const related=(e.data?.entities||[]).map(ref=>entityFromRef(st,ref)).filter(Boolean);
     const unique=related.filter((x,i,arr)=>arr.findIndex(y=>y.type===x.type&&y.id===x.id)===i);
-    return `${hero('⚡','發生的事',e.time||'') }<section class="resident-card resident-now"><h3>內容</h3><strong>${esc(e.text||'')}</strong></section>${unique.length?chipsCard('相關對象',unique.map(x=>entityChip(x.type,x.id,x.label,x.icon))):''}`;
+    return `${hero('⚡','發生的事',e.time||'')}<section class="resident-card resident-now"><h3>內容</h3><strong>${esc(e.text||'')}</strong></section>${unique.length?chipsCard('相關對象',unique.map(x=>entityChip(x.type,x.id,x.label,x.icon))):''}`;
   }
   function readableBody(st,selected){
     if(selected.type==='container')return containerView(st,selected.id);
@@ -159,10 +158,11 @@
   function decorateInspector({host:renderHost,selected}){
     if(renderHost!==host)return;
     if(selected?.type==='agent'){
+      currentKey=null;mode='readable';
       const agentToggle=host.querySelector('[data-v1140-mode="resident"]');if(agentToggle)agentToggle.textContent='檢視';
       return;
     }
-    if(!selected||!SUPPORTED.has(selected.type)){currentKey=null;return;}
+    if(!selected||!SUPPORTED.has(selected.type)){currentKey=null;mode='readable';return;}
     const key=`${selected.type}:${selected.id}`;
     if(key!==currentKey){currentKey=key;mode='readable';}
     let shell=host.querySelector(':scope > [data-v1141-entity-root]');
