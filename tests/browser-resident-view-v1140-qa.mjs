@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
+const CURRENT_VERSION='11.14.1-player-readable-action-explanations';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -12,7 +13,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openStory(){
   await page.goto('http://127.0.0.1:4173/?scenario=talk-no-response',{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION==='11.14.0-player-resident-view-debug-inspector');
+  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version,CURRENT_VERSION);
   for(let i=0;i<8;i++){
     const ready=await page.evaluate(()=>window.SimEngine.getState().agents.zhou.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'));
     if(ready)break;
@@ -44,8 +45,8 @@ async function snapshot(){
 
 await openStory();
 let desktop=await snapshot();
-assert.equal(desktop.version,'11.14.0-player-resident-view-debug-inspector');
-assert.equal(desktop.uiVersion,'11.14.0-player-resident-view-debug-inspector');
+assert.equal(desktop.version,CURRENT_VERSION);
+assert.equal(desktop.uiVersion,CURRENT_VERSION);
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -184,5 +185,5 @@ fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({
   catMemory:{...catMemory,residentText:undefined,debugText:undefined},
   pageErrors,consoleErrors
 },null,2));
-console.log('v11.14.0 browser resident view QA: desktop/mobile state-inert + animal private experience pass');
+console.log('v11.14.1 browser resident view QA: desktop/mobile state-inert + animal private experience pass');
 await browser.close();
