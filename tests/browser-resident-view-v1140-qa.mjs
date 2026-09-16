@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.14.3-natural-player-explanations';
+const CURRENT_VERSION='11.14.4-entity-readable-view';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -13,7 +13,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openStory(){
   await page.goto('http://127.0.0.1:4173/?scenario=talk-no-response',{waitUntil:'networkidle'});
-  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version,CURRENT_VERSION);
+  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version,CURRENT_VERSION);
   for(let i=0;i<8;i++){
     const ready=await page.evaluate(()=>window.SimEngine.getState().agents.zhou.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'));
     if(ready)break;
@@ -28,7 +28,7 @@ async function snapshot(){
     const activeMode=root?.querySelector('[data-v1140-mode].active')?.dataset.v1140Mode??null;
     const activeTab=root?.querySelector('[data-v1140-tab].active')?.dataset.v1140Tab??null;
     return {
-      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,
+      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,
       activeMode,activeTab,
       residentVisible:!!resident&&!resident.hidden&&!!resident.getClientRects().length,
       debugVisible:!!debug&&!debug.hidden&&!!debug.getClientRects().length,
@@ -42,11 +42,43 @@ async function snapshot(){
     };
   });
 }
+async function selectEntity(type,id){
+  await page.evaluate(({type,id})=>{
+    const selector=`[data-entity="${type}:${id}"]`,node=document.querySelector(selector);
+    if(node)node.click();
+    else{
+      const ui=window.SimUI,host=document.getElementById('inspector');
+      const selected={type,id};
+      if(type==='container')host.innerHTML='';
+      const mapNode=document.querySelector(selector);mapNode?.click();
+      if(!mapNode)throw new Error(`QA selector missing: ${selector}`);
+      void ui;void selected;
+    }
+  },{type,id});
+  await page.waitForSelector('[data-v1141-entity-root]');
+}
+async function entitySnapshot(){
+  return page.evaluate(()=>{
+    const E=window.SimEngine,st=E.getState(),root=document.querySelector('[data-v1141-entity-root]'),readable=root?.querySelector('[data-v1141-entity-readable]'),debug=root?.querySelector('[data-v1141-entity-debug]');
+    return {
+      version:st.version,uiVersion:E.UI_ENTITY_READABLE_VERSION,
+      activeMode:root?.querySelector('[data-v1141-entity-mode].active')?.dataset.v1141EntityMode??null,
+      readableVisible:!!readable&&!readable.hidden&&!!readable.getClientRects().length,
+      debugVisible:!!debug&&!debug.hidden&&!!debug.getClientRects().length,
+      readableText:readable?.innerText??'',debugText:debug?.innerText??'',
+      validator:window.SimValidator.validateState(st),
+      width:innerWidth,docWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,
+      inspectorActive:document.querySelector('[data-view="inspector"]')?.classList.contains('mobile-active')??false,
+      navActive:document.querySelector('.mobile-nav [data-tab="inspector"]')?.classList.contains('active')??false
+    };
+  });
+}
 
 await openStory();
 let desktop=await snapshot();
 assert.equal(desktop.version,CURRENT_VERSION);
 assert.equal(desktop.uiVersion,CURRENT_VERSION);
+assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -57,9 +89,10 @@ assert.deepEqual(desktop.inspectorDecorators,[
   {id:'memory.retention',order:700},
   {id:'memory.deliberation',order:800},
   {id:'socialOutcome.memory',order:900},
-  {id:'residentView.layer',order:1000}
+  {id:'residentView.layer',order:1000},
+  {id:'entityReadable.layer',order:1050}
 ],'Inspector presentation ownership must be explicit and deterministically ordered');
-assert.equal(desktop.activeMode,'resident','desktop: Agent should open Resident View by default');
+assert.equal(desktop.activeMode,'resident','desktop: Agent should open readable Resident View by default');
 assert.equal(desktop.residentVisible,true);
 assert.equal(desktop.debugVisible,false);
 assert.ok(desktop.residentText.includes('老周'));
@@ -71,6 +104,7 @@ assert.ok(!desktop.residentText.includes('Agent・zhou'));
 assert.equal(desktop.affectLabels.neutral,'平穩');
 assert.equal(desktop.affectLabels.frustrated,'明顯煩躁');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
+assert.equal(await page.locator('[data-v1140-mode="resident"]').innerText(),'檢視','Agent readable toggle should use the generalized label');
 
 const semanticLayers=await page.evaluate(()=>{
   const E=window.SimEngine,st=E.getState();
@@ -90,23 +124,13 @@ const semanticLayers=await page.evaluate(()=>{
   const restockState={...st,thoughts:{...st.thoughts,[restock.id]:{tick:88,pick:{id:'restockContainer'}}}};
   return {
     destName,
-    drinkWaterIntent:intent('drinkWater'),
-    drinkAlcoholIntent:intent('drinkAlcohol'),
-    restockIntent:intent('restockResource'),
-    wanderIntent:intent('explore'),
+    drinkWaterIntent:intent('drinkWater'),drinkAlcoholIntent:intent('drinkAlcohol'),restockIntent:intent('restockResource'),wanderIntent:intent('explore'),
     restockAction,wanderAction,
-    eatExplanation:explain('eat','satisfyHunger'),
-    drinkWaterExplanation:explain('drinkWater','drinkWater'),
-    drinkAlcoholExplanation:explain('drinkAlcohol','drinkAlcohol'),
-    restExplanation:explain('rest','recoverFatigue'),
-    sleepExplanation:explain('sleep','sleep'),
-    talkExplanation:explain('talk','socialize'),
-    petCatExplanation:explain('petCat','interactWithCat'),
-    seekHumanExplanation:explain('seekHuman','seekSocialContact',{agent:{kind:'cat'}}),
-    groomExplanation:explain('groom','groom',{agent:{kind:'cat',contacts:{paws:{}}}}),
+    eatExplanation:explain('eat','satisfyHunger'),drinkWaterExplanation:explain('drinkWater','drinkWater'),drinkAlcoholExplanation:explain('drinkAlcohol','drinkAlcohol'),
+    restExplanation:explain('rest','recoverFatigue'),sleepExplanation:explain('sleep','sleep'),talkExplanation:explain('talk','socialize'),petCatExplanation:explain('petCat','interactWithCat'),
+    seekHumanExplanation:explain('seekHuman','seekSocialContact',{agent:{kind:'cat'}}),groomExplanation:explain('groom','groom',{agent:{kind:'cat',contacts:{paws:{}}}}),
     externalSupplyExplanation:explain('externalSupply','replenishSupply',{action:{resource:'water'}}),
-    wanderExplanation:E.residentActionExplanation(wanderState,wander),
-    restockExplanation:E.residentActionExplanation(restockState,restock)
+    wanderExplanation:E.residentActionExplanation(wanderState,wander),restockExplanation:E.residentActionExplanation(restockState,restock)
   };
 });
 assert.equal(semanticLayers.drinkWaterIntent,'補充水分');
@@ -144,6 +168,7 @@ assert.ok(debug.debugText.includes('Memory → Deliberation'),'Debug must retain
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
+  entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
   intent:document.querySelectorAll('[data-v1121-intent]').length,
   memory:document.querySelectorAll('[data-v1130-memory]').length,
   appraisal:document.querySelectorAll('[data-v1131-appraisal]').length,
@@ -152,7 +177,7 @@ const debugOwnership=await page.evaluate(()=>({
   deliberation:document.querySelectorAll('[data-v1134-memory-deliberation]').length,
   socialOutcome:document.querySelectorAll('[data-v1135-social-outcome-memory]').length
 }));
-assert.deepEqual(debugOwnership,{roots:1,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1},'each Inspector layer must render exactly once');
+assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
 
 await page.click('[data-v1140-mode="resident"]');
 await page.click('[data-v1140-tab="memory"]');
@@ -172,6 +197,66 @@ assert.ok(recent.residentText.includes('最近發生的事'));
 assert.ok(recent.residentText.includes('自己的經驗・老周等了一會兒，沒有得到立即回應，便不再等了。'),'requester-private wait end should be visible only as the resident own experience');
 assert.ok(!recent.residentText.includes('故意忽略'),'private recent experience must not invent responder intent');
 assert.ok(recent.docWidth<=recent.width+1,`desktop overflow: ${recent.docWidth}>${recent.width}`);
+
+// Non-agent Entity Readable View: every current Inspector entity type gets a readable default while Debug retains engineering detail.
+const entityFixtures=await page.evaluate(()=>{
+  const E=window.SimEngine,st=E.getState();
+  const container=Object.values(st.containers).find(c=>Object.values(c.contents||{}).some(v=>v>.05))||Object.values(st.containers)[0];
+  const source=Object.values(st.sources)[0];
+  const furniture=Object.values(st.furniture).find(f=>(f.slots||[]).length)||Object.values(st.furniture)[0];
+  const tile=Object.values(st.map.tiles).find(t=>t.terrain==='floor'&&t.roomId)||Object.values(st.map.tiles)[0];
+  const room=Object.values(st.map.rooms)[0];
+  const actor=Object.values(st.agents)[0];
+  const eventId=E.addEvent('老周查看了附近的環境。','normal',[],{entities:[`agent:${actor.id}`,`container:${container.id}`],actor:actor.id,action:'presentationEntityProbe'});
+  return {
+    container:{id:container.id,name:container.name,resource:Object.keys(container.contents||{}).find(r=>(container.contents[r]||0)>.05)||null},
+    source:{id:source.id,name:source.name,resource:source.resource},
+    furniture:{id:furniture.id,name:furniture.name},
+    tile:{id:tile.id,terrain:tile.terrain},
+    room:{id:room.id,name:room.name},
+    event:{id:eventId,text:st.causes[eventId].text}
+  };
+});
+
+await selectEntity('container',entityFixtures.container.id);
+let entity=await entitySnapshot();
+assert.equal(entity.version,CURRENT_VERSION);assert.equal(entity.uiVersion,CURRENT_VERSION);assert.equal(entity.activeMode,'readable');assert.equal(entity.readableVisible,true);assert.equal(entity.debugVisible,false);
+assert.ok(entity.readableText.includes(entityFixtures.container.name));
+assert.ok(entity.readableText.includes('內容與容量'));
+if(entityFixtures.container.resource)assert.ok(entity.readableText.includes(await page.evaluate(r=>window.SimWorld.RESOURCE_TYPES?.[r]?.name||window.SimEngine.resourceName?.(r)||r,entityFixtures.container.resource)));
+assert.ok(!entity.readableText.includes(`Container・${entityFixtures.container.id}`));
+assert.ok(!entity.readableText.includes('空重'));
+const containerState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+await page.click('[data-v1141-entity-mode="debug"]');
+entity=await entitySnapshot();
+assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Container・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),containerState,'Container readable/debug switch must be state-inert');
+
+await selectEntity('source',entityFixtures.source.id);entity=await entitySnapshot();
+assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.source.name));assert.ok(entity.readableText.includes('提供的資源'));assert.ok(!entity.readableText.includes(`Resource Source・${entityFixtures.source.id}`));assert.ok(!entity.readableText.includes('操作 Port'));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Resource Source・${entityFixtures.source.id}`));assert.ok(entity.debugText.includes('操作 Port'));
+
+await selectEntity('furniture',entityFixtures.furniture.id);entity=await entitySnapshot();
+assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.furniture.name));assert.ok(entity.readableText.includes('用途'));assert.ok(entity.readableText.includes('正在使用'));assert.ok(!entity.readableText.includes('Footprint'));assert.ok(!entity.readableText.includes('預約：'));
+const furnitureState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Furniture・${entityFixtures.furniture.id}`));assert.ok(entity.debugText.includes('Footprint'));assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),furnitureState,'Furniture readable/debug switch must be state-inert');
+
+await selectEntity('tile',entityFixtures.tile.id);entity=await entitySnapshot();
+assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes('目前狀況'));assert.ok(!entity.readableText.includes(`Tile ${entityFixtures.tile.id}`));assert.ok(!entity.readableText.includes('局部噪音'));assert.ok(!entity.readableText.includes('阻擋來源'));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Tile ${entityFixtures.tile.id}`));assert.ok(entity.debugText.includes('局部噪音'));
+
+await selectEntity('room',entityFixtures.room.id);entity=await entitySnapshot();
+assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.room.name));assert.ok(entity.readableText.includes('目前狀況'));assert.ok(!entity.readableText.includes(`Derived Room・${entityFixtures.room.id}`));assert.ok(!entity.readableText.includes('平均局部舒適'));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Derived Room・${entityFixtures.room.id}`));assert.ok(entity.debugText.includes('平均局部舒適'));
+
+await selectEntity('event',entityFixtures.event.id);entity=await entitySnapshot();
+assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.event.text));assert.ok(entity.readableText.includes('相關對象'));assert.ok(!entity.readableText.includes('詳細資料'));assert.ok(!entity.readableText.includes('因果鏈'));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(entityFixtures.event.text));assert.ok(entity.debugText.includes('詳細資料'));assert.ok(entity.debugText.includes('因果鏈'));
+
+// Returning through an Agent must reset the same non-agent entity to readable default instead of retaining a previous Debug mode.
+await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.click());await page.waitForSelector('[data-v1140-resident-root]');
+await selectEntity('container',entityFixtures.container.id);entity=await entitySnapshot();assert.equal(entity.activeMode,'readable','returning to an entity after Agent view should default to readable');
+await page.screenshot({path:`${outDir}/desktop-entity-readable-container.png`,fullPage:true});
 
 await page.setViewportSize({width:390,height:844});
 await openStory();
@@ -201,6 +286,15 @@ assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator
 assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>${mobile.width}`);
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
 await page.screenshot({path:`${outDir}/mobile-resident-memory.png`,fullPage:true});
+
+// Mobile non-agent selection also opens Inspector in readable mode, remains overflow-safe, and toggles state-inertly.
+const mobileContainer=await page.evaluate(()=>{const c=Object.values(window.SimEngine.getState().containers)[0];return {id:c.id,name:c.name};});
+await selectEntity('container',mobileContainer.id);let mobileEntity=await entitySnapshot();
+assert.equal(mobileEntity.activeMode,'readable');assert.equal(mobileEntity.readableVisible,true);assert.equal(mobileEntity.inspectorActive,true);assert.equal(mobileEntity.navActive,true);assert.ok(mobileEntity.readableText.includes(mobileContainer.name));
+assert.ok(mobileEntity.docWidth<=mobileEntity.width+1,`mobile entity overflow: ${mobileEntity.docWidth}>${mobileEntity.width}`);assert.ok(mobileEntity.bodyWidth<=mobileEntity.width+1,`mobile entity body overflow: ${mobileEntity.bodyWidth}>${mobileEntity.width}`);
+const mobileEntityState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+await page.click('[data-v1141-entity-mode="debug"]');mobileEntity=await entitySnapshot();assert.equal(mobileEntity.activeMode,'debug');assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileEntityState,'mobile Entity Readable → Debug must not mutate simulation state');
+await page.click('[data-v1141-entity-mode="readable"]');await page.screenshot({path:`${outDir}/mobile-entity-readable-container.png`,fullPage:true});
 
 await page.evaluate(()=>{
   const E=window.SimEngine,st=E.getState(),cat=st.agents.orange,human=st.agents.zhou;
@@ -233,16 +327,11 @@ assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({
   ok:true,
-  desktop:{...desktop,residentText:undefined,debugText:undefined},
-  debug:{...debug,residentText:undefined,debugText:undefined},
-  memoryView:{...memoryView,residentText:undefined,debugText:undefined},
-  recent:{...recent,residentText:undefined,debugText:undefined},
-  mobile:{...mobile,residentText:undefined,debugText:undefined},
-  mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},
-  semanticLayers,
-  catRecent:{...catRecent,residentText:undefined,debugText:undefined},
-  catMemory:{...catMemory,residentText:undefined,debugText:undefined},
-  pageErrors,consoleErrors
+  desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},
+  memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},
+  mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},
+  mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,
+  catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors
 },null,2));
-console.log('v11.14.3 browser resident view QA: natural explanations + action/intent semantics + desktop/mobile state-inert pass');
+console.log('v11.14.4 browser readable entity QA: Agent + non-agent readable/debug state-inert pass');
 await browser.close();
