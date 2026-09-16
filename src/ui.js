@@ -1,9 +1,32 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,V=window.SimValidator;if(!E||!SP||!V)return;
+  const UI=window.SimUI=window.SimUI||{};
+  const inspectorDecorators=new Map();
   let selected=null,timer=null,mobileView='map',logMode='summary';
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const st=()=>E.getState(),posText=p=>p?`(${p.x}, ${p.y})`:'無',fmtLoad=v=>Math.round((v||0)*100)/100,isMobile=()=>matchMedia('(max-width:720px)').matches;
   const sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0),NEED_SHORT_ZH={hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',sleepNeed:'睡意',social:'社交'};
+
+  function sortedInspectorDecorators(){
+    return [...inspectorDecorators.values()].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  }
+  function currentInspectorSelection(){return selected?{...selected}:null;}
+  function runInspectorDecorators(){
+    const host=$('inspector');if(!host)return;
+    const context={host,selected:currentInspectorSelection(),state:st()};
+    for(const entry of sortedInspectorDecorators())entry.handler(context);
+  }
+  function registerInspectorDecorator(id,handler,order=0){
+    if(typeof id!=='string'||!id||typeof handler!=='function')throw new Error('invalid inspector decorator');
+    if(inspectorDecorators.has(id))throw new Error(`duplicate inspector decorator: ${id}`);
+    inspectorDecorators.set(id,{id,handler,order:Number(order)||0});
+    return handler;
+  }
+  function listInspectorDecorators(){return sortedInspectorDecorators().map(({id,order})=>({id,order}));}
+  UI.registerInspectorDecorator=registerInspectorDecorator;
+  UI.listInspectorDecorators=listInspectorDecorators;
+  UI.runInspectorDecorators=runInspectorDecorators;
+  UI.getInspectorSelection=currentInspectorSelection;
 
   function setMobileView(view){mobileView=view;document.querySelectorAll('.view-panel[data-view]').forEach(p=>p.classList.toggle('mobile-active',p.dataset.view===view));document.querySelectorAll('.mobile-nav [data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===view));if(isMobile())scrollTo({top:0,behavior:'auto'});}
   function select(type,id,open=true){selected={type,id};if(open&&isMobile())setMobileView('inspector');renderMap();renderInspector();}
@@ -35,7 +58,7 @@
   function inspectTile(id){const s=st(),t=s.map.tiles[id];if(!t)return'';const occ=SP.occupantsAt(s,t).map(a=>a.name),fs=SP.furnitureAt(s,t),wet=SP.tileLiquidAmount(t),blocker=SP.blockerAt(s,t);return `<div class="inspect-title"><div class="inspect-icon">${t.terrain==='wall'?'🧱':t.terrain==='doorway'?'🚪':'▫️'}</div><div><h2>Tile ${id}</h2><small>${t.terrain}</small></div></div><div class="inspect-section"><h3>空間</h3><div class="kv"><div class="k">Room</div><div>${roomName(t.roomId)}</div><div class="k">可通行</div><div>${SP.walkable(s,t)?'是':'否'}</div><div class="k">阻擋來源</div><div>${esc(blocker||'無')}</div><div class="k">角色</div><div>${occ.join('、')||'無'}</div><div class="k">家具</div><div>${fs.map(f=>f.name).join('、')||'無'}</div><div class="k">局部噪音</div><div>${SP.noiseAt(s,t).toFixed(1)}</div><div class="k">局部舒適</div><div>${Math.round(SP.comfortAt(s,t))}</div><div class="k">液體</div><div>${wet.toFixed(1)}</div></div></div><div class="inspect-section"><h3>地面內容</h3>${contentsBlock(t.surface)}</div>`;}
   function inspectRoom(id){const r=SP.roomMetrics(st(),id);if(!r)return'';return `<div class="inspect-title"><div class="inspect-icon">🏠</div><div><h2>${r.name}</h2><small>Derived Room・${id}</small></div></div><div class="inspect-section"><h3>自動推導</h3><div class="kv"><div class="k">地板格</div><div>${r.area}</div><div class="k">邊界牆／門</div><div>${r.wallTiles.length}</div><div class="k">家具數</div><div>${r.furnitureIds.length}</div><div class="k">房間價值</div><div>${r.value}</div><div class="k">平均噪音</div><div>${r.avgNoise.toFixed(1)}</div><div class="k">平均局部舒適</div><div>${Math.round(r.avgComfort)}</div></div><p class="hint">Room 由地形拓撲推導；它不是用途 Zone，也不直接賦予休息加成。</p></div>`;}
   function inspectEvent(id){const e=st().causes[id];if(!e)return'<div class="empty-inspector">事件不存在。</div>';return `<div class="inspect-title"><div class="inspect-icon">⚡</div><div><h2>${e.time}・事件</h2><small>${e.type}</small></div></div><div class="inspect-section"><h3>內容</h3><div class="content-item">${esc(e.text)}</div></div><div class="inspect-section"><h3>詳細資料</h3><div class="kv">${Object.entries(e.data||{}).map(([k,v])=>`<div class="k">${E.DATA_ZH[k]||E.ZH[k]||k}</div><div>${esc(typeof v==='object'?JSON.stringify(v):v)}</div>`).join('')}</div></div><div class="inspect-section"><h3>因果鏈</h3><pre class="cause">${esc(E.causeTree(id))}</pre></div>`;}
-  function renderInspector(){const host=$('inspector');if(!selected){host.innerHTML=worldOverview();return;}const {type,id}=selected;host.innerHTML=type==='agent'?inspectAgent(id):type==='container'?inspectContainer(id):type==='source'?inspectSource(id):type==='furniture'?inspectFurniture(id):type==='tile'?inspectTile(id):type==='room'?inspectRoom(id):type==='event'?inspectEvent(id):worldOverview();}
+  function renderInspector(){const host=$('inspector');if(!selected){host.innerHTML=worldOverview();runInspectorDecorators();return;}const {type,id}=selected;host.innerHTML=type==='agent'?inspectAgent(id):type==='container'?inspectContainer(id):type==='source'?inspectSource(id):type==='furniture'?inspectFurniture(id):type==='tile'?inspectTile(id):type==='room'?inspectRoom(id):type==='event'?inspectEvent(id):worldOverview();runInspectorDecorators();}
 
   function renderBadges(){const s=st(),wet=Object.values(s.map.tiles).filter(t=>SP.tileLiquidAmount(t)>.1).length,held=Object.values(s.agents).filter(a=>a.held).length,intox=Math.max(...Object.values(s.agents).map(a=>a.status.intoxication||0)),val=validation();$('worldBadges').innerHTML=`<span>濕地 ${wet}</span><span>持有物 ${held}</span><span>醉酒 ${Math.round(intox)}</span><span>食物 ${Math.round(E.foodStock())}</span>${Object.values(s.map.rooms).map(r=>`<button data-entity="room:${r.id}">🏠 ${r.name}</button>`).join('')}<span>格狀 ${s.map.width}×${s.map.height}</span><span class="${val.issueCount?'badge-bad':'badge-good'}">狀態${val.issueCount?'⚠':'✓'}</span>`;}
   function render(){const s=st();$('clock').textContent=`第 ${s.day} 天 ${E.timeStr()}`;$('tickLabel').textContent=`Tick ${s.tick}・Seed ${s.seed}`;renderBadges();renderMap();renderActions();renderTimeline();renderInspector();}

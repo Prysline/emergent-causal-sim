@@ -1,9 +1,7 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial;if(!E||!SP?.environmentAt)return;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let pending=false;
-
-  function normalizedType(type){return type==='Resource Source'?'Source':type;}
+  function normalizedType(type){return ({agent:'Agent',container:'Container',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
   function nodeFor(type,id,s){
     type=normalizedType(type);
     if(type==='Agent')return SP.nodeForAgent(s,s.agents?.[id]);
@@ -25,15 +23,15 @@
     }
     return'';
   }
-  function sync(){
-    pending=false;const host=document.getElementById('inspector');if(!host)return;
-    const meta=host.querySelector('.inspect-title small')?.textContent?.trim();let section=host.querySelector('.spatial-environment-section');
-    if(!meta||!meta.includes('・')){section?.remove();return;}
-    const [type,id]=meta.split('・',2),html=sectionHtml(type,id);if(!html){section?.remove();return;}
+  function decorateInspector({host,selected}){
+    if(!host)return;
+    let section=host.querySelector('.spatial-environment-section');
+    if(!selected){section?.remove();return;}
+    const type=selected.type,id=selected.id,html=sectionHtml(type,id);if(!html){section?.remove();return;}
     if(!section){section=document.createElement('div');section.className='inspect-section spatial-environment-section';const spatial=host.querySelector('.spatial-observability-section'),first=host.querySelector('.inspect-section');if(spatial)spatial.insertAdjacentElement('afterend',section);else if(first)first.insertAdjacentElement('afterend',section);else host.append(section);}
     if(section.innerHTML!==html)section.innerHTML=html;
   }
-  function schedule(){if(pending)return;pending=true;queueMicrotask(sync);}
-  const host=document.getElementById('inspector');if(host)new MutationObserver(schedule).observe(host,{childList:true,subtree:true,characterData:true});
-  schedule();
+  const UI=window.SimUI;
+  if(!UI?.registerInspectorDecorator)throw new Error('spatial.environment requires inspector decorator lifecycle');
+  UI.registerInspectorDecorator('spatial.environment',decorateInspector,200);
 })();

@@ -7,7 +7,7 @@
   const overheadText=o=>o?.covered?o.overhead.map(x=>`${x.name}下（淨空 ${meters(x.clearance)}）`).join('、'):(o?.surfaceId!=='floor'?'家具表面':'一般地板');
   let pending=false;
 
-  function normalizedInspectorType(type){return type==='Resource Source'?'Source':type;}
+  function normalizedInspectorType(type){return ({agent:'Agent',container:'Container',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
   function sectionHtml(type,id){
     const s=E.getState();type=normalizedInspectorType(type);
     if(type==='Agent'){
@@ -36,12 +36,11 @@
     const key=[...first.querySelectorAll('.k')].find(x=>x.textContent.trim()==='位置'),value=key?.nextElementSibling;if(!value)return;
     const wanted=SP.describePlace(s,o.node);if(value.textContent!==wanted)value.textContent=wanted;
   }
-  function syncInspector(){
-    const host=document.getElementById('inspector');if(!host)return;
-    const meta=host.querySelector('.inspect-title small')?.textContent?.trim();
+  function decorateInspector({host,selected}){
+    if(!host)return;
     let section=host.querySelector('.spatial-observability-section');
-    if(!meta||!meta.includes('・')){section?.remove();return;}
-    const [type,id]=meta.split('・',2),html=sectionHtml(type,id);
+    if(!selected){section?.remove();return;}
+    const type=selected.type,id=selected.id,html=sectionHtml(type,id);
     syncBaseObjectLocation(host,type,id);
     if(!html){section?.remove();return;}
     if(!section){section=document.createElement('div');section.className='inspect-section spatial-observability-section';const first=host.querySelector('.inspect-section');if(first)first.insertAdjacentElement('afterend',section);else host.append(section);}
@@ -85,8 +84,11 @@
     });
   }
 
-  function sync(){pending=false;syncInspector();syncMap();syncActions();}
-  function schedule(){if(pending)return;pending=true;queueMicrotask(sync);}
-  for(const id of ['inspector','map','actions']){const el=document.getElementById(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,subtree:true,characterData:true});}
+  function syncMapAndActions(){pending=false;syncMap();syncActions();}
+  function schedule(){if(pending)return;pending=true;queueMicrotask(syncMapAndActions);}
+  const UI=window.SimUI;
+  if(!UI?.registerInspectorDecorator)throw new Error('spatial.observability requires inspector decorator lifecycle');
+  UI.registerInspectorDecorator('spatial.observability',decorateInspector,100);
+  for(const id of ['map','actions']){const el=document.getElementById(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,subtree:true,characterData:true});}
   schedule();
 })();

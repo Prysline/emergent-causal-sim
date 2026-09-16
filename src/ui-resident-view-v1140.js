@@ -1,6 +1,7 @@
 (() => {
-  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld;
+  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld,UI=window.SimUI;
   if(!E||!SP||!W||typeof document==='undefined')return;
+  if(!UI?.registerInspectorDecorator)throw new Error('Resident View requires inspector decorator lifecycle');
 
   const VERSION='11.14.0-player-resident-view-debug-inspector';
   const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
@@ -17,7 +18,7 @@
     restockContainer:'補充容器',externalSupply:'外出補給'
   };
   const host=document.getElementById('inspector');if(!host)return;
-  let currentAgentId=null,mode='resident',residentTab='overview',scheduled=false,mutating=false;
+  let currentAgentId=null,mode='resident',residentTab='overview',scheduled=false;
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -25,10 +26,6 @@
   const actionName=action=>ACTION_LABELS[action]||E.ZH?.[action]||action||'一件事';
   const interactionName=kind=>W.interactionLabel?.(kind)||kind||'互動';
 
-  function selectedAgentFromDebug(){
-    const meta=[...host.querySelectorAll('.inspect-title small')].find(x=>x.textContent?.startsWith('Agent・'));
-    return meta?.textContent?.slice('Agent・'.length)||null;
-  }
   function needText(value){
     const v=clamp(Number(value)||0,0,100);
     if(v>=80)return '很迫切';
@@ -141,34 +138,35 @@
     const existing=[...host.childNodes];for(const node of existing)debug.appendChild(node);
     shell.append(modeBar,resident,debug);host.append(shell);renderResident(shell,id);applyMode(shell);return shell;
   }
-  function layerInspector(){
-    scheduled=false;if(mutating)return;
-    const id=selectedAgentFromDebug();
-    if(!id){currentAgentId=null;return;}
+  function layerInspector({host:renderHost,selected}){
+    scheduled=false;
+    if(renderHost!==host)return;
+    if(selected?.type!=='agent'){currentAgentId=null;return;}
+    const id=selected.id;
     if(id!==currentAgentId){currentAgentId=id;mode='resident';residentTab='overview';}
-    mutating=true;
     let shell=host.querySelector(':scope > [data-v1140-resident-root]');
     if(!shell)shell=buildShell(id);
-    else{
-      const debug=shell.querySelector('[data-v1140-debug-view]');
-      for(const node of [...host.childNodes])if(node!==shell)debug.appendChild(node);
-      renderResident(shell,id);applyMode(shell);
-    }
-    mutating=false;
+    else{renderResident(shell,id);applyMode(shell);}
+  }
+  function refreshResidentView(){
+    scheduled=false;
+    const selected=UI.getInspectorSelection?.(),shell=host.querySelector(':scope > [data-v1140-resident-root]');
+    if(!shell||selected?.type!=='agent')return;
+    if(selected.id!==currentAgentId){currentAgentId=selected.id;mode='resident';residentTab='overview';}
+    renderResident(shell,selected.id);applyMode(shell);
   }
   function schedule(){
     if(scheduled)return;scheduled=true;
-    queueMicrotask(()=>requestAnimationFrame(layerInspector));
+    queueMicrotask(()=>requestAnimationFrame(refreshResidentView));
   }
   function resetResidentView(){currentAgentId=null;mode='resident';residentTab='overview';schedule();}
 
-  new MutationObserver(()=>schedule()).observe(host,{childList:true,subtree:false});
+  UI.registerInspectorDecorator('residentView.layer',layerInspector,1000);
   document.addEventListener('click',event=>{
     const modeButton=event.target.closest?.('[data-v1140-mode]');
     if(modeButton){mode=modeButton.dataset.v1140Mode==='debug'?'debug':'resident';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell)applyMode(shell);return;}
     const tabButton=event.target.closest?.('[data-v1140-tab]');
     if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
-    schedule();
   });
 
   if(E.registerRuntimeHook){
