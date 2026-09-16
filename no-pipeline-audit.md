@@ -87,7 +87,6 @@ These are `src/*.js` files other than canonical `engine.js` / `runtime-hook-pipe
 ### `memory-runtime-v1130.js`
 - also registers formal runtime hooks: `True`
 ```text
-67:     a.episodicMemories.push(memory);if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);pruneAgentMemories(st,a);return memory;
 81:     const baseTick=E.tick,baseReset=E.reset;
 82:     E.tick=(...args)=>{const result=baseTick(...args);flushDeferredCoreEvents(E.getState());return result;};
 83:     E.reset=(...args)=>resetMemoryRuntime(baseReset(...args));
