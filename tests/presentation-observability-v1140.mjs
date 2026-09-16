@@ -39,6 +39,8 @@ const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8
 assert.match(indexSource,/v11\.14\.1・Player-readable Action Explanations/,'app shell must expose the current short version and feature label');
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
+const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
+assert.ok(architectureSource.includes(CURRENT_VERSION),'architecture current runtime marker must match the canonical version');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
