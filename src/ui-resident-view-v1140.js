@@ -54,6 +54,29 @@
     const kind=a?.activeIntent?.kind;
     return INTENT_LABELS[kind]||E.ZH?.[kind]||'照自己的步調行動';
   }
+  function playerActionExplanation(st,a){
+    const thought=st?.thoughts?.[a?.id],action=a?.action,pick=thought?.pick;
+    if(!thought||!action||!pick)return '';
+    if(thought.tick!==action.started||pick.id!==action.kind)return '';
+    if(a?.activeIntent?.kind==='respondSocialBid')return '';
+    const targetId=pick.targetAgent||action.targetAgent,target=targetId?agentName(st,targetId,''):'';
+    switch(pick.id){
+      case 'eat': return '因為肚子餓，所以去找東西吃。';
+      case 'drinkWater': return '因為口渴，所以去找水喝。';
+      case 'drinkAlcohol': return '因為口渴，也有飲酒偏好，所以去找酒。';
+      case 'rest': return '因為有些累，所以想休息一下。';
+      case 'sleep': return '因為睡意變得明顯，所以去找地方睡覺。';
+      case 'talk': return target?`因為想找人聊聊，所以主動去找${target}。`:'因為想找人聊聊，所以主動去找人互動。';
+      case 'petCat': return target?`因為想和${target}互動，所以主動去找牠。`:'因為想和貓互動，所以主動去找牠。';
+      case 'seekHuman': return target?`因為想找人親近，所以去找${target}。`:'因為想找人親近，所以去找人互動。';
+      case 'cleanFloor': return '因為附近有液體灑出，所以想把環境整理乾淨。';
+      case 'groom': return '因為想整理自己，所以開始理毛。';
+      case 'restockContainer': return '因為有物資快不夠了，所以正在補充。';
+      case 'externalSupply': return '因為家裡的物資不足，所以準備外出補給。';
+      case 'wander': return a.kind==='cat'?'現在比較想四處探索。':'目前沒有更迫切的事，所以四處走走。';
+      default: return '';
+    }
+  }
   function heldText(st,a){
     if(!a?.held)return '';
     return st.containers?.[a.held]?.name||E.endpointName?.(a.held)||a.held;
@@ -113,8 +136,8 @@
     return `<div class="resident-memory-list">${memories.map(m=>`<div class="resident-memory-item"><span>◦</span><p>${esc(memoryText(st,m))}</p></div>`).join('')}</div><p class="resident-footnote">這裡只把角色已保存的 episodic memory 翻成較容易閱讀的文字；不額外推定好惡、動機或關係。</p>`;
   }
   function overview(st,a){
-    const where=a.offMap?'門外':SP.describePlace(st,a),held=heldText(st,a),action=E.actionLabel(a),affect=affectLabel(a.affect);
-    return `<section class="resident-hero"><div class="resident-avatar">${a.kind==='cat'?'🐈':'👤'}</div><div><h2>${esc(a.name)}</h2><p>📍 ${esc(where)}・${esc(postureText(st,a))}${held?`・拿著 ${esc(held)}`:''}</p></div></section><section class="resident-card resident-now"><h3>現在</h3><strong>${esc(action)}</strong><p>${esc(intentText(a))}</p></section><section class="resident-card"><h3>狀態</h3><div class="resident-needs">${needCards(a)}</div></section><section class="resident-card resident-mood"><h3>心情</h3><strong>${esc(affect)}</strong><p>這是由目前的短期 Affect 轉成保守描述，不代表長期性格或關係。</p></section>`;
+    const where=a.offMap?'門外':SP.describePlace(st,a),held=heldText(st,a),action=E.actionLabel(a),affect=affectLabel(a.affect),explanation=playerActionExplanation(st,a);
+    return `<section class="resident-hero"><div class="resident-avatar">${a.kind==='cat'?'🐈':'👤'}</div><div><h2>${esc(a.name)}</h2><p>📍 ${esc(where)}・${esc(postureText(st,a))}${held?`・拿著 ${esc(held)}`:''}</p></div></section><section class="resident-card resident-now"><h3>現在</h3><strong>${esc(action)}</strong><p>${esc(intentText(a))}</p>${explanation?`<p class="resident-footnote" data-v1140-player-explanation><b>原因</b> ${esc(explanation)}</p>`:''}</section><section class="resident-card"><h3>狀態</h3><div class="resident-needs">${needCards(a)}</div></section><section class="resident-card resident-mood"><h3>心情</h3><strong>${esc(affect)}</strong><p>這是由目前的短期 Affect 轉成保守描述，不代表長期性格或關係。</p></section>`;
   }
   function residentBody(st,a){
     if(residentTab==='recent')return `<section class="resident-card"><h3>最近發生的事</h3>${eventList(st,a.id)}</section>`;
@@ -176,5 +199,6 @@
   E.UI_RESIDENT_VIEW_VERSION=VERSION;
   E.residentAffectLabel=affectLabel;
   E.residentNeedLabel=needText;
+  E.residentActionExplanation=playerActionExplanation;
   schedule();
 })();
