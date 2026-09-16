@@ -27,9 +27,25 @@
     const target=d.target&&st.agents?.[d.target];if(target?.position)return {x:target.position.x,y:target.position.y};
     return null;
   }
-  function isWorldObservableEvent(e){const d=e?.data||{};if(!e||e.type==='system'||!d.action)return false;if(d.visibility==='private'||d.phase==='plan'||NON_EPISODIC_ACTIONS.has(d.action))return false;return true;}
+  function isSuccessfulResourceTransferConsequence(st,e){
+    const d=e?.data||{};
+    if(!e||!d.actor||!d.resource||!d.from||!d.to||!Number.isFinite(d.amount))return false;
+    return (e.causeIds||[]).some(id=>st?.causes?.[id]?.data?.action==='pour');
+  }
+  function episodicPolicyForEvent(st,e){
+    const d=e?.data||{};
+    if(!e)return {episodic:false,reason:'missingEvent'};
+    if(e.type==='system')return {episodic:false,reason:'systemEvent'};
+    if(d.visibility==='private')return {episodic:false,reason:'privateVisibility'};
+    if(d.phase==='plan')return {episodic:false,reason:'planPhase'};
+    if(isSuccessfulResourceTransferConsequence(st,e))return {episodic:false,reason:'successfulResourceTransferConsequence'};
+    if(!d.action)return {episodic:false,reason:'noObservableAction'};
+    if(NON_EPISODIC_ACTIONS.has(d.action))return {episodic:false,reason:'nonEpisodicAction'};
+    return {episodic:true,reason:'observableWorldAction'};
+  }
+  function isWorldObservableEvent(e){return episodicPolicyForEvent(E.getState?.(),e).episodic;}
   function canObserveEvent(st,a,e){
-    if(!a||!e||!isWorldObservableEvent(e))return false;const d=e.data||{};
+    if(!a||!e||!episodicPolicyForEvent(st,e).episodic)return false;const d=e.data||{};
     if(a.id===d.actor)return true;if(a.offMap||E.isSleeping?.(a))return false;if(a.id===d.target)return true;
     const p=eventPosition(st,e);if(!p||!a.position)return false;const ar=SP.roomAt?.(st,a.position),er=SP.roomAt?.(st,p);if(ar&&er&&ar!==er)return false;
     return (SP.manhattan?.(a.position,p)??Infinity)<=EPISODIC_OBSERVATION_RANGE;
@@ -50,7 +66,7 @@
     const memory={id:`memory:${a.id}:${e.id}`,kind:'episodic',sourceEventId:e.id,observedTick,lastObservedTick:observedTick,observed:observableProjection(st,e)};
     a.episodicMemories.push(memory);if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);pruneAgentMemories(st,a);return memory;
   }
-  function observeEventForMemories(st,e,observedTick=st.tick){if(!isWorldObservableEvent(e))return [];const out=[];for(const a of Object.values(st?.agents||{})){const m=rememberObservedEvent(st,a,e,observedTick);if(m)out.push({agentId:a.id,memory:m});}return out;}
+  function observeEventForMemories(st,e,observedTick=st.tick){if(!episodicPolicyForEvent(st,e).episodic)return [];const out=[];for(const a of Object.values(st?.agents||{})){const m=rememberObservedEvent(st,a,e,observedTick);if(m)out.push({agentId:a.id,memory:m});}return out;}
   function onEventCreated({state:st,event,duringCoreTick}){if(!st||!event)return;if(duringCoreTick){deferredCoreEvents.push(event);return;}observeEventForMemories(st,event,event.tick);}
   function flushDeferredCoreEvents(st){const pending=deferredCoreEvents.splice(0);for(const event of pending)observeEventForMemories(st,event,event.tick);return pending.length;}
   function resetMemoryRuntime(st){deferredCoreEvents.length=0;return normalizeMemoryState(st);}
@@ -68,5 +84,5 @@
   }
 
   normalizeMemoryState(E.getState());
-  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories,flushDeferredMemoryEvents:flushDeferredCoreEvents});
+  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isSuccessfulResourceTransferConsequence,episodicPolicyForEvent,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories,flushDeferredMemoryEvents:flushDeferredCoreEvents});
 })();

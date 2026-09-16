@@ -124,6 +124,8 @@ Generic observed-event memory 保存最小 provenance / projection，例如：
 
 同一 Agent 對同一 `sourceEventId` 只建立一個 episode；再次處理更新 access metadata，不重複建立 historical event memory。
 
+Generic episodic eligibility 是明確的 Memory policy，不得只靠「event 剛好沒有 `data.action`」來決定心理語義。普通成功 pour 的 episodic atom 是來源 `action:'pour'`；其 successful resource-transfer result 是該 action 的 non-episodic consequence，即使未來為 UI / event consistency 補上額外 action metadata，也不得因此自動多形成第二筆 episode。failed pour 若經 Spatial Effects 形成獨立 `action:'spill'` physical effect，則 `spill` 仍是另一個可觀察、可 Appraise 的 episodic event。
+
 ### Historical Appraisal
 
 Appraisal 是 Agent-private historical annotation。第一次形成後，不因角色之後的 Need / Affect 改變而靜默重寫過去評估。
@@ -174,7 +176,7 @@ episodicMemoryCreated
 
 Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud failure。
 
-**Pipeline abstraction rule:** Architecture diagrams and ordering summaries use lifecycle responsibility labels. Concrete implementation hook IDs stay in source, the exact registry tables in `docs/tick-pipeline.md`, and `tests/runtime-hook-pipeline.mjs`; action-specific names must not become architecture stage names.
+**Pipeline abstraction rule:** Architecture diagrams and ordering summaries use lifecycle responsibility labels. Concrete implementation hook IDs stay in source, the exact registry tables in `docs/tick-pipeline.md`, and `tests/runtime-hook-pipeline.mjs`; action-specific names must not become architecture stage names。
 
 ### Current simulation ordering
 
