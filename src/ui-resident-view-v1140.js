@@ -3,7 +3,8 @@
   if(!E||!SP||!W||typeof document==='undefined')return;
   if(!UI?.registerInspectorDecorator)throw new Error('Resident View requires inspector decorator lifecycle');
 
-  const VERSION='11.14.0-player-resident-view-debug-inspector';
+  const VERSION=W.PRESENTATION_SCHEMA_VERSION;
+  if(!VERSION)throw new Error('Resident View requires presentation schema version');
   const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
   const INTENT_LABELS={
     satisfyHunger:'想找東西吃',satisfyThirst:'想喝點東西',recoverFatigue:'想休息一下',sleep:'想睡覺',
