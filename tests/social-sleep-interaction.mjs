@@ -3,7 +3,12 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world.js','spatial.js','engine.js','state-validator.js']){
+for(const file of [
+  'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
+  'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js',
+  'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js',
+  'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js'
+]){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -79,16 +84,22 @@ E.reset(20260911);
   assert.ok(contact,'貓打擾睡著的人仍應先形成真實接觸事件');
   assert.equal(contact.data.stimulusIntensity,34);
   assert.equal(contact.data.stimulusKind,'touch+sound');
+  assert.equal(contact.data.socialBid,true,'Current Social Bid lifecycle 應把 seekHuman contact 標記成 immutable world Bid');
+  assert.equal(contact.data.bidId,contact.id);
+  assert.equal(cat.activeIntent?.kind,'awaitResponse','requester 是否被回應仍由自己的 private wait Intent 表示');
   if(E.isSleeping(human)){
-    assert.equal(human.pendingInteraction,null,'沒有叫醒時不得假設睡著的人已接收到撒嬌請求');
+    assert.equal(contact.data.perceivedByTarget,false,'沒有叫醒時不得聲稱睡著的人已感知 Bid');
+    assert.equal(human.observedSocialBids.some(x=>x.bidId===contact.id),false,'未感知的 Bid 不得進入 responder local observations');
     const miss=st.events.find(e=>e.data?.action==='sleepDisturbance'&&e.data?.target===human.id);
     assert.ok(miss,'未喚醒時應留下可觀測的 disturbance 結果');
     assert.equal(miss.data.wakeChance,before);
   }else{
-    assert.equal(human.pendingInteraction?.type,'cat_request','真的被叫醒後才建立可回應的貓撒嬌請求');
+    assert.equal(contact.data.perceivedByTarget,true,'真的被叫醒後 contact 才可標記為 target perceived');
+    assert.ok(human.observedSocialBids.some(x=>x.bidId===contact.id),'真的被叫醒後 responder 才保留自己的 observed Social Bid reference');
     const wake=st.events.find(e=>e.data?.action==='sleepWake');
     assert.ok(wake?.causeIds?.includes(contact.id),'互動喚醒應保留造成喚醒的接觸事件因果鏈');
   }
+  assert.equal(Object.prototype.hasOwnProperty.call(human,'pendingInteraction'),false,'Current lifecycle 不得恢復 legacy pendingInteraction');
   noIssues('cat disturbs sleeping human coherently');
 }
 
@@ -105,4 +116,4 @@ E.reset(20260911);
   noIssues('awake pet does not fabricate reciprocal rub');
 }
 
-console.log('v11.10 social / sleep interaction regression: ok');
+console.log('Current social / sleep interaction regression: ok');

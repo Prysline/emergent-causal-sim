@@ -36,6 +36,7 @@ jobs:
       - run: node tests/action-construction.mjs
       - run: node tests/active-intent-foundation.mjs
       - run: node tests/social-bid-lifecycle.mjs
+      - run: node tests/legacy-pending-interaction-cleanup.mjs
       - run: node tests/intent-replan-preemption.mjs
       - run: node tests/soft-reconsideration-hysteresis.mjs
       - run: node tests/episodic-memory-foundation.mjs
