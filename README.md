@@ -34,6 +34,8 @@
 - hard replan / emergency preemption。
 - soft reconsideration / hysteresis。
 - canonical `E.buildAction(agent, choice)`，initial deliberation、replan、reconsideration 與 Memory correction 共用同一 concrete Action construction path。
+- canonical `E.baseUtilityForAction(agent, actionKind)`，initial chooser 與 soft reconsideration 共用 species-aware deterministic baseline；initial selection noise 與 soft switching policy 分離。
+- initial `system + phase:'plan'` event 是 private-cognition provisional record；同 tick Memory→Deliberation correction 只會 normalization 同一筆明確標記的 provisional plan，不新增第二筆 correction event。
 - decision-option provider extension point，subsystem 可提出 candidate，但仍由 core chooser 與其他需求共同競爭。
 
 ### Social agency
@@ -53,6 +55,7 @@
 - salience / recurrence / recency retention。
 - 第一版 target-aware Memory → Deliberation influence，只影響 initiator-side social candidate；Current Affect、Relationship 與 responder-specific Memory 尚未直接進入 responder scoring。
 - requester-private `privateSocialOutcome` 可記錄「當時沒有得到立即回應」，但不推定 counterpart 故意忽略、討厭或拒絕。
+- ordinary successful resource-transfer consequence 是明確 non-episodic outcome；成功 `pour` 仍由來源 action episode 表達，失敗 `spill` 則可作為獨立 observable physical effect。
 
 ### Presentation
 
@@ -60,6 +63,7 @@
 - UI 不得改寫 canonical event text。
 - core 保有 `E.actionLabel` ownership；presentation 透過 action-label resolver 派生 readable status。
 - recent social presentation 直接從 bounded canonical events + event creation `tick` 推導，不保存第二份 `recentSocialByAgent` lifecycle cache。
+- `ui.js` 是 Inspector base render owner；Spatial / Intent / Memory / Appraisal / Affect / Retention / Memory→Deliberation / Social Outcome 使用具名且排序明確的 Inspector decorator，不再以 MutationObserver 充當 Inspector completion lifecycle。
 
 ## Runtime lifecycle
 
@@ -74,25 +78,21 @@ afterReset
 episodicMemoryCreated
 ```
 
-Subsystem 使用具名 hook + explicit order，不再靠「最後載入的 wrapper 包住前一個 wrapper」決定跨系統語義。Script load order可以決定 registration 發生時間，但不能充當 lifecycle semantic contract。
+Subsystem 使用具名 hook + explicit order，不再靠「最後載入的 wrapper 包住前一個 wrapper」決定跨系統語義。Script load order可以決定 registration 發生時間，但不能充當 lifecycle semantic contract。所有會註冊 runtime hook 的 extension 都要求 production pipeline 已存在；目前沒有第二套 no-pipeline compatibility lifecycle。
 
-## 目前 active integration debt：Memory event observation
+## Memory event observation lifecycle
 
-PR #42 已移除 presentation 對 `E.addEvent` 的覆寫，但 `memory-runtime-v1130.js` 目前仍以 `E.addEvent` wrapper 立即觀察 extension-emitted event；core lexical `addEvent(...)` 則主要由 `memory.capture-events → memory.process-events` marker sweep 處理。
+Core 保有 canonical event creation ownership。`E.addEvent` commit `state.events / state.causes` 後會發出具名 event-created notification；Memory 透過 listener 消費 notification，不覆寫 `E.addEvent`，也不再用 marker sweep 掃描 `state.events` 猜測新事件。
 
-這不是可以直接刪除的死碼：
+Observation 依 producer 邊界分流：
 
-- `memory.capture-events` 位於 `beforeTick` order 600；
-- `memory.process-events` 位於 `afterTick` order 500；
-- `humanSocial.prepare` 在 capture 以前建立 `talkOffer`；
-- Pet / Human response runtime 在 process 之後建立 response events；
-- core lexical events則落在 sweep 可涵蓋的區段。
+- pre-core / post-process / tick 外 direct API 等非 core Agent loop producer：event-created 後同步形成 eligible psychological observation；
+- core sequential Agent loop 內建立的 event：Memory 只把 source event reference 排入 Memory-local ephemeral FIFO，在 `afterTick` order 500 `memory.process-events` 依 creation order flush；
+- deferred processing 仍使用 source event 的 creation `event.tick` 作 `observedTick` provenance，不把 afterTick processing time 當成事件發生時間；
+- same source event 維持 exactly-once episodic / Appraisal / Affect projection；
+- `system` plan 等 private cognition 仍是 non-episodic，event-created notification 不等於 generic Memory eligibility。
 
-因此目前是 **wrapper + sweep 的混合 observation contract**。下一步不是直接把所有事件都改成立即 observe，也不是全部延到 tick 尾端，而是先以 regression 鎖定 pre-core / core lexical / post-process / tick 外 direct API 的既有 timing，再設計不需要覆寫 `E.addEvent` 的正式 event-created / observation lifecycle。
-
-特別重要：core `tick()` 會先推進 `state.tick` 再執行 Agent，canonical `event.tick` 是事件建立時間 provenance。未來即使 observation 延後，也不能用較晚的 processing tick 靜默改寫歷史時間；同時也不能讓 core Agent loop 中途突然取得舊 runtime 同 tick 看不到的 Memory / Appraisal / Affect。
-
-詳細 contract 見 [`docs/architecture.md`](docs/architecture.md)。
+因此目前正式 contract 是 **core-owned event creation + event-created notification + Memory-controlled delivery**。舊 Memory `E.addEvent` wrapper、`memory.capture-events` 與 marker sweep 已移除；詳細 ordering / ownership contract 見 [`docs/architecture.md`](docs/architecture.md) 與 [`docs/tick-pipeline.md`](docs/tick-pipeline.md)。
 
 ## 測試與驗證
 
