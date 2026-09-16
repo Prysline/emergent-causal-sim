@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.AFFECT_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     if(st?.affects!==undefined)add('global_affect_registry_forbidden','v11.13.2 不應建立 global affects registry。');
     for(const a of Object.values(st?.agents||{})){
       const f=a.affect;
@@ -28,5 +27,5 @@
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
-  V.validateState=validateState;
+  V.registerValidationLayer('affect',validateLayer,1000);
 })();

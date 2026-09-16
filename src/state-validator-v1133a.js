@@ -1,11 +1,10 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION)return;
-  const baseValidate=V.validateState;
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o||{},k);
   const RESPONSE_ACTION={acceptTalk:'engage',briefTalkReply:'brief',declineTalk:'decline'};
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     const responsesByOffer=new Map(),talksByOffer=new Map();
 
     for(const a of Object.values(st?.agents||{})){
@@ -59,5 +58,5 @@
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
 
-  V.validateState=validateState;
+  V.registerValidationLayer('human-social-response',validateLayer,1300);
 })();

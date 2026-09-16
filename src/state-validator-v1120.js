@@ -1,9 +1,8 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.actionKind)return;
-  const baseValidate=V.validateState;
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const a of Object.values(st?.agents||{})){
       const action=a.action;if(!action)continue;
       if(!action.kind)add('action_kind_missing',`${a.name} 的 action 缺少 canonical kind。`,{agentId:a.id});
@@ -12,5 +11,5 @@
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
 
-  V.validateState=validateState;
+  V.registerValidationLayer('action.canonical-type',validateLayer,300);
 })();

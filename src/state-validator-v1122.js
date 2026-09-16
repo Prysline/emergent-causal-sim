@@ -1,10 +1,9 @@
 (() => {
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.bidEvent)return;
-  const baseValidate=V.validateState;
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 
-  function validateState(st){
-    const base=baseValidate(st),issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
+  function validateLayer(st,base){
+    const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
 
     for(const a of Object.values(st?.agents||{})){
       if(own(a,'pendingInteraction'))add('legacy_pending_interaction_persistent',`${a.name} 仍保存已移除的 legacy pendingInteraction；Social Bid responder 必須直接由 observedSocialBids / decision option contract 形成。`,{agentId:a.id});
@@ -73,5 +72,5 @@
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
 
-  V.validateState=validateState;
+  V.registerValidationLayer('social-bid',validateLayer,500);
 })();
