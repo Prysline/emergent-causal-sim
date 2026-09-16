@@ -10,31 +10,31 @@
 
 ```mermaid
 flowchart TD
-    START[呼叫 E.tick] --> B100[beforeTick 100\nsocialOutcome.capture-events]
-    B100 --> B200[200 memoryDeliberation.capture-idle]
-    B200 --> B300[300 humanSocial.prepare]
-    B300 --> B400[400 socialResponse.capture-pet-offers]
-    B400 --> B500[500 affect.decay]
-    B500 --> B600[600 memory.capture-events]
-    B600 --> B700[700 intent.soft-reconsideration]
-    B700 --> B800[800 intent.replan-preemption]
-    B800 --> B900[900 socialBid.prepare]
-    B900 --> B1000[1000 intent.reconcile-before]
-    B1000 --> B1100[1100 spatial.capture]
+    START[呼叫 E.tick] --> B100[beforeTick 100\nRequester Outcome Capture]
+    B100 --> B200[200 Memory-to-Deliberation Baseline Capture]
+    B200 --> B300[300 Human Social Prepare]
+    B300 --> B400[400 Social Response Prepare]
+    B400 --> B500[500 Affect Decay]
+    B500 --> B600[600 Memory Observation Checkpoint]
+    B600 --> B700[700 Soft Reconsideration]
+    B700 --> B800[800 Replan - Preemption]
+    B800 --> B900[900 Social Bid Prepare]
+    B900 --> B1000[1000 Intent Reconcile]
+    B1000 --> B1100[1100 Spatial Capture]
 
     B1100 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical lexical core events]
 
-    CORE --> A100[afterTick 100\nspatial.effects]
-    A100 --> A200[200 intent.reconcile-after]
-    A200 --> A300[300 socialBid.settle]
-    A300 --> A400[400 intent.recover-aborts]
-    A400 --> A500[500 memory.process-events]
-    A500 --> A600[600 socialResponse.resolve-pet-offers]
-    A600 --> A700[700 humanSocial.resolve]
-    A700 --> A800[800 memoryDeliberation.correct-initial]
-    A800 --> A900[900 socialOutcome.process]
-    A900 --> A1000[1000 uiObservability.render-mobile-summary]
-    A1000 --> A1100[1100 residentView.schedule]
+    CORE --> A100[afterTick 100\nSpatial Effects]
+    A100 --> A200[200 Intent Reconcile]
+    A200 --> A300[300 Social Bid Settle]
+    A300 --> A400[400 Abort Recovery]
+    A400 --> A500[500 Memory Observation Process]
+    A500 --> A600[600 Social Response Resolve]
+    A600 --> A700[700 Human Social Resolve]
+    A700 --> A800[800 Memory-to-Deliberation Correction]
+    A800 --> A900[900 Private Social Outcome Process]
+    A900 --> A1000[1000 Mobile Summary Render]
+    A1000 --> A1100[1100 Resident View Schedule]
     A1100 --> END[return core tick result]
 
     WRAP[[目前 legacy integration debt\nMemory 暫時 wrapper E.addEvent]] -. exported event 建立時同步 observe .-> MEM[observeEventForMemories]
@@ -46,9 +46,13 @@ flowchart TD
 
 圖中的 `E.addEvent` Memory wrapper **不屬於正式 runtime-hook phase**；它是目前為了補足 event-observation window 而存在的 active integration debt，刻意以虛線旁路表示。
 
+### Diagram abstraction
+
+The main Mermaid diagram uses lifecycle responsibility labels. Concrete implementation hook IDs stay in the registry tables below; action-specific names must not become architecture stage names.
+
 ## 2. beforeTick
 
-| Order | Hook ID | Owner | 主要責任 | 為什麼順序有語義 |
+| Order | Implementation Hook ID | Owner | 主要責任 | 為什麼順序有語義 |
 |---:|---|---|---|---|
 | 100 | `socialOutcome.capture-events` | Social Outcome Memory | 保存本 tick requester-private outcome 掃描 marker | 必須早於可能產生 wait-end / response 的後續 lifecycle |
 | 200 | `memoryDeliberation.capture-idle` | Memory → Deliberation | 記住 core 前真正 idle 的 Agent | afterTick 800 只應 correction 本來由 core 新做初始 deliberation 的 Agent |
@@ -72,7 +76,7 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 
 ## 4. afterTick
 
-| Order | Hook ID | Owner | 主要責任 | 為什麼順序有語義 |
+| Order | Implementation Hook ID | Owner | 主要責任 | 為什麼順序有語義 |
 |---:|---|---|---|---|
 | 100 | `spatial.effects` | Spatial Effects | 根據 pre-core snapshot 套用 movement / contact / spill 衍生效果 | 要先把物理結果寫回世界，再讓後續 lifecycle 看到正式 world state |
 | 200 | `intent.reconcile-after` | Active Intent | core Action 結果後先收斂 Intent linkage | 後續 Social Bid / abort recovery 應讀一致 linkage |
@@ -98,7 +102,7 @@ flowchart LR
     P300 --> P400[400 affect.from-appraisal]
 ```
 
-| Order | Hook ID | Owner | 責任 |
+| Order | Implementation Hook ID | Owner | 責任 |
 |---:|---|---|---|
 | 100 | `appraisal.base` | Appraisal | 建立 baseline / semantic appraisal |
 | 200 | `appraisal.social-response` | Pet Response Appraisal | 覆蓋／補充 `avoidPet` 等 pet-response appraisal |
@@ -109,7 +113,7 @@ flowchart LR
 
 ## 6. afterReset
 
-| Order | Hook ID | Owner | 責任 |
+| Order | Implementation Hook ID | Owner | 責任 |
 |---:|---|---|---|
 | 100 | `intent.normalize-reset` | Active Intent | 收斂 Action ↔ Intent linkage |
 | 200 | `socialBid.normalize-reset` | Social Bid | 初始化／清理 `observedSocialBids` |
