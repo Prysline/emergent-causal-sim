@@ -37,7 +37,7 @@
     const a=st.agents?.[d.actor];if(!a)return null;if(!Array.isArray(a.episodicMemories))a.episodicMemories=[];
     const existing=a.episodicMemories.find(m=>m?.sourceEventId===waitEvent.id);if(existing)return existing;
     const memory={id:`memory:${a.id}:${waitEvent.id}`,kind:'episodic',episodeKind:'privateSocialOutcome',sourceEventId:waitEvent.id,observedTick:st.tick,lastObservedTick:st.tick,experienced:privateOutcomeProjection(st,waitEvent,bid)};
-    a.episodicMemories.push(memory);appraiseRequesterSocialOutcome(st,a,memory);E.updateAffectFromAppraisal?.(st,a,memory);E.pruneAgentMemories?.(st,a);return memory;
+    a.episodicMemories.push(memory);appraiseRequesterSocialOutcome(st,a,memory);E.consolidateRelationshipFromMemory?.(st,a,memory);E.updateAffectFromAppraisal?.(st,a,memory);E.pruneAgentMemories?.(st,a);return memory;
   }
   function processRequesterSocialOutcomes(st,marker){const made=[];for(const e of newEventsSince(st,marker)){const memory=rememberRequesterSocialOutcome(st,e);if(memory)made.push({agentId:e.data.actor,memory});}return made;}
 
