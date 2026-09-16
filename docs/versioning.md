@@ -42,6 +42,12 @@
 
 不是每個 PR 都需要版本號。PR 編號、Git commit 與 runtime version 是不同維度：一個版本可以包含多個 refactor/docs PR；反之，一個真正改變 current contract 的 PR 必須同時處理版本更新。
 
+### 檔名 / workflow family 不是 current release marker
+
+像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`browser-resident-view-v1140-qa` 這類名稱代表 11.14 這條 subsystem / test family，可以跨 11.14.x patch 延續，不需要每個 patch 都複製／改名整組檔案與 workflow。判斷目前版本時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準，而不是從檔名或 workflow display name反推 current release。
+
+若未來 minor 升級代表新的 subsystem generation、舊 family 名稱會造成實質誤導，再另行 rename；單純 patch bump 不要求 rename。
+
 ## Version consistency checklist
 
 需要升版的 PR 必須同步確認：
@@ -51,8 +57,9 @@
 3. `SimEngine.UI_RESIDENT_VIEW_VERSION` 與 schema marker 一致；
 4. `index.html` 的 `<title>` 與頁首可見版本；
 5. `README.md` current runtime marker；
-6. presentation / browser regression 的 expected version；
-7. Architecture Current / relevant Current Design 文件。
+6. `docs/architecture.md` current runtime marker；
+7. presentation / browser regression 的 expected version；
+8. Notion Architecture Current / relevant Current Design 文件。
 
 `tests/presentation-observability-v1140.mjs` 負責鎖定 repo 內可自動驗證的 version consistency。若 feature 已改但版本 marker 沒更新，PR review / Current documentation sync 仍必須把它視為 release-contract 缺漏，而不是單純 docs 問題。
 
