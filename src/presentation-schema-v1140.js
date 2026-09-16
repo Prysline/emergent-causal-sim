@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
-  const VERSION='11.14.1-player-readable-action-explanations';
+  const VERSION='11.14.2-resident-action-intent-explanation-alignment';
   const baseCreateInitialState=W.createInitialState;
   const INTERACTION_LABELS=Object.freeze({
     talk:'聊天',
