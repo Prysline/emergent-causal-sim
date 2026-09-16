@@ -3,8 +3,8 @@
   const VERSION=W.MEMORY_SCHEMA_VERSION||'11.13.0-episodic-memory-foundation';
   const MAX_EPISODIC_MEMORIES=W.MAX_EPISODIC_MEMORIES||64;
   const EPISODIC_OBSERVATION_RANGE=W.EPISODIC_OBSERVATION_RANGE||4;
-  const baseAddEvent=E.addEvent;
   const NON_EPISODIC_ACTIONS=new Set(['wait','abort','restReroute','intentReconsider','socialWaitEnded','catRequestExpired']);
+  const deferredCoreEvents=[];
 
   function normalizeMemoryState(st){
     for(const a of Object.values(st?.agents||{})){
@@ -51,21 +51,22 @@
     a.episodicMemories.push(memory);if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);pruneAgentMemories(st,a);return memory;
   }
   function observeEventForMemories(st,e,observedTick=st.tick){if(!isWorldObservableEvent(e))return [];const out=[];for(const a of Object.values(st?.agents||{})){const m=rememberObservedEvent(st,a,e,observedTick);if(m)out.push({agentId:a.id,memory:m});}return out;}
-  function newEventsSince(st,marker){const out=[];for(const e of st.events||[]){if(marker&&e.id===marker)break;out.push(e);}return out.reverse();}
-  function processNewEvents(st,marker){for(const e of newEventsSince(st,marker))observeEventForMemories(st,e,st.tick);}
+  function onEventCreated({state:st,event,duringCoreTick}){if(!st||!event)return;if(duringCoreTick){deferredCoreEvents.push(event);return;}observeEventForMemories(st,event,event.tick);}
+  function flushDeferredCoreEvents(st){const pending=deferredCoreEvents.splice(0);for(const event of pending)observeEventForMemories(st,event,event.tick);return pending.length;}
+  function resetMemoryRuntime(st){deferredCoreEvents.length=0;return normalizeMemoryState(st);}
 
-  E.addEvent=(...args)=>{const id=baseAddEvent(...args),st=E.getState(),e=st?.causes?.[id];if(e)observeEventForMemories(st,e,st.tick);return id;};
+  if(!E.registerEventCreatedListener)throw new Error('Memory runtime requires core event-created listener support');
+  E.registerEventCreatedListener('memory.episodic-observation',onEventCreated,100);
 
   if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','memory.capture-events',(ctx)=>{ctx.locals.memoryV1130=E.getState()?.events?.[0]?.id||null;},600);
-    E.registerRuntimeHook('afterTick','memory.process-events',(ctx)=>processNewEvents(E.getState(),ctx.locals.memoryV1130),500);
-    E.registerRuntimeHook('afterReset','memory.normalize-reset',()=>normalizeMemoryState(E.getState()),300);
+    E.registerRuntimeHook('afterTick','memory.process-events',()=>flushDeferredCoreEvents(E.getState()),500);
+    E.registerRuntimeHook('afterReset','memory.normalize-reset',()=>resetMemoryRuntime(E.getState()),300);
   }else{
     const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const before=E.getState(),marker=before?.events?.[0]?.id||null,result=baseTick(...args),after=E.getState();processNewEvents(after,marker);return result;};
-    E.reset=(...args)=>normalizeMemoryState(baseReset(...args));
+    E.tick=(...args)=>{const result=baseTick(...args);flushDeferredCoreEvents(E.getState());return result;};
+    E.reset=(...args)=>resetMemoryRuntime(baseReset(...args));
   }
 
   normalizeMemoryState(E.getState());
-  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories});
+  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories,flushDeferredMemoryEvents:flushDeferredCoreEvents});
 })();
