@@ -24,11 +24,13 @@ jobs:
         run: |
           for f in src/*.js; do node --check "$f"; done
           node tests/validator-rule-registry.mjs
-      - name: Commit migration
+      - name: Prepare migration commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git restore .github/scripts/patch-validator-registry.py .github/workflows/patch-validator-registry.yml
           git add -A
+          git status --short
           git commit -m "Refactor validator ownership into named registry"
-          git push
+      - name: Push migration commit
+        run: git push origin HEAD:refactor/validator-rule-registry
