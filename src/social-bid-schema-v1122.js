@@ -9,7 +9,6 @@
     st.version=VERSION;
     for(const a of Object.values(st.agents||{})){
       a.observedSocialBids=[];
-      delete a.pendingInteraction;
     }
     return st;
   };
