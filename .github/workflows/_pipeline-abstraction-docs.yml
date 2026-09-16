@@ -1,0 +1,135 @@
+name: Branch pipeline abstraction docs cleanup
+
+on:
+  push:
+    branches:
+      - docs/pipeline-abstraction-level
+
+permissions:
+  contents: write
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply abstraction cleanup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('docs/tick-pipeline.md')
+          s = p.read_text()
+          anchor = "> 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。\n"
+          replacement = anchor + "\n> 表示層規則：**主流程圖描述 lifecycle responsibility，不把 implementation hook ID 或具體玩法動作當成架構階段名稱。** 精確 hook ID 只保留在 registry 表、source 與 regression；圖上的名稱應能在未來加入新互動類型時仍成立。\n"
+          assert anchor in s
+          s = s.replace(anchor, replacement, 1)
+          graph_replacements = {
+              'B100[beforeTick 100\\nsocialOutcome.capture-events]':'B100[beforeTick 100\\nRequester Outcome Capture]',
+              'B200[200 memoryDeliberation.capture-idle]':'B200[200 Memory→Deliberation Baseline Capture]',
+              'B300[300 humanSocial.prepare]':'B300[300 Human Social Prepare]',
+              'B400[400 socialResponse.capture-pet-offers]':'B400[400 Social Response Prepare]',
+              'B500[500 affect.decay]':'B500[500 Affect Decay]',
+              'B600[600 memory.capture-events]':'B600[600 Memory Observation Checkpoint]',
+              'B700[700 intent.soft-reconsideration]':'B700[700 Soft Reconsideration]',
+              'B800[800 intent.replan-preemption]':'B800[800 Replan / Preemption]',
+              'B900[900 socialBid.prepare]':'B900[900 Social Bid Prepare]',
+              'B1000[1000 intent.reconcile-before]':'B1000[1000 Intent Reconcile]',
+              'B1100[1100 spatial.capture]':'B1100[1100 Spatial Capture]',
+              'A100[afterTick 100\\nspatial.effects]':'A100[afterTick 100\\nSpatial Effects]',
+              'A200[200 intent.reconcile-after]':'A200[200 Intent Reconcile]',
+              'A300[300 socialBid.settle]':'A300[300 Social Bid Settle]',
+              'A400[400 intent.recover-aborts]':'A400[400 Abort Recovery]',
+              'A500[500 memory.process-events]':'A500[500 Memory Observation Process]',
+              'A600[600 socialResponse.resolve-pet-offers]':'A600[600 Social Response Resolve]',
+              'A700[700 humanSocial.resolve]':'A700[700 Human Social Resolve]',
+              'A800[800 memoryDeliberation.correct-initial]':'A800[800 Memory→Deliberation Correction]',
+              'A900[900 socialOutcome.process]':'A900[900 Private Social Outcome Process]',
+              'A1000[1000 uiObservability.render-mobile-summary]':'A1000[1000 Mobile Summary Render]',
+              'A1100[1100 residentView.schedule]':'A1100[1100 Resident View Schedule]',
+          }
+          for old, new in graph_replacements.items():
+              assert old in s, old
+              s = s.replace(old, new, 1)
+          note = "圖中的 `E.addEvent` Memory wrapper **不屬於正式 runtime-hook phase**；它是目前為了補足 event-observation window 而存在的 active integration debt，刻意以虛線旁路表示。"
+          note2 = note + "\n\n主流程圖使用的是**責任名稱**；下方表格的 `Implementation Hook ID` 才對應實際 registry。兩者不可混為同一抽象層。"
+          assert note in s
+          s = s.replace(note, note2, 1)
+          s = s.replace('| Order | Hook ID | Owner |', '| Order | Implementation Hook ID | Owner |')
+          s = s.replace('4. Pet/Human response 600/700 與 `memoryDeliberation.correct-initial` 800 的相對位置改變。', '4. `Social Response Resolve` 600 / `Human Social Resolve` 700 與 `Memory→Deliberation Correction` 800 的相對位置改變。')
+          p.write_text(s)
+
+          p = Path('docs/architecture.md')
+          s = p.read_text()
+          anchor = "Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud failure。\n"
+          replacement = anchor + "\n**Pipeline 的架構表示層與 implementation registry 分離。** Architecture／主流程圖應使用 lifecycle responsibility 名稱，不直接把 `socialResponse.capture-pet-offers` 這類具體 hook ID 或玩法動作提升成架構階段。精確 hook ID 仍由 source、`docs/tick-pipeline.md` 的 registry 表與 `tests/runtime-hook-pipeline.mjs` 保留並驗證。\n"
+          assert anchor in s
+          s = s.replace(anchor, replacement, 1)
+          old_before = """100  socialOutcome.capture-events
+200  memoryDeliberation.capture-idle
+300  humanSocial.prepare
+400  socialResponse.capture-pet-offers
+500  affect.decay
+600  memory.capture-events
+700  intent.soft-reconsideration
+800  intent.replan-preemption
+900  socialBid.prepare
+1000 intent.reconcile-before
+1100 spatial.capture"""
+          new_before = """100  Requester Outcome Capture
+200  Memory→Deliberation Baseline Capture
+300  Human Social Prepare
+400  Social Response Prepare
+500  Affect Decay
+600  Memory Observation Checkpoint
+700  Soft Reconsideration
+800  Replan / Preemption
+900  Social Bid Prepare
+1000 Intent Reconcile
+1100 Spatial Capture"""
+          assert old_before in s
+          s = s.replace(old_before, new_before, 1)
+          old_after = """100 spatial.effects
+200 intent.reconcile-after
+300 socialBid.settle
+400 intent.recover-aborts
+500 memory.process-events
+600 socialResponse.resolve-pet-offers
+700 humanSocial.resolve
+800 memoryDeliberation.correct-initial
+900 socialOutcome.process"""
+          new_after = """100 Spatial Effects
+200 Intent Reconcile
+300 Social Bid Settle
+400 Abort Recovery
+500 Memory Observation Process
+600 Social Response Resolve
+700 Human Social Resolve
+800 Memory→Deliberation Correction
+900 Private Social Outcome Process"""
+          assert old_after in s
+          s = s.replace(old_after, new_after, 1)
+          marker = "UI / Resident View 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。"
+          assert marker in s
+          s = s.replace(marker, "上述清單是 architecture view；精確 implementation hook ID / owner / order 對照請查 `docs/tick-pipeline.md`。\n\n" + marker, 1)
+          p.write_text(s)
+          PY
+      - name: Verify abstraction boundary
+        run: |
+          grep -q 'Social Response Prepare' docs/tick-pipeline.md
+          grep -q 'Implementation Hook ID' docs/tick-pipeline.md
+          grep -q 'Pipeline 的架構表示層與 implementation registry 分離' docs/architecture.md
+          if grep -A45 '## 1. 一個 `E.tick()` 的主流程' docs/tick-pipeline.md | grep -q 'capture-pet-offers'; then
+            echo 'main pipeline graph still exposes action-specific hook ID'
+            exit 1
+          fi
+      - name: Commit docs and remove temporary tooling
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/_pipeline-abstraction-docs.yml
+          git add docs/architecture.md docs/tick-pipeline.md
+          git commit -m 'Clarify pipeline abstraction level'
+          git push origin HEAD:docs/pipeline-abstraction-level
