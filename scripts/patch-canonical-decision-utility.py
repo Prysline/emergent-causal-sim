@@ -1,0 +1,52 @@
+from pathlib import Path
+
+path=Path('src/engine.js')
+s=path.read_text()
+
+def replace_exact(old,new,expected=1):
+    global s
+    count=s.count(old)
+    if count!=expected:
+        raise SystemExit(f'expected {expected} occurrences, found {count}: {old[:120]}')
+    s=s.replace(old,new)
+
+marker="  function options(a){"
+if s.count(marker)!=1:
+    raise SystemExit('options marker mismatch')
+helper="""  function baseUtilityForAction(a,id){
+    const n=a?.needs||{},traits=a?.traits||{};
+    switch(id){
+      case'eat':return (n.hunger||0)*1.08+12;
+      case'drinkWater':return a?.kind==='cat'?(n.thirst||0)*1.05+8:(n.thirst||0)*1.18+10;
+      case'drinkAlcohol':return a?.kind==='human'?(n.thirst||0)*.42+(traits.alcoholLike||0)*34+(a.status?.intoxication<35?6:-18):0;
+      case'rest':return a?.kind==='cat'?Math.max(0,Math.min(n.fatigue||0,72)-15)*1.05+8:Math.max(0,Math.min(n.fatigue||0,68)-18)*1.25+9;
+      case'sleep':return sleepChoice(a)?.score||0;
+      case'talk':return a?.kind==='human'?Math.max(0,(n.social||0)-18)*.9+(traits.social||0)*16:0;
+      case'petCat':return a?.kind==='human'?8+(traits.animalAffinity||0)*18+(n.social||0)*.18:0;
+      case'seekHuman':return a?.kind==='cat'?Math.max(0,(n.social||0)-10)*.95+(traits.social||0)*18:0;
+      case'cleanFloor':return a?.kind==='human'?15+wetTotal()*.9+(a.wellbeing?.safety||0)*.08:0;
+      case'groom':return a?.kind==='cat'?(n.groomingNeed||0)*.83+Object.values(a.contacts?.paws||{}).reduce((x,y)=>x+y,0)*.9+18:0;
+      case'wander':return a?.kind==='cat'?20+(traits.curious||0)*25:10;
+      default:return 0;
+    }
+  }
+
+"""
+s=s.replace(marker,helper+marker,1)
+
+replace_exact("score:a.needs.hunger*1.08+12","score:baseUtilityForAction(a,'eat')",2)
+replace_exact("score:a.needs.thirst*1.18+10","score:baseUtilityForAction(a,'drinkWater')")
+replace_exact("score:a.needs.thirst*.42+a.traits.alcoholLike*34+(a.status.intoxication<35?6:-18)","score:baseUtilityForAction(a,'drinkAlcohol')")
+replace_exact("score:Math.max(0,Math.min(a.needs.fatigue,68)-18)*1.25+9","score:baseUtilityForAction(a,'rest')")
+replace_exact("score:Math.max(0,a.needs.social-18)*.9+a.traits.social*16","score:baseUtilityForAction(a,'talk')")
+replace_exact("score:8+a.traits.animalAffinity*18+a.needs.social*.18","score:baseUtilityForAction(a,'petCat')")
+replace_exact("score:15+wet*.9+a.wellbeing.safety*.08","score:baseUtilityForAction(a,'cleanFloor')")
+replace_exact("score:10+rand(0,14)","score:baseUtilityForAction(a,'wander')+rand(0,14)")
+replace_exact("score:a.needs.groomingNeed*.83+Object.values(a.contacts.paws||{}).reduce((x,y)=>x+y,0)*.9+18","score:baseUtilityForAction(a,'groom')")
+replace_exact("score:Math.max(0,Math.min(a.needs.fatigue,72)-15)*1.05+8","score:baseUtilityForAction(a,'rest')")
+replace_exact("score:Math.max(0,a.needs.social-10)*.95+a.traits.social*18","score:baseUtilityForAction(a,'seekHuman')")
+replace_exact("score:20+a.traits.curious*25+rand(0,16)","score:baseUtilityForAction(a,'wander')+rand(0,16)")
+replace_exact("score:a.needs.thirst*1.05+8","score:baseUtilityForAction(a,'drinkWater')")
+replace_exact("holderOf,buildAction,registerDecisionOptionProvider","holderOf,buildAction,baseUtilityForAction,registerDecisionOptionProvider")
+
+path.write_text(s)
