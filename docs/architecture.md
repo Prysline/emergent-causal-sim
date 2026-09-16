@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.14.1-player-readable-action-explanations`。
+目前 runtime marker：`11.14.2-resident-action-intent-explanation-alignment`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -330,6 +330,16 @@ Core 保持 `E.actionLabel` ownership。Presentation 若要補 readable status�
 ### Recent social status
 
 `recentSocialByAgent` cache 已移除。Recent response / recent talk 由 bounded canonical events + `event.tick` 推導。
+
+### Resident current-activity semantic layers
+
+Resident View 的「現在」固定分成三層 read-only projection：
+
+- **Action＝角色現在具體在做什麼。** 來源是 live Action；Resident 可以把 raw phase ID、工程座標等轉成玩家可讀文字，但 Debug 仍保留完整 Action phase / spatial goal。
+- **Intent＝這個行動服務的短期目的。** 來源是 canonical `activeIntent.kind`；Resident label 必須覆蓋正式 Intent kind，不得另造 `satisfyThirst / cleanEnvironment / restockFood` 之類 presentation-only 假 kind 來猜測目的。
+- **Explanation＝為什麼此刻選這個行動。** 只在 final decision evidence 與 live Action 的 decision tick / action kind 對齊時顯示；應描述需求壓力、環境觸發或其他已存在證據，而不是只把 Intent 換句話重述一次。
+
+三層都不能寫回 simulation state，也不能成為 Deliberation / Memory / Affect 的輸入。完整 candidate score、utility、switch threshold、commitment cost、Memory delta、raw phase / coordinates 等工程資訊留在 Debug Inspector。
 
 ### Inspector render / decorator lifecycle
 
