@@ -1,0 +1,27 @@
+name: Patch canonical decision utility docs
+
+on:
+  push:
+    branches:
+      - "docs/canonical-decision-utility-contract"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: docs/canonical-decision-utility-contract
+      - name: Apply architecture patch
+        run: python scripts/patch-canonical-decision-utility-docs.py
+      - name: Commit docs and remove temporary patch files
+        run: |
+          rm .github/workflows/patch-canonical-decision-utility-docs.yml scripts/patch-canonical-decision-utility-docs.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/architecture.md .github/workflows/patch-canonical-decision-utility-docs.yml scripts/patch-canonical-decision-utility-docs.py
+          git commit -m "Document canonical decision utility baseline"
+          git push origin HEAD:docs/canonical-decision-utility-contract
