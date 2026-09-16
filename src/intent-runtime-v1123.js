@@ -39,14 +39,9 @@
   function prepareTick(st){applyEmergencyPreemption(st);planOpenIntents(st);return {before:snapshotLiveActions(st),marker:st.events?.[0]?.id||null};}
   function settleTick(st,snap){if(!snap)return;const newEvents=newEventsSince(st,snap.marker);recoverAbortedIntents(st,snap.before,newEvents);E.reconcileIntents?.(st);}
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','intent.replan-preemption',(ctx)=>{ctx.locals.intentV1123=prepareTick(E.getState());},800);
-    E.registerRuntimeHook('afterTick','intent.recover-aborts',(ctx)=>settleTick(E.getState(),ctx.locals.intentV1123),400);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const snap=prepareTick(E.getState()),result=baseTick(...args);settleTick(E.getState(),snap);return result;};
-    E.reset=(...args)=>baseReset(...args);
-  }
+    if(!E.registerRuntimeHook)throw new Error('intent-runtime-v1123.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','intent.replan-preemption',(ctx)=>{ctx.locals.intentV1123=prepareTick(E.getState());},800);
+  E.registerRuntimeHook('afterTick','intent.recover-aborts',(ctx)=>settleTick(E.getState(),ctx.locals.intentV1123),400);
 
   Object.assign(E,{INTERRUPTION_SCHEMA_VERSION:VERSION,REPLAN_SUPPORTED,EMERGENCY_PREEMPTIBLE,MAX_REPLAN_ATTEMPTS,intentStillValid,planOpenIntent,emergencyChoice});
 })();

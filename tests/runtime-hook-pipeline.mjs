@@ -78,4 +78,26 @@ assert.equal(E.getState().tick,200,'pipeline must advance the canonical core exa
 assert.equal(E.tick,E.RUNTIME_PIPELINE_TICK,'tick dispatcher identity must remain stable after long-run execution');
 assert.equal(E.reset,E.RUNTIME_PIPELINE_RESET,'reset dispatcher identity must remain stable after long-run execution');
 
+
+
+const srcDir=new URL('../src/',import.meta.url),testsDir=new URL('../tests/',import.meta.url);
+const hookSourceFiles=fs.readdirSync(srcDir).filter(name=>name.endsWith('.js')&&name!=='runtime-hook-pipeline.js').filter(name=>fs.readFileSync(new URL(name,srcDir),'utf8').includes('registerRuntimeHook('));
+assert.ok(hookSourceFiles.length>0,'architecture guard must discover runtime hook extensions');
+for(const name of hookSourceFiles){
+  const source=fs.readFileSync(new URL(name,srcDir),'utf8');
+  assert.ok(!/\bE\.(?:tick|reset|onEpisodicMemoryCreated)\s*=(?!=)/.test(source),`${name} must not own a no-pipeline lifecycle wrapper`);
+  assert.ok(source.includes(`if(!E.registerRuntimeHook)throw new Error('${name} requires runtime-hook-pipeline.js');`),`${name} must fail loudly when the production pipeline is missing`);
+}
+for(const testName of fs.readdirSync(testsDir).filter(name=>name.endsWith('.mjs')&&!name.startsWith('browser-'))){
+  const source=fs.readFileSync(new URL(testName,testsDir),'utf8');
+  const quotedJs=[...source.matchAll(/['"]([A-Za-z0-9._-]+\.js)['"]/g)].map(m=>m[1]);
+  const loadedHookFiles=hookSourceFiles.filter(name=>quotedJs.includes(name));
+  if(!loadedHookFiles.length)continue;
+  const engineIndex=quotedJs.indexOf('engine.js'),pipelineIndex=quotedJs.indexOf('runtime-hook-pipeline.js');
+  assert.ok(engineIndex>=0,`${testName} loads hook extensions without engine.js`);
+  assert.ok(pipelineIndex>engineIndex,`${testName} must load runtime-hook-pipeline.js after engine.js`);
+  const firstHookIndex=Math.min(...loadedHookFiles.map(name=>quotedJs.indexOf(name)));
+  assert.ok(pipelineIndex<firstHookIndex,`${testName} must load runtime-hook-pipeline.js before every hook extension`);
+}
+
 console.log('Runtime hook pipeline regression: ok');

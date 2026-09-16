@@ -50,14 +50,9 @@
   }
   function settlePendingOffers(st,pending){for(const record of pending||[])resolvePendingPetOffer(st,record);}
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','socialResponse.capture-pet-offers',(ctx)=>{ctx.locals.socialResponseV1132a=capturePendingPetOffers(E.getState());},400);
-    E.registerRuntimeHook('afterTick','socialResponse.resolve-pet-offers',(ctx)=>settlePendingOffers(E.getState(),ctx.locals.socialResponseV1132a),600);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const before=E.getState(),pending=capturePendingPetOffers(before),result=baseTick(...args),after=E.getState();settlePendingOffers(after,pending);return result;};
-    E.reset=(...args)=>baseReset(...args);
-  }
+    if(!E.registerRuntimeHook)throw new Error('social-response-runtime-v1132a.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','socialResponse.capture-pet-offers',(ctx)=>{ctx.locals.socialResponseV1132a=capturePendingPetOffers(E.getState());},400);
+  E.registerRuntimeHook('afterTick','socialResponse.resolve-pet-offers',(ctx)=>settlePendingOffers(E.getState(),ctx.locals.socialResponseV1132a),600);
 
   Object.assign(E,{SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,PET_RESPONSE_THRESHOLDS,petResponseScore,petResponseFor,preparePetResponseScenario});
   try{const scenario=typeof location!=='undefined'?new URLSearchParams(location.search||'').get('scenario'):null;if(['pet-accept','pet-tolerate','pet-avoid'].includes(scenario))preparePetResponseScenario(scenario);}catch{}

@@ -55,11 +55,7 @@
     }
   }
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','spatial.capture',(ctx)=>{ctx.locals.spatialV1114=captureSpatialTick(E.getState());},1100);
-    E.registerRuntimeHook('afterTick','spatial.effects',(ctx)=>settleSpatialTick(E.getState(),ctx.locals.spatialV1114),100);
-  }else{
-    const baseTick=E.tick;
-    E.tick=(...args)=>{const snap=captureSpatialTick(E.getState()),result=baseTick(...args);settleSpatialTick(E.getState(),snap);return result;};
-  }
+    if(!E.registerRuntimeHook)throw new Error('engine-spatial-v1114.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','spatial.capture',(ctx)=>{ctx.locals.spatialV1114=captureSpatialTick(E.getState());},1100);
+  E.registerRuntimeHook('afterTick','spatial.effects',(ctx)=>settleSpatialTick(E.getState(),ctx.locals.spatialV1114),100);
 })();

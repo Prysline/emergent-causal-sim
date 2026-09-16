@@ -41,14 +41,9 @@
   }
   function processRequesterSocialOutcomes(st,marker){const made=[];for(const e of newEventsSince(st,marker)){const memory=rememberRequesterSocialOutcome(st,e);if(memory)made.push({agentId:e.data.actor,memory});}return made;}
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','socialOutcome.capture-events',(ctx)=>{ctx.locals.socialOutcomeV1135=E.getState()?.events?.[0]?.id||null;},100);
-    E.registerRuntimeHook('afterTick','socialOutcome.process',(ctx)=>processRequesterSocialOutcomes(E.getState(),ctx.locals.socialOutcomeV1135),900);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const marker=E.getState()?.events?.[0]?.id||null,result=baseTick(...args);processRequesterSocialOutcomes(E.getState(),marker);return result;};
-    E.reset=(...args)=>baseReset(...args);
-  }
+    if(!E.registerRuntimeHook)throw new Error('social-outcome-memory-runtime-v1135.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','socialOutcome.capture-events',(ctx)=>{ctx.locals.socialOutcomeV1135=E.getState()?.events?.[0]?.id||null;},100);
+  E.registerRuntimeHook('afterTick','socialOutcome.process',(ctx)=>processRequesterSocialOutcomes(E.getState(),ctx.locals.socialOutcomeV1135),900);
 
   Object.assign(E,{SOCIAL_OUTCOME_MEMORY_SCHEMA_VERSION:VERSION,SOCIAL_OUTCOME_CONTEXT_CONGRUENCE:CONTEXT_CONGRUENCE,requesterSocialOutcomeContextKind:contextKind,appraiseRequesterSocialOutcome,rememberRequesterSocialOutcome,processRequesterSocialOutcomes});
 })();

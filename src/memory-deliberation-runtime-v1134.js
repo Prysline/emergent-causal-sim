@@ -54,13 +54,8 @@
   function captureIdle(st){return Object.values(st.agents||{}).filter(a=>!a.action&&!a.activeIntent&&!a.offMap).map(a=>a.id);}
 
   window.SimMemoryDeliberation={VERSION,adjustIntentCandidates,adjustCurrentIntentUtility,isDistinctTargetCandidate};
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('beforeTick','memoryDeliberation.capture-idle',(ctx)=>{ctx.locals.memoryDeliberationV1134=captureIdle(E.getState());},200);
-    E.registerRuntimeHook('afterTick','memoryDeliberation.correct-initial',(ctx)=>correctInitialDeliberation(E.getState(),ctx.locals.memoryDeliberationV1134),800);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset;
-    E.tick=(...args)=>{const idleBefore=captureIdle(E.getState()),result=baseTick(...args);correctInitialDeliberation(E.getState(),idleBefore);return result;};
-    E.reset=(...args)=>baseReset(...args);
-  }
+    if(!E.registerRuntimeHook)throw new Error('memory-deliberation-runtime-v1134.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('beforeTick','memoryDeliberation.capture-idle',(ctx)=>{ctx.locals.memoryDeliberationV1134=captureIdle(E.getState());},200);
+  E.registerRuntimeHook('afterTick','memoryDeliberation.correct-initial',(ctx)=>correctInitialDeliberation(E.getState(),ctx.locals.memoryDeliberationV1134),800);
   Object.assign(E,{MEMORY_DELIBERATION_SCHEMA_VERSION:VERSION,MEMORY_DELIBERATION_TOP_MEMORIES:TOP_MEMORIES,MEMORY_DELIBERATION_MAX_DELTA:MAX_DELTA,memoryAssociatedWithTarget,targetMemoryContributions,targetAssociation,targetEvaluation,targetEvaluations,bestMemoryTargetEvaluation:bestTargetEvaluation,currentSocialTargetEvaluations,adjustInitialDeliberation:correctInitialDeliberation});
 })();

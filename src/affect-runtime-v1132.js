@@ -29,16 +29,10 @@
     const f=normalizeAgentAffect(a,st?.tick||0);f.valence=round(clamp(f.valence+(positiveImpact-negativeImpact)*.55,-1,1));f.activation=round(clamp(f.activation+magnitude*.45,0,1));f.frustration=round(clamp(f.frustration+negativeImpact*.65-positiveImpact*.15,0,1));f.lastUpdatedTick=st?.tick||0;f.source={memoryId:memory.id,sourceEventId:memory.sourceEventId,appraisedTick:p.appraisedTick,appliedTick:st?.tick||0};return f;
   }
 
-  if(E.registerRuntimeHook){
-    E.registerRuntimeHook('episodicMemoryCreated','affect.from-appraisal',(ctx)=>{updateAffectFromAppraisal(ctx.state,ctx.agent,ctx.memory);ctx.result=ctx.memory?.appraisal||ctx.result;},400);
-    E.registerRuntimeHook('beforeTick','affect.decay',()=>{const st=E.getState();decayAffectState(st,(st?.tick||0)+1);},500);
-    E.registerRuntimeHook('afterReset','affect.normalize-reset',()=>normalizeAffectState(E.getState()),400);
-  }else{
-    const baseTick=E.tick,baseReset=E.reset,priorMemoryCreatedHook=E.onEpisodicMemoryCreated;
-    E.onEpisodicMemoryCreated=(st,a,memory)=>{if(typeof priorMemoryCreatedHook==='function')priorMemoryCreatedHook(st,a,memory);updateAffectFromAppraisal(st,a,memory);return memory?.appraisal||null;};
-    E.tick=(...args)=>{const st=E.getState();decayAffectState(st,(st?.tick||0)+1);return baseTick(...args);};
-    E.reset=(...args)=>normalizeAffectState(baseReset(...args));
-  }
+    if(!E.registerRuntimeHook)throw new Error('affect-runtime-v1132.js requires runtime-hook-pipeline.js');
+  E.registerRuntimeHook('episodicMemoryCreated','affect.from-appraisal',(ctx)=>{updateAffectFromAppraisal(ctx.state,ctx.agent,ctx.memory);ctx.result=ctx.memory?.appraisal||ctx.result;},400);
+  E.registerRuntimeHook('beforeTick','affect.decay',()=>{const st=E.getState();decayAffectState(st,(st?.tick||0)+1);},500);
+  E.registerRuntimeHook('afterReset','affect.normalize-reset',()=>normalizeAffectState(E.getState()),400);
 
   normalizeAffectState(E.getState());
   Object.assign(E,{AFFECT_SCHEMA_VERSION:VERSION,AFFECT_DECAY:DECAY,AFFECT_EPSILON:EPSILON,normalizeAffectState,decayAgentAffect,decayAffectState,updateAffectFromAppraisal});
