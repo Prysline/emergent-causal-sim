@@ -48,7 +48,7 @@ assert.ok(responderRel.familiarity>0&&responderRel.affinity>0,'responder should 
 assert.notDeepEqual(requesterRel,responderRel,'directional relationships may differ because each participant appraises a different outcome');
 const acceptEvent=st.events.find(e=>e.data?.action==='acceptTalk'&&e.data?.target==='zhou');
 assert.ok(acceptEvent,'full talk should have an acceptTalk response event');
-E.observeEventForMemories(st,acceptEvent,st.tick+1);
+E.observeEventForMemories(st,acceptEvent,st.tick);
 assert.deepEqual(relation(requester,'zhen'),requesterRel,'re-observing the same source event must not consolidate Relationship twice');
 noIssues('full talk directional consolidation');
 
@@ -99,6 +99,7 @@ noIssues('audited evidence gate');
 // Relationship is consolidated persistent slow state, not a recomputation from the current hot-memory set.
 st=E.prepareHumanTalkScenario('talk-engage',11506);assert.ok(runUntil(()=>E.getState().events.some(e=>e.data?.action==='talk'),10));st=E.getState();requester=st.agents.zhou;
 const consolidated=clone(relation(requester,'zhen'));assert.ok(consolidated);
+requester.affect={valence:0,activation:0,frustration:0,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:null};
 requester.episodicMemories=[];
 assert.deepEqual(relation(requester,'zhen'),consolidated,'pruning/clearing episodic memory must not erase already consolidated relationship state');
 noIssues('relationship survives memory pruning');
