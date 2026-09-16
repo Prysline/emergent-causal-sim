@@ -31,7 +31,13 @@ E.reset(20260911);
 const validation=V.validateState(E.getState());
 assert.equal(validation.issueCount,0,validation.issues.map(x=>`${x.code}: ${x.message}`).join(' | '));
 
-// Missing-layer guard is tested in an isolated registry so production finalization remains immutable.
+// Missing base aggregator and missing extension layers must both fail loudly.
+const emptyCtx=vm.createContext({console});emptyCtx.window=emptyCtx;
+assert.throws(
+  ()=>vm.runInContext(fs.readFileSync(new URL('../src/state-validator-manifest.js',import.meta.url),'utf8'),emptyCtx,{filename:'state-validator-manifest.js'}),
+  /Validator registry is unavailable/,
+  'production manifest must not silently skip a missing validator owner'
+);
 const ctx=vm.createContext({console});ctx.window=ctx;ctx.SimSpatial={};
 vm.runInContext(fs.readFileSync(new URL('../src/state-validator.js',import.meta.url),'utf8'),ctx,{filename:'state-validator.js'});
 ctx.SimValidator.registerValidationLayer('one',(_st,base)=>base,100);
