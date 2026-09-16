@@ -78,8 +78,6 @@ assert.equal(E.getState().tick,200,'pipeline must advance the canonical core exa
 assert.equal(E.tick,E.RUNTIME_PIPELINE_TICK,'tick dispatcher identity must remain stable after long-run execution');
 assert.equal(E.reset,E.RUNTIME_PIPELINE_RESET,'reset dispatcher identity must remain stable after long-run execution');
 
-
-
 const srcDir=new URL('../src/',import.meta.url),testsDir=new URL('../tests/',import.meta.url);
 const hookSourceFiles=fs.readdirSync(srcDir).filter(name=>name.endsWith('.js')&&name!=='runtime-hook-pipeline.js').filter(name=>fs.readFileSync(new URL(name,srcDir),'utf8').includes('registerRuntimeHook('));
 assert.ok(hookSourceFiles.length>0,'architecture guard must discover runtime hook extensions');
