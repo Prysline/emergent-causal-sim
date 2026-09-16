@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.14.2-resident-action-intent-explanation-alignment';
+const CURRENT_VERSION='11.14.3-natural-player-explanations';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -77,6 +77,11 @@ const semanticLayers=await page.evaluate(()=>{
   const dest=Object.values(st.containers).find(c=>Object.prototype.hasOwnProperty.call(c.contents||{},'water'))||Object.values(st.containers)[0];
   const destId=dest.id,destName=dest.name;
   const intent=kind=>E.residentIntentLabel({activeIntent:{kind}});
+  const explain=(kind,intentKind,{agent={},action={}}={})=>{
+    const probe={id:`qa-${kind}`,kind:'human',activeIntent:{kind:intentKind},...agent,action:{kind,started:66,...action}};
+    const probeState={...st,thoughts:{...st.thoughts,[probe.id]:{tick:66,pick:{id:kind}}}};
+    return E.residentActionExplanation(probeState,probe);
+  };
   const restockAction=E.residentActionText(st,{kind:'human',action:{kind:'restockContainer',phase:'toContainer',destinationId:destId,resource:'water'}});
   const wanderAction=E.residentActionText(st,{kind:'human',action:{kind:'wander',spatialGoal:{x:10,y:6}}});
   const wander={id:'qa-wander',kind:'human',activeIntent:{kind:'explore'},action:{kind:'wander',started:77,spatialGoal:{x:10,y:6}}};
@@ -90,6 +95,16 @@ const semanticLayers=await page.evaluate(()=>{
     restockIntent:intent('restockResource'),
     wanderIntent:intent('explore'),
     restockAction,wanderAction,
+    eatExplanation:explain('eat','satisfyHunger'),
+    drinkWaterExplanation:explain('drinkWater','drinkWater'),
+    drinkAlcoholExplanation:explain('drinkAlcohol','drinkAlcohol'),
+    restExplanation:explain('rest','recoverFatigue'),
+    sleepExplanation:explain('sleep','sleep'),
+    talkExplanation:explain('talk','socialize'),
+    petCatExplanation:explain('petCat','interactWithCat'),
+    seekHumanExplanation:explain('seekHuman','seekSocialContact',{agent:{kind:'cat'}}),
+    groomExplanation:explain('groom','groom',{agent:{kind:'cat',contacts:{paws:{}}}}),
+    externalSupplyExplanation:explain('externalSupply','replenishSupply',{action:{resource:'water'}}),
     wanderExplanation:E.residentActionExplanation(wanderState,wander),
     restockExplanation:E.residentActionExplanation(restockState,restock)
   };
@@ -102,7 +117,17 @@ assert.ok(!semanticLayers.restockAction.includes('toContainer'),'Resident Action
 assert.ok(semanticLayers.restockAction.includes(semanticLayers.destName)&&semanticLayers.restockAction.includes('水'),'Resident restock Action should describe the concrete player-readable task');
 assert.equal(semanticLayers.wanderAction,'四處走走');
 assert.ok(!semanticLayers.wanderAction.includes('(10,6)'),'Resident Action must not expose raw spatial coordinates');
-assert.equal(semanticLayers.wanderExplanation,'目前沒有其他更迫切的需求。','Explanation should state why wander won instead of repeating explore Intent');
+assert.equal(semanticLayers.eatExplanation,'因為肚子餓了。');
+assert.equal(semanticLayers.drinkWaterExplanation,'因為口渴。');
+assert.equal(semanticLayers.drinkAlcoholExplanation,'因為口渴，而且現在想喝點酒。');
+assert.equal(semanticLayers.restExplanation,'因為累了。');
+assert.equal(semanticLayers.sleepExplanation,'因為想睡了。');
+assert.equal(semanticLayers.talkExplanation,'因為想找人說說話。');
+assert.equal(semanticLayers.petCatExplanation,'因為想找點陪伴，也對貓有親近感。');
+assert.equal(semanticLayers.seekHumanExplanation,'因為想找點陪伴。');
+assert.equal(semanticLayers.groomExplanation,'因為身上有點需要整理了。');
+assert.equal(semanticLayers.externalSupplyExplanation,'因為家裡的水快不夠了。');
+assert.equal(semanticLayers.wanderExplanation,'因為現在沒有更急著要做的事。','Explanation should use natural selection-pressure wording instead of engine terminology');
 assert.equal(semanticLayers.restockExplanation,`因為${semanticLayers.destName}裡的水已經不多了。`,'Restock explanation should state the resource pressure rather than repeat the task');
 
 const stateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
@@ -219,5 +244,5 @@ fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({
   catMemory:{...catMemory,residentText:undefined,debugText:undefined},
   pageErrors,consoleErrors
 },null,2));
-console.log('v11.14.2 browser resident view QA: action/intent/explanation semantics + desktop/mobile state-inert pass');
+console.log('v11.14.3 browser resident view QA: natural explanations + action/intent semantics + desktop/mobile state-inert pass');
 await browser.close();
