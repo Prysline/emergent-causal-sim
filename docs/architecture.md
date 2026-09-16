@@ -2,7 +2,9 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.14.0-player-resident-view-debug-inspector`。
+目前 runtime marker：`11.14.1-player-readable-action-explanations`。
+
+版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
 目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Intent、Social Bid、Memory、Appraisal、Affect、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 app lifecycle 由 `runtime-hook-pipeline.js` 明確排序，不以 script-wrapper 疊接順序作為正式語義。
 
