@@ -1,375 +1,401 @@
-# Architecture — v11.10 Sleep Social Stimulus / Response
+# Architecture — Current Runtime Contract
 
-本文件描述目前正式架構。v10.4 以前的 wrapper / patch runtime 只存在 Git history；v11.7 清除 Unified Core 內殘留的案例特判、重複 truth 與 post-load API mutation；v11.8 移除最後的抽象 bulk hauling state `Agent.carrying`；v11.9 把活動疲勞與睡眠需求拆成 `fatigue / sleepNeed` 並加入 Species circadian profile；v11.10 再把社交互動拆成「發起 action → target stimulus → 是否喚醒 → 是否回應」，使睡眠中的目標不再因一次社交 action 自動醒來或自動做出 reciprocal response。
+本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-## 1. 模組責任
+目前 runtime marker：`11.14.0-player-resident-view-debug-inspector`。
 
-```text
-world.js
-→ 世界資料、species profile、entity capability、role、policy、初始狀態
+目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Intent、Social Bid、Memory、Appraisal、Affect、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 app lifecycle 由 `runtime-hook-pipeline.js` 明確排序，不以 script-wrapper 疊接順序作為正式語義。
 
-spatial.js
-→ topology、Room、dynamic blocker、A*、interaction geometry、局部環境
+## 1. Truth boundaries
 
-engine.js
-→ 唯一 tick、decision、sleep / circadian / social-stimulus derived logic、generic resource verbs、action lifecycle、物流流程
+### World Truth
 
-state-validator.js
-→ pure invariant validation
+World Truth 包含真正發生、可被引用的物理／世界事實，例如：
 
-ui.js
-→ read-only projection / Inspector / timeline / controls
-```
+- canonical World Event：`state.events / state.causes`
+- Agent / Object 的物理位置
+- Container / Source / Surface Environment 的實際 resource contents
+- posture、held container、reservations
+- Action 正在如何執行的 state machine
+- Spatial topology、Surface / Contact / interaction geometry
 
-任何模組不得在載入後包裝或覆寫另一模組的 `tick / reset`。Validator 不得修改 Engine API；UI 不得補 simulation state。
+Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
 
-## 2. 單一真相
+### Agent-private Truth
 
-### Agent
+不同 Agent 各自擁有：
 
-```text
-Agent.position           → 物理位置
-Agent.action             → 目前 action state machine
-Agent.posture            → standing / sitting / lying
-Agent.held               → 手持 portable Container
-Agent.needs.fatigue      → 活動造成的短期身體疲勞
-Agent.needs.sleepNeed    → 清醒時間累積的睡眠需求
-Agent.pendingInteraction → 已真正形成、仍可回應的短期互動請求
-```
+- `activeIntent`
+- `episodicMemories[]`
+- historical appraisal annotation
+- current Affect
+- requester-private waiting / wait-end experience
+- responder-local `observedSocialBids`
 
-`fatigue` 與 `sleepNeed` 不互相充當 alias。短休可以降低 fatigue，但不能把「沒睡夠」當成已恢復；真正 sleeping 才會降低 sleepNeed。
+一個 Agent 的 private state 不得直接取消、改寫或偽造另一個 Agent 的 private state。跨 Agent 影響必須經 World Event、observable stimulus、perception / observation 等正式邊界。
 
-`pendingInteraction` 也不能拿來表示「有人對睡著角色做過某件事」。只有目標真正處於可回應狀態時才建立 pending request；未喚醒的睡眠 disturbance 只存在 event / cause chain，不另存虛構的待回應狀態。
+### Observed Information
 
-`Agent.carrying` 已不存在。角色搬運 bulk resource 時，資源必須存在某個被角色實際持有的 `Container.contents`。Container 不保存 `heldBy`；`holderOf(containerId)` 由 `Agent.held` 推導。
+「World 中存在某事」不代表所有 Agent 都知道。Episodic Memory 只保存該 Agent 實際可觀察到的 minimal projection；Social Bid responder 也只能從自己的 observed bid refs 建立 candidate。
 
-### Species sleep profile
+## 2. Canonical Action / Active Intent
 
-物種提供預設睡眠／節律資料：
+### Action
 
-```text
-SPECIES_PROFILES[kind]
-→ circadianPattern
-→ sleepNeedGainPerTick
-→ sleepNeedRecoveryPerTick
-→ minSleepTicks / maxSleepTicks
-→ minimumSleepNeed
-→ sleepOpportunityThreshold
-→ naturalWakeSleepNeed
-→ noiseWakeThreshold
-```
+`action.kind` 是 Action type 的唯一正式欄位。
 
-目前：
+舊 `action.intent` alias、Action migration layer 與 `action.normalize-*` lifecycle 已移除。若 runtime 出現 legacy `{ intent: ... }` Action，Validator 應視為 invalid state，而不是自動修補。
 
-```text
-human → diurnal
-cat   → crepuscular
-```
+`action.intentId` 只表示 Action → Active Intent linkage，不是 Action type mirror。
 
-Agent 可用 trait 覆寫：
+### Active Intent
 
-```text
-traits.circadianPattern
-traits.circadianPhaseOffsetMinutes
-traits.sleepRecoveryRate
-```
+`activeIntent.kind` 表示「角色為什麼正在做這件事」；`action.kind` 表示「角色正在怎麼做」。兩者不可合併成同一欄位。
 
-`circadianPhaseOffsetMinutes` 用於同一物種中的早型／晚型差異；它不是新的 clock state。
+現行 Intent lifecycle 包含：
 
-### Derived sleep / arousal state
+- initial deliberation
+- action-bound Active Intent
+- hard replan / emergency preemption
+- soft reconsideration / hysteresis
+- requester-private `awaitResponse`
+- responder-private `respondSocialBid`
 
-以下資料都不保存進 Agent：
+### Canonical Action construction
 
-```text
-isSleeping(agent)
-circadianSleepBias(agent, minute)
-sleepPropensity(agent, minute)
-naturalWakeDrive(agent, minute)
-interactionWakeChance(agent, stimulusIntensity)
-```
+Concrete Action construction 由 core `E.buildAction(agent, choice)` 統一持有。Initial deliberation、hard replan、soft reconsideration 與 Memory→Deliberation correction 不得再保存平行的 Action construction switch。
 
-`isSleeping` 直接由 `Agent.action.intent === sleep && phase === sleeping` 推導。`interactionWakeChance` 讀現有睡眠 state 與本次 stimulus，不新增 persistent `sleepDepth / arousal` truth。
+Factory 只建立 Action shape；candidate utility、target policy、Intent lifecycle、plan event、responder scoring不屬於 factory 責任。
 
-### Exclusive use
+Caller 已明確選定的 `targetAgent / targetObject / targetTile / job / destination / carrier` 必須優先保留；不得因 factory fallback 靜默換掉 explicit social target。
 
-`state.reservations` 只表示「前往使用途中」的暫時 exclusive claim。角色正式坐／躺後，slot occupancy 由 `Agent.posture.slotId` 表示；角色拿起 Container 後，ownership 由 `Agent.held` 表示。
+## 3. Decision option providers
 
-### Supply worker
+Subsystem 若需要把正式 observation / private state 衍生出的 candidate 接入 core chooser，使用 decision-option provider。
 
-不保存 `state.supply.workerId`。活動中的 worker 由 `Agent.action.intent === 'externalSupply'` 推導。
+Provider contract：
 
-### Validation
+- 只提出 candidate，不直接建立 Action。
+- 不直接建立 Active Intent / World Event。
+- 不修改 Agent persistent/private state。
+- candidate 與 core needs / logistics options 一起競爭。
+- 可以附最小 provenance，供 candidate 被選中後的 subsystem settlement 使用。
 
-`SimValidator.validateState(state)` 是 pure function，回傳 `{ ok, issueCount, issues, crowdingTiles }`。Validator 會確認 `sleepNeed` 為 0–100 有限值、circadian override 合法、phase offset 為有限數值，也保留 sleeping posture / canSleep 等 invariant。
+Social Bid responder 是目前正式使用者：Human 對 Cat `socialAffection` 的 response candidate 直接由 responder-local `observedSocialBids` 產生，不再使用 `pendingInteraction / cat_request / accepted / catRequestExpired` compatibility bridge。
 
-## 3. World 是資料，不是流程腳本
+## 4. Social Bid / response agency
 
-Entity 可以使用 `roles / preferredResource / restock / interactions / portable / capacity / emptyLoad / transportResources / canEatFrom / canDrinkFrom / servingDish`。
+Social Bid 是 observable World Event，不是共享心理 lifecycle entity。
 
-例如 ready-food destination：
+Requester 與 responder 分別持有自己的 private state：
 
 ```text
-roles: [readyFood]
-restock:
-  resource: food
-  low: 18
-  strategy: logisticsContainer
-  sourceRole: foodReserve
+World Event: Social Bid
+├─ requester: awaitResponse / private wait-end experience
+└─ responder: observedSocialBids / optional respondSocialBid Intent
 ```
 
-物流容器：
+必須維持：
+
+- requester timeout 不得遠端取消 responder Intent；
+- responder 可以延後回應；
+- late response 可以和先前 requester wait-end experience 共存；
+- same-tick response-before-timeout ordering 由 regression 鎖定；
+- brief reply、explicit decline、no response 是不同事實；
+- no response 不得推論 intentional ignore / dislike / rejection。
+
+Human talk response 與 Pet response 都由 responder 自己的 state 決定。目前 responder scoring 尚未直接讀 Current Affect、Relationship 或 target-specific Memory influence。
+
+## 5. Memory / Appraisal / Affect
+
+### Episodic Memory
+
+每個 Agent 保存 bounded `episodicMemories[]`。
+
+Generic observed-event memory 保存最小 provenance / projection，例如：
+
+- `sourceEventId`
+- `observedTick / lastObservedTick`
+- `observed.action`
+- `actorId / targetId`
+- `positionRef`
+
+不複製完整 raw event data，不把 debug、utility、另一個 Agent 的 private state帶進 memory。
+
+同一 Agent 對同一 `sourceEventId` 只建立一個 episode；再次處理更新 access metadata，不重複建立 historical event memory。
+
+### Historical Appraisal
+
+Appraisal 是 Agent-private historical annotation。第一次形成後，不因角色之後的 Need / Affect 改變而靜默重寫過去評估。
+
+`episodicMemoryCreated` 正式 hook ordering：
 
 ```text
-roles: [logisticsContainer]
-portable: true
-capacity: 55
-emptyLoad: 0.8
-transportResources: [food]
-contents: {}
+appraisal.base
+→ appraisal.social-response
+→ appraisal.human-social
+→ affect.from-appraisal
 ```
 
-Engine 只查 capability / role / policy，不查目前場景的 entity ID；目前世界雖有「搬運籃」，Engine 不認 `basket` ID。
+### Current Affect
 
-## 4. Tile、Room 與 blocker
+Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memory 分層。它可以由新 appraisal 更新並隨 tick decay，但目前不直接進入 Human / Cat responder scoring。
 
-Tile 保存 terrain base：`terrain / material / walkable / surface.contents / roomId / furnitureIds`，不保存 `staticBlockedBy` cache。
+### Memory → Deliberation
 
-`SimSpatial.blockerAt()` 即時由 terrain、blocking furniture、無 support 的 fixed Container 與 fixed Source 推導。Room 由 floor topology flood-fill 推導；不是用途 Zone，也不直接提供休息或噪音魔法加成。
+目前只讓 target-related episodic history 以 bounded derived influence 進入 initiator-side social candidate，例如 `socialize / interactWithCat / seekSocialContact`。
 
-## 5. Interaction Geometry
+Memory influence 不保存成另一份 persistent relationship truth。
 
-正式 API：
+### Private Social Outcome
+
+`socialWaitEnded` 是 requester-private lifecycle event，generic observable Memory 刻意排除它。`social-outcome-memory-runtime-v1135.js` 將合法 no-response experience 建成 `privateSocialOutcome`，再做 requester-private appraisal / affect / retention。
+
+這條路徑不是 generic World Event observation，後續 event-observation cleanup 不得順手把兩者混成同一 truth boundary。
+
+## 6. Runtime Hook Pipeline
+
+正常 app runtime 由 `src/runtime-hook-pipeline.js` 持有：
+
+- `E.tick`
+- `E.reset`
+- `E.onEpisodicMemoryCreated`
+
+正式 phases：
 
 ```text
-interactionGeometry(state, target, agent, affordance)
-interactionPositions(...)
-bestInteractionPosition(...)
-isAtInteraction(...)
+beforeTick
+afterTick
+afterReset
+episodicMemoryCreated
 ```
 
-幾何規則屬於 **affordance + target data**。現行 mode：`occupy / reach / supportReach / port / slot / socialReach / tileContact / heldReach`。
+Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud failure。
 
-同一物件可同時 `pickup → occupy`、`drinkFrom → reach`。固定設備可用 `interactionPorts`；有 `supportId` 的物件可由 furniture footprint 推導 `supportReach`。
+### Current simulation ordering
 
-## 6. Movement
-
-A* 使用 12×8 Tile grid；不可達回傳 `[]`，Agent occupancy 是 soft cost，濕地增加 cost，一個 tick 最多移動一格。
-
-角色開始移動時會離開 sitting / lying posture。因此「醒來」與「起床」不同：Sleep action 結束可繼續 lying，真正移動時才 `standUp()`。
-
-## 7. Resource verbs
-
-底層資源只透過 `amountAt / capacityLeft / takeResource / putResource / transferResource / consumeFrom`。Endpoint 可為 Container、Source、Tile surface 或 Agent contact。角色主動 transfer 必須通過 `actorCanTransfer()` 與 Interaction Geometry；物流裝卸仍走同一個 `transferResource()`。
-
-## 8. Restock
-
-補充行為統一為 `restockContainer`，由 destination policy 決定 resource、threshold、strategy 與 source role。
-
-`carryContainer`：把目的容器本身帶到 source 補充，例如水桶。
-
-`logisticsContainer`：找相容 carrier → pickup → source → source-to-carrier transfer → destination → carrier-to-destination transfer → 放下空 carrier，例如 food reserve → ready food。
-
-## 9. Logistics Container
-
-正式 capability：
+`beforeTick`：
 
 ```text
-roles includes logisticsContainer
-portable = true
-capacity > 0
-transportResources = [...]
-contents
-emptyLoad
+100  socialOutcome.capture-events
+200  memoryDeliberation.capture-idle
+300  humanSocial.prepare
+400  socialResponse.capture-pet-offers
+500  affect.decay
+600  memory.capture-events
+700  intent.soft-reconsideration
+800  intent.replan-preemption
+900  socialBid.prepare
+1000 intent.reconcile-before
+1100 spatial.capture
 ```
 
-候選 carrier 必須資源相容、有容量、沒有不相容內容、未被別人持有／預約且可達。排序先偏好內容較少，再看距離。未來可加入箱子、麻袋、推車等 capability，而不重新建立 `Agent.carrying`。
+接著只執行一次 core `tick()`。
 
-## 10. External Supply
-
-外出補給使用 `canExit slot / externalSupplyDestination / preferredResource / logisticsContainer`。
+`afterTick`：
 
 ```text
-選擇 externalSupply
-→ 找出口 / destination / carrier
-→ pickup carrier
-→ 到出口並 offMap 工作
-→ 新取得 resource 寫入 carrier.contents
-→ 帶 carrier 回出口
-→ 前往 destination
-→ carrier → destination
-→ 放下空 carrier
+100 spatial.effects
+200 intent.reconcile-after
+300 socialBid.settle
+400 intent.recover-aborts
+500 memory.process-events
+600 socialResponse.resolve-pet-offers
+700 humanSocial.resolve
+800 memoryDeliberation.correct-initial
+900 socialOutcome.process
 ```
 
-若 fatigue / sleepNeed / thirst / hunger 過高，角色提早返回並在實際位置中止。Supply 只保存 `trigger / trips / totalProduced`；worker 由 active action 推導。
+UI / Resident View 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
 
-## 11. Food / Serving
+為 isolated legacy test harness 保留的「沒有 pipeline 時 fallback wrapper」不代表正常 app contract；正常 app 不得退回以 wrapper stacking 決定 lifecycle。
 
-`canEatFrom` 是可直接進食 Container；`servingDish` 是可盛食物的 portable Container；`readyFood` 是正常盛盤來源；`foodReserve` 是補充來源；`logisticsContainer` 是 bulk 搬運載體。
+## 7. Event creation / observation ownership
 
-一般人類：拿 serving dish → 找 readyFood → serve → 找座位 → eat。非常餓或沒有盤子時保留 direct-food fallback。貓不拿盤，但能直接吃可接近、未被別人持有的 `canEatFrom` Container。
+這是目前仍未完成的主要 integration debt。
 
-## 12. Drink
+### 7.1 Canonical event creation
 
-人類先找 portable `canDrinkFrom` vessel；沒有目標 resource 時再找 Source / Container 裝取。貓直接從可飲用 Container 中依可達距離選來源。Resource selection 依 capability，不綁具體物件 ID。
-
-## 13. Rest / Sleep / Circadian
-
-### Rest
+Core `engine.js` 的 event creator 會建立 canonical event 並寫入：
 
 ```text
-fatigue 高
-→ 找 canRest surface
-→ sitting / lying / floor rest
-→ 依 restQuality + local noise + recoveryRate 降低 fatigue
-→ sleepNeed 不降低；因仍清醒而繼續累積
+state.events
+state.causes
 ```
 
-躺床不等於 sleeping；短休結束後也可以維持 lying 思考下一個行動。
+PR #42 後 canonical event envelope 保存 `event.tick`，表示事件建立時的 simulation tick。
 
-### Sleep need / circadian
+Presentation 不得覆寫 `E.addEvent` 來改 canonical event text。Event text / data 應由真正產生事件的 simulation subsystem 負責。
 
-Awake tick 依 Species profile 增加 `sleepNeed`。Passive fatigue drift 僅保留極小值，活動疲勞主要來自 `applyExertion()`。
+### 7.2 現行 hybrid observation model
 
-正式節律 pattern：`diurnal / nocturnal / crepuscular`；human default = diurnal，cat default = crepuscular。Pattern 決定 `circadianSleepBias` 曲線，Agent phase offset 只平移曲線。節律是 soft bias，不是 hard gate。
+目前 generic Memory 有兩條 event-observation path：
 
-### Sleep decision
+1. **exported API wrapper**
+   - `memory-runtime-v1130.js` 暫時包住 `E.addEvent`。
+   - extension 呼叫 `E.addEvent(...)` 後會同步 `observeEventForMemories(...)`。
 
-Sleep candidate 需要合法 `canSleep` target、達到 `minimumSleepNeed`，且 `sleepPropensity >= sleepOpportunityThreshold`。
+2. **marker sweep**
+   - `memory.capture-events`：beforeTick order 600 保存當時 newest event marker。
+   - `memory.process-events`：afterTick order 500 掃描 marker 之後的新 events。
+   - core 內部呼叫 closure lexical `addEvent(...)`，不經 exported wrapper，因此主要靠 sweep 被 generic Memory 看見。
+
+這兩條路徑目前互補，而非完全重複。
+
+### 7.3 Observation window
+
+#### Pre-capture exported event
+
+`humanSocial.prepare` 在 beforeTick 300，可建立 `talkOffer`。
+
+它早於 `memory.capture-events` 600。若只刪除 wrapper，capture 時 `talkOffer` 已經存在並可能成為 marker，後面的 sweep 不會再處理它。
+
+所以這類事件目前是 **wrapper-only observation**。
+
+#### Capture → process window
+
+Marker capture 之後、`memory.process-events` 500 之前的事件可被 sweep 涵蓋，例如：
+
+- core tick 內的 lexical world events；
+- `spatial.effects`（afterTick 100）；
+- `socialBid.settle`（300；private event仍受 Memory filter 排除）；
+- `intent.recover-aborts`（400）。
+
+Exported `E.addEvent` event 若在這段先被 wrapper observe，sweep 再遇到時由 `sourceEventId` dedupe，不能重複建立 episode / appraisal / Affect。
+
+#### Post-process exported event
+
+`memory.process-events` 500 之後仍有正式 event producer：
+
+- `socialResponse.resolve-pet-offers`（600）
+- `humanSocial.resolve`（700）
+
+這裡會產生 `petOffer / acceptPet / toleratePet / avoidPet / petCat` 與 `acceptTalk / briefTalkReply / declineTalk / talk`。
+
+它們目前依賴 wrapper 立即形成 Memory / Appraisal / Affect。若只刪 wrapper，下一 tick 的 capture 會在這些事件已存在的情況下重新設 marker，因此不是保證「晚一 tick 才記住」，而可能完全漏掉 generic observation。
+
+#### Tick 外 direct API
+
+Memory / Appraisal focused regression 也會直接呼叫 `E.addEvent(...)`，並立刻 assertion Memory / Appraisal。這表示 isolated harness 現在同樣具有同步 observation behavior。
+
+### 7.4 Timing 不是 API implementation detail
+
+core `tick()` 會先 `state.tick++`，再逐一執行 Agent。
+
+因此：
+
+- pre-core event 可能使用舊 tick；
+- core / afterTick event 使用新 tick；
+- `event.tick` 是 creation-time provenance。
+
+若未來 observation 改為 queue / checkpoint 後才處理，不得直接用較晚的 processing `state.tick` 偷換事件發生時間。
+
+更重要的是，**不能簡單把所有 core event 都改成立即 Memory observe**。Core Agent 在同一 tick 中依序執行；若第一個 Agent 的 lexical event 立刻觸發 Memory → Appraisal → Affect，後面的 Agent 可能讀到舊 runtime 要到 core 完成後才出現的心理 state，導致同 tick decision semantics 改變。
+
+反過來，把所有 observation 都延到 tick 尾端也不等價。Social responses 現在在 afterTick 600/700 建立後即可形成 Memory / Appraisal / Affect，而 `memoryDeliberation.correct-initial` 位於 800。
+
+### 7.5 Cleanup target
+
+下一個 integration slice 應先建立 deterministic timing regression，至少涵蓋：
 
 ```text
-sleepPropensity
-= sleepNeed
-+ circadianSleepBias
-+ 少量高 fatigue contribution
+pre-core exported event
+a core lexical event
+post-process exported event
+tick 外 direct E.addEvent
+event.tick → observedTick provenance
+same-event dedupe / one appraisal / one Affect application
 ```
 
-fatigue 不再是固定睡眠門檻。
+之後再決定正式機制。可以評估 core-owned event-created notification + controlled observation queue/checkpoint，或其他等價設計；目前 **沒有**預先決定「所有 eventCreated 都立即執行 Memory」就是答案。
 
-### Sleeping / wake
+Done condition：
 
-Sleeping phase 會降低 fatigue 與 sleepNeed；sleepEfficiency 受 surface quality 與即時噪音影響。Sleep 可因自然醒、極端口渴、極端飢餓、強烈局部噪音、maxSleepTicks 或睡眠位置失效而結束。
+- Memory 不再 `E.addEvent = ...`；
+- event creation API ownership 穩定；
+- pre/core/post/direct 四種 producer 都不漏 observation；
+- 不重複建立 memory / appraisal / Affect；
+- preserve current same-tick semantics；
+- deferred observation 保留 canonical `event.tick` provenance；
+- `privateSocialOutcome` 仍保持 requester-private 專用路徑；
+- State regression + Memory / Social Browser QA 全綠。
 
-自然醒不要求 `fatigue === 0`。醒來事件保存 fatigue、sleepNeed、sleepEfficiency、circadianBias、sleepPropensity、wakeReason。午睡與主睡眠仍共用同一個 sleep action。
+## 8. Presentation ownership
 
-## 14. Social Interaction / Sleeping Target
+### Canonical event text
 
-v11.10 的核心原則是：**interaction initiation、stimulus、wake、response 是四個不同事實。**
+Event producer 自己決定 canonical event text。UI 只能 render，不得攔截 event creator 後改字。
 
-```text
-發起者選擇 social action
-→ 走到 social interaction position
-→ 發生發起者真的做出的行為
-→ 若 target 正在 sleeping，產生 stimulus
-→ interactionWakeChance + seeded roll
-→ target 可能醒，也可能繼續睡
-→ target 是否回應由之後自己的 action 決定
-```
+### Action label
 
-### Target eligibility 依 intent 而不同
+Core 保持 `E.actionLabel` ownership。Presentation 若要補 readable status，使用具名 action-label resolver；resolver 是 derived projection，不得建立 Action / Intent / Event 或修改 simulation state。
 
-普通 `talk` 需要清醒對象。Human decision 透過 `nearestAgent(..., {allowSleeping:false})` 排除 sleeping human；若目標在路途中睡著，`stepSocial()` 會中止聊天，不會把 sleeping target 當正常對話者。
+### Recent social status
 
-`petCat` 與 cat `seekHuman` 則允許 sleeping target，因為摸睡著的貓、貓去碰睡著的人本身都是真實可發生的行為。
+`recentSocialByAgent` cache 已移除。Recent response / recent talk 由 bounded canonical events + `event.tick` 推導。
 
-### Stimulus 是 action outcome，不是 persistent state
+### Resident View / Debug Inspector
 
-目前第一版社交刺激：
+Player Resident View 與 Debug Inspector 都是同一 authoritative simulation state 的 projection。View / tab switch 必須 state-inert。
 
-```text
-petCat    → touch，intensity 18
-seekHuman → touch+sound，intensity 34
-```
+Resident View 目前仍使用 DOM shell / MutationObserver 將既有 Inspector surfaces 組成 player/debug presentation；這是獨立 presentation architecture debt，不與 Memory event-observation cleanup 混成同一 slice。
 
-它們是該次 interaction 的 structured event data，不寫入 Agent 作長期狀態。
+## 9. Spatial / resources / sleep invariants
 
-### Interaction wake chance
+### Spatial
 
-```text
-interactionWakeChance
-← stimulus intensity
-← naturalWakeDrive
-← remaining sleepNeed
-← 是否仍在 species minSleepTicks 以前
-```
+- Agent 與可定位 Object 透過 Spatial API 回答 node。
+- floor environment 由 floor surface contents 持有；家具 Surface Environment 由 Surface Cell contents 持有。
+- Interaction Geometry 依 affordance + target data 推導合法操作位置。
+- dynamic blocker / Contact / supported contact 不建立重複 location truth。
 
-高 sleepNeed、剛入睡會降低被輕刺激喚醒的機率；sleepNeed 已低、接近自然醒時，相同刺激較容易叫醒。結果使用既有 seeded RNG，因此 deterministic replay 仍成立。
+詳見 [`interaction-geometry.md`](interaction-geometry.md)。
 
-目前沒有 NREM / REM 或 persistent `sleepDepth`。Wake chance 是簡化的 derived arousal model，不是醫學級睡眠階段模型。
+### Resources / logistics
 
-### Wake != response
+- `Agent.held + Container.contents` 是搬運與資源位置的正式 truth。
+- 舊 `Agent.carrying` 不存在。
+- transfer / serving / restock / external supply 都必須遵守 physical resource conservation 與合法 Interaction Geometry。
 
-`tryWakeFromInteraction()` 只處理「刺激是否結束 sleeping」。成功喚醒仍保留 lying posture，且不自動執行 reciprocal response。
+### Sleep
 
-`petCat` 現在只描述人真的摸了貓，不再固定附加「貓靠過去蹭了幾下」。Sleeping cat 未醒時明確記錄「仍然睡著，沒有明顯回應」；即使醒來，也只是可以在下一輪自行決策。
+- `fatigue` 與 `sleepNeed` 分離。
+- circadian pattern / phase offset 是 bias，不是第二份 clock。
+- sleeping target 的 stimulus、wake、response 是不同事實。
+- wake 不自動等於 social response。
 
-Cat `seekHuman` 的喵叫與蹭碰是貓自己選擇並完成的 action，所以可直接敘述；若 human sleeping，只有真的被叫醒後才建立 `cat_request`。未醒就不會保存一個假裝已接收到的 pending request。
+## 10. Validator / regression contract
 
-目前沒有 `selfTalk / mutter`。若未來加入，自言自語應是獨立 action，不能把普通 `talk` 對 sleeping target 當成 fallback。
+Validator 是 pure invariant checker，不應修補 state 或改 Engine API。
 
-## 15. Carry Load
+Regression 優先鎖：
 
-```text
-resourceLoad = amount × Resource.loadPerUnit
-containerLoad = emptyLoad + Σ(contents load)
-effectiveCarryLoad = held Container load
-```
+- Single Source of Truth；
+- World / Agent-private / Observed Information boundary；
+- canonical Action terminology / construction；
+- Intent interruption semantics；
+- Social Bid requester / responder agency；
+- event / memory provenance；
+- bounded Memory / retention；
+- Appraisal historical stability；
+- Affect provenance；
+- runtime hook ordering；
+- state-inert presentation；
+- deterministic long-run Validator 0。
 
-沒有 `Agent.carrying` 或 `currentLoad` cache。負重影響 movement exertion，再透過既有 exertion model 影響 fatigue / thirst / hunger。
+對 emergent behavior，不用「最後必須固定做某個 Action」代替 causal invariant。Focused causal story / counterfactual A/B 應只改目標變數，鎖住真正的因果差異。
 
-## 16. Event / Inspector contract
+## 11. Current integration priority
 
-事件 `data.entities` 保存 structured refs：`agent / container / source / furniture / slot`。UI 的最近相關事件只讀 refs，不解析自然語言猜關聯。
+目前最高優先度的架構整合債是 **Memory event observation / event-created lifecycle contract**。
 
-Sleep wake event 保存 `wakeReason / sleepNeed / fatigue / sleepEfficiency / circadianBias / sleepPropensity`。
+在完成 timing regression 與正式 event observation ownership 前，不要：
 
-v11.10 的 sleeping-social disturbance event 另外保存：
+- 直接刪除 Memory `E.addEvent` wrapper；
+- 把所有 core event 改成立即 psychological observation；
+- 把所有 observation 無條件延到 tick 尾端；
+- 把 `privateSocialOutcome` 混入 generic observable-event memory；
+- 順手重寫 Resident View DOM architecture；
+- 順手把 Current Affect / Relationship / Memory 接進 responder scoring。
 
-```text
-stimulusIntensity
-stimulusKind
-wakeChance
-wakeRoll
-```
-
-如果 interaction 真正喚醒 target，`sleepWake.causeIds` 會包含造成喚醒的 contact event，因此可追蹤 `接觸 → 喚醒` 因果鏈。
-
-Agent Inspector 顯示 sleepNeed、effective circadian pattern、phase offset、circadian bias 與 sleep propensity。快速 card 的「睡意」只是 `needs.sleepNeed` 的短標籤，不是第二份 UI state。
-
-## 17. Architectural regression
-
-CI 直接禁止 Engine 綁定目前世界 entity ID、`Agent.carrying`／`carriedResourceLoad()`／`supply.workerId` 回流、Validator mutation、World entity-ID blocker skip list、舊 `planLabel` 與 wrapper/enhancer module 回流。
-
-Logistics regression 驗證物資守恆、reservation 排他、中斷清理、carrier 位置與實際負重。
-
-Sleep pressure regression 驗證 species circadian default / override、rest 不清 sleepNeed、高 fatigue/低 sleepNeed 選 rest、低 fatigue/高 sleepNeed 可 sleep、自然醒可殘留 fatigue、口渴／噪音喚醒與 sleeping 降低 sleepNeed。
-
-Social / sleep interaction regression 額外驗證：
-
-- ordinary talk 不把 sleeping human 列為候選；
-- 輕摸高 sleepNeed、剛入睡的 cat 可完全不喚醒；
-- `petCat` 不再固定宣告 reciprocal rub；
-- sleeping cat 未醒時保留 sleep action並留下 no-response + wake chance / roll event；
-- cat 可打擾 sleeping human，但未叫醒時不能建立 `cat_request`；
-- 真正喚醒時 contact event 會成為 sleepWake cause；
-- awake cat 被摸也不由 `petCat` action 虛構回蹭。
-
-## 18. 目前未做
-
-v11.10 完成的是「sleep pressure + circadian + sleeping social stimulus / wake / response separation」。尚未加入：
-
-- 睡眠階段（NREM / REM）或醫學級 sleep architecture；
-- persistent sleepDepth / arousal state；
-- 長期 sleep debt、跨多日慢性睡眠不足後果；
-- daylight / lighting 對 circadian phase 的真實 entrainment；
-- 鬧鐘、工作行程、社會時鐘；
-- Agent chronotype 自動學習或隨環境逐日漂移；
-- 睡眠不足對 coordination / mood / cognition 的獨立長期作用；
-- 一般化 personality-driven response matrix（接受摸觸、閃避、回蹭等尚未成為完整 response system）；
-- `selfTalk / mutter`；
-- 多手／inventory／同時持有多個容器；
-- 推車等不屬於手持 `Agent.held` 的 hauling mode；
-- Container durability、破損、固體掉落；
-- carrier 類型偏好、容量需求預估與多趟工作排程；
-- storage ownership / personal inventory。
-
-Sleep 後續擴充應延伸 `SPECIES_PROFILES`、Agent sleep traits 與 derived wake/sleep functions；social response 應建立在 target 自己的 action / response 決策，不把結果寫死在 initiator narrative；物流則繼續擴充 Container / hauling capability，不重新建立平行 state。
+這些是不同 contract，應分開驗證與合併。
