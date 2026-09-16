@@ -23,11 +23,6 @@
     if(!resourceExists(st,r))return false;
     return Object.values(st.containers||{}).some(c=>c.portable&&c.canDrinkFrom&&(!E.holderOf?.(c.id)||E.holderOf(c.id)?.id===a.id));
   }
-  function sleepCandidateUtility(st,a){
-    const p=E.sleepProfile?.(a),need=a.needs?.sleepNeed||0,bias=E.circadianSleepBias?.(a,st.minute)||0,propensity=E.sleepPropensity?.(a,st.minute)??need;
-    if(!p||!SP.sleepTargets?.(st,a)?.length||need<p.minimumSleepNeed||propensity<p.sleepOpportunityThreshold)return null;
-    return 42+need*.55+Math.max(-8,bias*.55)+Math.max(0,(a.needs?.fatigue||0)-65)*.15;
-  }
   function currentBidUtility(st,a,intent){
     if(intent?.kind==='respondSocialBid'){
       const bid=E.bidEvent?.(st,intent.source?.bidId);if(!bid||bid.data?.bidTo!==a.id)return 0;
@@ -36,21 +31,24 @@
     if(intent?.kind==='awaitResponse')return 52;
     return null;
   }
+  function canonicalBaseUtility(a,actionKindValue){
+    if(typeof E.baseUtilityForAction!=='function')throw new Error('Soft reconsideration requires core baseUtilityForAction');
+    return E.baseUtilityForAction(a,actionKindValue);
+  }
   function utilityForIntent(st,a,intentKind,{intent=null}={}){
     const bidValue=currentBidUtility(st,a,intent||{kind:intentKind});if(bidValue!=null)return bidValue;
-    const n=a.needs||{},traits=a.traits||{};
     switch(intentKind){
-      case'satisfyHunger':return foodAmount(st)>.05?n.hunger*1.08+12:0;
-      case'drinkWater':return (a.kind==='cat'?!!drinkableContainer(st,a,'water'):hasHumanDrinkPlan(st,a,'water'))?n.thirst*1.18+10:0;
-      case'drinkAlcohol':return a.kind==='human'&&hasHumanDrinkPlan(st,a,'alcohol')?n.thirst*.42+(traits.alcoholLike||0)*34+(a.status?.intoxication<35?6:-18):0;
-      case'recoverFatigue':return Math.max(0,Math.min(n.fatigue||0,68)-18)*1.25+9;
-      case'sleep':return sleepCandidateUtility(st,a)||0;
-      case'socialize':return a.kind==='human'&&nearestAgent(st,a,'human',{awakeOnly:true})?Math.max(0,(n.social||0)-18)*.9+(traits.social||0)*16:0;
-      case'interactWithCat':return a.kind==='human'&&nearestAgent(st,a,'cat')?8+(traits.animalAffinity||0)*18+(n.social||0)*.18:0;
-      case'seekSocialContact':return a.kind==='cat'&&(n.social||0)>14&&nearestAgent(st,a,'human')?Math.max(0,(n.social||0)-10)*.95+(traits.social||0)*18:0;
-      case'removeHazard':{const wet=wetTotal(st);return wet>.2?15+wet*.9+(a.wellbeing?.safety||0)*.08:0;}
-      case'groom':return a.kind==='cat'?(n.groomingNeed||0)*.83+Object.values(a.contacts?.paws||{}).reduce((x,y)=>x+y,0)*.9+18:0;
-      case'explore':return a.kind==='cat'?20+(traits.curious||0)*25:10;
+      case'satisfyHunger':return foodAmount(st)>.05?canonicalBaseUtility(a,'eat'):0;
+      case'drinkWater':return (a.kind==='cat'?!!drinkableContainer(st,a,'water'):hasHumanDrinkPlan(st,a,'water'))?canonicalBaseUtility(a,'drinkWater'):0;
+      case'drinkAlcohol':return a.kind==='human'&&hasHumanDrinkPlan(st,a,'alcohol')?canonicalBaseUtility(a,'drinkAlcohol'):0;
+      case'recoverFatigue':return canonicalBaseUtility(a,'rest');
+      case'sleep':return canonicalBaseUtility(a,'sleep');
+      case'socialize':return a.kind==='human'&&nearestAgent(st,a,'human',{awakeOnly:true})?canonicalBaseUtility(a,'talk'):0;
+      case'interactWithCat':return a.kind==='human'&&nearestAgent(st,a,'cat')?canonicalBaseUtility(a,'petCat'):0;
+      case'seekSocialContact':return a.kind==='cat'&&(a.needs?.social||0)>14&&nearestAgent(st,a,'human')?canonicalBaseUtility(a,'seekHuman'):0;
+      case'removeHazard':return wetTotal(st)>.2?canonicalBaseUtility(a,'cleanFloor'):0;
+      case'groom':return a.kind==='cat'?canonicalBaseUtility(a,'groom'):0;
+      case'explore':return canonicalBaseUtility(a,'wander');
       default:return 0;
     }
   }
