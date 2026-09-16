@@ -107,7 +107,7 @@ def strictize_runtime_file(path):
         f"{body}"
     )
     text=text[:start]+replacement+text[else_end:]
-    forbidden=re.compile(r'\bE\.(?:tick|reset|onEpisodicMemoryCreated)\s*=')
+    forbidden=re.compile(r'\bE\.(?:tick|reset|onEpisodicMemoryCreated)\s*=(?!=)')
     if forbidden.search(text): raise SystemExit(f'{path}: lifecycle method assignment remains after fallback removal')
     for token in ('baseTick','baseReset','priorMemoryCreatedHook','baseMemoryHook'):
         if token in text: raise SystemExit(f'{path}: legacy wrapper token remains: {token}')
@@ -151,7 +151,7 @@ const hookSourceFiles=fs.readdirSync(srcDir).filter(name=>name.endsWith('.js')&&
 assert.ok(hookSourceFiles.length>0,'architecture guard must discover runtime hook extensions');
 for(const name of hookSourceFiles){
   const source=fs.readFileSync(new URL(name,srcDir),'utf8');
-  assert.ok(!/\bE\.(?:tick|reset|onEpisodicMemoryCreated)\s*=/.test(source),`${name} must not own a no-pipeline lifecycle wrapper`);
+  assert.ok(!/\bE\.(?:tick|reset|onEpisodicMemoryCreated)\s*=(?!=)/.test(source),`${name} must not own a no-pipeline lifecycle wrapper`);
   assert.ok(source.includes(`if(!E.registerRuntimeHook)throw new Error('${name} requires runtime-hook-pipeline.js');`),`${name} must fail loudly when the production pipeline is missing`);
 }
 for(const testName of fs.readdirSync(testsDir).filter(name=>name.endsWith('.mjs')&&!name.startsWith('browser-'))){
