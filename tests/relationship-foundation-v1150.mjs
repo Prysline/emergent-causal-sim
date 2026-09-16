@@ -87,7 +87,8 @@ noIssues('private no-response relationship boundary');
 
 // Proposal-only and unrelated episodes are not audited relationship evidence even when they have an appraisal.
 E.reset(11505);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;requester.position={x:5,y:5};responder.position={x:5,y:6};calm(requester);calm(responder);st.agents.orange.offMap=true;
-const offerId=E.addEvent('測試聊天邀請','normal',[],{actor:'zhen',target:'zhou',action:'talkOffer',socialBid:true,bidKind:'talkOffer',bidFrom:'zhen',bidTo:'zhou',perceivedByTarget:true,position:E.positionRef(requester.position)});
+const offerId=E.addEvent('測試聊天邀請','normal',[],{actor:'zhen',target:'zhou',action:'talkOffer',socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:'zhen',bidTo:'zhou',perceivedByTarget:true,position:E.positionRef(requester.position)});
+st.causes[offerId].data.bidId=offerId;
 assert.ok(requester.episodicMemories.some(m=>m.sourceEventId===offerId)&&responder.episodicMemories.some(m=>m.sourceEventId===offerId),'proposal can still be episodic memory');
 assert.equal(relation(requester,'zhou'),null);assert.equal(relation(responder,'zhen'),null);
 const spillId=E.addEvent('測試打翻','normal',[],{actor:'zhou',action:'spill',position:E.positionRef(responder.position)});
