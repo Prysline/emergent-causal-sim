@@ -3,21 +3,22 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.14.4-entity-readable-view';
+const CURRENT_VERSION='11.15.0-relationship-foundation';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
-  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js',
+  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js',
   'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
-  'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','affect-runtime-v1132.js','social-response-runtime-v1132a.js','memory-retention-runtime-v1133.js','human-social-response-runtime-v1133a.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
-  'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js'
+  'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','relationship-runtime-v1150.js','affect-runtime-v1132.js','social-response-runtime-v1132a.js','memory-retention-runtime-v1133.js','human-social-response-runtime-v1133a.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
+  'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js'
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
-E.reset(11404);
+E.reset(11500);
 let st=E.getState();
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
 const uiObservabilitySource=fs.readFileSync(new URL('../src/ui-observability-controls-v1133a.js',import.meta.url),'utf8');
 assert.doesNotMatch(uiObservabilitySource,/E\.addEvent\s*=/,'UI observability must not replace addEvent');
@@ -51,6 +52,17 @@ assert.doesNotMatch(residentUiSource,/飢餓感已經變得明顯|活動疲勞�
 assert.match(residentUiSource,/data-v1140-player-explanation/,'trusted explanation must render only as a Resident presentation element');
 assert.doesNotMatch(residentUiSource,/\.(?:currentReason|actionExplanation|playerStory|causalTrace)\s*=/,'Resident View must not persist explanation or causal-trace mirror state');
 
+const relationshipSource=fs.readFileSync(new URL('../src/relationship-runtime-v1150.js',import.meta.url),'utf8');
+assert.match(relationshipSource,/relationship\.consolidate/,'Relationship must consolidate from the episodic-memory lifecycle');
+assert.match(relationshipSource,/order:350|,350\)/,'Relationship consolidation must happen after specialized appraisal and before Affect');
+assert.match(relationshipSource,/acceptTalk:\{roles:new Set\(\['target'\]\)\}/,'full Human conversation requester evidence must come from acceptTalk rather than double-counting talk');
+assert.match(relationshipSource,/talk:\{roles:new Set\(\['target'\]\)\}/,'full Human conversation responder evidence must come from the completed talk outcome');
+assert.doesNotMatch(relationshipSource,/trust|friendshipScore|love|hate/,'Relationship Foundation must not smuggle unsupported semantic dimensions into runtime policy');
+const relationshipUiSource=fs.readFileSync(new URL('../src/ui-relationship-v1150.js',import.meta.url),'utf8');
+assert.match(relationshipUiSource,/registerInspectorDecorator\('relationship\.view',decorateInspector,1025\)/,'Relationship UI must use explicit Inspector lifecycle after Resident and before Entity readable layers');
+assert.match(relationshipUiSource,/熟悉不等於喜歡/,'player-readable relationship copy must preserve familiarity/affinity semantic separation');
+assert.doesNotMatch(relationshipUiSource,/\.relationships\s*=/,'Relationship UI must remain a read-only projection');
+
 const entityUiSource=fs.readFileSync(new URL('../src/ui-entity-readable-v1141.js',import.meta.url),'utf8');
 assert.match(entityUiSource,/const VERSION=W\.PRESENTATION_SCHEMA_VERSION;/,'Entity Readable View must inherit the canonical current runtime marker');
 assert.match(entityUiSource,/new Set\(\['container','source','furniture','tile','room','event'\]\)/,'Entity Readable View must explicitly cover all current non-agent Inspector entity types');
@@ -62,27 +74,32 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.14\.4・Entity Readable View/,'app shell must expose the current short version and feature label');
-assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must no longer imply that only residents have a readable view');
-assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must load the non-agent readable entity layer');
+assert.match(indexSource,/v11\.15\.0・Relationship Foundation/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
+assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
+assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load Relationship runtime');
+assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
+assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must keep the non-agent readable entity layer');
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
-assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must record the generalized readable entity boundary');
+assert.match(readmeSource,/Relationship Foundation/,'README must document the new long-term dyadic state');
+assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must retain the generalized readable entity boundary');
 assert.match(readmeSource,/slot reservation/,'README must document the reservation/debug privacy boundary');
 const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
 assert.ok(architectureSource.includes(CURRENT_VERSION),'architecture current runtime marker must match the canonical version');
 assert.match(architectureSource,/Action＝角色現在具體在做什麼/,'Architecture must define the Resident Action layer');
 assert.match(architectureSource,/Intent＝這個行動服務的短期目的/,'Architecture must define the Resident Intent layer');
-assert.match(architectureSource,/Explanation＝為什麼此刻選這個行動/,'Architecture must define the Resident Explanation layer');
+assert.match(architectureSource,/Explanation＝為什麼此刻選擇這個行動/,'Architecture must define the Resident Explanation layer');
 assert.match(architectureSource,/Explanation wording 優先自然直接/,'Architecture must record the natural player explanation wording contract');
 assert.match(architectureSource,/Entity Readable View/,'Architecture must define the generalized player-readable entity surface');
+assert.match(architectureSource,/Relationship Foundation/,'Architecture must define Relationship ownership and truth boundaries');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
 const explicitInspectorDecoratorFiles=[
   'ui-intent-v1121.js','ui-memory-v1130.js','ui-appraisal-v1131.js','ui-affect-v1132.js',
   'ui-memory-retention-v1133.js','ui-memory-deliberation-v1134.js','ui-social-outcome-memory-v1135.js',
-  'ui-spatial-environment.js','ui-resident-view-v1140.js','ui-entity-readable-v1141.js'
+  'ui-spatial-environment.js','ui-resident-view-v1140.js','ui-relationship-v1150.js','ui-entity-readable-v1141.js'
 ];
 for(const file of explicitInspectorDecoratorFiles){
   const source=fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8');
@@ -100,8 +117,8 @@ assert.equal(E.actionLabel({id:'qa-probe',action:null}),'QA presentation label')
 assert.equal(E.actionLabel,E.CORE_ACTION_LABEL,'registering a resolver must not replace core actionLabel');
 assert.throws(()=>E.registerActionLabelResolver('qa.presentation-label',()=>null,20),/duplicate action label resolver/);
 
-const forbiddenState=['residentView','playerSummary','debugInspectorMode','presentationState','playerFacingState','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','playerContents','readableFurnitureState'];
-const forbiddenAgent=['residentView','playerSummary','moodLabel','relationshipLabel','debugMode','presentation','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView'];
+const forbiddenState=['residentView','playerSummary','debugInspectorMode','presentationState','playerFacingState','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','playerContents','readableFurnitureState','pairRelationships','relationshipRegistry'];
+const forbiddenAgent=['residentView','playerSummary','moodLabel','relationshipLabel','debugMode','presentation','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','friendshipScore','relationshipScore'];
 for(const key of forbiddenState)assert.equal(Object.prototype.hasOwnProperty.call(st,key),false,`state persisted presentation field ${key}`);
 for(const a of Object.values(st.agents))for(const key of forbiddenAgent)assert.equal(Object.prototype.hasOwnProperty.call(a,key),false,`${a.id} persisted presentation field ${key}`);
 assert.equal(V.validateState(st).issueCount,0);
@@ -114,4 +131,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.14.4 presentation observability + entity readable view regression: ok');
+console.log('v11.15.0 presentation observability + relationship foundation regression: ok');
