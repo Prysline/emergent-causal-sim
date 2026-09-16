@@ -317,11 +317,32 @@ Core 保持 `E.actionLabel` ownership。Presentation 若要補 readable status�
 
 `recentSocialByAgent` cache 已移除。Recent response / recent talk 由 bounded canonical events + `event.tick` 推導。
 
-### Resident View / Debug Inspector
+### Inspector render / decorator lifecycle
 
 Player Resident View 與 Debug Inspector 都是同一 authoritative simulation state 的 projection。View / tab switch 必須 state-inert。
 
-Resident View 目前仍使用 DOM shell / MutationObserver 將既有 Inspector surfaces 組成 player/debug presentation；這是獨立 presentation architecture debt，不與 event-observation lifecycle 混成同一 slice。
+Base `ui.js` 是 `#inspector` 的唯一 render owner。它先提交 base Inspector DOM，再同步執行 `window.SimUI.registerInspectorDecorator(id, handler, order)` 註冊的 presentation decorators；decorator 不得以 `MutationObserver` 或 catch-all document click 猜測 Inspector 何時重畫完成。
+
+現行 presentation-only decorator order：
+
+```text
+100  Spatial Observability
+200  Spatial Environment
+300  Active Intent
+400  Episodic Memory
+500  Historical Appraisal
+600  Current Affect
+700  Memory Retention
+800  Memory → Deliberation
+900  Requester Social Outcome Memory
+1000 Resident View / Debug Layer
+```
+
+這些數字只表示 **Inspector composition order**，不是 simulation Runtime Hook Pipeline 的 phase/order；Architecture 圖仍應以 lifecycle responsibility 描述，不把 UI section 名稱提升為 simulation stage。
+
+Resident View 是最後一層 presentation decorator：它直接接收 base UI 傳入的 selected entity context，將已完成 decorators 的 Debug Inspector 包入 Resident/Debug shell，不再解析 `.inspect-title` 找 Agent，也不再以 `MutationObserver` 搬運重建後的 DOM。afterTick 1100 `residentView.schedule` / afterReset 700 `residentView.reset` 仍只負責 presentation refresh/reset，不取得 simulation lifecycle ownership。
+
+`ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
 
 ## 9. Spatial / resources / sleep invariants
 
@@ -373,9 +394,13 @@ Regression 優先鎖：
 
 Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂。後續不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。
 
-下一個仍明確存在、但與本次 simulation lifecycle 分離的 architecture debt 是 **Resident View / Debug Inspector 的 DOM shell / MutationObserver presentation coupling**。處理它時應維持：
+Resident View / Debug Inspector 原本的 DOM shell / MutationObserver coupling 已由 explicit Inspector render/decorator lifecycle 收斂。Current invariant：
 
-- simulation truth / lifecycle 不變；
-- Resident / Debug 仍是同一 authoritative state 的 projection；
-- 不把 presentation state 寫回 canonical simulation state；
-- 不順手改 responder scoring、Relationship、Memory influence 或 gameplay policy。
+- `ui.js` 是 Inspector base render owner；extension 只註冊具名 presentation decorator；
+- Inspector decorator order 必須 deterministic，且不依賴 script observer race / DOM title parsing；
+- Resident / Debug 仍是同一 authoritative state 的 projection，mode/tab switch 必須 state-inert；
+- presentation state 不得寫回 canonical simulation state；
+- map/actions 等其他 derived DOM observer 不得重新擴張成 Inspector ownership；
+- 本次 cleanup 不改 responder scoring、Relationship、Memory influence 或 gameplay policy。
+
+此 presentation debt 完成後，不在本文件提前指定下一個產品／玩法 slice；後續工作應重新以 Current Integration Debt 與 subsystem Active Design 為準。

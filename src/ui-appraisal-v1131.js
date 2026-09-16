@@ -19,10 +19,9 @@
     return f.kind;
   };
 
-  function decorateInspector(){
-    const host=document.getElementById('inspector');if(!host||host.querySelector('[data-v1131-appraisal]'))return;
-    const meta=[...host.querySelectorAll('.inspect-title small')].find(x=>x.textContent?.startsWith('Agent・'));if(!meta)return;
-    const id=meta.textContent.slice('Agent・'.length),st=E.getState(),a=st?.agents?.[id];if(!a)return;
+  function decorateInspector({host,selected,state:st}){
+    if(!host||host.querySelector('[data-v1131-appraisal]')||selected?.type!=='agent')return;
+    const id=selected.id,a=st?.agents?.[id];if(!a)return;
     const memories=(a.episodicMemories||[]).filter(m=>m.appraisal).slice().reverse().slice(0,6);
     const rows=memories.length?memories.map(m=>{
       const p=m.appraisal,factors=(p.factors||[]).map(factorLabel).join('・')||'—';
@@ -33,8 +32,7 @@
     const memory=host.querySelector('[data-v1130-memory]');if(memory)memory.after(section);else{const intent=host.querySelector('[data-v1121-intent]');if(intent)intent.after(section);else host.append(section);}
   }
 
-  const host=document.getElementById('inspector');
-  if(host)new MutationObserver(()=>queueMicrotask(decorateInspector)).observe(host,{childList:true,subtree:false});
-  document.addEventListener('click',()=>queueMicrotask(decorateInspector));
-  queueMicrotask(decorateInspector);
+  const UI=window.SimUI;
+  if(!UI?.registerInspectorDecorator)throw new Error('appraisal.historical requires inspector decorator lifecycle');
+  UI.registerInspectorDecorator('appraisal.historical',decorateInspector,500);
 })();

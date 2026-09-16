@@ -5,10 +5,9 @@
   const signed=v=>`${v>0?'+':''}${Number(v||0).toFixed(2)}`;
   const decayText=()=>`valence ×${E.AFFECT_DECAY.valence.toFixed(2)}・activation ×${E.AFFECT_DECAY.activation.toFixed(2)}・frustration ×${E.AFFECT_DECAY.frustration.toFixed(2)} / tick`;
 
-  function decorateInspector(){
-    const host=document.getElementById('inspector');if(!host||host.querySelector('[data-v1132-affect]'))return;
-    const meta=[...host.querySelectorAll('.inspect-title small')].find(x=>x.textContent?.startsWith('Agent・'));if(!meta)return;
-    const id=meta.textContent.slice('Agent・'.length),st=E.getState(),a=st?.agents?.[id];if(!a?.affect)return;
+  function decorateInspector({host,selected,state:st}){
+    if(!host||host.querySelector('[data-v1132-affect]')||selected?.type!=='agent')return;
+    const id=selected.id,a=st?.agents?.[id];if(!a?.affect)return;
     const f=a.affect,s=f.source||null;
     const source=s?`${esc(s.sourceEventId)}・${esc(s.memoryId)}`:'目前沒有 active source';
     const section=document.createElement('div');section.className='inspect-section';section.dataset.v1132Affect='';
@@ -16,8 +15,7 @@
     const appraisal=host.querySelector('[data-v1131-appraisal]');if(appraisal)appraisal.after(section);else host.append(section);
   }
 
-  const host=document.getElementById('inspector');
-  if(host)new MutationObserver(()=>queueMicrotask(decorateInspector)).observe(host,{childList:true,subtree:false});
-  document.addEventListener('click',()=>queueMicrotask(decorateInspector));
-  queueMicrotask(decorateInspector);
+  const UI=window.SimUI;
+  if(!UI?.registerInspectorDecorator)throw new Error('affect.current requires inspector decorator lifecycle');
+  UI.registerInspectorDecorator('affect.current',decorateInspector,600);
 })();

@@ -36,7 +36,8 @@ async function snapshot(){
       affectLabels:{neutral:E.residentAffectLabel({valence:0,activation:0,frustration:0}),frustrated:E.residentAffectLabel({valence:-.1,activation:.2,frustration:.6})},
       width:innerWidth,docWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,
       inspectorActive:document.querySelector('[data-view="inspector"]')?.classList.contains('mobile-active')??false,
-      navActive:document.querySelector('.mobile-nav [data-tab="inspector"]')?.classList.contains('active')??false
+      navActive:document.querySelector('.mobile-nav [data-tab="inspector"]')?.classList.contains('active')??false,
+      inspectorDecorators:window.SimUI?.listInspectorDecorators?.()??[]
     };
   });
 }
@@ -45,6 +46,18 @@ await openStory();
 let desktop=await snapshot();
 assert.equal(desktop.version,'11.14.0-player-resident-view-debug-inspector');
 assert.equal(desktop.uiVersion,'11.14.0-player-resident-view-debug-inspector');
+assert.deepEqual(desktop.inspectorDecorators,[
+  {id:'spatial.observability',order:100},
+  {id:'spatial.environment',order:200},
+  {id:'intent.active',order:300},
+  {id:'memory.episodic',order:400},
+  {id:'appraisal.historical',order:500},
+  {id:'affect.current',order:600},
+  {id:'memory.retention',order:700},
+  {id:'memory.deliberation',order:800},
+  {id:'socialOutcome.memory',order:900},
+  {id:'residentView.layer',order:1000}
+],'Inspector presentation ownership must be explicit and deterministically ordered');
 assert.equal(desktop.activeMode,'resident','desktop: Agent should open Resident View by default');
 assert.equal(desktop.residentVisible,true);
 assert.equal(desktop.debugVisible,false);
@@ -70,6 +83,17 @@ assert.equal(debug.residentVisible,false);
 assert.ok(debug.debugText.includes('Agent・zhou'),'Debug must retain original Inspector identity');
 assert.ok(debug.debugText.includes('Memory → Deliberation'),'Debug must retain advanced deliberation evidence');
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
+const debugOwnership=await page.evaluate(()=>({
+  roots:document.querySelectorAll('[data-v1140-resident-root]').length,
+  intent:document.querySelectorAll('[data-v1121-intent]').length,
+  memory:document.querySelectorAll('[data-v1130-memory]').length,
+  appraisal:document.querySelectorAll('[data-v1131-appraisal]').length,
+  affect:document.querySelectorAll('[data-v1132-affect]').length,
+  retention:document.querySelectorAll('[data-v1133-retention]').length,
+  deliberation:document.querySelectorAll('[data-v1134-memory-deliberation]').length,
+  socialOutcome:document.querySelectorAll('[data-v1135-social-outcome-memory]').length
+}));
+assert.deepEqual(debugOwnership,{roots:1,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1},'each Inspector layer must render exactly once');
 
 await page.click('[data-v1140-mode="resident"]');
 await page.click('[data-v1140-tab="memory"]');

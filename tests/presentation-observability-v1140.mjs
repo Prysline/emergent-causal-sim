@@ -24,6 +24,22 @@ assert.doesNotMatch(uiObservabilitySource,/E\.actionLabel\s*=/,'UI observability
 assert.doesNotMatch(uiObservabilitySource,/recentSocialByAgent/,'UI observability must not maintain a recent-social lifecycle cache');
 assert.equal(E.actionLabel,E.CORE_ACTION_LABEL,'core actionLabel ownership must remain stable before UI resolver registration');
 assert.deepEqual(E.listActionLabelResolvers(),[],'headless simulation should start without presentation label resolvers');
+
+const baseUiSource=fs.readFileSync(new URL('../src/ui.js',import.meta.url),'utf8');
+assert.match(baseUiSource,/registerInspectorDecorator/,'base UI must own explicit Inspector decorator lifecycle');
+const explicitInspectorDecoratorFiles=[
+  'ui-intent-v1121.js','ui-memory-v1130.js','ui-appraisal-v1131.js','ui-affect-v1132.js',
+  'ui-memory-retention-v1133.js','ui-memory-deliberation-v1134.js','ui-social-outcome-memory-v1135.js',
+  'ui-spatial-environment.js','ui-resident-view-v1140.js'
+];
+for(const file of explicitInspectorDecoratorFiles){
+  const source=fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8');
+  assert.match(source,/registerInspectorDecorator/,`${file} must use explicit Inspector lifecycle`);
+  assert.doesNotMatch(source,/new MutationObserver/,`${file} must not infer Inspector render completion from MutationObserver`);
+}
+const spatialUiSource=fs.readFileSync(new URL('../src/ui-spatial-observability.js',import.meta.url),'utf8');
+assert.match(spatialUiSource,/registerInspectorDecorator\('spatial\.observability'/,'spatial Inspector must use explicit decorator lifecycle');
+assert.doesNotMatch(spatialUiSource,/\['inspector','map','actions'\]/,'spatial DOM observer must no longer own Inspector rendering');
 const probeEventId=E.addEvent('presentation event tick probe','system',[],{action:'presentationProbe'});
 assert.equal(st.causes[probeEventId]?.tick,st.tick,'canonical events must preserve creation tick for derived presentation recency');
 E.registerActionLabelResolver('qa.presentation-label',(state,a)=>a?.id==='qa-probe'?'QA presentation label':null,10);

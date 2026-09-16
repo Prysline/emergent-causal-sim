@@ -3,10 +3,9 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>Number.isFinite(v)?Math.round(v*10)/10:'—';
 
-  function decorateInspector(){
-    const host=document.getElementById('inspector');if(!host||host.querySelector('[data-v1121-intent]'))return;
-    const meta=[...host.querySelectorAll('.inspect-title small')].find(x=>x.textContent?.startsWith('Agent・'));if(!meta)return;
-    const id=meta.textContent.slice('Agent・'.length),st=E.getState(),a=st?.agents?.[id];if(!a)return;
+  function decorateInspector({host,selected,state:st}){
+    if(!host||host.querySelector('[data-v1121-intent]')||selected?.type!=='agent')return;
+    const id=selected.id,a=st?.agents?.[id];if(!a)return;
     const intent=a.activeIntent,action=a.action,soft=E.reconsiderationSnapshot?.(st,a);
     const source=intent?.source?.type==='deliberation'?`自主決策・Tick ${intent.source.tick}`:intent?.source?.type==='softReconsideration'?`Soft reconsideration・Tick ${intent.source.tick}`:intent?.source?.type||'未知';
     const softState=!soft?'未啟用':soft.ok?'可重新評估':soft.reason==='minimum-hold'?`最短承諾中・剩 ${soft.holdRemaining} tick`:soft.reason==='protected-action'?'目前流程受保護':soft.reason==='emergency-priority'?'交由 Emergency preemption':'目前不重新評估';
@@ -16,8 +15,7 @@
     const first=host.querySelector('.inspect-section');if(first)first.after(section);else host.append(section);
   }
 
-  const host=document.getElementById('inspector');
-  if(host)new MutationObserver(()=>queueMicrotask(decorateInspector)).observe(host,{childList:true,subtree:false});
-  document.addEventListener('click',()=>queueMicrotask(decorateInspector));
-  queueMicrotask(decorateInspector);
+  const UI=window.SimUI;
+  if(!UI?.registerInspectorDecorator)throw new Error('intent.active requires inspector decorator lifecycle');
+  UI.registerInspectorDecorator('intent.active',decorateInspector,300);
 })();
