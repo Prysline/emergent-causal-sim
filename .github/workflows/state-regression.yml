@@ -41,6 +41,7 @@ jobs:
       - run: node tests/episodic-memory-foundation.mjs
       - run: node tests/event-appraisal.mjs
       - run: node tests/short-lived-affect.mjs
+      - run: node tests/memory-event-observation-timing.mjs
       - run: node tests/social-response-agency.mjs
       - run: node tests/memory-salience-pruning.mjs
       - run: node tests/human-social-response-agency.mjs
