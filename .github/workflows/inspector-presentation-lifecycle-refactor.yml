@@ -21,7 +21,9 @@ jobs:
         with:
           node-version: 22
       - name: Apply deterministic refactor
-        run: python3 .github/scripts/inspector_lifecycle_refactor.py
+        run: |
+          sed -i "s/'intent.active', 300, True/'intent.active', 300, False/" .github/scripts/inspector_lifecycle_refactor.py
+          python3 .github/scripts/inspector_lifecycle_refactor.py
       - name: Syntax and source regression
         run: |
           for f in src/ui.js src/ui-spatial-observability.js src/ui-spatial-environment.js src/ui-intent-v1121.js src/ui-memory-v1130.js src/ui-appraisal-v1131.js src/ui-affect-v1132.js src/ui-memory-retention-v1133.js src/ui-memory-deliberation-v1134.js src/ui-social-outcome-memory-v1135.js src/ui-resident-view-v1140.js; do node --check "$f"; done
