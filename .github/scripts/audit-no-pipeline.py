@@ -5,7 +5,7 @@ root=Path('.')
 src_dir=root/'src'
 tests_dir=root/'tests'
 
-assign_re=re.compile(r'\bE\.(tick|reset|onEpisodicMemoryCreated)\s*=')
+assign_re=re.compile(r'\bE\.(tick|reset|onEpisodicMemoryCreated)\s*=(?!=)')
 base_re=re.compile(r'\bbase(?:Tick|Reset|MemoryHook)\b')
 
 fallback_files=[]
