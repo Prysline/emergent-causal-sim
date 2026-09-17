@@ -55,12 +55,14 @@ near(positive.targetPreference-neutral.targetPreference,3.2);
 assert.equal(positive.finalUtility,neutral.finalUtility,'Relationship target preference must not increase the action-level utility');
 assert.equal(positive.memoryUtilityDelta,neutral.memoryUtilityDelta,'Relationship must not mutate Memory influence');
 
-// Equal-distance targets: long-term Relationship may reorder who is chosen without changing action utility.
-const mei=clone(target);mei.id='mei';mei.name='阿梅';mei.position={x:6,y:5};mei.action=null;mei.activeIntent=null;mei.relationships={};mei.episodicMemories=[];st.agents.mei=mei;
+// Spatially identical targets: Relationship is the only changed cause and may reorder who is chosen without changing action utility.
+const mei=clone(target);mei.id='mei';mei.name='阿梅';mei.position={...target.position};mei.action=null;mei.activeIntent=null;mei.relationships={};mei.episodicMemories=[];st.agents.mei=mei;
 actor.relationships={mei:{familiarity:.8,affinity:.5,lastUpdatedTick:st.tick}};
 const ranked=E.targetEvaluations(st,actor,'socialize',base);
+const meiEval=ranked.find(e=>e.targetAgent==='mei'),zhouEval=ranked.find(e=>e.targetAgent==='zhou');
+assert.ok(meiEval&&zhouEval,'both counterfactual targets must remain eligible');
+assert.equal(meiEval.pathDistance,zhouEval.pathDistance,'counterfactual target distances must be identical');
 assert.equal(ranked[0].targetAgent,'mei','positive long-term Relationship should win an otherwise equivalent target ranking');
-assert.ok(ranked.some(e=>e.targetAgent==='zhou'),'neutral target must remain eligible');
 assert.ok(ranked.every(e=>e.finalUtility===base),'Relationship-only fixture must leave action utility unchanged for every target');
 delete st.agents.mei;
 
