@@ -22,7 +22,7 @@ async function runScenario(scenario){
   return page.evaluate(()=>{
     const E=window.SimEngine,st=E.getState(),offer=st.events.find(e=>e.data?.action==='petOffer');
     const response=st.events.find(e=>e.data?.responseToBid===offer?.id&&['acceptPet','toleratePet','avoidPet'].includes(e.data?.action));
-    const pet=st.events.find(e=>e.data?.action==='petCat'&&e.data?.petOfferId===offer?.id);
+    const pet=st.events.find(e=>e.data?.action==='petAnimal'&&e.data?.petOfferId===offer?.id);
     const orange=st.agents.orange,zhou=st.agents.zhou;
     return {
       version:st.version,socialResponseVersion:E.SOCIAL_RESPONSE_SCHEMA_VERSION,offerId:offer?.id??null,responseAction:response?.data?.action??null,response:response?.data?.petResponse??null,petId:pet?.id??null,
@@ -44,7 +44,7 @@ assert.equal(desktop.scenarioValue,'pet-accept');
 assert.ok(desktop.offerId,'desktop accept: missing petOffer');
 assert.equal(desktop.responseAction,'acceptPet');
 assert.equal(desktop.response,'accept');
-assert.ok(desktop.petId,'desktop accept: successful petCat missing');
+assert.ok(desktop.petId,'desktop accept: successful petAnimal missing');
 assert.ok(desktop.orangeAffect.valence>0,'desktop accept: Orange should receive positive short-lived Affect');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 assert.equal(desktop.affectVisible,true,'desktop: Current Affect inspector section should be visible');
@@ -60,7 +60,7 @@ assert.equal(mobile.scenarioValue,'pet-avoid');
 assert.ok(mobile.offerId,'mobile avoid: missing petOffer');
 assert.equal(mobile.responseAction,'avoidPet');
 assert.equal(mobile.response,'avoid');
-assert.equal(mobile.petId,null,'mobile avoid: avoid must not also create successful petCat');
+assert.equal(mobile.petId,null,'mobile avoid: avoid must not also create successful petAnimal');
 assert.ok(mobile.zhouAffect.valence<0,'mobile avoid: declined human should receive negative short-lived Affect');
 assert.ok(mobile.zhouAffect.frustration>0,'mobile avoid: declined human should receive frustration');
 assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);
