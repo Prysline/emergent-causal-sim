@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.15.1・Relationship Target Preference**（`11.15.1-relationship-target-preference`）。
+目前 runtime marker：**v11.15.2・Relationship Responder Bias**（`11.15.2-relationship-responder-bias`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -45,6 +45,8 @@
 - Social Bid / responder-local observation / requester-private waiting 分離。
 - Human talk response：engage / brief / decline / no response 是不同結果。
 - Pet response：accept / tolerate / avoid 由 responder 自己的 state 決定。
+- **Relationship → Responder Bias**：Human responder 與 animal responder 可讀自己對 requester 的 directional Relationship，形成 bounded responder-specific score modifier；不讀 requester → responder 的反方向關係。
+- responder bias 只修正既有 responder policy。Human `talkResponseUtility` 可因 responder-specific response score 改變，但一般 `E.baseUtilityForAction(...,'talk')`、initiator social Action utility、current-intent utility、soft-switch threshold 與 commitment 不變。
 - requester timeout 不會遠端取消 responder-private Intent；late response 與先前 wait-end experience 可以同時成立。
 - 已移除舊 `pendingInteraction / cat_request / accepted / catRequestExpired` responder compatibility bridge。
 
@@ -62,8 +64,10 @@
 - 一次 encounter 對每個 Agent 最多 consolidation 一次，但雙方可使用不同 subjective outcome：完整 Human conversation 中 requester 使用 `acceptTalk`，responder 使用 `talk`；`avoidPet` 則可讓人與動物從同一 observable event 得到相反方向的 Affinity evidence。
 - `privateSocialOutcome` 只可更新 requester → counterpart；counterpart 不會因 requester 的 private timeout 被遠端改寫 Relationship。
 - Relationship 是 persistent slow state，不因來源 episodic memory 後續被 pruning 而倒退；第一版不做時間衰退，也不保存 contributing-memory history。
-- **v11.15.1 Relationship 已接入 initiator-side social target preference**：`relationshipTargetDelta = 8 × familiarity × affinity`，只影響 `socialize / interactWithAnimal / seekSocialContact` 的「找誰」。`targetPreference = memoryUtilityDelta + relationshipTargetDelta - distancePenalty`；action-level `finalUtility` 仍不加入 Relationship。負向 Relationship 不構成 hard ban。
-- Relationship 仍不修改 responder policy、Human `talkEngagementScore`、animal `petResponseScore`、current-intent utility、soft-switch threshold 或 commitment。Current Affect 與 responder-specific Memory 也仍未直接進入 responder scoring。
+- **v11.15.1 Relationship Target Preference**：`relationshipTargetDelta = 8 × familiarity × affinity`，只影響 `socialize / interactWithAnimal / seekSocialContact` 的「找誰」。`targetPreference = memoryUtilityDelta + relationshipTargetDelta - distancePenalty`；action-level `finalUtility` 仍不加入 Relationship。負向 Relationship 不構成 hard ban。
+- **v11.15.2 Relationship Responder Bias**：Relationship 提供單一 directional downstream signal `relationshipSignal = familiarity × affinity`（bounded `[-1,+1]`）；Human talk 與 animal pet responder subsystem 各自將它縮放為 response-score delta。目前兩者各自 cap 為 `±0.18`，但 ownership 分離，未要求未來永遠同係數。
+- Familiarity 本身不是正向意願：`affinity = 0` 時 responder Relationship delta 必為 0。Human 只讀 human responder → requester；animal 只讀 animal responder → human requester。
+- responder score decomposition 不寫入 World Event、不保存 Agent cache；World truth 只保留實際發生的 accept / brief / decline / tolerate / avoid 等結果。Current Affect 與 responder-specific Memory 仍未直接進入 responder scoring。
 - ordinary successful resource-transfer consequence 是明確 non-episodic outcome；成功 `pour` 仍由來源 action episode 表達，失敗 `spill` 則可作為獨立 observable physical effect。
 
 ### Presentation
@@ -74,6 +78,7 @@
 - Agent Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
 - Player Explanation 優先使用可由同一 evidence 直接支持的日常說法，例如「因為肚子餓了」「因為口渴」「因為累了」「因為想睡了」「因為想找人說說話」；不把 engine threshold 翻成「需求已經變得明顯」之類系統語言。精確需求強度仍留在 Needs / Debug；若沒有可靠的具體原因，使用保守抽象描述或省略，不自行補心理敘事。
 - Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick，並可拆解 social target ranking 的 Memory / Relationship / distance derived influence。
+- Relationship Debug 也可即時計算 responder `base score + Relationship delta → final score / response band`；這只是 authoritative Relationship + responder policy 的 derived observability，不建立 `talkResponseScore / petResponseScore / relationshipResponseDelta` persistent mirror。
 - Container / Source / Furniture / Tile / Room / Event 也有玩家可讀投影：優先顯示名稱、位置、內容物、容量、持有人、實際用途／使用者、表面內容、空間中的居民／家具與 canonical event text 等直接可理解資訊。
 - 非居民 Readable View 不直接顯示 raw entity ID、工程座標、Footprint、interaction Port、Surface cell、slot reservation、cause tree 或其他 debug provenance；這些仍留在 Debug Inspector。家具 readable status 只顯示實際使用者，不把 reservation 當成已發生事實或玩家可見心理資訊。
 - readable entity projection 只從現有 Container / Source / Furniture / Spatial / Event truth 即時推導，不新增 `playerContents`、`readableFurnitureState` 等 persistent mirror。
@@ -126,7 +131,8 @@ State regression 目前涵蓋：
 - Human / Pet responder agency；
 - Memory → Deliberation / requester social outcome；
 - Relationship Foundation 的 directional state、audited evidence gate、exactly-once consolidation、private-outcome boundary、Memory pruning independence 與 boundedness；
-- Relationship Target Preference 的 bounded directional delta、Memory + Relationship + distance decomposition、負向不 hard-ban、action utility / responder policy 邊界，以及 generic animal affordance target eligibility；
+- Relationship Target Preference 的 bounded directional delta、Memory + Relationship + distance decomposition、負向不 hard-ban、action-utility isolation，以及 generic animal affordance target eligibility；
+- Relationship Responder Bias 的 directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy boundary 與 derived Debug observability；
 - Runtime Hook Pipeline；
 - presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則、Relationship readable/debug 分層，以及非居民 Entity Readable / Debug 分層。
 
