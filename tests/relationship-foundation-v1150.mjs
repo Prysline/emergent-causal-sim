@@ -13,6 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
+const CURRENT_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,V=globalThis.SimValidator,W=globalThis.SimWorld;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const clone=x=>structuredClone(x);
@@ -21,9 +22,9 @@ function calm(a,{social=60}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue
 function runUntil(predicate,max=12){for(let i=0;i<max;i++){if(predicate())return true;E.tick();}return predicate();}
 
 E.reset(11500);let st=E.getState();
-assert.equal(st.version,'11.15.1-relationship-target-preference');
-assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.1-relationship-target-preference');
-assert.equal(E.RELATIONSHIP_SCHEMA_VERSION,'11.15.1-relationship-target-preference');
+assert.equal(st.version,CURRENT_VERSION);
+assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(E.RELATIONSHIP_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(W.RELATIONSHIP_MIN_RELEVANCE,.15);
 assert.equal(W.RELATIONSHIP_FAMILIARITY_RATE,.08);
 assert.equal(W.RELATIONSHIP_AFFINITY_RATE,.10);
@@ -106,24 +107,24 @@ requester.episodicMemories=[];
 assert.deepEqual(relation(requester,'zhen'),consolidated,'pruning/clearing episodic memory must not erase already consolidated relationship state');
 noIssues('relationship survives memory pruning');
 
-// v11.15.1 keeps Relationship out of responder policy and out of Memory association itself.
-// The new behavioral connection is a separate bounded target-ranking delta.
+// Relationship remains separate from Memory association itself. Base/no-counterpart responder helpers remain relationship-neutral;
+// v11.15.2 explicit-counterpart responder influence is covered by its focused regression.
 E.reset(11507);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;const animal=st.agents.orange;calm(requester,{social:90});calm(responder,{social:55});calm(animal,{social:55});
 const talkScoreBefore=E.talkEngagementScore(responder),petScoreBefore=E.petResponseScore(animal),assocBefore=clone(E.targetAssociation(st,requester,'zhou'));
 requester.relationships.zhou={familiarity:.92,affinity:-.88,lastUpdatedTick:st.tick};
 responder.relationships.zhen={familiarity:.90,affinity:.84,lastUpdatedTick:st.tick};
 animal.relationships.zhen={familiarity:.95,affinity:-.90,lastUpdatedTick:st.tick};
-assert.equal(E.talkEngagementScore(responder),talkScoreBefore,'Relationship must not modify Human responder score in v11.15.1');
-assert.equal(E.petResponseScore(animal),petScoreBefore,'Relationship must not modify animal responder score in v11.15.1');
+assert.equal(E.talkEngagementScore(responder),talkScoreBefore,'base/no-counterpart Human response helper must remain relationship-neutral');
+assert.equal(E.petResponseScore(animal),petScoreBefore,'base/no-counterpart animal response helper must remain relationship-neutral');
 assert.deepEqual(E.targetAssociation(st,requester,'zhou'),assocBefore,'Relationship must not alter the Memory association calculation');
-assert.ok(E.relationshipTargetDelta(requester,'zhou')<0,'Relationship now exposes a separate target preference delta');
-noIssues('responder and memory-association boundary');
+assert.ok(E.relationshipTargetDelta(requester,'zhou')<0,'Relationship target preference remains a separate derived delta');
+noIssues('base responder helper and memory-association boundary');
 
 // Bounded state and forbidden mirror fields remain clean during integration.
 E.reset(11508);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
-  assert.equal(st.version,'11.15.1-relationship-target-preference');
+  assert.equal(st.version,CURRENT_VERSION);
   assert.equal(Object.prototype.hasOwnProperty.call(st,'pairRelationships'),false);
   for(const a of Object.values(st.agents||{})){
     assert.ok(a.relationships&&typeof a.relationships==='object'&&!Array.isArray(a.relationships));
@@ -131,10 +132,10 @@ for(let i=0;i<500;i++){
       assert.notEqual(otherId,a.id);
       assert.ok(r.familiarity>=0&&r.familiarity<=1);
       assert.ok(r.affinity>=-1&&r.affinity<=1);
-      for(const forbidden of ['trust','love','hate','friendshipScore','relationshipScore','confidence','history','evidenceIds','memoryIds','lastEvidenceMemoryId','preferredTarget'])assert.equal(Object.prototype.hasOwnProperty.call(r,forbidden),false,`${a.id}->${otherId} persisted ${forbidden}`);
+      for(const forbidden of ['trust','love','hate','friendshipScore','relationshipScore','confidence','history','evidenceIds','memoryIds','lastEvidenceMemoryId','preferredTarget','relationshipResponseDelta'])assert.equal(Object.prototype.hasOwnProperty.call(r,forbidden),false,`${a.id}->${otherId} persisted ${forbidden}`);
     }
   }
   if(i%25===0)noIssues(`tick ${i+1}`);
 }
 noIssues('500 tick integration');
-console.log('v11.15 relationship foundation regression: ok');
+console.log('v11.15 Relationship foundation regression: ok');

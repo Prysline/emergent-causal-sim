@@ -49,6 +49,8 @@ assert.ok(desktop.orangeAffect.valence>0,'desktop accept: Orange should receive 
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 assert.equal(desktop.affectVisible,true,'desktop: Current Affect inspector section should be visible');
 assert.ok(desktop.inspectorText.includes('Current Affect'));
+assert.ok(desktop.inspectorText.includes('Pet responder：base'),'desktop Debug should expose derived animal responder score decomposition');
+assert.ok(desktop.inspectorText.includes('Relationship'),'desktop Debug should identify the Relationship contribution');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 await page.screenshot({path:`${outDir}/desktop-accept.png`,fullPage:true});
@@ -66,6 +68,7 @@ assert.ok(mobile.zhouAffect.frustration>0,'mobile avoid: declined human should r
 assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);
 assert.equal(mobile.inspectorActive,true,'mobile Agent selection should open Inspector');
 assert.equal(mobile.navActive,true,'mobile Inspector nav should be active');
+assert.ok(mobile.inspectorText.includes('Pet responder：base'),'mobile Debug should retain responder score decomposition');
 assert.ok(mobile.docWidth<=mobile.width+1,`mobile document overflow: ${mobile.docWidth}>${mobile.width}`);
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
 await page.screenshot({path:`${outDir}/mobile-avoid.png`,fullPage:true});

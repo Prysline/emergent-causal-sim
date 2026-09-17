@@ -55,5 +55,6 @@ jobs:
       - run: node tests/animal-social-outcome-memory.mjs
       - run: node tests/relationship-foundation-v1150.mjs
       - run: node tests/relationship-target-preference-v1151.mjs
+      - run: node tests/relationship-responder-bias-v1152.mjs
       - run: node tests/runtime-hook-pipeline.mjs
       - run: node tests/presentation-observability-v1140.mjs

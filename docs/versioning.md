@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.15.1-relationship-target-preference`
+`11.15.2-relationship-responder-bias`
 
-玩家可見標題使用短版 `v11.15.1`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、`SimWorld.RELATIONSHIP_SCHEMA_VERSION`、Resident View、Relationship View 與 Entity Readable View 的 UI version 使用完整 marker。
+玩家可見標題使用短版 `v11.15.2`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、`SimWorld.RELATIONSHIP_SCHEMA_VERSION`、Resident View、Relationship View 與 Entity Readable View 的 UI version 使用完整 marker。
 
 ## 何時必須升版
 
@@ -37,14 +37,14 @@
 
 - `major`：專案世代／大規模不相容重構；目前為 11。
 - `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split，11.15 建立 persistent Relationship Foundation。
-- `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意、11.14.3 將 Explanation 的玩家文案收斂為自然直接的原因描述、11.14.4 將玩家可讀 Inspector 擴展到 Container / Source / Furniture / Tile / Room / Event、11.15.1 讓既有 Relationship Foundation 第一次以 bounded target preference 影響 initiator-side social target selection。
+- `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意、11.14.3 將 Explanation 的玩家文案收斂為自然直接的原因描述、11.14.4 將玩家可讀 Inspector 擴展到 Container / Source / Furniture / Tile / Room / Event、11.15.1 讓既有 Relationship Foundation 第一次以 bounded target preference 影響 initiator-side social target selection、11.15.2 再讓 responder 自己的 directional Relationship 以 bounded modifier 影響 Human talk / animal pet response score。
 - `slug`：描述 current marker 的主要辨識功能，不是完整 changelog。
 
 不是每個 PR 都需要版本號。PR 編號、Git commit 與 runtime version 是不同維度：一個版本可以包含多個 refactor/docs PR；反之，一個真正改變 current contract 的 PR 必須同時處理版本更新。
 
 ### 檔名 / workflow family 不是 current release marker
 
-像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`browser-resident-view-v1140-qa` 這類名稱代表 subsystem / test family，可以跨後續 current release 延續，不需要因 runtime marker 升到 11.15.1 就整組複製／改名。Relationship 自己仍使用 `relationship-*-v1150.js` family；判斷目前版本時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、`SimWorld.RELATIONSHIP_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準，而不是從其他舊 family 檔名或 workflow display name 反推 current release。
+像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`browser-resident-view-v1140-qa` 這類名稱代表 subsystem / test family，可以跨後續 current release 延續，不需要因 runtime marker 升到 11.15.2 就整組複製／改名。Relationship 自己仍使用 `relationship-*-v1150.js` family；判斷目前版本時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、`SimWorld.RELATIONSHIP_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準，而不是從其他舊 family 檔名或 workflow display name 反推 current release。
 
 若未來 subsystem generation 改變，舊 family 名稱造成實質誤導，再另行 rename；單純 current marker 推進不要求 rename。
 
@@ -71,3 +71,5 @@ PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 sim
 11.15.0 正式新增 Agent-local persistent `relationships[counterpartId]` state、historical Appraisal → Relationship consolidation semantics，以及玩家可讀／Debug Relationship surface。這同時觸及 persistent schema、simulation semantics 與 observability，因此使用新的 minor marker `11.15.0-relationship-foundation`；該 Foundation 當時刻意保持 decision-inert。
 
 11.15.1 在同一 minor 線內完成動物互動 canonicalization（`interactWithAnimal / petAnimal`）並讓 Relationship 第一次進入 initiator-side social target ranking。Relationship influence 僅作 bounded target preference：`relationshipTargetDelta = 8 × familiarity × affinity`，與 Memory influence、distance penalty 一起決定「找誰」，但不加入 action-level social utility、不 hard-ban 負向 target，也不修改 responder policy、current-intent utility、soft-switch threshold 或 commitment。因此使用 patch marker `11.15.1-relationship-target-preference`。
+
+11.15.2 再加入 **Relationship → Responder Bias**。Relationship runtime 只提供 directional unitless `relationshipSignal = familiarity × affinity`；Human talk 與 animal pet responder subsystem 各自持有自己的 bounded scaling，目前 cap 均為 `±0.18`。Human responder-specific `talkResponseUtility` 可因 response score 改變，但 general `E.baseUtilityForAction(...,'talk')`、initiator social Action utility、target preference、current-intent utility、soft-switch threshold 與 commitment 不變。World Event 不保存 response-score decomposition 或 Relationship internals，Debug 只即時派生 `base + Relationship delta → final`。因此這是 simulation semantics + observability 的 patch-level current contract 變更，使用 `11.15.2-relationship-responder-bias`。

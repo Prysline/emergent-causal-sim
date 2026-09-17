@@ -13,6 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
+const CURRENT_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const clone=x=>structuredClone(x);
 const near=(actual,expected,eps=.001,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
@@ -20,7 +21,7 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 function calm(a,{social=70}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue:8,sleepNeed:8,social});a.action=null;a.activeIntent=null;a.offMap=false;a.episodicMemories=[];a.relationships={};}
 
 E.reset(11510);let st=E.getState();
-assert.equal(st.version,'11.15.1-relationship-target-preference');
+assert.equal(st.version,CURRENT_VERSION);
 assert.equal(W.RELATIONSHIP_TARGET_CAP,8);
 assert.equal(E.RELATIONSHIP_TARGET_CAP,8);
 assert.equal(E.INTENT_BY_ACTION.petAnimal,'interactWithAnimal');
@@ -106,13 +107,14 @@ assert.ok(animalTargets.includes('dog'));
 assert.ok(!animalTargets.includes('turtle'));
 delete st.agents.dog;delete st.agents.turtle;delete W.SPECIES_PROFILES.dog;delete W.SPECIES_PROFILES.turtle;
 
-// Relationship target preference remains initiator-only: responder policies do not read it.
+// v11.15.1 target-preference boundary remains intact in v11.15.2: base/no-counterpart responder helpers do not feed back into target ranking.
+// Explicit responder→requester Relationship influence is tested separately in relationship-responder-bias-v1152.mjs.
 E.reset(11513);st=E.getState();const requester=st.agents.zhen,responder=st.agents.zhou,animal=st.agents.orange;calm(requester);calm(responder);calm(animal);
 const talkBefore=E.talkEngagementScore(responder),petBefore=E.petResponseScore(animal);
 responder.relationships.zhen={familiarity:1,affinity:1,lastUpdatedTick:st.tick};
 animal.relationships.zhen={familiarity:1,affinity:-1,lastUpdatedTick:st.tick};
-assert.equal(E.talkEngagementScore(responder),talkBefore);
-assert.equal(E.petResponseScore(animal),petBefore);
-noIssues('responder policy remains relationship-inert');
+assert.equal(E.talkEngagementScore(responder),talkBefore,'no-counterpart Human base helper remains neutral');
+assert.equal(E.petResponseScore(animal),petBefore,'no-counterpart animal base helper remains neutral');
+noIssues('target preference boundary remains isolated');
 
-console.log('v11.15.1 relationship target preference regression: ok');
+console.log('v11.15.1 relationship target preference regression remains valid under v11.15.2');

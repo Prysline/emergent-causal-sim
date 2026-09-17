@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.15.1-relationship-target-preference';
+const CURRENT_VERSION='11.15.2-relationship-responder-bias';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
@@ -15,7 +15,7 @@ const files=[
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
-E.reset(11500);
+E.reset(11520);
 let st=E.getState();
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,CURRENT_VERSION);
@@ -57,10 +57,14 @@ assert.match(relationshipSource,/relationship\.consolidate/,'Relationship must c
 assert.match(relationshipSource,/order:350|,350\)/,'Relationship consolidation must happen after specialized appraisal and before Affect');
 assert.match(relationshipSource,/acceptTalk:\{roles:new Set\(\['target'\]\)\}/,'full Human conversation requester evidence must come from acceptTalk rather than double-counting talk');
 assert.match(relationshipSource,/talk:\{roles:new Set\(\['target'\]\)\}/,'full Human conversation responder evidence must come from the completed talk outcome');
+assert.match(relationshipSource,/function relationshipSignal\(a,counterpartId\)/,'Relationship must expose one directional unitless downstream signal');
 assert.doesNotMatch(relationshipSource,/trust|friendshipScore|love|hate/,'Relationship Foundation must not smuggle unsupported semantic dimensions into runtime policy');
 const relationshipUiSource=fs.readFileSync(new URL('../src/ui-relationship-v1150.js',import.meta.url),'utf8');
 assert.match(relationshipUiSource,/registerInspectorDecorator\('relationship\.view',decorateInspector,1025\)/,'Relationship UI must use explicit Inspector lifecycle after Resident and before Entity readable layers');
 assert.match(relationshipUiSource,/熟悉不等於喜歡/,'player-readable relationship copy must preserve familiarity/affinity semantic separation');
+assert.match(relationshipUiSource,/Talk responder：base/,'Relationship Debug must expose Human responder score decomposition');
+assert.match(relationshipUiSource,/Pet responder：base/,'Relationship Debug must expose animal responder score decomposition');
+assert.match(relationshipUiSource,/Responder score 分解為即時計算的 derived Debug/,'Relationship Debug must identify responder decomposition as derived, not persistent truth');
 assert.doesNotMatch(relationshipUiSource,/\.relationships\s*=/,'Relationship UI must remain a read-only projection');
 
 const entityUiSource=fs.readFileSync(new URL('../src/ui-entity-readable-v1141.js',import.meta.url),'utf8');
@@ -74,8 +78,9 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.15\.1・Relationship Target Preference/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.15\.2・Relationship Responder Bias/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
+assert.match(indexSource,/responder base score \+ Relationship delta → final score/,'app shell must describe responder-bias Debug decomposition');
 assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
 assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load Relationship runtime');
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
@@ -83,6 +88,7 @@ assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must keep the
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
 assert.match(readmeSource,/Relationship Foundation/,'README must document the long-term dyadic state foundation');
+assert.match(readmeSource,/Responder Bias/,'README must document current Relationship responder influence');
 assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must retain the generalized readable entity boundary');
 assert.match(readmeSource,/slot reservation/,'README must document the reservation/debug privacy boundary');
 const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
@@ -93,6 +99,7 @@ assert.match(architectureSource,/Explanation＝為什麼此刻選擇這個行動
 assert.match(architectureSource,/Explanation wording 優先自然直接/,'Architecture must record the natural player explanation wording contract');
 assert.match(architectureSource,/Entity Readable View/,'Architecture must define the generalized player-readable entity surface');
 assert.match(architectureSource,/Relationship Foundation/,'Architecture must define Relationship ownership and truth boundaries');
+assert.match(architectureSource,/Relationship → Responder Bias/,'Architecture must define current responder-bias boundary');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
@@ -117,8 +124,8 @@ assert.equal(E.actionLabel({id:'qa-probe',action:null}),'QA presentation label')
 assert.equal(E.actionLabel,E.CORE_ACTION_LABEL,'registering a resolver must not replace core actionLabel');
 assert.throws(()=>E.registerActionLabelResolver('qa.presentation-label',()=>null,20),/duplicate action label resolver/);
 
-const forbiddenState=['residentView','playerSummary','debugInspectorMode','presentationState','playerFacingState','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','playerContents','readableFurnitureState','pairRelationships','relationshipRegistry'];
-const forbiddenAgent=['residentView','playerSummary','moodLabel','relationshipLabel','debugMode','presentation','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','friendshipScore','relationshipScore'];
+const forbiddenState=['residentView','playerSummary','debugInspectorMode','presentationState','playerFacingState','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','playerContents','readableFurnitureState','pairRelationships','relationshipRegistry','responderEvaluation'];
+const forbiddenAgent=['residentView','playerSummary','moodLabel','relationshipLabel','debugMode','presentation','currentReason','actionExplanation','playerStory','causalTrace','entityReadableView','friendshipScore','relationshipScore','relationshipResponseDelta','talkResponseScore','petResponseScore'];
 for(const key of forbiddenState)assert.equal(Object.prototype.hasOwnProperty.call(st,key),false,`state persisted presentation field ${key}`);
 for(const a of Object.values(st.agents))for(const key of forbiddenAgent)assert.equal(Object.prototype.hasOwnProperty.call(a,key),false,`${a.id} persisted presentation field ${key}`);
 assert.equal(V.validateState(st).issueCount,0);
@@ -131,4 +138,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.15.1 presentation observability + relationship target preference regression: ok');
+console.log('v11.15.2 presentation observability + Relationship responder bias regression: ok');

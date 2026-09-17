@@ -36,10 +36,16 @@
     section.innerHTML=`<h3>關係</h3><div class="resident-memory-list">${rows}</div><p class="resident-footnote">這裡是多次直接相處經驗累積出的慢速紀錄；熟悉不等於喜歡，也不推定對方的動機。</p>`;
     return section;
   }
+  function responderEvaluationLine(st,a,counterpartId){
+    const counterpart=st?.agents?.[counterpartId];if(!counterpart)return '';
+    if(a.kind==='human'&&counterpart.kind==='human'&&E.talkResponseEvaluation){const x=E.talkResponseEvaluation(a,counterpart);return `Talk responder：base ${Number(x.baseScore).toFixed(3)} + Relationship ${Number(x.relationshipResponseDelta).toFixed(3)} → final ${Number(x.finalScore).toFixed(3)} (${esc(x.response)})`;}
+    if(E.isAnimalAgent?.(a)&&counterpart.kind==='human'&&E.petResponseEvaluation){const x=E.petResponseEvaluation(a,counterpart);return `Pet responder：base ${Number(x.baseScore).toFixed(3)} + Relationship ${Number(x.relationshipResponseDelta).toFixed(3)} → final ${Number(x.finalScore).toFixed(3)} (${esc(x.response)})`;}
+    return '';
+  }
   function debugSection(st,a){
     const entries=relationshipEntries(st,a),section=document.createElement('div');section.className='inspect-section';section.dataset.v1150RelationshipDebug='';
-    const rows=entries.length?entries.map(r=>`<div class="k">${esc(r.name)}・${esc(r.id)}</div><div>Familiarity ${Number(r.familiarity).toFixed(3)}・Affinity ${Number(r.affinity).toFixed(3)}・updated Tick ${esc(r.lastUpdatedTick)}</div>`).join(''):'<div class="k">Relationship</div><div>目前沒有 consolidated dyadic state</div>';
-    section.innerHTML=`<h3>Relationship</h3><div class="kv">${rows}</div><p class="hint">Agent-private directional slow state。只保存 familiarity / affinity / lastUpdatedTick；不保存 trust、friendship score 或 contributing-memory history。</p>`;
+    const rows=entries.length?entries.map(r=>{const responderLine=responderEvaluationLine(st,a,r.id);return `<div class="k">${esc(r.name)}・${esc(r.id)}</div><div>Familiarity ${Number(r.familiarity).toFixed(3)}・Affinity ${Number(r.affinity).toFixed(3)}・updated Tick ${esc(r.lastUpdatedTick)}</div>${responderLine?`<div>${responderLine}</div>`:''}`;}).join(''):'<div class="k">Relationship</div><div>目前沒有 consolidated dyadic state</div>';
+    section.innerHTML=`<h3>Relationship</h3><div class="kv">${rows}</div><p class="hint">Agent-private directional slow state。只保存 familiarity / affinity / lastUpdatedTick；Responder score 分解為即時計算的 derived Debug，不保存第二份 state。Relationship target preference 與 responder bias 都不等於一般 social Action utility。</p>`;
     return section;
   }
   function decorateInspector({host:renderHost,selected,state:providedState}){
@@ -64,5 +70,6 @@
   E.UI_RELATIONSHIP_VERSION=VERSION;
   E.relationshipFamiliarityLabel=familiarityLabel;
   E.relationshipAffinityLabel=affinityLabel;
+  E.relationshipResponderEvaluationLine=responderEvaluationLine;
   schedule();
 })();
