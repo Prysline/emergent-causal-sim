@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.16.0-physical-profile-foundation';
+const CURRENT_VERSION='11.17.0-passage-profile-multimode';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -173,7 +173,7 @@ assert.ok(debug.debugText.includes('Agent・zhou'),'Debug must retain original I
 assert.ok(debug.debugText.includes('Memory + Relationship → Social Target'),'Debug must retain advanced social target evidence');
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
 assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Familiarity')&&debug.debugText.includes('Affinity'),'Debug must expose exact directional relationship dimensions');
-assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('Standing MovementEnvelope'),'Debug must expose authoritative Physical Profile and derived standing MovementEnvelope');
+assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('MovementEnvelopes'),'Debug must expose authoritative Physical Profile and derived multi-mode MovementEnvelopes');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
   entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
@@ -265,7 +265,7 @@ assert.equal(mobile.activeMode,'resident');assert.equal(mobile.residentVisible,t
 const mobileStateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1140-mode="debug"]');await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
 const mobileDebug=await snapshot();const mobileStateAfterDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('Standing MovementEnvelope'),'mobile Debug should retain Physical Profile observability');
+assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('MovementEnvelopes'),'mobile Debug should retain multi-mode Physical Profile observability');
 await page.click('[data-v1140-mode="resident"]');await page.click('[data-v1140-tab="memory"]');mobile=await snapshot();
 const mobileStateAfterMemory=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 assert.equal(mobileStateAfterMemory,mobileStateBefore,'mobile Resident tab switch must not mutate simulation state');assert.ok(mobile.residentText.includes('當時沒有得到回應'));assert.ok(!mobile.residentText.includes('故意忽略'));assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>${mobile.width}`);assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
@@ -293,5 +293,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.16.0 browser readable entity QA: Physical Profile + Relationship + Agent + non-agent readable/debug state-inert pass');
+console.log('v11.17.0 browser readable entity QA: Passage Profile + multi-mode Physical Debug + Relationship + readable/debug state-inert pass');
 await browser.close();
