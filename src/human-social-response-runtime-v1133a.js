@@ -3,20 +3,25 @@
   if(!E||!W?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
   const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.13.3a-human-social-response';
   const TALK_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,engageMin:.62});
+  const TALK_RELATIONSHIP_RESPONSE_CAP=.18;
   const HIGH_COMMITMENT_ACTIONS=new Set(['eat','drinkWater','drinkAlcohol','sleep','restockContainer','externalSupply']);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
   const actionKind=a=>E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;
   const resetForScenario=E.reset;
+  const counterpartId=counterpart=>typeof counterpart==='string'?counterpart:counterpart?.id||null;
 
-  function talkEngagementScore(human){const social=clamp((Number(human?.needs?.social)||0)/100,0,1),rawTrait=Number(human?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1);return round(social*.70+sociability*.30);}
-  function talkResponseFor(human){const score=talkEngagementScore(human);if(score<TALK_RESPONSE_THRESHOLDS.declineMax)return 'decline';if(score>=TALK_RESPONSE_THRESHOLDS.engageMin)return 'engage';return 'brief';}
-  function talkResponseUtility(human){return round(48+talkEngagementScore(human)*36);}
+  function talkBaseEngagementScore(human){const social=clamp((Number(human?.needs?.social)||0)/100,0,1),rawTrait=Number(human?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1);return round(social*.70+sociability*.30);}
+  function talkRelationshipResponseDelta(human,requester){const id=counterpartId(requester);if(!id)return 0;const signal=Number(E.relationshipSignal?.(human,id))||0;return round(clamp(signal*TALK_RELATIONSHIP_RESPONSE_CAP,-TALK_RELATIONSHIP_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP));}
+  function talkResponseEvaluation(human,requester=null){const baseScore=talkBaseEngagementScore(human),relationshipResponseDelta=talkRelationshipResponseDelta(human,requester),finalScore=round(clamp(baseScore+relationshipResponseDelta,0,1));const response=finalScore<TALK_RESPONSE_THRESHOLDS.declineMax?'decline':finalScore>=TALK_RESPONSE_THRESHOLDS.engageMin?'engage':'brief';return {baseScore,relationshipResponseDelta,finalScore,response};}
+  function talkEngagementScore(human,requester=null){return talkResponseEvaluation(human,requester).finalScore;}
+  function talkResponseFor(human,requester=null){return talkResponseEvaluation(human,requester).response;}
+  function talkResponseUtility(human,requester=null){return round(48+talkEngagementScore(human,requester)*36);}
   function newestObservedTalkOffer(st,a){return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>x.bid?.data?.bidKind==='talkOffer'&&x.bid.data.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;}
   function talkResponseCandidate(st,a){
     if(!a||a.kind!=='human'||a.offMap||E.isSleeping?.(a))return null;const pick=newestObservedTalkOffer(st,a);if(!pick)return null;
     const requester=st.agents?.[pick.bid.data.bidFrom];if(!requester||requester.offMap||requester.kind!=='human')return null;if(!SP.isAtInteraction(st,a,{kind:'agent',id:requester.id},'social'))return null;
-    return {intentKind:'respondSocialBid',actionKind:'talk',utility:talkResponseUtility(a),targetAgent:requester.id,bidId:pick.bid.id,observedTick:pick.ref.observedTick,responseKind:talkResponseFor(a)};
+    return {intentKind:'respondSocialBid',actionKind:'talk',utility:talkResponseUtility(a,requester),targetAgent:requester.id,bidId:pick.bid.id,observedTick:pick.ref.observedTick,responseKind:talkResponseFor(a,requester)};
   }
   function awaitIntent(st,a,bid){const patience=Number(E.REQUESTER_PATIENCE_TICKS)||3;return {id:`intent:${a.id}:${st.tick}:awaitResponse:${bid.id}`,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:bid.id},patienceUntilTick:st.tick+patience};}
   function responseIntent(st,a,c,sourceExtra={}){return {id:`intent:${a.id}:${st.tick}:respondSocialBid:${c.bidId}`,kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:c.bidId,observedTick:c.observedTick,...sourceExtra}};}
@@ -72,7 +77,7 @@
       const action=responder.action;if(responder.kind!=='human'||!action||actionKind(responder)!=='talk'||action.phase!=='respondBid'||!action.responseToBid)continue;
       const bid=E.bidEvent?.(st,action.responseToBid),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
       if(!bid||bid.data?.bidKind!=='talkOffer'||bid.data.bidTo!==responder.id||!requester||requester.offMap||responder.offMap||E.isSleeping?.(responder)||!SP.isAtInteraction(st,responder,{kind:'agent',id:requester.id},'social')){responder.action=null;if(responder.activeIntent?.source?.bidId===action.responseToBid)responder.activeIntent=null;continue;}
-      const response=talkResponseFor(responder),responseId=addTalkResponse(st,responder,requester,bid.id,response);settleObservedBid(responder,bid.id);settleRequesterWait(requester,bid.id);if(response==='engage')applyFullTalk(st,requester,responder,bid.id,responseId);else if(response==='brief')applyBriefReply(requester,responder);responder.action=null;if(responder.activeIntent?.source?.bidId===bid.id)responder.activeIntent=null;
+      const response=talkResponseFor(responder,requester),responseId=addTalkResponse(st,responder,requester,bid.id,response);settleObservedBid(responder,bid.id);settleRequesterWait(requester,bid.id);if(response==='engage')applyFullTalk(st,requester,responder,bid.id,responseId);else if(response==='brief')applyBriefReply(requester,responder);responder.action=null;if(responder.activeIntent?.source?.bidId===bid.id)responder.activeIntent=null;
     }
   }
   function noResponseInterpretationWeight(waitEvent){const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;if(d.responderContextObserved!==true)return .22;const kind=d.observedResponderActionKind||null;if(kind==='sleep'||d.observedResponderPosture==='lying'&&kind==='sleep')return .05;if(kind&&HIGH_COMMITMENT_ACTIONS.has(kind))return .12;if(kind)return .28;return .45;}
@@ -89,6 +94,6 @@
   E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
   E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 
-  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,HIGH_COMMITMENT_ACTIONS,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
+  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_RELATIONSHIP_RESPONSE_CAP,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
   try{const scenario=typeof location!=='undefined'?new URLSearchParams(location.search||'').get('scenario'):null;if(['talk-engage','talk-brief','talk-decline','talk-no-response'].includes(scenario))prepareHumanTalkScenario(scenario);}catch{}
 })();
