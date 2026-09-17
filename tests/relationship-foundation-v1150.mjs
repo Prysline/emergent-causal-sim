@@ -6,14 +6,15 @@ globalThis.window=globalThis;
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
-  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js',
+  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js',
   'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
   'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','relationship-runtime-v1150.js','affect-runtime-v1132.js','social-response-runtime-v1132a.js','memory-retention-runtime-v1133.js','human-social-response-runtime-v1133a.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
-  'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-manifest.js'
+  'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js','state-validator-manifest.js'
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const CURRENT_VERSION='11.15.2-relationship-responder-bias';
+const APP_VERSION='11.16.0-physical-profile-foundation';
+const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,V=globalThis.SimValidator,W=globalThis.SimWorld;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const clone=x=>structuredClone(x);
@@ -22,9 +23,9 @@ function calm(a,{social=60}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue
 function runUntil(predicate,max=12){for(let i=0;i<max;i++){if(predicate())return true;E.tick();}return predicate();}
 
 E.reset(11500);let st=E.getState();
-assert.equal(st.version,CURRENT_VERSION);
-assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(E.RELATIONSHIP_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(st.version,APP_VERSION);
+assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,RELATIONSHIP_VERSION);
+assert.equal(E.RELATIONSHIP_SCHEMA_VERSION,RELATIONSHIP_VERSION);
 assert.equal(W.RELATIONSHIP_MIN_RELEVANCE,.15);
 assert.equal(W.RELATIONSHIP_FAMILIARITY_RATE,.08);
 assert.equal(W.RELATIONSHIP_AFFINITY_RATE,.10);
@@ -124,7 +125,7 @@ noIssues('base responder helper and memory-association boundary');
 E.reset(11508);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
-  assert.equal(st.version,CURRENT_VERSION);
+  assert.equal(st.version,APP_VERSION);
   assert.equal(Object.prototype.hasOwnProperty.call(st,'pairRelationships'),false);
   for(const a of Object.values(st.agents||{})){
     assert.ok(a.relationships&&typeof a.relationships==='object'&&!Array.isArray(a.relationships));
