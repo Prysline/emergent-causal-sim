@@ -25,6 +25,12 @@ async function showFullTimeline(){
   if(await mobileTimeline.isVisible())await mobileTimeline.click();
   await page.click('[data-logmode="full"]');
 }
+async function openResponderDebug(){
+  await page.evaluate(()=>document.querySelector('[data-entity="agent:zhen"]')?.click());
+  await page.waitForSelector('[data-v1140-resident-root]');
+  await page.click('[data-v1140-mode="debug"]');
+  await page.waitForSelector('[data-v1150-relationship-debug]');
+}
 async function snapshot(){
   return page.evaluate(()=>{
     const E=window.SimEngine,st=E.getState();
@@ -39,7 +45,7 @@ async function snapshot(){
       talkId:talk?.id??null,talkOfferId:talk?.data?.talkOfferId??null,talkResponseEventId:talk?.data?.talkResponseEventId??null,
       timeout:timeout?{id:timeout.id,visibility:timeout.data?.visibility??null,bidKind:timeout.data?.bidKind??null,responderContextObserved:timeout.data?.responderContextObserved??null,observedResponderActionKind:timeout.data?.observedResponderActionKind??null}:null,
       validator:window.SimValidator.validateState(st),scenarioValue:document.getElementById('socialScenario')?.value??null,
-      timelineText:document.getElementById('timeline')?.innerText??'',
+      timelineText:document.getElementById('timeline')?.innerText??'',inspectorText:document.getElementById('inspector')?.innerText??'',
       width:innerWidth,docWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,
       pageTitle:document.title
     };
@@ -51,7 +57,9 @@ assert.equal(opened.humanSocialVersion,'11.13.3a-human-social-response');
 assert.equal(opened.scenarioValue,'talk-engage');
 assert.ok((await page.title()).includes('因果湧現模擬器'));
 await showFullTimeline();
-await step();let desktop=await snapshot();
+await step();
+await openResponderDebug();
+let desktop=await snapshot();
 fs.writeFileSync(`${outDir}/desktop-state.json`,JSON.stringify(desktop,null,2));
 await page.screenshot({path:`${outDir}/desktop-engage.png`,fullPage:true});
 assert.ok(desktop.offerId,'desktop engage: talkOffer missing after first step');
@@ -62,6 +70,8 @@ assert.equal(desktop.talkOfferId,desktop.offerId,'desktop engage: full talk must
 assert.equal(desktop.talkResponseEventId,desktop.responseId,'desktop engage: full talk must preserve the explicit responder event');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop full timeline should expose the talk offer');
+assert.ok(desktop.inspectorText.includes('Talk responder：base'),'desktop Debug should expose derived Human responder score decomposition');
+assert.ok(desktop.inspectorText.includes('Relationship'),'desktop Debug should identify the Relationship contribution');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 
@@ -87,6 +97,6 @@ assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyW
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
-fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,timelineText:undefined},mobile:{...mobile,timelineText:undefined},pageErrors,consoleErrors},null,2));
+fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,timelineText:undefined,inspectorText:undefined},mobile:{...mobile,timelineText:undefined,inspectorText:undefined},pageErrors,consoleErrors},null,2));
 console.log('human social response browser QA: 2/2 pass');
 await browser.close();
