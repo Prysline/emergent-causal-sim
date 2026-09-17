@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.15.1-relationship-target-preference`。
+目前 runtime marker：`11.15.2-relationship-responder-bias`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -96,7 +96,7 @@ Provider contract：
 - candidate 與 core needs / logistics options 一起競爭。
 - 可以附最小 provenance，供 candidate 被選中後的 subsystem settlement 使用。
 
-Social Bid responder 是目前正式使用者：Human 對 Cat `socialAffection` 的 response candidate 直接由 responder-local `observedSocialBids` 產生，不再使用 `pendingInteraction / cat_request / accepted / catRequestExpired` compatibility bridge。
+Social Bid responder 是目前正式使用者：Human 對 animal `socialAffection` 的 response candidate 直接由 responder-local `observedSocialBids` 產生，不再使用 `pendingInteraction / cat_request / accepted / catRequestExpired` compatibility bridge。
 
 ## 4. Social Bid / response agency
 
@@ -119,7 +119,16 @@ World Event: Social Bid
 - brief reply、explicit decline、no response 是不同事實；
 - no response 不得推論 intentional ignore / dislike / rejection。
 
-Human talk response 與目前 Pet response 都由 responder 自己的 state 決定。v11.15.1 Relationship 只接入 initiator-side social target preference；Human `talkEngagementScore`、animal `petResponseScore` 與 responder candidate policy 仍未直接讀 Current Affect、Relationship 或 target-specific Memory influence。
+Human talk response 與目前 Pet response 都由 responder 自己的 state 決定。v11.15.2 起，兩條 responder policy 可額外讀**responder 自己對 requester 的 directional Relationship**；Relationship runtime 只提供 unitless `relationshipSignal = familiarity × affinity`，Human / animal responder subsystem 各自決定自己的 bounded scaling。目前兩者 cap 都是 `±0.18`，但這不是共享 scoring owner。
+
+Responder bias 的正式邊界：
+
+- Human 只讀 human responder → human requester；animal pet response 只讀 animal responder → human requester。反方向 Relationship 不得滲入。
+- `familiarity > 0` 但 `affinity = 0` 時 Relationship response delta 必為 0；熟悉本身不是正向意願。
+- Human `talkResponseUtility` 是 responder-specific candidate utility，因此可隨 final response score bounded 改變；general `E.baseUtilityForAction(...,'talk')` 不讀 Relationship。
+- animal pet response 只改 accept / tolerate / avoid band，不建立另一套一般 Action motivation。
+- Current Affect 與 target-specific Memory influence 仍未直接進 responder scoring。
+- responder score decomposition 不寫入 World Event、不保存 Agent cache；canonical World Event 只描述實際發生的 response outcome。
 
 ## 5. Memory / Appraisal / Affect / Relationship
 
@@ -165,7 +174,7 @@ Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memo
 
 Target-related episodic history 以 bounded derived influence 進入 initiator-side social candidate；目前 canonical social intents 為 `socialize / interactWithAnimal / seekSocialContact`。
 
-Relationship 在 v11.15.1 也只作 initiator-side target ranking signal，不改 action-level social motivation：
+Relationship 在 v11.15.1 起作 initiator-side target ranking signal，不改 action-level social motivation：
 
 ```text
 relationshipTargetDelta = 8 × familiarity × affinity
@@ -182,8 +191,28 @@ finalUtility = baseUtility + memoryUtilityDelta
 - `relationshipTargetDelta` bounded `[-8,+8]`；`familiarity=0` 或 `affinity=0` 時為 0。
 - 負向 Relationship 只降低 target preference，不從 eligibility 移除 target。
 - Relationship 不加入 `finalUtility`，因此不直接提高／降低是否選擇 social Action。
-- Relationship 不修改 current-intent utility、soft-switch threshold、commitment 或 responder score。
+- target-preference signal 不修改 current-intent utility、soft-switch threshold 或 commitment；也不直接持有 responder score ownership。
 - Memory influence 與 Relationship 都是 derived decision signals，不互相寫回，也不保存 persistent preferred-target mirror。
+
+### Relationship → Responder Bias
+
+v11.15.2 新增另一個**獨立 consumer**，不是把 target-preference delta 重用成 responder utility：
+
+```text
+relationshipSignal = familiarity × affinity
+
+Human finalTalkResponseScore
+  = clamp(baseTalkResponseScore
+        + relationshipSignal × TALK_RELATIONSHIP_RESPONSE_CAP)
+
+Animal finalPetResponseScore
+  = clamp(basePetResponseScore
+        + relationshipSignal × PET_RELATIONSHIP_RESPONSE_CAP)
+```
+
+目前兩個 cap 都是 `0.18`，但 constant 與 policy ownership 分開。Relationship subsystem 只輸出 bounded directional signal，不決定 Human / animal response threshold，也不建立 response Action / Intent / Event。
+
+這個 consumer 只在 responder 已經面對特定 requester 時成立；它不回灌一般 social Action utility、不改 initiator target ranking 公式、不改 current-intent utility / switch threshold / commitment。World Event 不保存 `baseResponseScore / relationshipResponseDelta / finalScore` 等 private decomposition；Debug 可從 authoritative Relationship + responder policy 即時計算。
 
 Initial core chooser 建立的 `system + phase:'plan'` event 是**同 tick provisional private-cognition plan**，以 `data.planLifecycle='initialProvisional'` 明示其 creation payload 尚可能在 afterTick 800 Memory-to-Deliberation Correction 被 normalization。Correction 只能改寫同一 tick、同 actor、`type:'system'`、同 lifecycle marker 且 action 對應 initial pick 的既有 canonical plan event；不得新增第二筆 correction event，也不得回頭改寫較舊 plan 或其他 plan-shaped event。Event ID / cause identity 保持不變，event-created consumer 若讀取 creation payload 必須把它視為 provisional，而不是 immutable final plan。Plan event 仍屬 private cognition / non-episodic，不進 generic Episodic Memory。
 
@@ -223,7 +252,7 @@ agent.relationships[counterpartId] = {
 - `talkOffer / petOffer / acceptPet / toleratePet` 等 proposal / intermediate response 不直接 consolidation。
 - 非 relational event、bystander observation、單純 `agency === other` 都不足以建立 Relationship evidence。
 
-Foundation consolidation 公式保持 bounded / diminishing return：Familiarity 越高，同等 episode 的增幅越小；Affinity 正向 evidence 朝 +1、負向 evidence 朝 -1 推進，但既有極端值仍可被反方向重要 experience 拉回。v11.15.1 只把這份 directional slow state讀入 initiator-side target preference；不因此取得 action-level motivation、responder 或 interruption ownership。
+Foundation consolidation 公式保持 bounded / diminishing return：Familiarity 越高，同等 episode 的增幅越小；Affinity 正向 evidence 朝 +1、負向 evidence 朝 -1 推進，但既有極端值仍可被反方向重要 experience 拉回。v11.15.1 先把這份 directional slow state 接入 initiator-side target preference；v11.15.2 再讓 responder-specific policy讀取同一 directional truth 的 unitless signal。兩者都不讓 Relationship subsystem 取得一般 action-level motivation、interruption 或 response-event ownership。
 
 ### Deferred architecture cleanup｜private experience lifecycle
 
@@ -413,7 +442,8 @@ Resident overview 額外顯示 Relationship 的 read-only 長期摘要。Readabl
 - Familiarity 顯示「還不太熟／有些熟悉／熟悉／很熟悉／非常熟悉」等相處歷史程度；
 - 低 Familiarity 時不顯示 Affinity 判斷，避免一兩次 encounter 就產生「很喜歡／很討厭」式過度敘事；
 - 有足夠 Familiarity 時，Affinity 只描述「相處大致中性／愉快／不順」等 experience trend，不使用 friendship / trust / love / hate label；
-- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / distancePenalty / targetPreference` decomposition；UI 不保存 relationship 或 preferred-target mirror。
+- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / distancePenalty / targetPreference` decomposition；
+- v11.15.2 Debug 另可即時計算 Human / animal responder 的 `base response score + Relationship response delta → final score / response band`。這是 derived observability，不保存 `talkResponseScore / petResponseScore / relationshipResponseDelta` mirror，也不把 private score decomposition寫入 World Event。
 
 ### Entity Readable View
 
@@ -457,76 +487,3 @@ Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Acti
 Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
 
 `ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
-
-## 9. Spatial / resources / sleep invariants
-
-### Spatial
-
-- Agent 與可定位 Object 透過 Spatial API 回答 node。
-- floor environment 由 floor surface contents 持有；家具 Surface Environment 由 Surface Cell contents 持有。
-- Interaction Geometry 依 affordance + target data 推導合法操作位置。
-- dynamic blocker / Contact / supported contact 不建立重複 location truth。
-
-詳見 [`interaction-geometry.md`](interaction-geometry.md)。
-
-### Resources / logistics
-
-- `Agent.held + Container.contents` 是搬運與資源位置的正式 truth。
-- 舊 `Agent.carrying` 不存在。
-- transfer / serving / restock / external supply 都必須遵守 physical resource conservation 與合法 Interaction Geometry。
-
-### Sleep
-
-- `fatigue` 與 `sleepNeed` 分離。
-- circadian pattern / phase offset 是 bias，不是第二份 clock。
-- sleeping target 的 stimulus、wake、response 是不同事實。
-- wake 不自動等於 social response。
-
-## 10. Validator / regression contract
-
-Validator 是 pure invariant checker，不應修補 state 或改 Engine API。
-
-Regression 優先鎖：
-
-- Single Source of Truth；
-- World / Agent-private / Observed Information boundary；
-- canonical Action terminology / construction；
-- Intent interruption semantics；
-- Social Bid requester / responder agency；
-- event creation ownership / event-created consumer registry；
-- event / memory provenance；
-- bounded Memory / retention；
-- Appraisal historical stability；
-- Affect provenance；
-- Relationship directional ownership / audited evidence / boundedness；
-- Relationship target-preference boundedness、action-utility / responder-policy boundary 與 generic animal affordance eligibility；
-- runtime hook ordering；
-- state-inert presentation；
-- deterministic long-run Validator 0。
-
-對 emergent behavior，不用「最後必須固定做某個 Action」代替 causal invariant。Focused causal story / counterfactual A/B 應只改目標變數，鎖住真正的因果差異。
-
-## 11. Current integration priority
-
-Relationship Current invariant：
-
-- `relationships` 只存在 Agent-local directional map，不建立 global / pair registry；
-- persistent entry 只保存 `familiarity / affinity / lastUpdatedTick`；
-- Relationship 只 consolidate audited direct relational experience 的 historical Appraisal，不自行解析 raw event 或從 agency 推論好惡；
-- proposal / intermediate response 不得造成同一 encounter 重複計分；
-- requester-private no-response 只能更新 requester → counterpart；
-- Memory pruning 不得抹除已 consolidated Relationship；
-- v11.15.1 Relationship 只影響 initiator-side `socialize / interactWithAnimal / seekSocialContact` target ranking，使用 `8 × familiarity × affinity` bounded delta；
-- Relationship 不得加入 action-level social utility、不 hard-ban negative target、不修改 responder score、current-intent utility、soft-switch threshold 或 commitment；
-- 動物互動 canonicalize 為 `interactWithAnimal / petAnimal`，target eligibility 由 species profile / affordance 判斷，不依物種名稱拆 Action；
-- player-readable Relationship 只是 authoritative state projection；Debug 可顯示精確數值與 target-ranking decomposition；任何 mode/tab switch 都必須 state-inert。
-
-Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂；不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。Private experience lifecycle 的全面統一目前只記為 deferred architecture cleanup，不阻塞本 slice。
-
-## 12. Validator rule ownership
-
-`src/state-validator.js` 是唯一 `validateState` aggregator owner。Versioned validator extension 不得捕捉或覆寫 `V.validateState`；每一層 invariant 使用 `V.registerValidationLayer(id, handler, order)` 以唯一 ID 與 explicit order 註冊。
-
-正式 app 在所有 versioned validator 載入後由 `state-validator-manifest.js` finalize expected layer set。duplicate ID、duplicate order、missing expected layer、unexpected layer、finalize 後 late registration 都必須 loud failure；不得靠 `index.html` script load order 靜默決定 validation semantics。
-
-每個 layer 接收 `(state, previousResult)` 並回傳下一個 validation result；既有 invariant logic 保持在原本 owner 檔案。Registry 只負責 ownership / ordering / completeness，不把 subsystem invariant 集中回單一巨型 validator。
