@@ -8,7 +8,7 @@
   const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
   const INTENT_LABELS={
     satisfyHunger:'填飽肚子',drinkWater:'補充水分',drinkAlcohol:'解渴／喝點酒',recoverFatigue:'緩解活動疲勞',sleep:'補足睡眠',
-    socialize:'找人聊聊',interactWithCat:'和貓互動',seekSocialContact:'找人親近',awaitResponse:'等待對方回應',
+    socialize:'找人聊聊',interactWithAnimal:'和動物互動',seekSocialContact:'找人親近',awaitResponse:'等待對方回應',
     respondSocialBid:'回應對方的互動',explore:'探索附近',removeHazard:'處理濕滑地面',groom:'整理毛髮與身體',
     restockResource:'補充室內資源',replenishSupply:'補足家中庫存'
   };
@@ -17,7 +17,7 @@
   if(MISSING_INTENT_LABELS.length)throw new Error(`Resident View missing canonical Intent labels: ${MISSING_INTENT_LABELS.join(', ')}`);
   const ACTION_LABELS={
     talk:'聊天',talkOffer:'聊天邀請',acceptTalk:'接受聊天',briefTalkReply:'簡短回應聊天',declineTalk:'沒有繼續聊天',
-    petCat:'摸貓',acceptPet:'接受撫摸',toleratePet:'容忍撫摸',avoidPet:'避開撫摸',drinkWater:'喝水',drinkAlcohol:'喝酒',
+    petAnimal:'撫摸動物',acceptPet:'接受撫摸',toleratePet:'容忍撫摸',avoidPet:'避開撫摸',drinkWater:'喝水',drinkAlcohol:'喝酒',
     eat:'吃東西',sleep:'睡覺',rest:'休息',wander:'走動',cleanFloor:'清理地面',groom:'舔毛',spill:'打翻液體',
     restockContainer:'補充容器',externalSupply:'外出補給'
   };
@@ -109,7 +109,7 @@
       case 'rest': return '因為累了。';
       case 'sleep': return '因為想睡了。';
       case 'talk': return '因為想找人說說話。';
-      case 'petCat': return '因為想找點陪伴，也對貓有親近感。';
+      case 'petAnimal': return '因為想找點陪伴，也對動物有親近感。';
       case 'seekHuman': return '因為想找點陪伴。';
       case 'cleanFloor': return '因為附近有濕滑的地面需要處理。';
       case 'groom': {
@@ -159,7 +159,7 @@
       case 'talkOffer': return actor&&target?`${actor}曾找${target}聊天。`:'記得一次聊天邀請。';
       case 'briefTalkReply': return actor&&target?`${actor}曾簡短回應${target}的聊天邀請。`:'記得一次簡短的聊天回應。';
       case 'declineTalk': return actor&&target?`${actor}曾明確表示那次不繼續聊天。`:'記得一次沒有繼續的聊天。';
-      case 'petCat': return actor&&target?`${actor}曾摸過${target}。`:'記得一次撫摸互動。';
+      case 'petAnimal': return actor&&target?`${actor}曾摸過${target}。`:'記得一次撫摸互動。';
       case 'avoidPet': return actor&&target?`${actor}曾避開${target}的撫摸。`:'記得一次避開撫摸的互動。';
       case 'spill': return '記得一次液體灑出的事。';
       default: return `記得一次「${actionName(o.action)}」相關的事。`;
