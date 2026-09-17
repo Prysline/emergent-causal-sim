@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.15.2-relationship-responder-bias`
+`11.16.0-physical-profile-foundation`
 
-玩家可見標題使用短版 `v11.15.2`；`state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、`SimWorld.RELATIONSHIP_SCHEMA_VERSION`、Resident View、Relationship View 與 Entity Readable View 的 UI version 使用完整 marker。
+玩家可見標題使用短版 `v11.16.0`；`state.version` 與 `SimWorld.PRESENTATION_SCHEMA_VERSION` 使用完整 current marker。Subsystem schema/runtime marker 代表各自 contract generation：目前 Physical 使用 `SimWorld.PHYSICAL_SCHEMA_VERSION = 11.16.0-physical-profile-foundation`，Relationship 仍保留自己的 `SimWorld.RELATIONSHIP_SCHEMA_VERSION = 11.15.2-relationship-responder-bias`，不因無關 current release 推進而假裝 Relationship schema 也升版。Resident / Physical / Entity Readable 等 UI version 若以 current Presentation marker 為 owner，則跟隨 current marker。
 
 ## 何時必須升版
 
@@ -36,7 +36,7 @@
 目前採 `major.minor.patch-slug`：
 
 - `major`：專案世代／大規模不相容重構；目前為 11。
-- `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split，11.15 建立 persistent Relationship Foundation。
+- `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split，11.15 建立 persistent Relationship Foundation，11.16 建立 Physical Profile Foundation。
 - `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意、11.14.3 將 Explanation 的玩家文案收斂為自然直接的原因描述、11.14.4 將玩家可讀 Inspector 擴展到 Container / Source / Furniture / Tile / Room / Event、11.15.1 讓既有 Relationship Foundation 第一次以 bounded target preference 影響 initiator-side social target selection、11.15.2 再讓 responder 自己的 directional Relationship 以 bounded modifier 影響 Human talk / animal pet response score。
 - `slug`：描述 current marker 的主要辨識功能，不是完整 changelog。
 
@@ -44,7 +44,9 @@
 
 ### 檔名 / workflow family 不是 current release marker
 
-像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`browser-resident-view-v1140-qa` 這類名稱代表 subsystem / test family，可以跨後續 current release 延續，不需要因 runtime marker 升到 11.15.2 就整組複製／改名。Relationship 自己仍使用 `relationship-*-v1150.js` family；判斷目前版本時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、`SimWorld.RELATIONSHIP_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準，而不是從其他舊 family 檔名或 workflow display name 反推 current release。
+像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類名稱代表 subsystem / test family，可以跨後續 current release 延續，不需要因 runtime marker 推進就整組複製／改名。
+
+判斷**整體 current release** 時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 進入 11.16.0 就把沒有 contract 變更的 Relationship schema 假升到 11.16.0，也不得從舊 family 檔名反推整體 current release。
 
 若未來 subsystem generation 改變，舊 family 名稱造成實質誤導，再另行 rename；單純 current marker 推進不要求 rename。
 
@@ -53,12 +55,12 @@
 需要升版的 PR 必須同步確認：
 
 1. `src/presentation-schema-v1140.js` 的 current runtime marker；
-2. 新增 subsystem 的 schema marker（本線為 `SimWorld.RELATIONSHIP_SCHEMA_VERSION`）；
+2. 本次新增／改變 subsystem 的 schema/runtime marker（本線為 `SimWorld.PHYSICAL_SCHEMA_VERSION / PHYSICAL_RUNTIME_VERSION`），並確認未變更 subsystem 不被假升版；
 3. `state.version` / `SimWorld.PRESENTATION_SCHEMA_VERSION`；
-4. `SimEngine.UI_RESIDENT_VIEW_VERSION`、`SimEngine.UI_RELATIONSHIP_VERSION` 與 `SimEngine.UI_ENTITY_READABLE_VERSION`（若已載入）都與 current marker 一致；
+4. 由 Presentation current marker 持有的 UI version（目前包含 Resident View、Physical View、Entity Readable View；其他 subsystem UI 依其 owner contract 判斷）沒有形成第二份 release marker；
 5. `index.html` 的 `<title>` 與頁首可見版本；
 6. `README.md` current runtime marker；
-7. `docs/architecture.md` / `docs/tick-pipeline.md` current runtime marker；
+7. `docs/architecture.md` / `docs/tick-pipeline.md` 若記載 current runtime marker，必須同步；若文件刻意只記 subsystem contract，則不得為了版本同步改寫無關語義；
 8. presentation / browser regression 的 expected version；
 9. Notion Architecture Current / relevant Current Design 文件。
 
@@ -73,3 +75,5 @@ PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 sim
 11.15.1 在同一 minor 線內完成動物互動 canonicalization（`interactWithAnimal / petAnimal`）並讓 Relationship 第一次進入 initiator-side social target ranking。Relationship influence 僅作 bounded target preference：`relationshipTargetDelta = 8 × familiarity × affinity`，與 Memory influence、distance penalty 一起決定「找誰」，但不加入 action-level social utility、不 hard-ban 負向 target，也不修改 responder policy、current-intent utility、soft-switch threshold 或 commitment。因此使用 patch marker `11.15.1-relationship-target-preference`。
 
 11.15.2 再加入 **Relationship → Responder Bias**。Relationship runtime 只提供 directional unitless `relationshipSignal = familiarity × affinity`；Human talk 與 animal pet responder subsystem 各自持有自己的 bounded scaling，目前 cap 均為 `±0.18`。Human responder-specific `talkResponseUtility` 可因 response score 改變，但 general `E.baseUtilityForAction(...,'talk')`、initiator social Action utility、target preference、current-intent utility、soft-switch threshold 與 commitment 不變。World Event 不保存 response-score decomposition 或 Relationship internals，Debug 只即時派生 `base + Relationship delta → final`。因此這是 simulation semantics + observability 的 patch-level current contract 變更，使用 `11.15.2-relationship-responder-bias`。
+
+11.16.0 正式建立 **Physical Profile Foundation**。每個 Agent 新增 authoritative `physical` state，第一版包含 `mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`；`SimPhysical.getMovementEnvelope(agent, mode)` 從個體 profile 即時派生 `clearanceHeight / clearanceWidth / clearanceLength / speedFactor`，不保存第二份 envelope cache。既有 Spatial 家具下 clearance 改為消費 canonical Physical `requiredClearance`，同時維持 Human `1.65 m`、Cat `0.32 m` 對餐桌下 `0.72 m` 的預設行為 parity；單一個體 geometry / locomotion profile override 則可改變自己的 feasibility，不再由 `kind` 硬鎖。Debug Inspector 新增 Physical Profile / standing MovementEnvelope observability。本 slice 刻意不加入 crouch / kneelCrawl / proneCrawl、姿勢切換、traversal timing、crowding geometry 或人格／Relationship 對 locomotion willingness 的影響。由於這同時新增 persistent physical schema、新 subsystem interface、Spatial consumer semantics 與正式 Debug observability，因此使用新的 minor marker `11.16.0-physical-profile-foundation`。
