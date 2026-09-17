@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.15.1-relationship-target-preference';
+const CURRENT_VERSION='11.15.2-relationship-responder-bias';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -217,7 +217,6 @@ const entityFixtures=await page.evaluate(()=>{
     source:{id:source.id,name:source.name,resource:source.resource},furniture:{id:furniture.id,name:furniture.name},tile:{id:tile.id,terrain:tile.terrain},room:{id:room.id,name:room.name},event:{id:eventId,text:st.causes[eventId].text}
   };
 });
-
 await selectEntity('container',entityFixtures.container.id);
 let entity=await entitySnapshot();
 assert.equal(entity.version,CURRENT_VERSION);assert.equal(entity.uiVersion,CURRENT_VERSION);assert.equal(entity.activeMode,'readable');assert.equal(entity.readableVisible,true);assert.equal(entity.debugVisible,false);
@@ -289,5 +288,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.15.1 browser readable entity QA: Relationship target preference + Agent + non-agent readable/debug state-inert pass');
+console.log('v11.15.2 browser readable entity QA: Relationship responder bias + Agent + non-agent readable/debug state-inert pass');
 await browser.close();
