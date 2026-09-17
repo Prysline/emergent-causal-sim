@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
-  const VERSION='11.15.2-relationship-responder-bias';
+  const VERSION='11.16.0-physical-profile-foundation';
   const baseCreateInitialState=W.createInitialState;
   const INTERACTION_LABELS=Object.freeze({
     talk:'聊天',

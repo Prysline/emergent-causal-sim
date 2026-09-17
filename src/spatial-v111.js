@@ -48,7 +48,7 @@
   }
   function floorWalkable(st,p,agent=null){
     if(fixedFloorBlocker(st,p))return false;
-    if(agent){const needed=profile(agent).requiredClearance;for(const f of overheadAt(st,p)){if((f.spatial?.under?.clearance??Infinity)<needed)return false;}}
+    if(agent){const needed=window.SimPhysical?.requiredClearance?.(agent,'standing')??profile(agent).requiredClearance;for(const f of overheadAt(st,p)){if((f.spatial?.under?.clearance??Infinity)<needed)return false;}}
     return true;
   }
   function surfaceWalkable(st,node,agent=null){

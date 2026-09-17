@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.15.2-relationship-responder-bias';
+const CURRENT_VERSION='11.16.0-physical-profile-foundation';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -13,7 +13,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openStory(){
   await page.goto('http://127.0.0.1:4173/?scenario=talk-no-response',{waitUntil:'networkidle'});
-  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version&&window.SimEngine?.UI_RELATIONSHIP_VERSION===version,CURRENT_VERSION);
+  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version&&window.SimEngine?.UI_RELATIONSHIP_VERSION===version&&window.SimEngine?.UI_PHYSICAL_VERSION===version,CURRENT_VERSION);
   for(let i=0;i<8;i++){
     const ready=await page.evaluate(()=>window.SimEngine.getState().agents.zhou.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'));
     if(ready)break;
@@ -22,6 +22,7 @@ async function openStory(){
   await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.click());
   await page.waitForSelector('[data-v1140-resident-root]');
   await page.waitForFunction(()=>document.querySelector('[data-v1150-relationship-readable]'));
+  await page.waitForFunction(()=>document.querySelector('[data-v1160-physical-debug]'));
 }
 async function snapshot(){
   return page.evaluate(()=>{
@@ -29,7 +30,7 @@ async function snapshot(){
     const activeMode=root?.querySelector('[data-v1140-mode].active')?.dataset.v1140Mode??null;
     const activeTab=root?.querySelector('[data-v1140-tab].active')?.dataset.v1140Tab??null;
     return {
-      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,relationshipUiVersion:E.UI_RELATIONSHIP_VERSION,
+      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,relationshipUiVersion:E.UI_RELATIONSHIP_VERSION,physicalUiVersion:E.UI_PHYSICAL_VERSION,
       activeMode,activeTab,
       residentVisible:!!resident&&!resident.hidden&&!!resident.getClientRects().length,
       debugVisible:!!debug&&!debug.hidden&&!!debug.getClientRects().length,
@@ -78,6 +79,7 @@ assert.equal(desktop.version,CURRENT_VERSION);
 assert.equal(desktop.uiVersion,CURRENT_VERSION);
 assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
+assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -90,6 +92,7 @@ assert.deepEqual(desktop.inspectorDecorators,[
   {id:'socialOutcome.memory',order:900},
   {id:'residentView.layer',order:1000},
   {id:'relationship.view',order:1025},
+  {id:'physical.view',order:1026},
   {id:'entityReadable.layer',order:1050}
 ],'Inspector presentation ownership must be explicit and deterministically ordered');
 assert.equal(desktop.activeMode,'resident','desktop: Agent should open readable Resident View by default');
@@ -170,6 +173,7 @@ assert.ok(debug.debugText.includes('Agent・zhou'),'Debug must retain original I
 assert.ok(debug.debugText.includes('Memory + Relationship → Social Target'),'Debug must retain advanced social target evidence');
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
 assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Familiarity')&&debug.debugText.includes('Affinity'),'Debug must expose exact directional relationship dimensions');
+assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('Standing MovementEnvelope'),'Debug must expose authoritative Physical Profile and derived standing MovementEnvelope');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
   entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
@@ -180,9 +184,10 @@ const debugOwnership=await page.evaluate(()=>({
   retention:document.querySelectorAll('[data-v1133-retention]').length,
   deliberation:document.querySelectorAll('[data-v1134-memory-deliberation]').length,
   socialOutcome:document.querySelectorAll('[data-v1135-social-outcome-memory]').length,
-  relationship:document.querySelectorAll('[data-v1150-relationship-debug]').length
+  relationship:document.querySelectorAll('[data-v1150-relationship-debug]').length,
+  physical:document.querySelectorAll('[data-v1160-physical-debug]').length
 }));
-assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1,relationship:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
+assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1,relationship:1,physical:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
 
 await page.click('[data-v1140-mode="resident"]');
 await page.click('[data-v1140-tab="memory"]');
@@ -260,7 +265,7 @@ assert.equal(mobile.activeMode,'resident');assert.equal(mobile.residentVisible,t
 const mobileStateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1140-mode="debug"]');await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
 const mobileDebug=await snapshot();const mobileStateAfterDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));
+assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('Standing MovementEnvelope'),'mobile Debug should retain Physical Profile observability');
 await page.click('[data-v1140-mode="resident"]');await page.click('[data-v1140-tab="memory"]');mobile=await snapshot();
 const mobileStateAfterMemory=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 assert.equal(mobileStateAfterMemory,mobileStateBefore,'mobile Resident tab switch must not mutate simulation state');assert.ok(mobile.residentText.includes('當時沒有得到回應'));assert.ok(!mobile.residentText.includes('故意忽略'));assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>${mobile.width}`);assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
@@ -288,5 +293,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.15.2 browser readable entity QA: Relationship responder bias + Agent + non-agent readable/debug state-inert pass');
+console.log('v11.16.0 browser readable entity QA: Physical Profile + Relationship + Agent + non-agent readable/debug state-inert pass');
 await browser.close();
