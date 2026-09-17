@@ -21,15 +21,19 @@
   });
 
   function defaultPhysicalProfile(kind){
-    const template=DEFAULT_PHYSICAL_PROFILES[kind]||DEFAULT_PHYSICAL_PROFILES.human;
-    return clone(template);
+    const template=DEFAULT_PHYSICAL_PROFILES[kind];
+    return template?clone(template):null;
   }
 
   W.VERSION=VERSION;
   W.createInitialState=(seed)=>{
     const st=baseCreateInitialState(seed);
     st.version=VERSION;
-    for(const a of Object.values(st.agents||{}))if(!a.physical)a.physical=defaultPhysicalProfile(a.kind);
+    for(const a of Object.values(st.agents||{})){
+      if(a.physical)continue;
+      const profile=defaultPhysicalProfile(a.kind);
+      if(profile)a.physical=profile;
+    }
     return st;
   };
   W.PHYSICAL_SCHEMA_VERSION=VERSION;
