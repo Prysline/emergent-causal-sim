@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.16.0-physical-profile-foundation`。
+目前 runtime marker：`11.17.0-passage-profile-multimode`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -17,6 +17,7 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - canonical World Event：`state.events / state.causes`
 - Agent / Object 的物理位置
 - Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
+- authored passage geometry：Furniture `spatial.under` 與可選 `map.passageConstraints`
 - Container / Source / Surface Environment 的實際 resource contents
 - posture、held container、reservations
 - Action 正在如何執行的 state machine
@@ -24,7 +25,7 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 
 Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
 
-Physical Profile Foundation 同樣遵守 single-source rule：Agent 保存可重用的物理事實；`MovementEnvelope` 是由 `SimPhysical.getMovementEnvelope(agent, locomotionMode)` 根據 profile 即時計算的 derived geometry，不保存 `agent.movementEnvelope` 或 `agent.physical.movementEnvelope` cache。未來 Anatomy 可替換 envelope 的推導來源，但 Spatial 仍只消費 canonical Physical interface，不直接知道 limb tree。
+Physical / Passage contract 同樣遵守 single-source rule：Agent 保存可重用的物理事實；`MovementEnvelope` 是由 `SimPhysical.getMovementEnvelope(agent, locomotionMode)` 根據 profile 即時計算的 derived geometry；`PassageProfile` 則由 `SimSpatial.getPassageProfile(state, fromNode, toNode)` 根據既有 Spatial geometry 即時計算。兩者都不保存 persistent cache。未來 Anatomy 可替換 envelope 的推導來源，但 Spatial 仍只消費 canonical Physical interface，不直接知道 limb tree。
 
 ### Agent-private Truth
 
@@ -323,6 +324,8 @@ UI / readable Inspector 可以在更晚的 presentation hooks render，但不得
 
 Runtime hook extension 不再保留「沒有 pipeline 時 fallback wrapper」。任何需要 `registerRuntimeHook` 的 extension 若未先載入 `runtime-hook-pipeline.js` 必須 loud failure；focused Node test 也必須在 `engine.js` 後、任何 hook extension 前載入同一 production pipeline。正常 app 與 test 不再存在第二套 wrapper-stacking lifecycle。
 
+Physical / Passage Profile Slice 2 沒有新增 runtime hook 或 tick phase；它提供同步 derived geometry / feasibility query，A* 只在既有 traversal expansion 中讀 `walk` feasibility。
+
 ## 7. Event creation / observation ownership
 
 ### 7.1 Canonical event creation
@@ -450,7 +453,7 @@ Resident overview 額外顯示 Relationship 的 read-only 長期摘要。Readabl
 
 ### Physical Profile Debug projection
 
-v11.16.0 Physical Profile Foundation 只在 Debug 顯示精確 `mass / volume / bodyGeometry` 與 standing `MovementEnvelope`。Physical UI 直接讀 authoritative profile 與 `SimPhysical.getMovementEnvelope(...)`；不建立 `movementEnvelope` presentation mirror，也不把 coarse MVP template 描述成 Anatomy 級測量結果。Player-readable behavior 文案目前不使用這些數字推論人格、身材評價或 locomotion 動機。
+v11.17.0 Physical / Passage Slice 2 在 Debug 顯示精確 `mass / volume / bodyGeometry` 與每個 supported locomotion mode 的即時 `MovementEnvelope`。Physical UI 直接讀 authoritative profile 與 `SimPhysical.getMovementEnvelope(...)`；不建立 `movementEnvelope` presentation mirror，也不把 coarse MVP template 描述成 Anatomy 級測量結果。`posture: standing` 與 locomotion `walk` 保持不同語意；Player-readable behavior 文案目前不使用這些數字推論人格、身材評價或「願不願意 crawl」。
 
 ### Entity Readable View
 
@@ -492,7 +495,7 @@ Base `ui.js` 是 `#inspector` 的唯一 render owner。它先提交 base Inspect
 
 Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Action / Intent / Explanation；order 1025 Relationship layer 與 order 1026 Physical layer 在 Agent shell 已建立後補入各自 read-only / Debug projection；order 1050 Entity Readable layer 對 Agent 不建立第二個 shell，只統一玩家入口標籤。Container / Source / Furniture / Tile / Room / Event 則由 order 1050 將已完成 decorators 的 base Inspector DOM 包入 Readable / Debug shell。所有 layer 都直接使用 base UI 傳入的 `selected` context，不解析 `.inspect-title` 猜 entity，也不以 `MutationObserver` 搬運重建後的 DOM。
 
-Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。Physical Profile Slice 1 是靜態 profile + derived projection，沒有取得 simulation runtime hook ownership。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
+Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。Physical / Passage Slice 2 是靜態 profile + 同步 derived projection / query，沒有取得 simulation runtime hook ownership。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
 
 `ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
 
@@ -507,9 +510,9 @@ Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `r
 
 詳見 [`interaction-geometry.md`](interaction-geometry.md)。
 
-### Physical Profile Foundation
+### Physical Profile + Passage Profile / Multi-mode Feasibility
 
-v11.16.0 的第一刀只建立 reusable physical facts 與 standing MovementEnvelope contract：
+v11.17.0 在 v11.16.0 individual Physical Profile 基礎上加入 multi-mode MovementEnvelope 與 edge-derived PassageProfile：
 
 ```text
 agent.physical
@@ -521,18 +524,29 @@ agent.physical
 
 SimPhysical.getMovementEnvelope(agent, mode)
 → { clearanceHeight, clearanceWidth, clearanceLength, speedFactor, sourceMode }
+
+SimSpatial.getPassageProfile(state, fromNode, toNode)
+→ { clearanceHeight, clearanceWidth, ... }
+
+SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
+→ { passage, modes: { [mode]: { feasible, failedAxes } } }
 ```
 
 正式邊界：
 
-- mass、volume、body geometry 分開保存，不用單一 `bodySize` 取代；
-- default Human / Cat profile 是 coarse MVP template，clone 成每個 Agent 自己的 state，個體可 override；
-- `MovementEnvelope` 是 derived output，不保存 persistent cache；
+- mass、volume、body geometry 分開保存，不用單一 `bodySize` 取代；default Human / Cat profile 是 coarse MVP template，clone 成每個 Agent 自己的 state，個體可 override；
+- `MovementEnvelope` 與 `PassageProfile` 都是 derived output，不保存 persistent cache；
+- Physical locomotion baseline 由舊 `standing` 正名為 `walk`，與 Agent `posture.kind='standing'` 分離；Validator 會拒絕 legacy standing locomotion alias；
+- Human 第一批 supported modes 為 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不假定所有 body plan 共享 Human mode 名稱；
 - locomotion profile 可用各軸 factor 或 absolute clearance override；Spatial 不自行推導 torso thickness / Anatomy；
-- Spatial 家具下 clearance 現在讀 `SimPhysical.requiredClearance(agent, 'standing')`，只有 Physical interface unavailable 時才保留 legacy species scalar fallback；
-- 預設 standing geometry 刻意維持 v11.11 behavior parity：Human `1.65 m`、Cat `0.32 m` 對既有餐桌下 `0.72 m` clearance 的結果不變；
-- 本 slice 不新增 crouch / kneelCrawl / proneCrawl，不把 posture transition、travel time、crowding、Relationship / trait motivation 混入 Physical feasibility；
-- 未來「能不能過」由 Physical + Spatial 決定；「願不願意為某目標趴著過」屬行為／動機選擇層，不能回寫 Physical truth。
+- PassageProfile 第一版只正式比較 `clearanceHeight / clearanceWidth`。某軸沒有明確限制時為 `null = unconstrained`；不發明每格固定公尺數，也不把 body length 誤當成直線 passage length requirement；
+- passage geometry 可來自 Furniture `spatial.under.clearance / clearanceWidth` 與可選 edge-local `map.passageConstraints`，Spatial 將這些 world facts 收斂成 canonical edge query；
+- `traversalFeasibility` 只回答 physical feasibility，不回傳 `bestMode / recommendedMode / utility`，不讀 Relationship、Memory、traits、goal pressure，也不修改 posture；
+- 現行 A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此 crawl-query 可行不代表 routing 會自動 crawl；
+- deterministic single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；low/lower 情況下另一側水源仍不可由現行 walk-only A* 到達；
+- Static fit 與 Traversable 概念仍分離，但本 slice **不實作 PoseEnvelope / static occupancy API**；不能拿 MovementEnvelope 假裝靜態 body bounds；
+- `clearanceLength / turn clearance / maneuverability`、locomotion execution / posture transition、`pathDistance / traversalCost / travelTime` 分家、crowding、Anatomy / Injury / Collision 都延後；
+- 「能不能過」由 Physical + Spatial 決定；未來「願不願意為某目標趴著過」屬行為／動機選擇層，不能回寫 physical feasibility，也不能把真實 traversal / exertion burden 抹成 0。
 
 ### Resources / logistics
 
@@ -555,7 +569,9 @@ Regression 優先鎖：
 
 - Single Source of Truth；
 - World / Agent-private / Observed Information boundary；
-- Physical Profile individual ownership、positive dimensions / mass / volume、derived MovementEnvelope no-cache boundary、default Spatial behavior parity 與 individual geometry override；
+- Physical Profile individual ownership、positive dimensions / mass / volume、multi-mode MovementEnvelope no-cache boundary、`standing → walk` terminology、default Spatial behavior parity 與 individual geometry override；
+- Passage Profile height / width validity、`null = unconstrained`、explicit edge constraint 與 per-mode `failedAxes`；
+- crawl feasibility query 不得讓 walk-only A* 自動選 mode 或修改 posture；
 - canonical Action terminology / construction；
 - Intent interruption semantics；
 - Social Bid requester / responder agency；
@@ -575,12 +591,14 @@ Regression 優先鎖：
 
 ## 11. Current integration priority
 
-Physical Current invariant：
+Physical / Locomotion Current invariant：
 
 - `agent.physical` 保存 individual authoritative profile；template 只是初始化來源，不是 runtime species hard-code；
-- `MovementEnvelope` 只由 `SimPhysical.getMovementEnvelope(agent, mode)` derived，不建立 persistent mirror；
-- Spatial overhead clearance 必須消費 canonical Physical interface；Spatial observability 也顯示同一 derived clearance；
-- Slice 1 只啟用 standing mode，維持既有 Human / Cat default feasibility，不偷做 crawling / posture transition / traversal timing；
+- `MovementEnvelope` 只由 `SimPhysical.getMovementEnvelope(agent, mode)` derived，不建立 persistent mirror；`PassageProfile` 同樣由 Spatial edge geometry derived，不建立 cache；
+- locomotion baseline 是 `walk`，不得再把 Agent posture `standing` 當成同一個 locomotion mode；
+- Human 目前可查詢 `walk / kneelCrawl / proneCrawl` feasibility，Cat 目前只定義 `walk`；capability 只表示物理支援，不代表行為意願；
+- Spatial A* 本 slice 仍只有 walk execution。若 passage 對 walk blocked，即使 crawl query 可行，也不得自動 crawl 或修改 posture；
+- 下一個 product slice 是 route semantics 分家：`pathDistance` 回到幾何／拓樸距離，`traversalCost` 表示客觀通行負擔，`travelTime` 表示耗時；之後才接 locomotion execution / posture transition；
 - mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
 - Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
 
