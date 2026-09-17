@@ -61,7 +61,7 @@ const human=st.agents.zhou,cat=st.agents.orange,bystander=st.agents.zhen;
 human.position={x:5,y:5};cat.position={x:5,y:6};bystander.position={x:7,y:5};
 Object.assign(human.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:65});
 Object.assign(cat.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,groomingNeed:20,social:5});
-human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
+human.action={kind:'petAnimal',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
 E.ensureIntentForAction?.(st,human);
 assert.equal(SP.isAtInteraction(st,human,{kind:'agent',id:cat.id},'social'),true,'fixture must begin in social range');
 
