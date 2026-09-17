@@ -1,8 +1,8 @@
 # Emergent Causal Simulator
 
-湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶與環境如何自行形成沒有被作者逐條寫死的因果鏈。
+湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.14.4・Entity Readable View**（`11.14.4-entity-readable-view`）。
+目前 runtime marker：**v11.15.0・Relationship Foundation**（`11.15.0-relationship-foundation`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -15,7 +15,8 @@
 - Action type 的唯一正式欄位是 `action.kind`；舊 `action.intent` compatibility 已移除。
 - `Agent.activeIntent` 是 Agent-private 短期目的，與 `action.kind` 分工不同；`action.intentId` 只作 Action → Active Intent linkage。
 - Social Bid 是可觀察的 World Event；requester waiting、responder Intent、episodic memory、Affect 都是各 Agent 自己的 private state，不建立共享心理 lifecycle registry。
-- Episodic Memory 保存 Agent-local observable projection，不複製完整 World Event，也不把另一個 Agent 的 private state當成可觀察資訊。
+- Episodic Memory 保存 Agent-local observable projection，不複製完整 World Event，也不把另一個 Agent 的 private state 當成可觀察資訊。
+- Relationship 也是 Agent-private directional state：`A → B` 與 `B → A` 分開保存，只承接 A 自己的 historical appraisal consolidation，不建立共享 pair score。
 
 ## 目前已具備
 
@@ -46,15 +47,21 @@
 - requester timeout 不會遠端取消 responder-private Intent；late response 與先前 wait-end experience 可以同時成立。
 - 已移除舊 `pendingInteraction / cat_request / accepted / catRequestExpired` responder compatibility bridge。
 
-### Memory / appraisal / affect
+### Memory / appraisal / affect / relationship
 
 - bounded Agent-local episodic memory。
 - minimal observable snapshot + source-event provenance。
 - historical Appraisal；re-observation 不會用現在狀態靜默重寫過去的評估。
 - short-lived Affect。
 - salience / recurrence / recency retention。
-- 第一版 target-aware Memory → Deliberation influence，只影響 initiator-side social candidate；Current Affect、Relationship 與 responder-specific Memory 尚未直接進入 responder scoring。
+- 第一版 target-aware Memory → Deliberation influence，只影響 initiator-side social candidate。
 - requester-private `privateSocialOutcome` 可記錄「當時沒有得到立即回應」，但不推定 counterpart 故意忽略、討厭或拒絕。
+- **Relationship Foundation**：每個 Agent 以 `relationships[counterpartId]` 保存 `familiarity 0..1 / affinity -1..1 / lastUpdatedTick`；Familiarity 表示累積相處歷史，Affinity 表示長期主觀相處經驗偏正／偏負，兩者都不等於 friendship / trust / love / hate。
+- Relationship 只由 audited direct relational experience 的 historical Appraisal consolidation 更新；`talkOffer / petOffer / acceptPet / toleratePet` 等 proposal / intermediate response 不重複計分。
+- 一次 encounter 對每個 Agent 最多 consolidation 一次，但雙方可使用不同 subjective outcome：完整 Human conversation 中 requester 使用 `acceptTalk`，responder 使用 `talk`；`avoidPet` 則可讓人與貓從同一 observable event 得到相反方向的 Affinity evidence。
+- `privateSocialOutcome` 只可更新 requester → counterpart；counterpart 不會因 requester 的 private timeout 被遠端改寫 Relationship。
+- Relationship 是 persistent slow state，不因來源 episodic memory 後續被 pruning 而倒退；第一版不做時間衰退，也不保存 contributing-memory history。
+- **v11.15.0 Relationship 完全 decision-inert**：不修改 target selection、candidate utility、soft reconsideration、Human `talkEngagementScore` 或 Cat `petResponseScore`。Current Affect 與 responder-specific Memory 也仍未直接進入 responder scoring。
 - ordinary successful resource-transfer consequence 是明確 non-episodic outcome；成功 `pour` 仍由來源 action episode 表達，失敗 `spill` 則可作為獨立 observable physical effect。
 
 ### Presentation
@@ -64,6 +71,7 @@
 - Agent Action 會把 raw phase 名稱與工程座標轉成玩家可讀描述；完整 phase / spatial goal 仍留在 Debug。
 - Agent Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
 - Player Explanation 優先使用可由同一 evidence 直接支持的日常說法，例如「因為肚子餓了」「因為口渴」「因為累了」「因為想睡了」「因為想找人說說話」；不把 engine threshold 翻成「需求已經變得明顯」之類系統語言。精確需求強度仍留在 Needs / Debug；若沒有可靠的具體原因，使用保守抽象描述或省略，不自行補心理敘事。
+- Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick。
 - Container / Source / Furniture / Tile / Room / Event 也有玩家可讀投影：優先顯示名稱、位置、內容物、容量、持有人、實際用途／使用者、表面內容、空間中的居民／家具與 canonical event text 等直接可理解資訊。
 - 非居民 Readable View 不直接顯示 raw entity ID、工程座標、Footprint、interaction Port、Surface cell、slot reservation、cause tree 或其他 debug provenance；這些仍留在 Debug Inspector。家具 readable status 只顯示實際使用者，不把 reservation 當成已發生事實或玩家可見心理資訊。
 - readable entity projection 只從現有 Container / Source / Furniture / Spatial / Event truth 即時推導，不新增 `playerContents`、`readableFurnitureState` 等 persistent mirror。
@@ -71,7 +79,7 @@
 - UI 不得改寫 canonical event text。
 - core 保有 `E.actionLabel` ownership；presentation 透過 action-label resolver 派生 readable status。
 - recent social presentation 直接從 bounded canonical events + event creation `tick` 推導，不保存第二份 `recentSocialByAgent` lifecycle cache。
-- `ui.js` 是 Inspector base render owner；Spatial / Intent / Memory / Appraisal / Affect / Retention / Memory→Deliberation / Social Outcome / Resident / Entity Readable 使用具名且排序明確的 Inspector decorator，不再以 MutationObserver 充當 Inspector completion lifecycle。
+- `ui.js` 是 Inspector base render owner；Spatial / Intent / Memory / Appraisal / Affect / Retention / Memory→Deliberation / Social Outcome / Resident / Relationship / Entity Readable 使用具名且排序明確的 Inspector decorator，不再以 MutationObserver 充當 Inspector completion lifecycle。
 
 ## Runtime lifecycle
 
@@ -86,7 +94,9 @@ afterReset
 episodicMemoryCreated
 ```
 
-Subsystem 使用具名 hook + explicit order，不再靠「最後載入的 wrapper 包住前一個 wrapper」決定跨系統語義。Script load order可以決定 registration 發生時間，但不能充當 lifecycle semantic contract。所有會註冊 runtime hook 的 extension 都要求 production pipeline 已存在；目前沒有第二套 no-pipeline compatibility lifecycle。
+Subsystem 使用具名 hook + explicit order，不再靠「最後載入的 wrapper 包住前一個 wrapper」決定跨系統語義。Script load order 可以決定 registration 發生時間，但不能充當 lifecycle semantic contract。所有會註冊 runtime hook 的 extension 都要求 production pipeline 已存在；目前沒有第二套 no-pipeline compatibility lifecycle。
+
+Relationship 對 ordinary observed episodic memory 使用 `episodicMemoryCreated` order 350：specialized Appraisal 100～300 → Relationship consolidation 350 → Affect 400。Requester-private `privateSocialOutcome` 目前仍是專用建立路徑，在自己的 Appraisal 完成後呼叫同一 `E.consolidateRelationshipFromMemory(...)` policy，再進 Affect / prune；兩種 experience lifecycle 的全面統一保留為後續 architecture cleanup，不阻塞本 slice。
 
 ## Memory event observation lifecycle
 
@@ -97,7 +107,7 @@ Observation 依 producer 邊界分流：
 - pre-core / post-process / tick 外 direct API 等非 core Agent loop producer：event-created 後同步形成 eligible psychological observation；
 - core sequential Agent loop 內建立的 event：Memory 只把 source event reference 排入 Memory-local ephemeral FIFO，在 `afterTick` order 500 `memory.process-events` 依 creation order flush；
 - deferred processing 仍使用 source event 的 creation `event.tick` 作 `observedTick` provenance，不把 afterTick processing time 當成事件發生時間；
-- same source event 維持 exactly-once episodic / Appraisal / Affect projection；
+- same source event 維持 exactly-once episodic / Appraisal / Affect / Relationship consolidation；
 - `system` plan 等 private cognition 仍是 non-episodic，event-created notification 不等於 generic Memory eligibility。
 
 因此目前正式 contract 是 **core-owned event creation + event-created notification + Memory-controlled delivery**。舊 Memory `E.addEvent` wrapper、`memory.capture-events` 與 marker sweep 已移除；詳細 ordering / ownership contract 見 [`docs/architecture.md`](docs/architecture.md) 與 [`docs/tick-pipeline.md`](docs/tick-pipeline.md)。
@@ -113,10 +123,11 @@ State regression 目前涵蓋：
 - Episodic Memory / Appraisal / Affect / salience；
 - Human / Pet responder agency；
 - Memory → Deliberation / requester social outcome；
+- Relationship Foundation 的 directional state、audited evidence gate、exactly-once consolidation、private-outcome boundary、Memory pruning independence、boundedness 與 decision-inert contract；
 - Runtime Hook Pipeline；
-- presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則，以及非居民 Entity Readable / Debug 分層。
+- presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則、Relationship readable/debug 分層，以及非居民 Entity Readable / Debug 分層。
 
-另有 Chromium Browser QA 驗證 Social Response、Human Social Response、Memory、Resident View、Entity Readable View、mobile controls 與 UI state-inert behavior。Regression 優先鎖 authoritative state、truth boundary、causal linkage 與 deterministic invariants，而不是要求 emergent simulation 每次都走唯一固定劇情。
+另有 Chromium Browser QA 驗證 Social Response、Human Social Response、Memory、Resident View、Relationship、Entity Readable View、mobile controls 與 UI state-inert behavior。Regression 優先鎖 authoritative state、truth boundary、causal linkage 與 deterministic invariants，而不是要求 emergent simulation 每次都走唯一固定劇情。
 
 ## 執行
 

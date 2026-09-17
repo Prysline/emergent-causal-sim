@@ -6,7 +6,8 @@ globalThis.window=globalThis;
 const EXPECTED=[
   ['spatial.node',100],['spatial.environment',200],['action.canonical-type',300],['intent.active',400],['social-bid',500],
   ['interruption',600],['deliberation',700],['memory.episodic',800],['appraisal',900],['affect',1000],
-  ['social-response',1100],['memory-retention',1200],['human-social-response',1300],['memory-deliberation',1400],['social-outcome-memory',1500]
+  ['social-response',1100],['memory-retention',1200],['human-social-response',1300],['memory-deliberation',1400],['social-outcome-memory',1500],
+  ['relationship',1600]
 ];
 const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const scripts=[...html.matchAll(/<script src="(src\/[^"]+\.js)" defer><\/script>/g)].map(m=>m[1]);
@@ -21,12 +22,12 @@ assert.deepEqual(V.listValidationLayers(),EXPECTED.map(([id,order])=>({id,order}
 assert.equal(V.isValidationRegistryFinalized(),false);
 
 // Duplicate ownership must fail before finalization rather than silently replace an invariant layer.
-assert.throws(()=>V.registerValidationLayer('spatial.node',()=>({issues:[]}),1600),/Duplicate validator layer id/);
+assert.throws(()=>V.registerValidationLayer('spatial.node',()=>({issues:[]}),1700),/Duplicate validator layer id/);
 assert.throws(()=>V.registerValidationLayer('test.duplicate-order',()=>({issues:[]}),100),/Duplicate validator layer order/);
 
 vm.runInThisContext(fs.readFileSync(new URL('../src/state-validator-manifest.js',import.meta.url),'utf8'),{filename:'src/state-validator-manifest.js'});
 assert.equal(V.isValidationRegistryFinalized(),true);
-assert.throws(()=>V.registerValidationLayer('late.layer',()=>({issues:[]}),1600),/finalized/,'late validator registration must fail loudly');
+assert.throws(()=>V.registerValidationLayer('late.layer',()=>({issues:[]}),1700),/finalized/,'late validator registration must fail loudly');
 E.reset(20260911);
 const validation=V.validateState(E.getState());
 assert.equal(validation.issueCount,0,validation.issues.map(x=>`${x.code}: ${x.message}`).join(' | '));
