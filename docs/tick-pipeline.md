@@ -2,7 +2,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.15.1-relationship-target-preference`。
+目前 runtime marker：`11.15.2-relationship-responder-bias`。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >
@@ -93,7 +93,7 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render | presentation-only；不得影響 simulation ordering |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection | presentation-only；不得影響 simulation ordering |
 
-v11.15.1 的 Relationship target preference 不新增 runtime hook，也不改上述 order；它只在既有 initiator-side target evaluation 中加入 bounded derived signal。因此本版 pipeline ordering 與 11.15.0 Foundation 相同，版本同步是 Current contract 對齊，不代表新增 lifecycle stage。
+v11.15.1 的 Relationship target preference 與 v11.15.2 的 Relationship responder bias 都**不新增 runtime hook、也不改上述 order**。前者在既有 initiator-side target evaluation 中加入 bounded derived signal；後者由既有 Social Response / Human Social Response owner 在自己的 response evaluation 內讀 responder → requester 的 directional Relationship signal。因此本版 pipeline ordering仍與 11.15.0 Foundation 相同，版本同步是 Current contract 對齊，不代表新增 lifecycle stage。
 
 ## 5. `episodicMemoryCreated` 支線
 
@@ -161,7 +161,7 @@ core addEvent
 - **No marker sweep**：`memory.capture-events` 與 newest-event marker 已移除；Memory 不再掃 `state.events` 推斷「哪些事件剛發生」。
 - **Private outcome remains separate**：`privateSocialOutcome` 仍是 requester-private experience path，不折進 generic World Event observation；它只可更新 requester 自己的 directional Relationship。
 
-PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contract：tick 外 direct API、pre-core Human social offer、core-loop world event、Social Response Resolve 600、Human Social Resolve 700 都必須維持原有心理可見時點與 `event.tick → observedTick` provenance。Relationship consolidation 在這些既有心理 checkpoint 中維持 order 350，不因 v11.15.1 target preference 改變 event delivery mode。
+PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contract：tick 外 direct API、pre-core Human social offer、core-loop world event、Social Response Resolve 600、Human Social Resolve 700 都必須維持原有心理可見時點與 `event.tick → observedTick` provenance。Relationship consolidation 在這些既有心理 checkpoint 中維持 order 350；v11.15.1 target preference 與 v11.15.2 responder bias 都只讀已存在的 Relationship derived signal，不改 event delivery mode。
 
 ## 8. 哪些 order / boundary 變更必須視為 semantic change
 
@@ -192,7 +192,8 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 - event-created consumer registry：`E.listEventCreatedListeners()`。
 - architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 exact simulation hook ID / order，並拒絕 extension-owned lifecycle wrapper。
 - Relationship Foundation causal guard：`tests/relationship-foundation-v1150.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
-- Relationship Target Preference causal guard：`tests/relationship-target-preference-v1151.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility / responder boundary、負向不 hard-ban，以及 generic animal affordance eligibility。
+- Relationship Target Preference causal guard：`tests/relationship-target-preference-v1151.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility isolation、負向不 hard-ban，以及 generic animal affordance eligibility。
+- Relationship Responder Bias causal guard：`tests/relationship-responder-bias-v1152.mjs` 鎖 responder → requester directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy 與 no persistent score cache。
 - presentation hook / decorator 的 exact ordering 另由 presentation / browser regression 鎖定；它們不能被誤讀成 simulation pipeline stage。
 
 若 source registry、focused regression 與本文不一致，以 current executable source + regression 為準，並在同一修正中同步本文；不得讓舊文件 ordering 反過來覆蓋現行已驗證 runtime。
