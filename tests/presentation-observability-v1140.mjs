@@ -124,7 +124,7 @@ assert.match(architectureSource,/Explanation wording 優先自然直接/,'Archit
 assert.match(architectureSource,/Entity Readable View/,'Architecture must define the generalized player-readable entity surface');
 assert.match(architectureSource,/Relationship Foundation/,'Architecture must define Relationship ownership and truth boundaries');
 assert.match(architectureSource,/Relationship → Responder Bias/,'Architecture must retain responder-bias boundary');
-assert.match(architectureSource,/Physical Profile Foundation/,'Architecture must define Physical Profile ownership');
+assert.match(architectureSource,/Physical Profile \+ Passage Profile \/ Multi-mode Feasibility/,'Architecture must define the current Physical / Passage ownership boundary');
 assert.match(architectureSource,/MovementEnvelope/,'Architecture must define the derived locomotion geometry boundary');
 assert.match(architectureSource,/PassageProfile/,'Architecture must define the derived passage geometry boundary');
 assert.match(architectureSource,/traversalFeasibility/,'Architecture must define the physical multi-mode feasibility boundary');
