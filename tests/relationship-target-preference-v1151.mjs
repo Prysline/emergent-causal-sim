@@ -13,7 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const clone=x=>structuredClone(x);
 const near=(actual,expected,eps=.001,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
@@ -93,12 +93,13 @@ assert.equal(E.canPetAnimal(human,cat),true);
 assert.equal(E.buildAction(human,{id:'petAnimal',targetAgent:'orange'})?.kind,'petAnimal');
 W.SPECIES_PROFILES.dog={...clone(W.SPECIES_PROFILES.cat),socialClass:'animal',interactionAffordances:{pet:true}};
 W.SPECIES_PROFILES.turtle={...clone(W.SPECIES_PROFILES.cat),socialClass:'animal',interactionAffordances:{pet:false}};
-const dog=clone(cat);dog.id='dog';dog.name='小狗';dog.kind='dog';dog.position={x:6,y:5};dog.relationships={};dog.episodicMemories=[];
-const turtle=clone(cat);turtle.id='turtle';turtle.name='陸龜';turtle.kind='turtle';turtle.position={x:6,y:6};turtle.relationships={};turtle.episodicMemories=[];
+const dog=clone(cat);dog.id='dog';dog.name='小狗';dog.kind='dog';dog.position={...cat.position};dog.relationships={};dog.episodicMemories=[];
+const turtle=clone(cat);turtle.id='turtle';turtle.name='陸龜';turtle.kind='turtle';turtle.position={...cat.position};turtle.relationships={};turtle.episodicMemories=[];
 st.agents.dog=dog;st.agents.turtle=turtle;
 assert.equal(E.isAnimalAgent(dog),true);
 assert.equal(E.canPetAnimal(human,dog),true,'pet feasibility must not be hardcoded to cat');
 assert.equal(E.canPetAnimal(human,turtle),false,'species affordance may explicitly disable petting without creating a new Action kind');
+assert.ok(Number.isFinite(SP.pathDistance(st,human,dog.position)),'future animal fixture must be spatially reachable before target-ranking eligibility is tested');
 const animalTargets=E.targetEvaluations(st,human,'interactWithAnimal',E.baseUtilityForAction(human,'petAnimal')).map(e=>e.targetAgent);
 assert.ok(animalTargets.includes('orange'));
 assert.ok(animalTargets.includes('dog'));
