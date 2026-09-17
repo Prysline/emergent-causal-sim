@@ -9,16 +9,23 @@
   const RECENCY_HALF_LIFE=E.MEMORY_RECENCY_HALF_LIFE||W.MEMORY_RECENCY_HALF_LIFE||32;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=(v,d=3)=>{const p=10**d;return Math.round(v*p)/p;};
-  const SUPPORTED_INTENTS=new Set(['socialize','interactWithCat','seekSocialContact']);
-  const ACTION_TO_INTENT=Object.freeze({talk:'socialize',petCat:'interactWithCat',seekHuman:'seekSocialContact'});
+  const SUPPORTED_INTENTS=new Set(['socialize','interactWithAnimal','seekSocialContact']);
+  const ACTION_TO_INTENT=Object.freeze({talk:'socialize',petAnimal:'interactWithAnimal',seekHuman:'seekSocialContact'});
 
   function eligibleTargets(st,a,intentKind){
     if(!a||a.offMap||!SUPPORTED_INTENTS.has(intentKind))return [];
-    let kind=null,awakeOnly=false;
-    if(intentKind==='socialize'){if(a.kind!=='human')return [];kind='human';awakeOnly=true;}
-    else if(intentKind==='interactWithCat'){if(a.kind!=='human')return [];kind='cat';}
-    else if(intentKind==='seekSocialContact'){if(a.kind!=='cat')return [];kind='human';}
-    return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&t.kind===kind&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,pathDistance:SP.pathDistance(st,a,target.position)})).filter(x=>Number.isFinite(x.pathDistance));
+    let predicate=null,awakeOnly=false;
+    if(intentKind==='socialize'){
+      if(a.kind!=='human')return [];
+      awakeOnly=true;predicate=t=>t.kind==='human';
+    }else if(intentKind==='interactWithAnimal'){
+      if(a.kind!=='human')return [];
+      predicate=t=>E.canPetAnimal?.(a,t)===true;
+    }else if(intentKind==='seekSocialContact'){
+      if(E.isAnimalAgent?.(a)!==true)return [];
+      predicate=t=>t.kind==='human';
+    }
+    return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,pathDistance:SP.pathDistance(st,a,target.position)})).filter(x=>Number.isFinite(x.pathDistance));
   }
   function memoryEvidence(st,a,m){
     const p=m?.appraisal||{},relevance=clamp(Number(p.relevance)||0,0,1),congruence=clamp(Number(p.goalCongruence)||0,-1,1),age=Math.max(0,(Number(st?.tick)||0)-(Number(m?.lastObservedTick)||Number(m?.observedTick)||0)),recency=1/(1+age/RECENCY_HALF_LIFE);
@@ -27,7 +34,10 @@
   function memoryAssociatedWithTarget(m,targetId){if(!m||!targetId)return false;if(m?.appraisal?.agency?.kind==='other'&&m.appraisal.agency.agentId===targetId)return true;return m.episodeKind==='privateSocialOutcome'&&m?.experienced?.kind==='socialNoResponse'&&m.experienced.counterpartId===targetId;}
   function targetMemoryContributions(st,a,targetId){return (a?.episodicMemories||[]).filter(m=>memoryAssociatedWithTarget(m,targetId)).map(m=>memoryEvidence(st,a,m)).sort((x,y)=>Math.abs(y.evidence)-Math.abs(x.evidence)||y.lastObservedTick-x.lastObservedTick||String(x.memoryId).localeCompare(String(y.memoryId))).slice(0,TOP_MEMORIES);}
   function targetAssociation(st,a,targetId){const contributions=targetMemoryContributions(st,a,targetId),signedEvidence=contributions.reduce((sum,c)=>sum+c.evidence,0),association=Math.tanh(signedEvidence),memoryUtilityDelta=clamp(association*MAX_DELTA,-MAX_DELTA,MAX_DELTA);return {targetId,contributions,signedEvidence:round(signedEvidence,4),association:round(association,4),memoryUtilityDelta:round(memoryUtilityDelta)};}
-  function targetEvaluation(st,a,target,intentKind,baseUtility){const pathDistance=SP.pathDistance(st,a,target.position),assoc=targetAssociation(st,a,target.id),distancePenalty=Math.min(Math.max(0,pathDistance)*DISTANCE_WEIGHT,DISTANCE_CAP);return {...assoc,intentKind,targetAgent:target.id,pathDistance:round(pathDistance),distancePenalty:round(distancePenalty),targetPreference:round(assoc.memoryUtilityDelta-distancePenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};}
+  function targetEvaluation(st,a,target,intentKind,baseUtility){
+    const pathDistance=SP.pathDistance(st,a,target.position),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),distancePenalty=Math.min(Math.max(0,pathDistance)*DISTANCE_WEIGHT,DISTANCE_CAP);
+    return {...assoc,intentKind,targetAgent:target.id,pathDistance:round(pathDistance),relationshipTargetDelta,distancePenalty:round(distancePenalty),targetPreference:round(assoc.memoryUtilityDelta+relationshipTargetDelta-distancePenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};
+  }
   function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target})=>targetEvaluation(st,a,target,intentKind,baseUtility)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}
   function bestTargetEvaluation(st,a,intentKind,baseUtility){return targetEvaluations(st,a,intentKind,baseUtility)[0]||null;}
   function adjustIntentCandidates(st,a,candidates){
@@ -37,7 +47,7 @@
   }
   function adjustCurrentIntentUtility(st,a,intent,baseUtility){if(!SUPPORTED_INTENTS.has(intent?.kind))return baseUtility;const targetId=a?.action?.targetAgent,target=targetId&&st.agents?.[targetId];if(!target||target.offMap)return baseUtility;return targetEvaluation(st,a,target,intent.kind,baseUtility).finalUtility;}
   function isDistinctTargetCandidate(st,a,intent,candidate){if(!SUPPORTED_INTENTS.has(intent?.kind)||candidate?.intentKind!==intent.kind)return false;const currentTarget=a?.action?.targetAgent;return !!(currentTarget&&candidate?.targetAgent&&candidate.targetAgent!==currentTarget);}
-  function coreIntentForOption(a,option){const intentKind=ACTION_TO_INTENT[option?.id];if(!intentKind)return null;if(option.id==='petCat'&&a?.activeIntent?.kind==='respondSocialBid')return null;return intentKind;}
+  function coreIntentForOption(a,option){const intentKind=ACTION_TO_INTENT[option?.id];if(!intentKind)return null;if(option.id==='petAnimal'&&a?.activeIntent?.kind==='respondSocialBid')return null;return intentKind;}
   function adjustCoreOptions(st,a,options){const adjusted=(options||[]).map(option=>{const intentKind=coreIntentForOption(a,option);if(!intentKind)return option;const best=bestTargetEvaluation(st,a,intentKind,Number(option.score)||0);if(!best)return option;return {...option,targetAgent:best.targetAgent,score:round((Number(option.score)||0)+best.memoryUtilityDelta)};});return adjusted.sort((x,y)=>(Number(y.score)||0)-(Number(x.score)||0)||String(x.id).localeCompare(String(y.id)));}
   function samePick(a,b){return !!a&&!!b&&a.id===b.id&&(a.targetAgent||null)===(b.targetAgent||null);}
   function rewritePlanEvent(st,a,oldPick,newPick){const e=(st.events||[]).find(x=>x.tick===st.tick&&x.type==='system'&&x.data?.actor===a.id&&x.data?.phase==='plan'&&x.data?.planLifecycle==='initialProvisional'&&x.data?.action===oldPick?.id);if(!e)return;e.text=`${a.name}決定${E.ZH?.[newPick.id]||newPick.id}。`;e.data.action=newPick.id;}
@@ -50,7 +60,7 @@
     }
     E.reconcileIntents?.(st);
   }
-  function currentSocialTargetEvaluations(st,a){const out=[];const intents=a?.kind==='human'?['socialize','interactWithCat']:a?.kind==='cat'?['seekSocialContact']:[];for(const intentKind of intents){const base=E.utilityForIntent?.(st,a,intentKind,{intent:null})||0;for(const e of targetEvaluations(st,a,intentKind,base))out.push(e);}return out;}
+  function currentSocialTargetEvaluations(st,a){const out=[];const intents=a?.kind==='human'?['socialize','interactWithAnimal']:E.isAnimalAgent?.(a)?['seekSocialContact']:[];for(const intentKind of intents){const base=E.utilityForIntent?.(st,a,intentKind,{intent:null})||0;for(const e of targetEvaluations(st,a,intentKind,base))out.push(e);}return out;}
   function captureIdle(st){return Object.values(st.agents||{}).filter(a=>!a.action&&!a.activeIntent&&!a.offMap).map(a=>a.id);}
 
   window.SimMemoryDeliberation={VERSION,adjustIntentCandidates,adjustCurrentIntentUtility,isDistinctTargetCandidate};

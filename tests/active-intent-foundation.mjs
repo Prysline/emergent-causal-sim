@@ -71,6 +71,23 @@ if(walker.action){
 }
 noIssues('no policy change');
 
+// If another actor ends an Action during the core loop and this actor starts a new Action later in the same tick,
+// the new Action must not inherit the previous action-bound Intent merely because that Intent object still exists.
+E.reset(20260911);
+st=E.getState();
+const rebound=st.agents.zhen;
+rebound.action={kind:'sleep',phase:'sleeping',started:st.tick,intentId:'intent:zhen:0:sleep'};
+rebound.activeIntent={id:'intent:zhen:0:sleep',kind:'sleep',createdTick:st.tick,lifecycle:'actionBound',source:{type:'deliberation',tick:st.tick}};
+rebound.action=null;
+rebound.action=E.buildAction(rebound,{id:'drinkAlcohol'});
+assert.ok(rebound.action,'replacement Action fixture should be constructible');
+assert.equal(rebound.action.intentId,undefined,'core replacement Action starts unbound');
+E.reconcileIntents(st);
+assert.equal(rebound.activeIntent.kind,'drinkAlcohol','replacement Action should receive a fresh matching Active Intent');
+assert.equal(rebound.action.intentId,rebound.activeIntent.id,'replacement Action should bind to the fresh Active Intent');
+assert.notEqual(rebound.activeIntent.id,'intent:zhen:0:sleep','stale sleep Intent identity must not survive replacement');
+noIssues('replacement action rebind');
+
 // Long-run integration: every live Action has exactly one linked Active Intent and no stale Intent survives an idle state.
 E.reset(77);
 for(let i=0;i<500;i++){
@@ -80,7 +97,7 @@ for(let i=0;i<500;i++){
     if(a.action){
       assert.ok(a.activeIntent,`${a.name} missing Active Intent at tick ${st.tick}`);
       assert.equal(a.action.intentId,a.activeIntent.id,`${a.name} Action→Intent link mismatch at tick ${st.tick}`);
-      assert.equal(a.activeIntent.kind,E.intentKindForAction(a.action.kind));
+      assert.equal(a.activeIntent.kind,E.intentKindForAction(a.action.kind),`${a.name} Action ${a.action.kind} mismatched Active Intent ${a.activeIntent.kind} at tick ${st.tick}`);
     }else assert.equal(a.activeIntent,null,`${a.name} stale Active Intent at tick ${st.tick}`);
   }
   noIssues(`tick ${i+1}`);

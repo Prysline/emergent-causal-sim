@@ -5,6 +5,7 @@
   const MIN_RELEVANCE=W.RELATIONSHIP_MIN_RELEVANCE??.15;
   const FAMILIARITY_RATE=W.RELATIONSHIP_FAMILIARITY_RATE??.08;
   const AFFINITY_RATE=W.RELATIONSHIP_AFFINITY_RATE??.10;
+  const TARGET_CAP=W.RELATIONSHIP_TARGET_CAP??8;
   const WEIGHTS=W.RELATIONSHIP_ENCOUNTER_WEIGHTS||{};
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
@@ -13,7 +14,7 @@
     talk:{roles:new Set(['target'])},
     briefTalkReply:{roles:new Set(['actor','target'])},
     declineTalk:{roles:new Set(['actor','target'])},
-    petCat:{roles:new Set(['actor','target'])},
+    petAnimal:{roles:new Set(['actor','target'])},
     avoidPet:{roles:new Set(['actor','target'])}
   });
 
@@ -43,6 +44,11 @@
   }
   function ensureRelationshipMap(a){if(!a.relationships||typeof a.relationships!=='object'||Array.isArray(a.relationships))a.relationships={};return a.relationships;}
   function relationshipEntry(a,counterpartId){return a?.relationships?.[counterpartId]||null;}
+  function relationshipTargetDelta(a,counterpartId){
+    const entry=relationshipEntry(a,counterpartId);if(!entry)return 0;
+    const familiarity=clamp(Number(entry.familiarity)||0,0,1),affinity=clamp(Number(entry.affinity)||0,-1,1);
+    return round(clamp(TARGET_CAP*familiarity*affinity,-TARGET_CAP,TARGET_CAP));
+  }
   function consolidateRelationshipFromMemory(st,a,memory){
     const evidence=relationshipEvidenceForMemory(st,a,memory);if(!evidence)return null;
     const map=ensureRelationshipMap(a),before=map[evidence.counterpartId]||{familiarity:0,affinity:0,lastUpdatedTick:null};
@@ -62,5 +68,5 @@
   if(!E.registerRuntimeHook)throw new Error('relationship-runtime-v1150.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','relationship.consolidate',(ctx)=>{const result=consolidateRelationshipFromMemory(ctx.state,ctx.agent,ctx.memory);if(result)ctx.locals.relationship=result;},350);
 
-  Object.assign(E,{RELATIONSHIP_SCHEMA_VERSION:VERSION,RELATIONSHIP_MIN_RELEVANCE:MIN_RELEVANCE,RELATIONSHIP_FAMILIARITY_RATE:FAMILIARITY_RATE,RELATIONSHIP_AFFINITY_RATE:AFFINITY_RATE,RELATIONSHIP_OBSERVED_RULES:OBSERVED_RULES,relationshipRole,relationshipEvidenceForMemory,relationshipEntry,consolidateRelationshipFromMemory});
+  Object.assign(E,{RELATIONSHIP_SCHEMA_VERSION:VERSION,RELATIONSHIP_MIN_RELEVANCE:MIN_RELEVANCE,RELATIONSHIP_FAMILIARITY_RATE:FAMILIARITY_RATE,RELATIONSHIP_AFFINITY_RATE:AFFINITY_RATE,RELATIONSHIP_TARGET_CAP:TARGET_CAP,RELATIONSHIP_OBSERVED_RULES:OBSERVED_RULES,relationshipRole,relationshipEvidenceForMemory,relationshipEntry,relationshipTargetDelta,consolidateRelationshipFromMemory});
 })();

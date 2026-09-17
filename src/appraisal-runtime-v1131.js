@@ -23,7 +23,7 @@
     if(o.actorId===a.id){addFactor(ctx,{kind:'selfActor',relevanceDelta:.25});roleMatched=true;}
     if(!roleMatched)addFactor(ctx,{kind:'bystander',relevanceDelta:.08});
   }
-  function petCatRule(ctx){
+  function petAnimalRule(ctx){
     const {a,memory}=ctx,o=memory.observed||{};
     if(o.targetId===a.id){const social=normNeed(a.needs?.social);addFactor(ctx,{kind:'need',key:'social',level:round(social),relevanceDelta:round(.15+.30*social),congruenceDelta:round(.15+.65*social)});}
     if(o.actorId===a.id){const affinity=clamp(Number(a.traits?.animalAffinity)||0,0,1);addFactor(ctx,{kind:'trait',key:'animalAffinity',level:round(affinity),relevanceDelta:round(.05+.10*affinity),congruenceDelta:round(.05+.15*affinity)});}
@@ -35,7 +35,7 @@
     let relevanceDelta=0,congruenceDelta=0;if(d===0){relevanceDelta=.35;congruenceDelta=-.55;}else if(d===1){relevanceDelta=.28;congruenceDelta=-.45;}else if(d===2){relevanceDelta=.18;congruenceDelta=-.30;}else if(d<=4){relevanceDelta=.08;congruenceDelta=-.12;}
     if(relevanceDelta||congruenceDelta)addFactor(ctx,{kind:'spillProximity',distance:d,relevanceDelta,congruenceDelta});
   }
-  const APPRAISAL_RULES=Object.freeze({petCat:petCatRule,spill:spillRule});
+  const APPRAISAL_RULES=Object.freeze({petAnimal:petAnimalRule,spill:spillRule});
   function appraiseEpisodicMemory(st,a,memory){
     if(!memory||memory.kind!=='episodic'||memory.appraisal)return memory?.appraisal||null;
     const ctx={st,a,memory,relevance:0,goalCongruence:0,factors:[]};applyRoleBaseline(ctx);const action=memory.observed?.action||'',rule=APPRAISAL_RULES[action]||null;if(rule)rule(ctx);

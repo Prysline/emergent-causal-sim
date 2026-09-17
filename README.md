@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.15.0・Relationship Foundation**（`11.15.0-relationship-foundation`）。
+目前 runtime marker：**v11.15.1・Relationship Target Preference**（`11.15.1-relationship-target-preference`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -38,6 +38,7 @@
 - canonical `E.baseUtilityForAction(agent, actionKind)`，initial chooser 與 soft reconsideration 共用 species-aware deterministic baseline；initial selection noise 與 soft switching policy 分離。
 - initial `system + phase:'plan'` event 是 private-cognition provisional record；同 tick Memory→Deliberation correction 只會 normalization 同一筆明確標記的 provisional plan，不新增第二筆 correction event。
 - decision-option provider extension point，subsystem 可提出 candidate，但仍由 core chooser 與其他需求共同競爭。
+- 動物互動使用 canonical `interactWithAnimal` Intent 與 `petAnimal` Action；目前可撫摸目標由 species profile / affordance 判斷，不依 Cat / Dog 等物種名稱拆分平行 Action。
 
 ### Social agency
 
@@ -58,10 +59,11 @@
 - requester-private `privateSocialOutcome` 可記錄「當時沒有得到立即回應」，但不推定 counterpart 故意忽略、討厭或拒絕。
 - **Relationship Foundation**：每個 Agent 以 `relationships[counterpartId]` 保存 `familiarity 0..1 / affinity -1..1 / lastUpdatedTick`；Familiarity 表示累積相處歷史，Affinity 表示長期主觀相處經驗偏正／偏負，兩者都不等於 friendship / trust / love / hate。
 - Relationship 只由 audited direct relational experience 的 historical Appraisal consolidation 更新；`talkOffer / petOffer / acceptPet / toleratePet` 等 proposal / intermediate response 不重複計分。
-- 一次 encounter 對每個 Agent 最多 consolidation 一次，但雙方可使用不同 subjective outcome：完整 Human conversation 中 requester 使用 `acceptTalk`，responder 使用 `talk`；`avoidPet` 則可讓人與貓從同一 observable event 得到相反方向的 Affinity evidence。
+- 一次 encounter 對每個 Agent 最多 consolidation 一次，但雙方可使用不同 subjective outcome：完整 Human conversation 中 requester 使用 `acceptTalk`，responder 使用 `talk`；`avoidPet` 則可讓人與動物從同一 observable event 得到相反方向的 Affinity evidence。
 - `privateSocialOutcome` 只可更新 requester → counterpart；counterpart 不會因 requester 的 private timeout 被遠端改寫 Relationship。
 - Relationship 是 persistent slow state，不因來源 episodic memory 後續被 pruning 而倒退；第一版不做時間衰退，也不保存 contributing-memory history。
-- **v11.15.0 Relationship 完全 decision-inert**：不修改 target selection、candidate utility、soft reconsideration、Human `talkEngagementScore` 或 Cat `petResponseScore`。Current Affect 與 responder-specific Memory 也仍未直接進入 responder scoring。
+- **v11.15.1 Relationship 已接入 initiator-side social target preference**：`relationshipTargetDelta = 8 × familiarity × affinity`，只影響 `socialize / interactWithAnimal / seekSocialContact` 的「找誰」。`targetPreference = memoryUtilityDelta + relationshipTargetDelta - distancePenalty`；action-level `finalUtility` 仍不加入 Relationship。負向 Relationship 不構成 hard ban。
+- Relationship 仍不修改 responder policy、Human `talkEngagementScore`、animal `petResponseScore`、current-intent utility、soft-switch threshold 或 commitment。Current Affect 與 responder-specific Memory 也仍未直接進入 responder scoring。
 - ordinary successful resource-transfer consequence 是明確 non-episodic outcome；成功 `pour` 仍由來源 action episode 表達，失敗 `spill` 則可作為獨立 observable physical effect。
 
 ### Presentation
@@ -71,7 +73,7 @@
 - Agent Action 會把 raw phase 名稱與工程座標轉成玩家可讀描述；完整 phase / spatial goal 仍留在 Debug。
 - Agent Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
 - Player Explanation 優先使用可由同一 evidence 直接支持的日常說法，例如「因為肚子餓了」「因為口渴」「因為累了」「因為想睡了」「因為想找人說說話」；不把 engine threshold 翻成「需求已經變得明顯」之類系統語言。精確需求強度仍留在 Needs / Debug；若沒有可靠的具體原因，使用保守抽象描述或省略，不自行補心理敘事。
-- Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick。
+- Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick，並可拆解 social target ranking 的 Memory / Relationship / distance derived influence。
 - Container / Source / Furniture / Tile / Room / Event 也有玩家可讀投影：優先顯示名稱、位置、內容物、容量、持有人、實際用途／使用者、表面內容、空間中的居民／家具與 canonical event text 等直接可理解資訊。
 - 非居民 Readable View 不直接顯示 raw entity ID、工程座標、Footprint、interaction Port、Surface cell、slot reservation、cause tree 或其他 debug provenance；這些仍留在 Debug Inspector。家具 readable status 只顯示實際使用者，不把 reservation 當成已發生事實或玩家可見心理資訊。
 - readable entity projection 只從現有 Container / Source / Furniture / Spatial / Event truth 即時推導，不新增 `playerContents`、`readableFurnitureState` 等 persistent mirror。
@@ -123,7 +125,8 @@ State regression 目前涵蓋：
 - Episodic Memory / Appraisal / Affect / salience；
 - Human / Pet responder agency；
 - Memory → Deliberation / requester social outcome；
-- Relationship Foundation 的 directional state、audited evidence gate、exactly-once consolidation、private-outcome boundary、Memory pruning independence、boundedness 與 decision-inert contract；
+- Relationship Foundation 的 directional state、audited evidence gate、exactly-once consolidation、private-outcome boundary、Memory pruning independence 與 boundedness；
+- Relationship Target Preference 的 bounded directional delta、Memory + Relationship + distance decomposition、負向不 hard-ban、action utility / responder policy 邊界，以及 generic animal affordance target eligibility；
 - Runtime Hook Pipeline；
 - presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則、Relationship readable/debug 分層，以及非居民 Entity Readable / Debug 分層。
 

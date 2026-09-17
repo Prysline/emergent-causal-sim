@@ -64,9 +64,10 @@ assert.equal(desktop.mei.memoryUtilityDelta,0,'unrelated mei should stay neutral
 assert.ok(desktop.zhou.targetPreference<desktop.mei.targetPreference,'farther neutral target should outrank closer negative-history target');
 assert.equal(desktop.persistedInfluence,false,'memory influence fields must stay derived');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
-assert.equal(desktop.sectionVisible,true,'Memory → Deliberation Inspector section missing');
-assert.ok(desktop.inspectorText.includes('Memory → Deliberation'));
+assert.equal(desktop.sectionVisible,true,'Memory + Relationship target Inspector section missing');
+assert.ok(desktop.inspectorText.includes('Memory + Relationship → Social Target'));
 assert.ok(desktop.inspectorText.includes('memory delta'));
+assert.ok(desktop.inspectorText.includes('relationship'));
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 await page.screenshot({path:`${outDir}/desktop.png`,fullPage:true});

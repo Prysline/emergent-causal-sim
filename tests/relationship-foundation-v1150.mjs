@@ -21,12 +21,13 @@ function calm(a,{social=60}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue
 function runUntil(predicate,max=12){for(let i=0;i<max;i++){if(predicate())return true;E.tick();}return predicate();}
 
 E.reset(11500);let st=E.getState();
-assert.equal(st.version,'11.15.0-relationship-foundation');
-assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.0-relationship-foundation');
-assert.equal(E.RELATIONSHIP_SCHEMA_VERSION,'11.15.0-relationship-foundation');
+assert.equal(st.version,'11.15.1-relationship-target-preference');
+assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.1-relationship-target-preference');
+assert.equal(E.RELATIONSHIP_SCHEMA_VERSION,'11.15.1-relationship-target-preference');
 assert.equal(W.RELATIONSHIP_MIN_RELEVANCE,.15);
 assert.equal(W.RELATIONSHIP_FAMILIARITY_RATE,.08);
 assert.equal(W.RELATIONSHIP_AFFINITY_RATE,.10);
+assert.equal(W.RELATIONSHIP_TARGET_CAP,8);
 for(const a of Object.values(st.agents))assert.deepEqual(a.relationships,{},'new state must start without invented relationship history');
 assert.deepEqual(E.listRuntimeHooks('episodicMemoryCreated'),[
   {id:'appraisal.base',order:100},
@@ -68,7 +69,7 @@ assert.ok(runUntil(()=>E.getState().events.some(e=>e.data?.action==='avoidPet'),
 st=E.getState();const human=st.agents.zhou,cat=st.agents.orange;
 assert.ok(relation(human,'orange')?.familiarity>0&&relation(cat,'zhou')?.familiarity>0);
 assert.ok(relation(human,'orange')?.affinity<0,'human target should consolidate the declined pet attempt negatively');
-assert.ok(relation(cat,'zhou')?.affinity>0,'cat actor may consolidate successful boundary maintenance positively');
+assert.ok(relation(cat,'zhou')?.affinity>0,'animal actor may consolidate successful boundary maintenance positively');
 noIssues('avoidPet directional appraisal');
 
 // Requester-private no-response updates only requester→counterpart, and repeated processing of the same wait event is exactly-once.
@@ -105,22 +106,24 @@ requester.episodicMemories=[];
 assert.deepEqual(relation(requester,'zhen'),consolidated,'pruning/clearing episodic memory must not erase already consolidated relationship state');
 noIssues('relationship survives memory pruning');
 
-// First slice is decision-inert: Relationship alone must not change target memory association or responder scores.
-E.reset(11507);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;const cat2=st.agents.orange;calm(requester,{social:90});calm(responder,{social:55});calm(cat2,{social:55});
-const talkScoreBefore=E.talkEngagementScore(responder),petScoreBefore=E.petResponseScore(cat2),assocBefore=clone(E.targetAssociation(st,requester,'zhou'));
+// v11.15.1 keeps Relationship out of responder policy and out of Memory association itself.
+// The new behavioral connection is a separate bounded target-ranking delta.
+E.reset(11507);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;const animal=st.agents.orange;calm(requester,{social:90});calm(responder,{social:55});calm(animal,{social:55});
+const talkScoreBefore=E.talkEngagementScore(responder),petScoreBefore=E.petResponseScore(animal),assocBefore=clone(E.targetAssociation(st,requester,'zhou'));
 requester.relationships.zhou={familiarity:.92,affinity:-.88,lastUpdatedTick:st.tick};
 responder.relationships.zhen={familiarity:.90,affinity:.84,lastUpdatedTick:st.tick};
-cat2.relationships.zhen={familiarity:.95,affinity:-.90,lastUpdatedTick:st.tick};
-assert.equal(E.talkEngagementScore(responder),talkScoreBefore,'Relationship must not modify Human responder score in v11.15.0');
-assert.equal(E.petResponseScore(cat2),petScoreBefore,'Relationship must not modify Cat responder score in v11.15.0');
-assert.deepEqual(E.targetAssociation(st,requester,'zhou'),assocBefore,'Relationship must not enter existing Memory→Deliberation association in v11.15.0');
-noIssues('decision inert');
+animal.relationships.zhen={familiarity:.95,affinity:-.90,lastUpdatedTick:st.tick};
+assert.equal(E.talkEngagementScore(responder),talkScoreBefore,'Relationship must not modify Human responder score in v11.15.1');
+assert.equal(E.petResponseScore(animal),petScoreBefore,'Relationship must not modify animal responder score in v11.15.1');
+assert.deepEqual(E.targetAssociation(st,requester,'zhou'),assocBefore,'Relationship must not alter the Memory association calculation');
+assert.ok(E.relationshipTargetDelta(requester,'zhou')<0,'Relationship now exposes a separate target preference delta');
+noIssues('responder and memory-association boundary');
 
 // Bounded state and forbidden mirror fields remain clean during integration.
 E.reset(11508);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
-  assert.equal(st.version,'11.15.0-relationship-foundation');
+  assert.equal(st.version,'11.15.1-relationship-target-preference');
   assert.equal(Object.prototype.hasOwnProperty.call(st,'pairRelationships'),false);
   for(const a of Object.values(st.agents||{})){
     assert.ok(a.relationships&&typeof a.relationships==='object'&&!Array.isArray(a.relationships));
@@ -128,10 +131,10 @@ for(let i=0;i<500;i++){
       assert.notEqual(otherId,a.id);
       assert.ok(r.familiarity>=0&&r.familiarity<=1);
       assert.ok(r.affinity>=-1&&r.affinity<=1);
-      for(const forbidden of ['trust','love','hate','friendshipScore','relationshipScore','confidence','history','evidenceIds','memoryIds','lastEvidenceMemoryId'])assert.equal(Object.prototype.hasOwnProperty.call(r,forbidden),false,`${a.id}->${otherId} persisted ${forbidden}`);
+      for(const forbidden of ['trust','love','hate','friendshipScore','relationshipScore','confidence','history','evidenceIds','memoryIds','lastEvidenceMemoryId','preferredTarget'])assert.equal(Object.prototype.hasOwnProperty.call(r,forbidden),false,`${a.id}->${otherId} persisted ${forbidden}`);
     }
   }
   if(i%25===0)noIssues(`tick ${i+1}`);
 }
 noIssues('500 tick integration');
-console.log('v11.15.0 relationship foundation regression: ok');
+console.log('v11.15 relationship foundation regression: ok');

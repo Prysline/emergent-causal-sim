@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.15.0-relationship-foundation';
+const CURRENT_VERSION='11.15.1-relationship-target-preference';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -130,7 +130,7 @@ const semanticLayers=await page.evaluate(()=>{
     drinkWaterIntent:intent('drinkWater'),drinkAlcoholIntent:intent('drinkAlcohol'),restockIntent:intent('restockResource'),wanderIntent:intent('explore'),
     restockAction,wanderAction,
     eatExplanation:explain('eat','satisfyHunger'),drinkWaterExplanation:explain('drinkWater','drinkWater'),drinkAlcoholExplanation:explain('drinkAlcohol','drinkAlcohol'),
-    restExplanation:explain('rest','recoverFatigue'),sleepExplanation:explain('sleep','sleep'),talkExplanation:explain('talk','socialize'),petCatExplanation:explain('petCat','interactWithCat'),
+    restExplanation:explain('rest','recoverFatigue'),sleepExplanation:explain('sleep','sleep'),talkExplanation:explain('talk','socialize'),petAnimalExplanation:explain('petAnimal','interactWithAnimal'),
     seekHumanExplanation:explain('seekHuman','seekSocialContact',{agent:{kind:'cat'}}),groomExplanation:explain('groom','groom',{agent:{kind:'cat',contacts:{paws:{}}}}),
     externalSupplyExplanation:explain('externalSupply','replenishSupply',{action:{resource:'water'}}),
     wanderExplanation:E.residentActionExplanation(wanderState,wander),restockExplanation:E.residentActionExplanation(restockState,restock)
@@ -150,7 +150,7 @@ assert.equal(semanticLayers.drinkAlcoholExplanation,'因為口渴，而且現在
 assert.equal(semanticLayers.restExplanation,'因為累了。');
 assert.equal(semanticLayers.sleepExplanation,'因為想睡了。');
 assert.equal(semanticLayers.talkExplanation,'因為想找人說說話。');
-assert.equal(semanticLayers.petCatExplanation,'因為想找點陪伴，也對貓有親近感。');
+assert.equal(semanticLayers.petAnimalExplanation,'因為想找點陪伴，也對動物有親近感。');
 assert.equal(semanticLayers.seekHumanExplanation,'因為想找點陪伴。');
 assert.equal(semanticLayers.groomExplanation,'因為身上有點需要整理了。');
 assert.equal(semanticLayers.externalSupplyExplanation,'因為家裡的水快不夠了。');
@@ -167,7 +167,7 @@ assert.equal(debug.activeMode,'debug');
 assert.equal(debug.debugVisible,true);
 assert.equal(debug.residentVisible,false);
 assert.ok(debug.debugText.includes('Agent・zhou'),'Debug must retain original Inspector identity');
-assert.ok(debug.debugText.includes('Memory → Deliberation'),'Debug must retain advanced deliberation evidence');
+assert.ok(debug.debugText.includes('Memory + Relationship → Social Target'),'Debug must retain advanced social target evidence');
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
 assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Familiarity')&&debug.debugText.includes('Affinity'),'Debug must expose exact directional relationship dimensions');
 const debugOwnership=await page.evaluate(()=>({
@@ -277,9 +277,9 @@ await page.click('[data-v1141-entity-mode="readable"]');await page.screenshot({p
 await page.evaluate(()=>{
   const E=window.SimEngine,st=E.getState(),cat=st.agents.orange,human=st.agents.zhou;
   cat.offMap=false;cat.position={x:5,y:5};human.offMap=false;human.position={x:5,y:6};cat.episodicMemories=[];cat.relationships={};
-  const bidId=E.addEvent('橘子主動靠近老周，想和他親近。','normal',[],{actor:cat.id,target:human.id,action:'seekHuman',socialBid:true,bidKind:'catAffection',interactionKind:'socialAffection',expectsResponse:true,bidFrom:cat.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef?.(cat.position)||null});
+  const bidId=E.addEvent('橘子主動靠近老周，想和他親近。','normal',[],{actor:cat.id,target:human.id,action:'seekHuman',socialBid:true,bidKind:'animalAffection',interactionKind:'socialAffection',expectsResponse:true,bidFrom:cat.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef?.(cat.position)||null});
   st.causes[bidId].data.bidId=bidId;
-  const waitId=E.addEvent('橘子等了一會兒，沒有得到立即回應，便不再等了。','normal',[bidId],{actor:cat.id,action:'socialWaitEnded',bidId,bidKind:'catAffection',interactionKind:'socialAffection',visibility:'private',owner:cat.id,responderContextObserved:true,observedResponderActionKind:null,observedResponderPosture:'standing'});
+  const waitId=E.addEvent('橘子等了一會兒，沒有得到立即回應，便不再等了。','normal',[bidId],{actor:cat.id,action:'socialWaitEnded',bidId,bidKind:'animalAffection',interactionKind:'socialAffection',visibility:'private',owner:cat.id,responderContextObserved:true,observedResponderActionKind:null,observedResponderPosture:'standing'});
   E.rememberRequesterSocialOutcome(st,st.causes[waitId]);document.querySelector('[data-entity="agent:orange"]')?.click();
 });
 await page.waitForFunction(()=>document.querySelector('[data-v1140-resident-view]')?.innerText.includes('橘子'));
@@ -289,5 +289,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.15.0 browser readable entity QA: Relationship + Agent + non-agent readable/debug state-inert pass');
+console.log('v11.15.1 browser readable entity QA: Relationship target preference + Agent + non-agent readable/debug state-inert pass');
 await browser.close();

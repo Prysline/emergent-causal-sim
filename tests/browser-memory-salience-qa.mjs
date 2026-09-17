@@ -18,7 +18,7 @@ async function seedRetentionStory(){
     st.agents.zhen.position={x:7,y:5};
     st.agents.orange.needs.social=90;
     for(let i=0;i<64;i++)E.addEvent(`低重要度背景事件 ${i}`,'normal',[],{actor:'zhou',action:'groom',position:'5,5'});
-    const importantId=E.addEvent('老周摸了橘子。','good',[],{actor:'zhou',target:'orange',action:'petCat',position:'5,6',debugSecret:'retention-browser-hidden'});
+    const importantId=E.addEvent('老周摸了橘子。','good',[],{actor:'zhou',target:'orange',action:'petAnimal',position:'5,6',debugSecret:'retention-browser-hidden'});
     window.__retentionQaImportantId=importantId;
     document.querySelector('[data-entity="agent:orange"]')?.click();
   });
@@ -58,7 +58,7 @@ function assertStory(s,label){
   assert.equal(s.memoryCount,s.cap,`${label}: memory cap should remain bounded after 65th observed event`);
   assert.equal(s.cap,64,`${label}: cap changed unexpectedly`);
   assert.equal(s.importantPresent,true,`${label}: important 65th memory was pruned before appraisal/Affect retention could protect it`);
-  assert.equal(s.importantAction,'petCat',`${label}: important memory action mismatch`);
+  assert.equal(s.importantAction,'petAnimal',`${label}: important memory action mismatch`);
   assert.ok(s.importantScore>0,`${label}: derived salience missing`);
   assert.equal(s.protectedByAffect,true,`${label}: active Affect source should be retention-protected`);
   assert.ok(s.affectSourceMemoryId?.startsWith('memory:orange:'),`${label}: Affect source memory id missing`);

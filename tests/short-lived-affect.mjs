@@ -22,7 +22,7 @@ noIssues('reset');
 // Positive appraisal creates bounded Agent-private short-lived affect without leaking to a neutral bystander.
 E.reset(1312);st=E.getState();
 st.agents.zhou.position={x:5,y:5};st.agents.orange.position={x:5,y:6};st.agents.zhen.position={x:6,y:6};st.agents.orange.needs.social=90;
-const petId=E.addEvent('老周摸了橘子。','normal',[],{actor:'zhou',target:'orange',action:'petCat',position:'5,6'});
+const petId=E.addEvent('老周摸了橘子。','normal',[],{actor:'zhou',target:'orange',action:'petAnimal',position:'5,6'});
 const orangeMemory=memoryFor('orange',petId),orangeAffect=st.agents.orange.affect,zhenAffect=st.agents.zhen.affect;
 assert.ok(orangeMemory?.appraisal,'target must have historical appraisal first');
 assert.ok(orangeAffect.valence>0,'positive goal-congruent appraisal should produce positive short-lived valence');

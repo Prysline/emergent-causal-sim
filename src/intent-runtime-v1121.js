@@ -3,12 +3,12 @@
   const VERSION=W.INTENT_SCHEMA_VERSION||'11.12.1-active-intent-foundation';
   const INTENT_BY_ACTION={
     eat:'satisfyHunger',drinkWater:'drinkWater',drinkAlcohol:'drinkAlcohol',rest:'recoverFatigue',sleep:'sleep',
-    talk:'socialize',petCat:'interactWithCat',seekHuman:'seekSocialContact',cleanFloor:'removeHazard',groom:'groom',
+    talk:'socialize',petAnimal:'interactWithAnimal',seekHuman:'seekSocialContact',cleanFloor:'removeHazard',groom:'groom',
     wander:'explore',restockContainer:'restockResource',externalSupply:'replenishSupply'
   };
   const INTENT_ZH={
     satisfyHunger:'解決飢餓',drinkWater:'喝水',drinkAlcohol:'喝酒',recoverFatigue:'恢復活動疲勞',sleep:'睡眠',
-    socialize:'進行社交',interactWithCat:'和貓互動',seekSocialContact:'尋求人類互動',removeHazard:'處理環境危險',groom:'理毛清潔',
+    socialize:'進行社交',interactWithAnimal:'和動物互動',seekSocialContact:'尋求人類互動',removeHazard:'處理環境危險',groom:'理毛清潔',
     explore:'探索／閒晃',restockResource:'補充室內資源',replenishSupply:'外出補給'
   };
 
@@ -22,8 +22,11 @@
   }
   function ensureIntentForAction(st,a){
     const action=a?.action;if(!action)return null;
-    if(!a.activeIntent)a.activeIntent=createIntent(st,a,action);
-    if(!action.intentId)action.intentId=a.activeIntent.id;
+    const boundIntent=a.activeIntent&&action.intentId&&action.intentId===a.activeIntent.id;
+    if(!boundIntent){
+      a.activeIntent=createIntent(st,a,action);
+      action.intentId=a.activeIntent.id;
+    }
     return a.activeIntent;
   }
   function reconcileAgentIntent(st,a){

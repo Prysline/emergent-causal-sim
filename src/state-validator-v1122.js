@@ -39,7 +39,7 @@
         if(intent.kind==='respondSocialBid'){
           if(intent.lifecycle!=='actionBound')add('respond_social_bid_lifecycle_invalid',`${a.name} 的 respondSocialBid Intent 必須綁定 Action。`,{agentId:a.id,intentId:intent.id});
           if(bid&&bid.data?.bidTo!==a.id)add('respond_social_bid_wrong_responder',`${a.name} 正在回應不是指向自己的 Social Bid。`,{agentId:a.id,intentId:intent.id,bidId});
-          if(!a.action||a.action.kind!=='petCat')add('respond_social_bid_action_invalid',`${a.name} 的 respondSocialBid 必須由 petCat Action 執行。`,{agentId:a.id,intentId:intent.id,actionKind:a.action?.kind});
+          if(!a.action||a.action.kind!=='petAnimal')add('respond_social_bid_action_invalid',`${a.name} 的 respondSocialBid 必須由 petAnimal Action 執行。`,{agentId:a.id,intentId:intent.id,actionKind:a.action?.kind});
           if(bid&&a.action?.targetAgent!==bid.data?.bidFrom)add('respond_social_bid_target_mismatch',`${a.name} 的 response Action target 與 Bid requester 不一致。`,{agentId:a.id,intentId:intent.id,bidId,targetAgent:a.action?.targetAgent,bidFrom:bid.data?.bidFrom});
           if(intent.source?.observedTick!=null&&(!Number.isInteger(intent.source.observedTick)||intent.source.observedTick<0||intent.source.observedTick>st.tick))add('respond_social_bid_observed_tick_invalid',`${a.name} 的 respondSocialBid observedTick 無效。`,{agentId:a.id,intentId:intent.id,observedTick:intent.source?.observedTick});
         }

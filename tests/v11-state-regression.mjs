@@ -97,7 +97,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,cat=st.agents.orange;a.action={kind:'petCat',phase:'move',targetAgent:cat.id,spatialGoal:{x:5,y:4},started:0,wait:0};assert.equal(E.actionLabel(a),`摸${cat.name}・目標 (5,4)`);assert.ok(!E.actionLabel(a).includes('・・'));
+  const st=E.getState(),a=st.agents.zhen,cat=st.agents.orange;a.action={kind:'petAnimal',phase:'move',targetAgent:cat.id,spatialGoal:{x:5,y:4},started:0,wait:0};assert.equal(E.actionLabel(a),`摸${cat.name}・目標 (5,4)`);assert.ok(!E.actionLabel(a).includes('・・'));
 }
 
 {

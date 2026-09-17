@@ -2,7 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
   const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.12.4-soft-reconsideration';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
-  const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petCat','seekHuman','cleanFloor','groom','rest']);
+  const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
 
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function foodAmount(st){return Object.values(st.containers||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
@@ -10,6 +10,7 @@
   function nearestAgent(st,a,kind,{awakeOnly=false}={}){
     return Object.values(st.agents||{}).filter(x=>x.id!==a.id&&!x.offMap&&x.kind===kind&&(!awakeOnly||!E.isSleeping?.(x))).map(x=>({x,d:SP.pathDistance(st,a,x.position)})).filter(x=>Number.isFinite(x.d)).sort((p,q)=>p.d-q.d)[0]?.x||null;
   }
+  function nearestPettableAnimal(a){return E.nearestPettableAnimal?.(a)||null;}
   function resourceExists(st,r){
     if(Object.values(st.sources||{}).some(s=>s.resource===r&&(s.infinite||(s.amount||0)>.05)))return true;
     return Object.values(st.containers||{}).some(c=>(c.contents?.[r]||0)>.05);
@@ -44,8 +45,8 @@
       case'recoverFatigue':return canonicalBaseUtility(a,'rest');
       case'sleep':return canonicalBaseUtility(a,'sleep');
       case'socialize':return a.kind==='human'&&nearestAgent(st,a,'human',{awakeOnly:true})?canonicalBaseUtility(a,'talk'):0;
-      case'interactWithCat':return a.kind==='human'&&nearestAgent(st,a,'cat')?canonicalBaseUtility(a,'petCat'):0;
-      case'seekSocialContact':return a.kind==='cat'&&(a.needs?.social||0)>14&&nearestAgent(st,a,'human')?canonicalBaseUtility(a,'seekHuman'):0;
+      case'interactWithAnimal':return a.kind==='human'&&nearestPettableAnimal(a)?canonicalBaseUtility(a,'petAnimal'):0;
+      case'seekSocialContact':return E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&nearestAgent(st,a,'human')?canonicalBaseUtility(a,'seekHuman'):0;
       case'removeHazard':return wetTotal(st)>.2?canonicalBaseUtility(a,'cleanFloor'):0;
       case'groom':return a.kind==='cat'?canonicalBaseUtility(a,'groom'):0;
       case'explore':return canonicalBaseUtility(a,'wander');
@@ -58,12 +59,12 @@
     if(a.kind==='human'){
       push('satisfyHunger','eat');push('drinkWater','drinkWater');push('drinkAlcohol','drinkAlcohol');push('recoverFatigue','rest');push('sleep','sleep');
       const h=nearestAgent(st,a,'human',{awakeOnly:true});if(h)push('socialize','talk',{targetAgent:h.id});
-      const cat=nearestAgent(st,a,'cat');if(cat)push('interactWithCat','petCat',{targetAgent:cat.id});
+      const animal=nearestPettableAnimal(a);if(animal)push('interactWithAnimal','petAnimal',{targetAgent:animal.id});
       push('removeHazard','cleanFloor');
-      const bidPick=E.newestObservedCatBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap)out.push({intentKind:'respondSocialBid',actionKind:'petCat',utility:72+(a.traits?.animalAffinity||0)*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick});}
+      const bidPick=E.newestObservedAnimalBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap&&E.canPetAnimal?.(a,target))out.push({intentKind:'respondSocialBid',actionKind:'petAnimal',utility:72+(a.traits?.animalAffinity||0)*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick});}
     }else{
       push('satisfyHunger','eat');push('groom','groom');push('recoverFatigue','rest');push('sleep','sleep');
-      const h=nearestAgent(st,a,'human');if((a.needs?.social||0)>14&&h)push('seekSocialContact','seekHuman',{targetAgent:h.id});
+      const h=nearestAgent(st,a,'human');if(E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&h)push('seekSocialContact','seekHuman',{targetAgent:h.id});
       push('drinkWater','drinkWater');
     }
     const hook=window.SimMemoryDeliberation?.adjustIntentCandidates;
@@ -77,7 +78,7 @@
     switch(kind){
       case'wander':cost=0;break;
       case'talk':case'seekHuman':cost=p.phase==='move'?4:9;break;
-      case'petCat':cost=p.phase==='move'?5:10;break;
+      case'petAnimal':cost=p.phase==='move'?5:10;break;
       case'cleanFloor':cost=p.phase==='move'?5:13;break;
       case'groom':cost=12;break;
       case'rest':cost=p.phase==='chooseSurface'?3:p.phase==='move'?6:p.phase==='settle'?9:12;break;

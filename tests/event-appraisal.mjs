@@ -24,7 +24,7 @@ function petScenario(socialNeed){
   s.agents.orange.position={x:5,y:6};
   s.agents.zhen.position={x:6,y:6};
   s.agents.orange.needs.social=socialNeed;
-  const id=E.addEvent('老周摸了橘子。','normal',[],{actor:'zhou',target:'orange',action:'petCat',position:'5,6',debugSecret:'must not enter appraisal'});
+  const id=E.addEvent('老周摸了橘子。','normal',[],{actor:'zhou',target:'orange',action:'petAnimal',position:'5,6',debugSecret:'must not enter appraisal'});
   return {st:s,id,zhou:memoryFor('zhou',id),orange:memoryFor('orange',id),zhen:memoryFor('zhen',id)};
 }
 
@@ -41,7 +41,7 @@ assert.ok(scene.zhen.appraisal.goalCongruence===0,'bystander should not inherit 
 assert.deepEqual(scene.orange.appraisal.agency,{kind:'other',agentId:'zhou'});
 assert.deepEqual(scene.zhou.appraisal.agency,{kind:'self'});
 assert.deepEqual(scene.zhen.appraisal.agency,{kind:'other',agentId:'zhou'});
-assert.equal(scene.orange.appraisal.ruleId,'petCat-v1');
+assert.equal(scene.orange.appraisal.ruleId,'petAnimal-v1');
 assert.equal(Object.prototype.hasOwnProperty.call(scene.orange.appraisal,'valence'),false);
 assert.equal(Object.prototype.hasOwnProperty.call(scene.orange.appraisal,'affect'),false);
 assert.equal(JSON.stringify(scene.orange.appraisal).includes('debugSecret'),false,'raw event data must not leak into appraisal');
@@ -50,7 +50,7 @@ noIssues('different observers');
 // Counterfactual A/B: only social need changes; appraisal changes, not the world event semantics.
 const high=petScenario(90).orange.appraisal;
 const low=petScenario(10).orange.appraisal;
-assert.ok(high.relevance>low.relevance,'higher social need should raise petCat relevance');
+assert.ok(high.relevance>low.relevance,'higher social need should raise petAnimal relevance');
 assert.ok(high.goalCongruence>low.goalCongruence,'higher social need should raise positive goal congruence');
 
 // Unknown actions use conservative role baseline instead of invented semantics.

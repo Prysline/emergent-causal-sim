@@ -7,12 +7,12 @@
     alcohol:{id:'alcohol',name:'酒',icon:'🍺',phase:'liquid',drinkable:true,thirstRelief:[8,17],intoxicationFactor:1.35,evaporation:.11,loadPerUnit:.025}
   };
   const SPECIES_PROFILES={
-    human:{circadianPattern:'diurnal',sleepNeedGainPerTick:.17,sleepNeedRecoveryPerTick:.24,minSleepTicks:10,maxSleepTicks:330,minimumSleepNeed:28,sleepOpportunityThreshold:55,naturalWakeSleepNeed:22,noiseWakeThreshold:30},
-    cat:{circadianPattern:'crepuscular',sleepNeedGainPerTick:.20,sleepNeedRecoveryPerTick:.32,minSleepTicks:6,maxSleepTicks:180,minimumSleepNeed:24,sleepOpportunityThreshold:52,naturalWakeSleepNeed:26,noiseWakeThreshold:26}
+    human:{socialClass:'person',circadianPattern:'diurnal',sleepNeedGainPerTick:.17,sleepNeedRecoveryPerTick:.24,minSleepTicks:10,maxSleepTicks:330,minimumSleepNeed:28,sleepOpportunityThreshold:55,naturalWakeSleepNeed:22,noiseWakeThreshold:30},
+    cat:{socialClass:'animal',interactionAffordances:{pet:true},circadianPattern:'crepuscular',sleepNeedGainPerTick:.20,sleepNeedRecoveryPerTick:.32,minSleepTicks:6,maxSleepTicks:180,minimumSleepNeed:24,sleepOpportunityThreshold:52,naturalWakeSleepNeed:26,noiseWakeThreshold:26}
   };
   const ZH={
     hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',sleepNeed:'睡眠需求',social:'社交需求',comfort:'舒適',safety:'安全感',groomingNeed:'理毛需求',
-    eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',restockContainer:'補充資源',rest:'休息',sleep:'睡眠',talk:'找人聊天',petCat:'摸貓',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',externalSupply:'外出補給',
+    eat:'吃東西',drinkWater:'喝水',drinkAlcohol:'喝酒',restockContainer:'補充資源',rest:'休息',sleep:'睡眠',talk:'找人聊天',petAnimal:'摸動物',seekHuman:'找人撒嬌',cleanFloor:'清理地面',groom:'舔毛清潔',wander:'閒晃',externalSupply:'外出補給',
     intoxication:'醉酒',coordination:'動作協調',normal:'正常'
   };
   const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',sleepNeed:'睡眠需求',sleepNeedRecovery:'睡眠需求恢復',circadianPattern:'日夜節律',circadianBias:'時段睡眠偏向',sleepPropensity:'睡眠傾向',wakeReason:'醒來原因',wakeChance:'互動喚醒機率',wakeRoll:'互動喚醒擲骰',stimulusIntensity:'刺激強度',stimulusKind:'刺激類型',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',carrier:'物流容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重',entities:'關聯實體'};
