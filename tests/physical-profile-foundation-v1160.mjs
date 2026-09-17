@@ -10,17 +10,18 @@ for(const file of [
 ])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const CURRENT_VERSION='11.16.0-physical-profile-foundation';
-const E=globalThis.SimEngine,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 E.reset(11600);
 const st=E.getState(),zhen=st.agents.zhen,zhou=st.agents.zhou,orange=st.agents.orange;
 assert.equal(st.version,CURRENT_VERSION);
-assert.equal(globalThis.SimWorld.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(P.VERSION,CURRENT_VERSION);
+assert.equal(W.defaultPhysicalProfile('unknown-kind'),null,'unknown kinds must not silently inherit Human physical geometry');
 
 for(const a of [zhen,zhou,orange]){
-  assert.ok(a.physical,'every Agent must own authoritative physical state');
+  assert.ok(a.physical,'every current Agent must own authoritative physical state');
   assert.ok(a.physical.mass>0&&a.physical.volume>0);
   assert.ok(a.physical.bodyGeometry.height>0&&a.physical.bodyGeometry.width>0&&a.physical.bodyGeometry.length>0);
   assert.equal(a.physical.locomotionCapabilities.standing,true);
