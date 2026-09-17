@@ -2,11 +2,11 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.15.2-relationship-responder-bias`。
+目前 runtime marker：`11.16.0-physical-profile-foundation`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
-目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 app lifecycle 由 `runtime-hook-pipeline.js` 明確排序，不以 script-wrapper 疊接順序作為正式語義。
+目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Physical、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 app lifecycle 由 `runtime-hook-pipeline.js` 明確排序，不以 script-wrapper 疊接順序作為正式語義。
 
 ## 1. Truth boundaries
 
@@ -16,12 +16,15 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 
 - canonical World Event：`state.events / state.causes`
 - Agent / Object 的物理位置
+- Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
 - Container / Source / Surface Environment 的實際 resource contents
 - posture、held container、reservations
 - Action 正在如何執行的 state machine
 - Spatial topology、Surface / Contact / interaction geometry
 
 Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
+
+Physical Profile Foundation 同樣遵守 single-source rule：Agent 保存可重用的物理事實；`MovementEnvelope` 是由 `SimPhysical.getMovementEnvelope(agent, locomotionMode)` 根據 profile 即時計算的 derived geometry，不保存 `agent.movementEnvelope` 或 `agent.physical.movementEnvelope` cache。未來 Anatomy 可替換 envelope 的推導來源，但 Spatial 仍只消費 canonical Physical interface，不直接知道 limb tree。
 
 ### Agent-private Truth
 
@@ -445,6 +448,10 @@ Resident overview 額外顯示 Relationship 的 read-only 長期摘要。Readabl
 - Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / distancePenalty / targetPreference` decomposition；
 - v11.15.2 Debug 另可即時計算 Human / animal responder 的 `base response score + Relationship response delta → final score / response band`。這是 derived observability，不保存 `talkResponseScore / petResponseScore / relationshipResponseDelta` mirror，也不把 private score decomposition寫入 World Event。
 
+### Physical Profile Debug projection
+
+v11.16.0 Physical Profile Foundation 只在 Debug 顯示精確 `mass / volume / bodyGeometry` 與 standing `MovementEnvelope`。Physical UI 直接讀 authoritative profile 與 `SimPhysical.getMovementEnvelope(...)`；不建立 `movementEnvelope` presentation mirror，也不把 coarse MVP template 描述成 Anatomy 級測量結果。Player-readable behavior 文案目前不使用這些數字推論人格、身材評價或 locomotion 動機。
+
 ### Entity Readable View
 
 Player-readable Inspector 不再只覆蓋 Agent。現行 selectable entity 的 readable surface 包含 `agent / container / source / furniture / tile / room / event`；所有 readable 內容都只從當下 authoritative state / canonical event 即時投影，與 Debug Inspector 共享同一份 truth。
@@ -477,18 +484,19 @@ Base `ui.js` 是 `#inspector` 的唯一 render owner。它先提交 base Inspect
 900  Requester Social Outcome Memory
 1000 Resident View / Debug Layer
 1025 Relationship Readable / Debug Projection
+1026 Physical Profile Debug Projection
 1050 Entity Readable / Debug Layer
 ```
 
 這些數字只表示 **Inspector composition order**，不是 simulation Runtime Hook Pipeline 的 phase/order；Architecture 圖仍應以 lifecycle responsibility 描述，不把 UI section 名稱提升為 simulation stage。
 
-Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Action / Intent / Explanation；order 1025 Relationship layer 在 Agent shell 已建立後補入 Relationship readable / Debug projection；order 1050 Entity Readable layer 對 Agent 不建立第二個 shell，只統一玩家入口標籤。Container / Source / Furniture / Tile / Room / Event 則由 order 1050 將已完成 decorators 的 base Inspector DOM 包入 Readable / Debug shell。所有 layer 都直接使用 base UI 傳入的 `selected` context，不解析 `.inspect-title` 猜 entity，也不以 `MutationObserver` 搬運重建後的 DOM。
+Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Action / Intent / Explanation；order 1025 Relationship layer 與 order 1026 Physical layer 在 Agent shell 已建立後補入各自 read-only / Debug projection；order 1050 Entity Readable layer 對 Agent 不建立第二個 shell，只統一玩家入口標籤。Container / Source / Furniture / Tile / Room / Event 則由 order 1050 將已完成 decorators 的 base Inspector DOM 包入 Readable / Debug shell。所有 layer 都直接使用 base UI 傳入的 `selected` context，不解析 `.inspect-title` 猜 entity，也不以 `MutationObserver` 搬運重建後的 DOM。
 
-Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
+Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。Physical Profile Slice 1 是靜態 profile + derived projection，沒有取得 simulation runtime hook ownership。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
 
 `ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
 
-## 9. Spatial / resources / sleep invariants
+## 9. Spatial / Physical / resources / sleep invariants
 
 ### Spatial
 
@@ -498,6 +506,33 @@ Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `r
 - dynamic blocker / Contact / supported contact 不建立重複 location truth。
 
 詳見 [`interaction-geometry.md`](interaction-geometry.md)。
+
+### Physical Profile Foundation
+
+v11.16.0 的第一刀只建立 reusable physical facts 與 standing MovementEnvelope contract：
+
+```text
+agent.physical
+├─ mass
+├─ volume
+├─ bodyGeometry { height, width, length }
+├─ locomotionCapabilities
+└─ locomotionProfiles
+
+SimPhysical.getMovementEnvelope(agent, mode)
+→ { clearanceHeight, clearanceWidth, clearanceLength, speedFactor, sourceMode }
+```
+
+正式邊界：
+
+- mass、volume、body geometry 分開保存，不用單一 `bodySize` 取代；
+- default Human / Cat profile 是 coarse MVP template，clone 成每個 Agent 自己的 state，個體可 override；
+- `MovementEnvelope` 是 derived output，不保存 persistent cache；
+- locomotion profile 可用各軸 factor 或 absolute clearance override；Spatial 不自行推導 torso thickness / Anatomy；
+- Spatial 家具下 clearance 現在讀 `SimPhysical.requiredClearance(agent, 'standing')`，只有 Physical interface unavailable 時才保留 legacy species scalar fallback；
+- 預設 standing geometry 刻意維持 v11.11 behavior parity：Human `1.65 m`、Cat `0.32 m` 對既有餐桌下 `0.72 m` clearance 的結果不變；
+- 本 slice 不新增 crouch / kneelCrawl / proneCrawl，不把 posture transition、travel time、crowding、Relationship / trait motivation 混入 Physical feasibility；
+- 未來「能不能過」由 Physical + Spatial 決定；「願不願意為某目標趴著過」屬行為／動機選擇層，不能回寫 Physical truth。
 
 ### Resources / logistics
 
@@ -520,6 +555,7 @@ Regression 優先鎖：
 
 - Single Source of Truth；
 - World / Agent-private / Observed Information boundary；
+- Physical Profile individual ownership、positive dimensions / mass / volume、derived MovementEnvelope no-cache boundary、default Spatial behavior parity 與 individual geometry override；
 - canonical Action terminology / construction；
 - Intent interruption semantics；
 - Social Bid requester / responder agency；
@@ -538,6 +574,15 @@ Regression 優先鎖：
 對 emergent behavior，不用「最後必須固定做某個 Action」代替 causal invariant。Focused causal story / counterfactual A/B 應只改目標變數，鎖住真正的因果差異。
 
 ## 11. Current integration priority
+
+Physical Current invariant：
+
+- `agent.physical` 保存 individual authoritative profile；template 只是初始化來源，不是 runtime species hard-code；
+- `MovementEnvelope` 只由 `SimPhysical.getMovementEnvelope(agent, mode)` derived，不建立 persistent mirror；
+- Spatial overhead clearance 必須消費 canonical Physical interface；Spatial observability 也顯示同一 derived clearance；
+- Slice 1 只啟用 standing mode，維持既有 Human / Cat default feasibility，不偷做 crawling / posture transition / traversal timing；
+- mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
+- Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
 
 Relationship Current invariant：
 
