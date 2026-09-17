@@ -487,3 +487,79 @@ Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Acti
 Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
 
 `ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
+
+## 9. Spatial / resources / sleep invariants
+
+### Spatial
+
+- Agent 與可定位 Object 透過 Spatial API 回答 node。
+- floor environment 由 floor surface contents 持有；家具 Surface Environment 由 Surface Cell contents 持有。
+- Interaction Geometry 依 affordance + target data 推導合法操作位置。
+- dynamic blocker / Contact / supported contact 不建立重複 location truth。
+
+詳見 [`interaction-geometry.md`](interaction-geometry.md)。
+
+### Resources / logistics
+
+- `Agent.held + Container.contents` 是搬運與資源位置的正式 truth。
+- 舊 `Agent.carrying` 不存在。
+- transfer / serving / restock / external supply 都必須遵守 physical resource conservation 與合法 Interaction Geometry。
+
+### Sleep
+
+- `fatigue` 與 `sleepNeed` 分離。
+- circadian pattern / phase offset 是 bias，不是第二份 clock。
+- sleeping target 的 stimulus、wake、response 是不同事實。
+- wake 不自動等於 social response。
+
+## 10. Validator / regression contract
+
+Validator 是 pure invariant checker，不應修補 state 或改 Engine API。
+
+Regression 優先鎖：
+
+- Single Source of Truth；
+- World / Agent-private / Observed Information boundary；
+- canonical Action terminology / construction；
+- Intent interruption semantics；
+- Social Bid requester / responder agency；
+- event creation ownership / event-created consumer registry；
+- event / memory provenance；
+- bounded Memory / retention；
+- Appraisal historical stability；
+- Affect provenance；
+- Relationship directional ownership / audited evidence / boundedness；
+- Relationship target-preference boundedness、action-utility isolation 與 generic animal affordance eligibility；
+- Relationship responder-bias directionality、bounded Human / animal score delta、reverse-direction isolation、World Event privacy 與 derived Debug observability；
+- runtime hook ordering；
+- state-inert presentation；
+- deterministic long-run Validator 0。
+
+對 emergent behavior，不用「最後必須固定做某個 Action」代替 causal invariant。Focused causal story / counterfactual A/B 應只改目標變數，鎖住真正的因果差異。
+
+## 11. Current integration priority
+
+Relationship Current invariant：
+
+- `relationships` 只存在 Agent-local directional map，不建立 global / pair registry；
+- persistent entry 只保存 `familiarity / affinity / lastUpdatedTick`；
+- Relationship 只 consolidate audited direct relational experience 的 historical Appraisal，不自行解析 raw event 或從 agency 推論好惡；
+- proposal / intermediate response 不得造成同一 encounter 重複計分；
+- requester-private no-response 只能更新 requester → counterpart；
+- Memory pruning 不得抹除已 consolidated Relationship；
+- v11.15.1 Relationship 只影響 initiator-side `socialize / interactWithAnimal / seekSocialContact` target ranking，使用 `8 × familiarity × affinity` bounded delta；
+- v11.15.2 responder bias 只讀 responder → requester 的 `familiarity × affinity` unitless signal，由 Human / animal responder owner 各自縮放，目前 cap `±0.18`；反方向 Relationship 不得滲入；
+- Relationship 不得加入一般 action-level social utility、不 hard-ban negative target、不修改 current-intent utility、soft-switch threshold 或 commitment；
+- responder score decomposition 只可 derived render，不寫入 World Event 或 persistent Agent cache；
+- 動物互動 canonicalize 為 `interactWithAnimal / petAnimal`，target eligibility 由 species profile / affordance 判斷，不依物種名稱拆 Action；
+- player-readable Relationship 只是 authoritative state projection；Debug 可顯示精確數值、target-ranking decomposition 與 responder-score decomposition；任何 mode/tab switch 都必須 state-inert。
+
+Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂；不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。Private experience lifecycle 的全面統一目前只記為 deferred architecture cleanup，不阻塞本 slice。
+
+## 12. Validator rule ownership
+
+`src/state-validator.js` 是唯一 `validateState` aggregator owner。Versioned validator extension 不得捕捉或覆寫 `V.validateState`；每一層 invariant 使用 `V.registerValidationLayer(id, handler, order)` 以唯一 ID 與 explicit order 註冊。
+
+正式 app 在所有 versioned validator 載入後由 `state-validator-manifest.js` finalize expected layer set。duplicate ID、duplicate order、missing expected layer、unexpected layer、finalize 後 late registration 都必須 loud failure；不得靠 `index.html` script load order 靜默決定 validation semantics。
+
+每個 layer 接收 `(state, previousResult)` 並回傳下一個 validation result；既有 invariant logic 保持在原本 owner 檔案。Registry 只負責 ownership / ordering / completeness，不把 subsystem invariant 集中回單一巨型 validator。
