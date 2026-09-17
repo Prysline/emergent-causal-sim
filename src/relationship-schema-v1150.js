@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
-  const VERSION='11.15.1-relationship-target-preference';
+  const VERSION='11.15.2-relationship-responder-bias';
   const baseCreateInitialState=W.createInitialState;
   const ENCOUNTER_WEIGHTS=Object.freeze({
     acceptTalk:1,
