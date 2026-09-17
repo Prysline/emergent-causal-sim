@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>因果湧現模擬器 v11.16.0｜Physical Profile Foundation</title>
+  <title>因果湧現模擬器 v11.17.0｜Passage Profile + Multi-mode Feasibility</title>
   <link rel="stylesheet" href="styles/app.css">
   <link rel="stylesheet" href="styles/spatial.css">
   <link rel="stylesheet" href="styles/spatial-observability.css">
@@ -14,7 +14,7 @@
 <body>
 <div class="shell">
   <header class="appbar">
-    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.16.0・Physical Profile Foundation</span></h1></div>
+    <div><div class="eyebrow">EMERGENT CAUSAL SIM</div><h1>因果湧現模擬器 <span>v11.17.0・Passage Profile + Multi-mode Feasibility</span></h1></div>
     <div class="clockbox"><b id="clock">第 1 天 12:00</b><small id="tickLabel">Tick 0</small></div>
   </header>
   <div class="toolbar">
@@ -27,7 +27,7 @@
       <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>社交目標由近期 Memory 與慢速 Relationship 排序；Relationship 另可 bounded 修正 responder 對特定 requester 的回應分數，但不改一般 social Action utility</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
       <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>brief reply、explicit decline 與 no-response 保持不同事實邊界；Relationship 只 consolidate Agent 自己已形成的 historical appraisal</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
     </div>
-    <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>實體檢視 / Debug Inspector</b><small>居民關係顯示慢速 Familiarity / Affinity；Debug 可檢查 Physical Profile / standing MovementEnvelope、社交目標排序，以及 responder score 分解</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
+    <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>實體檢視 / Debug Inspector</b><small>居民關係顯示慢速 Familiarity / Affinity；Debug 可檢查 Physical Profile / multi-mode MovementEnvelopes、Spatial 幾何、社交目標排序與 responder score 分解</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
   </main>
 </div>
 <nav class="mobile-nav" aria-label="手機版分頁"><button data-tab="map" class="active"><span>🗺️</span>地圖</button><button data-tab="agents"><span>👥</span>行動</button><button data-tab="timeline"><span>📜</span>時間線</button><button data-tab="inspector"><span>🔎</span>檢視</button></nav>
@@ -55,6 +55,7 @@
 <script src="src/relationship-schema-v1150.js" defer></script>
 <script src="src/physical-schema-v1160.js" defer></script>
 <script src="src/physical-runtime-v1160.js" defer></script>
+<script src="src/spatial-passage-v1170.js" defer></script>
 <script src="src/engine.js" defer></script>
 <script src="src/runtime-hook-pipeline.js" defer></script>
 <script src="src/engine-spatial-v1114.js" defer></script>
