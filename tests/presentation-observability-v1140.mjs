@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.15.0-relationship-foundation';
+const CURRENT_VERSION='11.15.1-relationship-target-preference';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
@@ -74,7 +74,7 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.15\.0・Relationship Foundation/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.15\.1・Relationship Target Preference/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
 assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load Relationship runtime');
@@ -82,7 +82,7 @@ assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player
 assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must keep the non-agent readable entity layer');
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
-assert.match(readmeSource,/Relationship Foundation/,'README must document the new long-term dyadic state');
+assert.match(readmeSource,/Relationship Foundation/,'README must document the long-term dyadic state foundation');
 assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must retain the generalized readable entity boundary');
 assert.match(readmeSource,/slot reservation/,'README must document the reservation/debug privacy boundary');
 const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
@@ -131,4 +131,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.15.0 presentation observability + relationship foundation regression: ok');
+console.log('v11.15.1 presentation observability + relationship target preference regression: ok');
