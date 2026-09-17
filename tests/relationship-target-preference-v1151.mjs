@@ -13,7 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const APP_VERSION='11.16.0-physical-profile-foundation';
+const APP_VERSION='11.17.0-passage-profile-multimode';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const clone=x=>structuredClone(x);
@@ -119,4 +119,4 @@ assert.equal(E.talkEngagementScore(responder),talkBefore,'no-counterpart Human b
 assert.equal(E.petResponseScore(animal),petBefore,'no-counterpart animal base helper remains neutral');
 noIssues('target preference boundary remains isolated');
 
-console.log('v11.15.1 relationship target preference regression remains valid under v11.16.0');
+console.log('v11.15.1 relationship target preference regression remains valid under v11.17.0');
