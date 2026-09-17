@@ -2,7 +2,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.15.2-relationship-responder-bias`。
+目前 runtime marker：`11.16.0-physical-profile-foundation`。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >
@@ -93,7 +93,7 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render | presentation-only；不得影響 simulation ordering |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection | presentation-only；不得影響 simulation ordering |
 
-v11.15.1 的 Relationship target preference 與 v11.15.2 的 Relationship responder bias 都**不新增 runtime hook、也不改上述 order**。前者在既有 initiator-side target evaluation 中加入 bounded derived signal；後者由既有 Social Response / Human Social Response owner 在自己的 response evaluation 內讀 responder → requester 的 directional Relationship signal。因此本版 pipeline ordering仍與 11.15.0 Foundation 相同，版本同步是 Current contract 對齊，不代表新增 lifecycle stage。
+v11.15.1 的 Relationship target preference 與 v11.15.2 的 Relationship responder bias 都**不新增 runtime hook、也不改上述 order**。前者在既有 initiator-side target evaluation 中加入 bounded derived signal；後者由既有 Social Response / Human Social Response owner 在自己的 response evaluation 內讀 responder → requester 的 directional Relationship signal。v11.16.0 Physical Profile Foundation 同樣不新增 runtime hook：它只在 state construction 建立 authoritative profile，並由 Spatial / Debug 在需要時同步讀 derived MovementEnvelope。因此本版 pipeline ordering仍與 11.15.0 Foundation 相同，版本同步是 Current contract 對齊，不代表新增 lifecycle stage。
 
 ## 5. `episodicMemoryCreated` 支線
 
@@ -133,7 +133,7 @@ flowchart LR
 | 700 | `residentView.reset` | Presentation | 重設／排程 Resident View |
 | 750 | `relationshipView.reset` | Presentation | 重設／排程 Relationship projection |
 
-Relationship persistent state 由 `relationship-schema-v1150.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。
+Relationship persistent state 由 `relationship-schema-v1150.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 也由 `physical-schema-v1160.js` 的 initial-state layer建立；Slice 1 不需要 simulation-level afterReset hook。
 
 ## 7. Event-created / Memory observation lifecycle
 
