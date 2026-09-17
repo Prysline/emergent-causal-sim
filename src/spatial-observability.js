@@ -7,7 +7,7 @@
   function roomLabel(st,spaceId){return st.map?.rooms?.[spaceId]?.name||spaceId||'world';}
   function surfaceLabel(st,surfaceId){if(!surfaceId||surfaceId===FLOOR)return'地板';const entry=SP.surfaceEntry?.(st,surfaceId);return entry?.surface?.label||surfaceId;}
   function clearanceFor(st,node){if(!node||node.surfaceId!==FLOOR)return null;const values=(SP.overheadAt?.(st,node)||[]).map(f=>f.spatial?.under?.clearance).filter(Number.isFinite);return values.length?Math.min(...values):null;}
-  function movementEnvelope(agent){return agent?(window.SimPhysical?.getMovementEnvelope?.(agent,'standing')??null):null;}
+  function movementEnvelope(agent){return agent?(window.SimPhysical?.getMovementEnvelope?.(agent,'walk')??null):null;}
   function requiredClearance(agent){return agent?(movementEnvelope(agent)?.clearanceHeight??SP.TRAVERSAL_PROFILES?.[agent.kind]?.requiredClearance??null):null;}
   function nodeObservation(st,p,agent=null){
     const node=SP.normalizeNode(st,p);if(!node)return null;
@@ -22,7 +22,7 @@
       surfaceLabel:surfaceLabel(st,node.surfaceId),
       position:{x:node.x,y:node.y},
       covered:overhead.length>0,
-      overhead:overhead.map(f=>({id:f.id,name:f.name,clearance:f.spatial?.under?.clearance??null})),
+      overhead:overhead.map(f=>({id:f.id,name:f.name,clearance:f.spatial?.under?.clearance??null,clearanceWidth:f.spatial?.under?.clearanceWidth??null})),
       clearance,
       requiredClearance:required,
       movementEnvelope:envelope,
@@ -50,6 +50,7 @@
       cells:(surface?.cells||[]).map(p=>({x:p.x,y:p.y})),
       allowKinds:[...(surface?.allowKinds||[])],
       clearance:Number.isFinite(under?.clearance)?under.clearance:null,
+      clearanceWidth:Number.isFinite(under?.clearanceWidth)?under.clearanceWidth:null,
       cover:under?.cover||null
     };
   }
