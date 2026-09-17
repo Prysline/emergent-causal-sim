@@ -53,18 +53,18 @@ E.reset(20260911);
   cat.needs.sleepNeed=100;
   putToSleep(st,cat,'sofa:left',0);
   assert.equal(E.interactionWakeChance(cat,18),0,'高 sleepNeed 且剛入睡時，輕摸可以完全不足以喚醒');
-  human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
+  human.action={kind:'petAnimal',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
   E.tick();
 
   assert.equal(cat.action?.kind,'sleep','輕摸不一定叫醒正在深睡的貓');
-  const pet=st.events.find(e=>e.data?.action==='petCat');
-  assert.ok(pet,'摸貓本身應記為發起者 action');
-  assert.ok(!pet.text.includes('蹭了幾下'),'摸貓不得再固定虛構貓有回蹭');
+  const pet=st.events.find(e=>e.data?.action==='petAnimal');
+  assert.ok(pet,'撫摸本身應記為發起者 action');
+  assert.ok(!pet.text.includes('蹭了幾下'),'撫摸不得固定虛構動物有回蹭');
   const noResponse=st.events.find(e=>e.data?.action==='sleepDisturbance'&&e.data?.target===cat.id);
   assert.ok(noResponse?.text.includes('沒有對摸觸作出明顯回應'),'睡著且未醒的貓應明確保持無回應');
   assert.equal(noResponse.data.wakeChance,0);
   assert.equal(noResponse.data.stimulusKind,'touch');
-  noIssues('pet sleeping cat without fabricated response');
+  noIssues('pet sleeping animal without fabricated response');
 }
 
 E.reset(20260911);
@@ -81,7 +81,7 @@ E.reset(20260911);
   E.tick();
 
   const contact=st.events.find(e=>e.data?.action==='seekHuman');
-  assert.ok(contact,'貓打擾睡著的人仍應先形成真實接觸事件');
+  assert.ok(contact,'動物打擾睡著的人仍應先形成真實接觸事件');
   assert.equal(contact.data.stimulusIntensity,34);
   assert.equal(contact.data.stimulusKind,'touch+sound');
   assert.equal(contact.data.socialBid,true,'Current Social Bid lifecycle 應把 seekHuman contact 標記成 immutable world Bid');
@@ -100,7 +100,7 @@ E.reset(20260911);
     assert.ok(wake?.causeIds?.includes(contact.id),'互動喚醒應保留造成喚醒的接觸事件因果鏈');
   }
   assert.equal(Object.prototype.hasOwnProperty.call(human,'pendingInteraction'),false,'Current lifecycle 不得恢復 legacy pendingInteraction');
-  noIssues('cat disturbs sleeping human coherently');
+  noIssues('animal disturbs sleeping human coherently');
 }
 
 E.reset(20260911);
@@ -108,11 +108,11 @@ E.reset(20260911);
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   st.agents.zhou.offMap=true;
   human.position={...cat.position};
-  human.action={kind:'petCat',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
+  human.action={kind:'petAnimal',phase:'interact',targetAgent:cat.id,started:st.tick,wait:0};
   E.tick();
-  const pet=st.events.find(e=>e.data?.action==='petCat');
+  const pet=st.events.find(e=>e.data?.action==='petAnimal');
   assert.ok(pet);
-  assert.ok(!pet.text.includes('靠過去蹭'),'清醒貓被摸時也不應由 petCat action 固定宣告回蹭');
+  assert.ok(!pet.text.includes('靠過去蹭'),'清醒動物被摸時也不應由 petAnimal action 固定宣告回蹭');
   noIssues('awake pet does not fabricate reciprocal rub');
 }
 
