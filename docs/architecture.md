@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.15.0-relationship-foundation`。
+目前 runtime marker：`11.15.1-relationship-target-preference`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -66,6 +66,8 @@ Relationship 同樣遵守方向性 private truth：`A.relationships[B]` 與 `B.r
 - requester-private `awaitResponse`
 - responder-private `respondSocialBid`
 
+動物互動使用 canonical `interactWithAnimal` Intent 與 `petAnimal` Action。是否能撫摸某 target 由 species profile / affordance 與可達性等實際條件判斷，不依 Cat / Dog / Rabbit 等物種名稱建立平行 Action kind。
+
 ### Canonical Action construction
 
 Concrete Action construction 由 core `E.buildAction(agent, choice)` 統一持有。Initial deliberation、hard replan、soft reconsideration 與 Memory→Deliberation correction 不得再保存平行的 Action construction switch。
@@ -117,7 +119,7 @@ World Event: Social Bid
 - brief reply、explicit decline、no response 是不同事實；
 - no response 不得推論 intentional ignore / dislike / rejection。
 
-Human talk response 與目前 Pet response 都由 responder 自己的 state 決定。v11.15.0 Relationship Foundation 仍完全 decision-inert；Human `talkEngagementScore`、Cat `petResponseScore` 與 responder candidate policy 尚未直接讀 Current Affect、Relationship 或 target-specific Memory influence。
+Human talk response 與目前 Pet response 都由 responder 自己的 state 決定。v11.15.1 Relationship 只接入 initiator-side social target preference；Human `talkEngagementScore`、animal `petResponseScore` 與 responder candidate policy 仍未直接讀 Current Affect、Relationship 或 target-specific Memory influence。
 
 ## 5. Memory / Appraisal / Affect / Relationship
 
@@ -157,13 +159,31 @@ Relationship 必須讀 specialized historical Appraisal 的最終結果，不自
 
 ### Current Affect
 
-Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memory / Relationship 分層。它可以由新 appraisal 更新並隨 tick decay，但目前不直接進入 Human / Cat responder scoring。
+Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memory / Relationship 分層。它可以由新 appraisal 更新並隨 tick decay，但目前不直接進入 Human / animal responder scoring。
 
-### Memory → Deliberation
+### Memory → Deliberation / Relationship Target Preference
 
-目前只讓 target-related episodic history 以 bounded derived influence 進入 initiator-side social candidate，例如 `socialize / interactWithCat / seekSocialContact`。
+Target-related episodic history 以 bounded derived influence 進入 initiator-side social candidate；目前 canonical social intents 為 `socialize / interactWithAnimal / seekSocialContact`。
 
-Memory influence 不保存成另一份 persistent relationship truth。v11.15.0 Relationship 也沒有反向接進這個 derived memory association；兩層在第一版保持可獨立驗證。
+Relationship 在 v11.15.1 也只作 initiator-side target ranking signal，不改 action-level social motivation：
+
+```text
+relationshipTargetDelta = 8 × familiarity × affinity
+
+targetPreference = memoryUtilityDelta
+                 + relationshipTargetDelta
+                 - distancePenalty
+
+finalUtility = baseUtility + memoryUtilityDelta
+```
+
+正式邊界：
+
+- `relationshipTargetDelta` bounded `[-8,+8]`；`familiarity=0` 或 `affinity=0` 時為 0。
+- 負向 Relationship 只降低 target preference，不從 eligibility 移除 target。
+- Relationship 不加入 `finalUtility`，因此不直接提高／降低是否選擇 social Action。
+- Relationship 不修改 current-intent utility、soft-switch threshold、commitment 或 responder score。
+- Memory influence 與 Relationship 都是 derived decision signals，不互相寫回，也不保存 persistent preferred-target mirror。
 
 Initial core chooser 建立的 `system + phase:'plan'` event 是**同 tick provisional private-cognition plan**，以 `data.planLifecycle='initialProvisional'` 明示其 creation payload 尚可能在 afterTick 800 Memory-to-Deliberation Correction 被 normalization。Correction 只能改寫同一 tick、同 actor、`type:'system'`、同 lifecycle marker 且 action 對應 initial pick 的既有 canonical plan event；不得新增第二筆 correction event，也不得回頭改寫較舊 plan 或其他 plan-shaped event。Event ID / cause identity 保持不變，event-created consumer 若讀取 creation payload 必須把它視為 provisional，而不是 immutable final plan。Plan event 仍屬 private cognition / non-episodic，不進 generic Episodic Memory。
 
@@ -197,13 +217,13 @@ agent.relationships[counterpartId] = {
 
 - 完整 Human conversation：requester 只從 `acceptTalk` consolidation；responder 只從完成的 `talk` consolidation，避免 `talkOffer → acceptTalk → talk` 重複計分。
 - `briefTalkReply / declineTalk`：direct target 可依既有 shallow negative appraisal 更新；actor 自己只有 neutral actor-side appraisal 時只增加 Familiarity，不自行產生負面 Affinity。
-- `petCat`：actor / target 均可依自己的 historical appraisal consolidation。
-- `avoidPet`：actor / target 均可 consolidation，因此同一 observable event 可以讓 Cat 正向、人類負向。
+- `petAnimal`：actor / target 均可依自己的 historical appraisal consolidation。
+- `avoidPet`：actor / target 均可 consolidation，因此同一 observable event 可以讓動物正向、人類負向。
 - `privateSocialOutcome.socialNoResponse`：只 requester → counterpart，且使用較低 encounter weight。
 - `talkOffer / petOffer / acceptPet / toleratePet` 等 proposal / intermediate response 不直接 consolidation。
 - 非 relational event、bystander observation、單純 `agency === other` 都不足以建立 Relationship evidence。
 
-第一版公式保持 bounded / diminishing return：Familiarity 越高，同等 episode 的增幅越小；Affinity 正向 evidence 朝 +1、負向 evidence 朝 -1 推進，但既有極端值仍可被反方向重要 experience 拉回。Relationship 第一版不改任何 decision policy。
+Foundation consolidation 公式保持 bounded / diminishing return：Familiarity 越高，同等 episode 的增幅越小；Affinity 正向 evidence 朝 +1、負向 evidence 朝 -1 推進，但既有極端值仍可被反方向重要 experience 拉回。v11.15.1 只把這份 directional slow state讀入 initiator-side target preference；不因此取得 action-level motivation、responder 或 interruption ownership。
 
 ### Deferred architecture cleanup｜private experience lifecycle
 
@@ -393,7 +413,7 @@ Resident overview 額外顯示 Relationship 的 read-only 長期摘要。Readabl
 - Familiarity 顯示「還不太熟／有些熟悉／熟悉／很熟悉／非常熟悉」等相處歷史程度；
 - 低 Familiarity 時不顯示 Affinity 判斷，避免一兩次 encounter 就產生「很喜歡／很討厭」式過度敘事；
 - 有足夠 Familiarity 時，Affinity 只描述「相處大致中性／愉快／不順」等 experience trend，不使用 friendship / trust / love / hate label；
-- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，但 UI 不保存 relationship mirror。
+- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / distancePenalty / targetPreference` decomposition；UI 不保存 relationship 或 preferred-target mirror。
 
 ### Entity Readable View
 
@@ -478,7 +498,8 @@ Regression 優先鎖：
 - bounded Memory / retention；
 - Appraisal historical stability；
 - Affect provenance；
-- Relationship directional ownership / audited evidence / boundedness / decision-inert boundary；
+- Relationship directional ownership / audited evidence / boundedness；
+- Relationship target-preference boundedness、action-utility / responder-policy boundary 與 generic animal affordance eligibility；
 - runtime hook ordering；
 - state-inert presentation；
 - deterministic long-run Validator 0。
@@ -487,7 +508,7 @@ Regression 優先鎖：
 
 ## 11. Current integration priority
 
-Relationship Foundation 的 Current invariant：
+Relationship Current invariant：
 
 - `relationships` 只存在 Agent-local directional map，不建立 global / pair registry；
 - persistent entry 只保存 `familiarity / affinity / lastUpdatedTick`；
@@ -495,8 +516,10 @@ Relationship Foundation 的 Current invariant：
 - proposal / intermediate response 不得造成同一 encounter 重複計分；
 - requester-private no-response 只能更新 requester → counterpart；
 - Memory pruning 不得抹除已 consolidated Relationship；
-- v11.15.0 Relationship 必須 decision-inert，不得修改 target selection、candidate utility、soft reconsideration 或 responder score；
-- player-readable Relationship 只是 authoritative state projection，Debug 才顯示精確數值；任何 mode/tab switch 都必須 state-inert。
+- v11.15.1 Relationship 只影響 initiator-side `socialize / interactWithAnimal / seekSocialContact` target ranking，使用 `8 × familiarity × affinity` bounded delta；
+- Relationship 不得加入 action-level social utility、不 hard-ban negative target、不修改 responder score、current-intent utility、soft-switch threshold 或 commitment；
+- 動物互動 canonicalize 為 `interactWithAnimal / petAnimal`，target eligibility 由 species profile / affordance 判斷，不依物種名稱拆 Action；
+- player-readable Relationship 只是 authoritative state projection；Debug 可顯示精確數值與 target-ranking decomposition；任何 mode/tab switch 都必須 state-inert。
 
 Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂；不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。Private experience lifecycle 的全面統一目前只記為 deferred architecture cleanup，不阻塞本 slice。
 
