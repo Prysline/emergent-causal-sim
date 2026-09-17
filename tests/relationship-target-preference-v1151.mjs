@@ -63,7 +63,8 @@ const meiEval=ranked.find(e=>e.targetAgent==='mei'),zhouEval=ranked.find(e=>e.ta
 assert.ok(meiEval&&zhouEval,'both counterfactual targets must remain eligible');
 assert.equal(meiEval.pathDistance,zhouEval.pathDistance,'counterfactual target distances must be identical');
 assert.equal(ranked[0].targetAgent,'mei','positive long-term Relationship should win an otherwise equivalent target ranking');
-assert.ok(ranked.every(e=>e.finalUtility===base),'Relationship-only fixture must leave action utility unchanged for every target');
+assert.ok(ranked.every(e=>e.memoryUtilityDelta===0),'Relationship-only fixture must contain no Memory utility contribution');
+assert.ok(ranked.every(e=>e.finalUtility===neutral.finalUtility),'Relationship-only fixture must leave action utility unchanged for every target');
 delete st.agents.mei;
 
 // Negative Relationship is a preference penalty, not a hard ban.
