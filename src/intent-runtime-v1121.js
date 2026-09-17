@@ -22,8 +22,11 @@
   }
   function ensureIntentForAction(st,a){
     const action=a?.action;if(!action)return null;
-    if(!a.activeIntent)a.activeIntent=createIntent(st,a,action);
-    if(!action.intentId)action.intentId=a.activeIntent.id;
+    const boundIntent=a.activeIntent&&action.intentId&&action.intentId===a.activeIntent.id;
+    if(!boundIntent){
+      a.activeIntent=createIntent(st,a,action);
+      action.intentId=a.activeIntent.id;
+    }
     return a.activeIntent;
   }
   function reconcileAgentIntent(st,a){
