@@ -73,7 +73,7 @@ noIssues('emergency preemption cleanup');
 
 // A requester-private open wait can be preempted by its own emergency without informing/cancelling anyone else.
 E.reset(20260911);st=E.getState();cat=st.agents.orange;
-const bidId=E.addEvent('橘子發出一次測試用社交邀請。','good',[],{actor:'orange',target:'zhou',action:'seekHuman',socialBid:true,bidKind:'catAffection',bidFrom:'orange',bidTo:'zhou',perceivedByTarget:false});
+const bidId=E.addEvent('橘子發出一次測試用社交邀請。','good',[],{actor:'orange',target:'zhou',action:'seekHuman',socialBid:true,bidKind:'animalAffection',bidFrom:'orange',bidTo:'zhou',perceivedByTarget:false});
 st.causes[bidId].data.bidId=bidId;
 cat.activeIntent={id:`intent:orange:0:awaitResponse:${bidId}`,kind:'awaitResponse',createdTick:0,lifecycle:'open',source:{type:'socialBid',bidId},patienceUntilTick:20};
 cat.needs.thirst=99;
@@ -97,17 +97,17 @@ noIssues('protected workflow remains stable');
 // Requester timeout remains private: v11.12.3 must not reinterpret it as a responder hard invalidation.
 E.reset(41);st=E.getState();
 const requester=st.agents.orange,responder=st.agents.zhou;
-const socialBidId=E.addEvent('橘子發出一次測試用社交邀請。','good',[],{actor:'orange',target:'zhou',action:'seekHuman',socialBid:true,bidKind:'catAffection',bidFrom:'orange',bidTo:'zhou',perceivedByTarget:true});
+const socialBidId=E.addEvent('橘子發出一次測試用社交邀請。','good',[],{actor:'orange',target:'zhou',action:'seekHuman',socialBid:true,bidKind:'animalAffection',bidFrom:'orange',bidTo:'zhou',perceivedByTarget:true});
 st.causes[socialBidId].data.bidId=socialBidId;
 requester.activeIntent={id:`intent:orange:0:awaitResponse:${socialBidId}`,kind:'awaitResponse',createdTick:0,lifecycle:'open',source:{type:'socialBid',bidId:socialBidId},patienceUntilTick:1};
 responder.observedSocialBids=[{bidId:socialBidId,observedTick:0,expiresTick:6}];
 responder.activeIntent={id:`intent:zhou:0:respondSocialBid:${socialBidId}`,kind:'respondSocialBid',createdTick:0,lifecycle:'actionBound',source:{type:'socialBid',bidId:socialBidId,observedTick:0}};
-responder.action={kind:'petCat',phase:'move',started:0,wait:0,targetAgent:'orange',intentId:responder.activeIntent.id};
+responder.action={kind:'petAnimal',phase:'move',started:0,wait:0,targetAgent:'orange',intentId:responder.activeIntent.id};
 responder.position={x:10,y:6};requester.position={x:2,y:6};
 E.tick();st=E.getState();
 assert.equal(requester.activeIntent,null,'requester patience should still end privately');
 assert.equal(st.agents.zhou.activeIntent?.kind,'respondSocialBid','requester timeout must not hard-invalidate responder Intent');
-assert.equal(st.agents.zhou.action?.kind,'petCat');
+assert.equal(st.agents.zhou.action?.kind,'petAnimal');
 noIssues('private timeout is not remote invalidation');
 
 // Long-run integration preserves all previous lifecycle invariants.
