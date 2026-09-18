@@ -4,8 +4,8 @@
   const VERSION=W.MEMORY_DELIBERATION_SCHEMA_VERSION||'11.13.4-memory-deliberation-influence';
   const TOP_MEMORIES=W.MEMORY_DELIBERATION_TOP_MEMORIES||6;
   const MAX_DELTA=W.MEMORY_DELIBERATION_MAX_DELTA||18;
-  const DISTANCE_WEIGHT=W.MEMORY_TARGET_DISTANCE_WEIGHT||2;
-  const DISTANCE_CAP=W.MEMORY_TARGET_DISTANCE_CAP||12;
+  const ACCESS_COST_WEIGHT=W.MEMORY_TARGET_ACCESS_COST_WEIGHT||2;
+  const ACCESS_COST_CAP=W.MEMORY_TARGET_ACCESS_COST_CAP||12;
   const RECENCY_HALF_LIFE=E.MEMORY_RECENCY_HALF_LIFE||W.MEMORY_RECENCY_HALF_LIFE||32;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=(v,d=3)=>{const p=10**d;return Math.round(v*p)/p;};
@@ -25,7 +25,7 @@
       if(E.isAnimalAgent?.(a)!==true)return [];
       predicate=t=>t.kind==='human';
     }
-    return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,pathDistance:SP.pathDistance(st,a,target.position)})).filter(x=>Number.isFinite(x.pathDistance));
+    return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,traversalCost:SP.traversalCost(st,a,target.position)})).filter(x=>Number.isFinite(x.traversalCost));
   }
   function memoryEvidence(st,a,m){
     const p=m?.appraisal||{},relevance=clamp(Number(p.relevance)||0,0,1),congruence=clamp(Number(p.goalCongruence)||0,-1,1),age=Math.max(0,(Number(st?.tick)||0)-(Number(m?.lastObservedTick)||Number(m?.observedTick)||0)),recency=1/(1+age/RECENCY_HALF_LIFE);
@@ -35,14 +35,15 @@
   function targetMemoryContributions(st,a,targetId){return (a?.episodicMemories||[]).filter(m=>memoryAssociatedWithTarget(m,targetId)).map(m=>memoryEvidence(st,a,m)).sort((x,y)=>Math.abs(y.evidence)-Math.abs(x.evidence)||y.lastObservedTick-x.lastObservedTick||String(x.memoryId).localeCompare(String(y.memoryId))).slice(0,TOP_MEMORIES);}
   function targetAssociation(st,a,targetId){const contributions=targetMemoryContributions(st,a,targetId),signedEvidence=contributions.reduce((sum,c)=>sum+c.evidence,0),association=Math.tanh(signedEvidence),memoryUtilityDelta=clamp(association*MAX_DELTA,-MAX_DELTA,MAX_DELTA);return {targetId,contributions,signedEvidence:round(signedEvidence,4),association:round(association,4),memoryUtilityDelta:round(memoryUtilityDelta)};}
   function targetEvaluation(st,a,target,intentKind,baseUtility){
-    const pathDistance=SP.pathDistance(st,a,target.position),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),distancePenalty=Math.min(Math.max(0,pathDistance)*DISTANCE_WEIGHT,DISTANCE_CAP);
-    return {...assoc,intentKind,targetAgent:target.id,pathDistance:round(pathDistance),relationshipTargetDelta,distancePenalty:round(distancePenalty),targetPreference:round(assoc.memoryUtilityDelta+relationshipTargetDelta-distancePenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};
+    const route=SP.planRoute(st,a,target.position,{mode:'walk',objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);
+    return {...assoc,intentKind,targetAgent:target.id,pathDistance:round(route.pathDistance),traversalCost:round(route.traversalCost),travelTime:round(route.travelTime),relationshipTargetDelta,accessPenalty:round(accessPenalty),targetPreference:round(assoc.memoryUtilityDelta+relationshipTargetDelta-accessPenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};
   }
-  function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target})=>targetEvaluation(st,a,target,intentKind,baseUtility)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}
+  function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target})=>targetEvaluation(st,a,target,intentKind,baseUtility)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}
+
   function bestTargetEvaluation(st,a,intentKind,baseUtility){return targetEvaluations(st,a,intentKind,baseUtility)[0]||null;}
   function adjustIntentCandidates(st,a,candidates){
     const out=[];
-    for(const c of candidates||[]){if(!SUPPORTED_INTENTS.has(c.intentKind)){out.push(c);continue;}const best=bestTargetEvaluation(st,a,c.intentKind,c.utility);if(!best)continue;out.push({...c,targetAgent:best.targetAgent,utility:best.finalUtility,targetPreference:best.targetPreference,pathDistance:best.pathDistance});}
+    for(const c of candidates||[]){if(!SUPPORTED_INTENTS.has(c.intentKind)){out.push(c);continue;}const best=bestTargetEvaluation(st,a,c.intentKind,c.utility);if(!best)continue;out.push({...c,targetAgent:best.targetAgent,utility:best.finalUtility,targetPreference:best.targetPreference,pathDistance:best.pathDistance,traversalCost:best.traversalCost,travelTime:best.travelTime,accessPenalty:best.accessPenalty});}
     return out;
   }
   function adjustCurrentIntentUtility(st,a,intent,baseUtility){if(!SUPPORTED_INTENTS.has(intent?.kind))return baseUtility;const targetId=a?.action?.targetAgent,target=targetId&&st.agents?.[targetId];if(!target||target.offMap)return baseUtility;return targetEvaluation(st,a,target,intent.kind,baseUtility).finalUtility;}
