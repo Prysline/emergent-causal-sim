@@ -40,6 +40,9 @@ assert.equal(obs.spatialGoal.surfaceId,'diningTable:surface');
 assert.equal(obs.lastPath.length,2);
 assert.equal(obs.lastPath[0].surfaceId,'floor');
 assert.equal(obs.lastPath[1].surfaceId,'diningTable:surface');
+assert.equal(obs.routePlan.pathDistance,1,'current spatial goal route should expose selected-path topology distance');
+assert.ok(Math.abs(obs.routePlan.traversalCost-1.1)<1e-9,'current spatial goal route should expose objective traversal cost');
+assert.equal(obs.routePlan.travelTime,1,'current executable travel time is one tick for one walk edge');
 assert.equal(SP.formatNode(st,orange.position),'主室・餐桌桌面 (5, 2)');
 
 const tray=SP.objectObservation(st,'mealTray');
