@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.19.0-locomotion-execution-posture`。
+目前 runtime marker：`11.20.0-dynamic-congestion`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -594,7 +594,24 @@ v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route met
 - **arrival semantics**：crawl抵達後 posture不自動改回 standing；完成 Action只清除 active locomotion phase。下一次需要其他 mode時再支付 transition，避免在低矮幾何中出現免費站立。
 - **observability / validation**：Locomotion Debug顯示 posture、active mode、phase、speedFactor、edge ticks與 pending edge；Validator檢查 locomotion phase、posture/mode一致性與 pending step timing，不建立第二份 UI truth。
 - **心理層明確未接線**：v11.19 只會依 objective route facts選擇 physically executable mode。Relationship、Memory、traits、goal pressure、discomfort / embarrassment / dirt aversion尚未參與「願不願意爬」；它們未來只能影響 behavioral choice，不能回寫 Physical feasibility或把客觀 travel time變成零。
-- **仍未包含**：crowding / dynamic congestion、PoseEnvelope/static fit、length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。現有 exertion維持 per-edge parity，避免本 slice同時偷改 energy balance。
+- **仍未包含**：PoseEnvelope/static fit、length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。Dynamic Congestion 已由下一節接線；現有 exertion仍維持 per-edge parity，避免本 slice偷改 energy balance。
+
+### Dynamic Congestion
+
+v11.20.0 將既有粗略的「目的 node occupancy 固定 penalty」收斂為 derived Dynamic Congestion（動態擁擠）contract：
+
+- **ownership**：Crowding 不擁有 physical feasibility。MovementEnvelope vs PassageProfile 仍是個體能否通過某 edge 的唯一物理可行性 truth；其他 Agent 永遠不修改 PassageProfile。
+- **derived / uncached**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 只讀當下 world state，即時計算 next-edge congestion；不寫入 `state.crowding / state.congestion` 等 persistent mirror。
+- **soft consequence only**：第一版不產生 hard block。多 Agent 在狹窄處相遇時，側身、錯步、短暫停頓與調整移動方式被抽象為 `congestionCost` 與 movement delay，不建立 collision / reservation / yielding semantics。
+- **width approximation**：known `PassageProfile.clearanceWidth` 存在時，mover 的 MovementEnvelope width 與附近 Agent 的 effective width 形成 maneuvering-space pressure；另一人的寬度只以 crowding-specific approximation 參與，不宣稱兩個人體矩形必須完整並排，也不得冒充 PoseEnvelope / Static fit。
+- **unknown width**：passage width 為 `null` 時，只依 occupant count、movement direction 等已知資訊形成 soft penalty，不推導「一格最多幾人」等虛假 physical capacity。
+- **direction severity**：第一版 deterministic weight 為 `same=.65 / stationary=1 / unknown=1 / opposite=1.7`，因此同向 < 靜止／未知 < 逆向。這是客觀交通阻力，不含 Relationship / personality / courtesy。
+- **first-pass pressure formula**：每名附近 Agent 先提供 base occupant pressure `.35`；若 width 已知，再加入 `max(0, widthRatio-.75) × 1.5` 的 narrowness pressure；最後乘 direction weight。這些都是 MVP approximation constants，不是人體工程學常數。
+- **route cost**：`congestionCost = congestionPressure × 2.5`，加入 objective `traversalCost`。舊 floor `occupiedCount × 5/2.5` 在 Crowding runtime 存在時停用。
+- **movement slowdown**：`delayTicks = floor(congestionPressure × 2)`；effective edge ticks = locomotion base edge ticks + delay ticks。Debug 的 `speedMultiplier` 由 base / effective ticks 派生。離散 tick 會量化小幅 slowdown，因此 direction severity即使已反映在 pressure / cost，也不保證每個單一 occupant情況都產生不同整數 tick。
+- **planning vs execution**：route planning 讀當下 congestion snapshot；core `moveToward()` 每 tick 會重新 `planRoute(...)`，新 edge 開始時使用該次 step 的 crowding-adjusted `moveTicks`。因此較早的 estimated `travelTime` 與 actual travel time 可因人群移動不同；multi-tick edge開始後不在中途重算同一 edge。
+- **interaction target**：`bestInteractionPosition()` 在 Crowding runtime 存在時不再額外先按 raw occupancy 排序，而讓 canonical route/crowding cost負責 crowded position preference，避免 double count。
+- **deliberate non-goals**：第一版不禁止 Agent spatial overlap、不做 edge reservation、movement claim、誰先走、yielding、deadlock resolution、collision，也不加入 behavioral willingness / aversion。若後續實測「穿過彼此」本身成為產品問題，再另開 contention slice，不在本版預先引入 arbitration。
 
 ### Resources / logistics
 
@@ -619,7 +636,8 @@ Regression 優先鎖：
 - World / Agent-private / Observed Information boundary；
 - Physical Profile individual ownership、positive dimensions / mass / volume、multi-mode MovementEnvelope no-cache boundary、`standing → walk` terminology、default Spatial behavior parity 與 individual geometry override；
 - Passage Profile height / width validity、`null = unconstrained`、explicit edge constraint 與 per-mode `failedAxes`；
-- crawl feasibility query 不得讓 walk-only A* 自動選 mode 或修改 posture；
+- v11.17 isolated Passage focused harness仍不得因 feasibility query 自動 crawl；production v11.19+ mode-aware execution則由 Locomotion contract另行鎖定；
+- Dynamic Congestion direction severity、known-vs-unknown width、soft-no-block、planning snapshot vs execution refresh、legacy occupancy double-count removal；
 - canonical Action terminology / construction；
 - Intent interruption semantics；
 - Social Bid requester / responder agency；
@@ -645,7 +663,7 @@ Physical / Locomotion Current invariant：
 - `MovementEnvelope` 只由 `SimPhysical.getMovementEnvelope(agent, mode)` derived，不建立 persistent mirror；`PassageProfile` 同樣由 Spatial edge geometry derived，不建立 cache；
 - locomotion baseline 是 `walk`，不得再把 Agent posture `standing` 當成同一個 locomotion mode；
 - Human 目前可查詢 `walk / kneelCrawl / proneCrawl` feasibility，Cat 目前只定義 `walk`；capability 只表示物理支援，不代表行為意願；
-- Spatial A* 本 slice 仍只有 walk execution。若 passage 對 walk blocked，即使 crawl query 可行，也不得自動 crawl 或修改 posture；
+- Spatial production route 已支援 `mode:'auto'` 的 walk / kneelCrawl / proneCrawl execution；explicit walk-only query仍可供 focused compatibility。physical feasibility、mode execution 與 behavioral willingness仍分層；
 - v11.18.0 建立 Route Semantics Split；v11.19.0 已把它接到 multi-mode execution：`pathDistance`＝physical-feasible shortest topology edge count、`traversalCost`＝最低客觀通行負擔、`travelTime`＝selected executable route 的真實 transition + movement ticks。A* primary objective仍為 traversal cost；
 - mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
 - Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
