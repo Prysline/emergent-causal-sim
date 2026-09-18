@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 22
       - run: for f in src/*.js; do node --check "$f"; done
-      - run: node tests/v11-state-regression.mjs
+      - run: node tests/v11-state-regression.mjs\n      - run: node tests/world-authoring-foundation.mjs
       - run: node tests/sleep-pressure.mjs
       - run: node tests/social-sleep-interaction.mjs
       - run: node tests/logistics-invariants.mjs
