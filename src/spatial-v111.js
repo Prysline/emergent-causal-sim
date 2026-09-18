@@ -48,7 +48,7 @@
   }
   function floorWalkable(st,p,agent=null){
     if(fixedFloorBlocker(st,p))return false;
-    if(agent){const needed=window.SimPhysical?.requiredClearance?.(agent,'standing')??profile(agent).requiredClearance;for(const f of overheadAt(st,p)){if((f.spatial?.under?.clearance??Infinity)<needed)return false;}}
+    if(agent){const needed=window.SimPhysical?.requiredClearance?.(agent,'walk')??profile(agent).requiredClearance;for(const f of overheadAt(st,p)){if((f.spatial?.under?.clearance??Infinity)<needed)return false;}}
     return true;
   }
   function surfaceWalkable(st,node,agent=null){
@@ -74,21 +74,26 @@
     const surfaceNode=from.surfaceId===FLOOR?to:from,entry=surfaceEntry(st,surfaceNode.surfaceId);if(!entry)return Infinity;
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
   }
+  function walkEdgeFeasible(st,a,from,to){
+    if(!a)return true;
+    const check=SP.traversalFeasibility?.(st,a,from,to),walk=check?.modes?.walk;
+    return walk?walk.feasible:true;
+  }
   function outsidePerimeterFloorNodes(st,entry,agent){
     const out=new Map();for(const c of entry.surface.cells||[])for(const [dx,dy] of DIRS){const p={x:c.x+dx,y:c.y+dy};if(isFootprintCell(entry,p))continue;const n=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,n,agent))out.set(nodeKey(st,n),n);}return [...out.values()];
   }
   function traversalNeighbors(st,p,aOrId=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeWalkable(st,n,a))return [];
     if(n.surfaceId===FLOOR){
-      for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:n.x+dx,y:n.y+dy},FLOOR);if(nodeWalkable(st,q,a))out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:n.x+dx,y:n.y+dy},FLOOR);if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
-        for(const c of entry.surface.cells||[]){if(Math.abs(c.x-n.x)+Math.abs(c.y-n.y)!==1||isFootprintCell(entry,n))continue;const q=normalizeNode(st,c,entry.surface.id);if(nodeWalkable(st,q,a))out.set(nodeKey(st,q),q);}
+        for(const c of entry.surface.cells||[]){if(Math.abs(c.x-n.x)+Math.abs(c.y-n.y)!==1||isFootprintCell(entry,n))continue;const q=normalizeNode(st,c,entry.surface.id);if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       }
     }else{
       const entry=surfaceEntry(st,n.surfaceId);if(!entry)return [];
-      for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:n.x+dx,y:n.y+dy},n.surfaceId);if(nodeWalkable(st,q,a))out.set(nodeKey(st,q),q);}
-      for(const q of outsidePerimeterFloorNodes(st,entry,a)){if(Math.abs(q.x-n.x)+Math.abs(q.y-n.y)===1)out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:n.x+dx,y:n.y+dy},n.surfaceId);if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
+      for(const q of outsidePerimeterFloorNodes(st,entry,a)){if(Math.abs(q.x-n.x)+Math.abs(q.y-n.y)===1&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
     }
     return [...out.values()];
   }

@@ -3,11 +3,11 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.16.0-physical-profile-foundation';
+const CURRENT_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
-  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js',
+  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js',
   'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
   'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','relationship-runtime-v1150.js','affect-runtime-v1132.js','social-response-runtime-v1132a.js','memory-retention-runtime-v1133.js','human-social-response-runtime-v1133a.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js'
@@ -15,12 +15,13 @@ const files=[
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
-E.reset(11600);
+E.reset(11700);
 let st=E.getState();
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(W.PHYSICAL_RUNTIME_VERSION,CURRENT_VERSION);
+assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,CURRENT_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
 const uiObservabilitySource=fs.readFileSync(new URL('../src/ui-observability-controls-v1133a.js',import.meta.url),'utf8');
 assert.doesNotMatch(uiObservabilitySource,/E\.addEvent\s*=/,'UI observability must not replace addEvent');
@@ -70,11 +71,17 @@ assert.match(relationshipUiSource,/Responder score 分解為即時計算的 deri
 assert.doesNotMatch(relationshipUiSource,/\.relationships\s*=/,'Relationship UI must remain a read-only projection');
 
 const physicalSource=fs.readFileSync(new URL('../src/physical-runtime-v1160.js',import.meta.url),'utf8');
-assert.match(physicalSource,/function getMovementEnvelope\(agent,mode='standing'\)/,'Physical runtime must own the canonical derived MovementEnvelope interface');
-assert.match(physicalSource,/function requiredClearance\(agent,mode='standing'\)/,'Physical runtime must expose canonical clearance to Spatial');
+assert.match(physicalSource,/function getMovementEnvelope\(agent,mode='walk'\)/,'Physical runtime must own the canonical walk-first derived MovementEnvelope interface');
+assert.match(physicalSource,/function requiredClearance\(agent,mode='walk'\)/,'Physical runtime must expose canonical walk clearance to Spatial');
+assert.match(physicalSource,/function supportedLocomotionModes\(agent\)/,'Physical runtime must expose supported locomotion modes without choosing one');
+const passageSource=fs.readFileSync(new URL('../src/spatial-passage-v1170.js',import.meta.url),'utf8');
+assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial must own the canonical derived PassageProfile query');
+assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
+assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
 const physicalUiSource=fs.readFileSync(new URL('../src/ui-physical-v1160.js',import.meta.url),'utf8');
 assert.match(physicalUiSource,/registerInspectorDecorator\('physical\.view',decorateInspector,1026\)/,'Physical Debug must use the explicit Inspector lifecycle');
-assert.match(physicalUiSource,/MovementEnvelope 由 Physical runtime 即時計算/,'Physical Debug must identify MovementEnvelope as derived truth');
+assert.match(physicalUiSource,/MovementEnvelope 由 locomotion mode 即時計算/,'Physical Debug must identify MovementEnvelope as derived truth');
+assert.match(physicalUiSource,/posture 的 standing 與 locomotion 的 walk 是不同語意/,'Physical Debug must preserve posture/locomotion terminology separation');
 assert.doesNotMatch(physicalUiSource,/\.physical\s*=/,'Physical UI must remain a read-only projection');
 
 const entityUiSource=fs.readFileSync(new URL('../src/ui-entity-readable-v1141.js',import.meta.url),'utf8');
@@ -88,14 +95,15 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.16\.0・Physical Profile Foundation/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.17\.0・Passage Profile \+ Multi-mode Feasibility/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
-assert.match(indexSource,/Physical Profile \/ standing MovementEnvelope/,'app shell must expose current Physical Debug observability');
+assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
 assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
 assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load Relationship runtime');
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
 assert.match(indexSource,/physical-schema-v1160\.js/,'app shell must load Physical schema');
 assert.match(indexSource,/physical-runtime-v1160\.js/,'app shell must load Physical runtime');
+assert.match(indexSource,/spatial-passage-v1170\.js/,'app shell must load Passage Profile runtime');
 assert.match(indexSource,/state-validator-v1160\.js/,'app shell must load Physical validator');
 assert.match(indexSource,/ui-physical-v1160\.js/,'app shell must load Physical Debug projection');
 assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must keep the non-agent readable entity layer');
@@ -103,7 +111,8 @@ const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
 assert.match(readmeSource,/Relationship Foundation/,'README must document the long-term dyadic state foundation');
 assert.match(readmeSource,/Responder Bias/,'README must retain current Relationship responder influence');
-assert.match(readmeSource,/Physical Profile Foundation/,'README must document the current Physical Foundation slice');
+assert.match(readmeSource,/Physical Profile Foundation/,'README must retain the Physical Foundation boundary');
+assert.match(readmeSource,/Passage Profile/,'README must document the current multi-mode traversal-feasibility slice');
 assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must retain the generalized readable entity boundary');
 assert.match(readmeSource,/slot reservation/,'README must document the reservation/debug privacy boundary');
 const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
@@ -115,8 +124,10 @@ assert.match(architectureSource,/Explanation wording 優先自然直接/,'Archit
 assert.match(architectureSource,/Entity Readable View/,'Architecture must define the generalized player-readable entity surface');
 assert.match(architectureSource,/Relationship Foundation/,'Architecture must define Relationship ownership and truth boundaries');
 assert.match(architectureSource,/Relationship → Responder Bias/,'Architecture must retain responder-bias boundary');
-assert.match(architectureSource,/Physical Profile Foundation/,'Architecture must define Physical Profile ownership');
+assert.match(architectureSource,/Physical Profile \+ Passage Profile \/ Multi-mode Feasibility/,'Architecture must define the current Physical / Passage ownership boundary');
 assert.match(architectureSource,/MovementEnvelope/,'Architecture must define the derived locomotion geometry boundary');
+assert.match(architectureSource,/PassageProfile/,'Architecture must define the derived passage geometry boundary');
+assert.match(architectureSource,/traversalFeasibility/,'Architecture must define the physical multi-mode feasibility boundary');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
@@ -161,4 +172,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.16.0 presentation observability + Physical Profile foundation regression: ok');
+console.log('v11.17.0 presentation observability + Passage Profile multi-mode feasibility regression: ok');

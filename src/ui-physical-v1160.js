@@ -9,11 +9,18 @@
   const kg=v=>Number.isFinite(Number(v))?`${Number(v).toFixed(2)} kg`:'—';
   const cubic=v=>Number.isFinite(Number(v))?`${Number(v).toFixed(4)} m³`:'—';
 
+  function envelopeText(a){
+    const modes=P.supportedLocomotionModes?.(a)||[];
+    return modes.map(mode=>{
+      const e=P.getMovementEnvelope(a,mode);
+      return e?`<b>${esc(mode)}</b>・H ${esc(meters(e.clearanceHeight))}・W ${esc(meters(e.clearanceWidth))}・L ${esc(meters(e.clearanceLength))}・speed ×${esc(Number(e.speedFactor).toFixed(2))}`:`<b>${esc(mode)}</b>・無法推導`;
+    }).join('<br>')||'無';
+  }
   function debugSection(a){
-    const p=P.getPhysicalProfile(a),e=P.getMovementEnvelope(a,'standing');if(!p)return null;
+    const p=P.getPhysicalProfile(a);if(!p)return null;
     const section=document.createElement('div');section.className='inspect-section';section.dataset.v1160PhysicalDebug='';
     const g=p.bodyGeometry||{};
-    section.innerHTML=`<h3>Physical Profile</h3><div class="kv"><div class="k">Mass</div><div>${esc(kg(p.mass))}</div><div class="k">Volume</div><div>${esc(cubic(p.volume))}</div><div class="k">Body Geometry</div><div>H ${esc(meters(g.height))}・W ${esc(meters(g.width))}・L ${esc(meters(g.length))}</div><div class="k">Standing MovementEnvelope</div><div>${e?`H ${esc(meters(e.clearanceHeight))}・W ${esc(meters(e.clearanceWidth))}・L ${esc(meters(e.clearanceLength))}・speed ×${esc(Number(e.speedFactor).toFixed(2))}`:'無法推導'}</div></div><p class="hint">mass / volume / bodyGeometry 是 Agent authoritative physical state；MovementEnvelope 由 Physical runtime 即時計算，不保存第二份 cache。Slice 1 的 Spatial clearance 仍只消費 standing envelope。</p>`;
+    section.innerHTML=`<h3>Physical Profile</h3><div class="kv"><div class="k">Mass</div><div>${esc(kg(p.mass))}</div><div class="k">Volume</div><div>${esc(cubic(p.volume))}</div><div class="k">Body Geometry</div><div>H ${esc(meters(g.height))}・W ${esc(meters(g.width))}・L ${esc(meters(g.length))}</div><div class="k">MovementEnvelopes</div><div>${envelopeText(a)}</div></div><p class="hint">mass / volume / bodyGeometry 是 Agent authoritative physical state；MovementEnvelope 由 locomotion mode 即時計算，不保存第二份 cache。posture 的 standing 與 locomotion 的 walk 是不同語意；Spatial Passage feasibility 只比較物理可行性，不替 Agent 選擇 crawl。</p>`;
     return section;
   }
   function decorateInspector({host:renderHost,selected,state:providedState}){

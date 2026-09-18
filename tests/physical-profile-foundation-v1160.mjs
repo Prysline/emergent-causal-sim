@@ -9,11 +9,11 @@ for(const file of [
   'state-validator.js','state-validator-v111.js','state-validator-v1160.js'
 ])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const CURRENT_VERSION='11.16.0-physical-profile-foundation';
+const CURRENT_VERSION='11.17.0-passage-profile-multimode';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
-E.reset(11600);
+E.reset(11700);
 const st=E.getState(),zhen=st.agents.zhen,zhou=st.agents.zhou,orange=st.agents.orange;
 assert.equal(st.version,CURRENT_VERSION);
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
@@ -24,31 +24,36 @@ for(const a of [zhen,zhou,orange]){
   assert.ok(a.physical,'every current Agent must own authoritative physical state');
   assert.ok(a.physical.mass>0&&a.physical.volume>0);
   assert.ok(a.physical.bodyGeometry.height>0&&a.physical.bodyGeometry.width>0&&a.physical.bodyGeometry.length>0);
-  assert.equal(a.physical.locomotionCapabilities.standing,true);
+  assert.equal(a.physical.locomotionCapabilities.walk,true);
+  assert.equal(Object.prototype.hasOwnProperty.call(a.physical.locomotionCapabilities,'standing'),false,'posture standing must not remain a locomotion mode alias');
   assert.equal(Object.prototype.hasOwnProperty.call(a.physical,'movementEnvelope'),false,'MovementEnvelope must remain derived');
-  const envelope=P.getMovementEnvelope(a,'standing');
+  const envelope=P.getMovementEnvelope(a,'walk');
   assert.ok(envelope&&envelope.clearanceHeight>0&&envelope.clearanceWidth>0&&envelope.clearanceLength>0);
-  assert.equal(P.requiredClearance(a,'standing'),envelope.clearanceHeight);
+  assert.equal(envelope.sourceMode,'walk');
+  assert.equal(P.requiredClearance(a,'walk'),envelope.clearanceHeight);
 }
+assert.deepEqual(P.supportedLocomotionModes(zhen),['walk','kneelCrawl','proneCrawl'],'Human first Slice 2 profile must expose the agreed modes');
+assert.deepEqual(P.supportedLocomotionModes(orange),['walk'],'Cat Slice 2 must not inherit Human crawl mode names');
 
-assert.equal(P.requiredClearance(zhen,'standing'),1.65,'default Human clearance must preserve v11.11 behavior');
-assert.equal(P.requiredClearance(orange,'standing'),.32,'default Cat clearance must preserve v11.11 behavior');
+assert.equal(P.requiredClearance(zhen,'walk'),1.65,'default Human walk clearance must preserve v11.11 standing behavior');
+assert.equal(P.requiredClearance(orange,'walk'),.32,'default Cat walk clearance must preserve v11.11 standing behavior');
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'default Cat still fits below dining table');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),false,'default Human still does not fit below dining table');
+assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),false,'default Human walk still does not fit below dining table');
 
 const oldZhenHeight=zhen.physical.bodyGeometry.height;
 zhen.physical.bodyGeometry.height=.60;
-assert.equal(P.requiredClearance(zhen,'standing'),.60,'clearance must derive from the individual Agent physical profile');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),true,'a Human individual whose standing envelope fits must no longer be blocked by kind-level hardcoding');
+assert.equal(P.requiredClearance(zhen,'walk'),.60,'clearance must derive from the individual Agent physical profile');
+assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),true,'a Human individual whose walk envelope fits must no longer be blocked by kind-level hardcoding');
 zhen.physical.bodyGeometry.height=oldZhenHeight;
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),false,'restoring individual geometry restores default feasibility');
 
-zhou.physical.locomotionProfiles.standing={...zhou.physical.locomotionProfiles.standing,clearanceHeight:.68};
-assert.equal(P.requiredClearance(zhou,'standing'),.68,'locomotion profile may provide an explicit absolute envelope override');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhou),true,'Spatial must consume the canonical MovementEnvelope override');
+zhou.physical.locomotionProfiles.walk={...zhou.physical.locomotionProfiles.walk,clearanceHeight:.68};
+assert.equal(P.requiredClearance(zhou,'walk'),.68,'locomotion profile may provide an explicit absolute envelope override');
+assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhou),true,'Spatial must consume the canonical walk MovementEnvelope override');
 
 const obs=SP.agentObservation(st,'orange');
 assert.equal(obs.requiredClearance,.32,'Spatial observability must report canonical Physical clearance');
+assert.equal(obs.movementEnvelope.sourceMode,'walk','Spatial observability must use canonical walk terminology');
 
 let validation=V.validateState(st);
 assert.equal(validation.issueCount,0,validation.issues.map(x=>x.message).join('\n'));
@@ -60,10 +65,18 @@ orange.physical.movementEnvelope={clearanceHeight:.32};
 validation=V.validateState(st);
 assert.ok(validation.issues.some(x=>x.code==='physical_derived_envelope_persisted'&&x.agentId==='orange'),'validator must reject persistent derived envelope mirrors');
 delete orange.physical.movementEnvelope;
+const oldWalk=orange.physical.locomotionCapabilities.walk;
+orange.physical.locomotionCapabilities.standing=true;
+orange.physical.locomotionProfiles.standing={heightFactor:1,widthFactor:1,lengthFactor:1,speedFactor:1};
+validation=V.validateState(st);
+assert.ok(validation.issues.some(x=>x.code==='physical_legacy_standing_mode'&&x.agentId==='orange'),'validator must reject the retired standing locomotion mode alias');
+delete orange.physical.locomotionCapabilities.standing;
+delete orange.physical.locomotionProfiles.standing;
+orange.physical.locomotionCapabilities.walk=oldWalk;
 assert.equal(V.validateState(st).issueCount,0);
 
-E.reset(11600);
+E.reset(11700);
 for(let i=0;i<500;i++)E.tick();
 validation=V.validateState(E.getState());
 assert.equal(validation.issueCount,0,validation.issues.slice(0,8).map(x=>x.message).join('\n'));
-console.log('v11.16.0 Physical Profile foundation contract passed');
+console.log('v11.17.0 Physical Profile multi-mode foundation contract passed');

@@ -1,5 +1,6 @@
 (() => {
   const V=window.SimValidator,SP=window.SimSpatial;if(!V||!SP?.nodeWalkable)return;
+  const positive=v=>Number.isFinite(Number(v))&&Number(v)>0;
 
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),byNode=new Map();
@@ -13,6 +14,15 @@
       if(!c.position||SP.holderOf(st,c.id))continue;
       const node=SP.objectNode(st,c.id);if(!node)continue;
       if(c.supportId){const expected=st.furniture?.[c.supportId]?.spatial?.surface?.id;if(expected&&node.surfaceId!==expected)add('supported_object_surface_mismatch',`${c.name}承載於 ${c.supportId}，但 Spatial Node 不在其 surface。`,{containerId:c.id,supportId:c.supportId,surfaceId:node.surfaceId,expectedSurfaceId:expected});}
+    }
+    for(const f of Object.values(st?.furniture||{})){
+      const under=f.spatial?.under;if(!under)continue;
+      if(under.clearance!=null&&!positive(under.clearance))add('spatial_passage_height_invalid',`${f.name} 的 under.clearance 必須是正數或未設定。`,{furnitureId:f.id,value:under.clearance});
+      if(under.clearanceWidth!=null&&!positive(under.clearanceWidth))add('spatial_passage_width_invalid',`${f.name} 的 under.clearanceWidth 必須是正數或未設定。`,{furnitureId:f.id,value:under.clearanceWidth});
+    }
+    for(const [edgeKey,constraint] of Object.entries(st?.map?.passageConstraints||{})){
+      if(constraint?.clearanceHeight!=null&&!positive(constraint.clearanceHeight))add('spatial_passage_height_invalid',`Passage ${edgeKey} 的 clearanceHeight 必須是正數或未設定。`,{edgeKey,value:constraint.clearanceHeight});
+      if(constraint?.clearanceWidth!=null&&!positive(constraint.clearanceWidth))add('spatial_passage_width_invalid',`Passage ${edgeKey} 的 clearanceWidth 必須是正數或未設定。`,{edgeKey,value:constraint.clearanceWidth});
     }
     const crowdingNodes=[];for(const [position,ids] of byNode)if(ids.length>1)crowdingNodes.push({position,agentIds:[...ids],count:ids.length});
     return {...base,issueCount:issues.length,issues,crowdingTiles:crowdingNodes,crowdingNodes,ok:issues.length===0};

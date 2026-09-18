@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.16.0・Physical Profile Foundation**（`11.16.0-physical-profile-foundation`）。
+目前 runtime marker：**v11.17.0・Passage Profile + Multi-mode Feasibility**（`11.17.0-passage-profile-multimode`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -13,6 +13,7 @@
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。
+- authored passage geometry 仍由 Furniture / Spatial edge constraint 持有；`PassageProfile` 由 `SimSpatial.getPassageProfile(state, fromNode, toNode)` 即時計算，不建立第二份 passage cache。
 - Action type 的唯一正式欄位是 `action.kind`；舊 `action.intent` compatibility 已移除。
 - `Agent.activeIntent` 是 Agent-private 短期目的，與 `action.kind` 分工不同；`action.intentId` 只作 Action → Active Intent linkage。
 - Social Bid 是可觀察的 World Event；requester waiting、responder Intent、episodic memory、Affect 都是各 Agent 自己的 private state，不建立共享心理 lifecycle registry。
@@ -28,9 +29,13 @@
 - Interaction Geometry 依 affordance + target data 決定合法接觸位置。
 - Container / Source / Surface Environment 的實體資源 transfer、Serving、Carry Load、Restock、External Supply。
 - **Physical Profile Foundation**：每個 Agent 保存獨立 `mass / volume / bodyGeometry` 與 locomotion capability/profile；Human / Cat 現行模板只提供 coarse MVP default，不把物種名稱當作永久通行規則。
-- `SimPhysical.getMovementEnvelope(agent, 'standing')` 依個體 geometry + locomotion profile 產生 derived `clearanceHeight / clearanceWidth / clearanceLength / speedFactor`；profile 可提供 absolute clearance override，但目前只啟用 `standing` mode。
-- Spatial 家具下淨空判定現在消費 canonical Physical `requiredClearance`；既有預設行為保持不變（Cat `0.32 m` 可過 `0.72 m` 餐桌下，Human `1.65 m` 不可），但單一 Human 個體若 geometry 改變，feasibility 會跟著個體資料改變，不再由 `kind` 硬鎖。
-- Slice 1 尚未加入 crouch / kneelCrawl / proneCrawl、姿勢切換 Action、travel-time 重寫、crowding geometry、Anatomy / Injury / Collision；Physical 只提供事實與 derived geometry，不決定「願不願意」採用某種 locomotion。
+- Physical locomotion baseline 已由舊 `standing` 正名為 `walk`，與 Agent `posture.kind = 'standing'` 分離。Human 第一批支援 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不硬套 Human 姿勢名稱。
+- `SimPhysical.getMovementEnvelope(agent, mode)` 依個體 geometry + locomotion profile 產生 derived `clearanceHeight / clearanceWidth / clearanceLength / speedFactor`；profile 可提供 absolute clearance override。
+- **Passage Profile + multi-mode feasibility**：`SimSpatial.getPassageProfile(...)` 從 edge 兩端的 overhead geometry 與可選 explicit edge constraint 派生 `clearanceHeight / clearanceWidth`；`null` 表示該軸目前沒有明確限制，不代表 0。
+- `SimSpatial.traversalFeasibility(...)` 將各 supported mode 的 MovementEnvelope 與 PassageProfile 比較，只回 `feasible / failedAxes`。它不選 `bestMode`、不讀 Relationship / Memory / traits / goal pressure，也不修改 Agent posture。
+- 現行 A* **仍然只執行 `walk`**，但每條 edge 已消費 canonical `walk` Passage feasibility。因此 width / height constraint 會真正阻擋 walk route，同時系統即使知道 `kneelCrawl / proneCrawl` 物理可行，也不會在 Slice 2 偷偷自動趴下穿越。
+- 既有預設行為保持可解釋：Cat `walk` clearance `0.32 m` 可過 `0.72 m` 餐桌下，Human `walk` clearance `1.65 m` 不可；Human `proneCrawl` query 可以在更低空間中判定可行，但 routing / execution 尚未使用它。
+- 本 slice 尚未加入 locomotion execution / posture transition、`pathDistance / traversalCost / travelTime` 分家、PoseEnvelope / static fit、length / turn clearance、crowding geometry、Anatomy / Injury / Collision；Physical / Spatial 只回答客觀幾何可行性，不決定「願不願意」採用 crawl。
 
 ### Agent decision / action
 
@@ -84,7 +89,7 @@
 - Player Explanation 優先使用可由同一 evidence 直接支持的日常說法，例如「因為肚子餓了」「因為口渴」「因為累了」「因為想睡了」「因為想找人說說話」；不把 engine threshold 翻成「需求已經變得明顯」之類系統語言。精確需求強度仍留在 Needs / Debug；若沒有可靠的具體原因，使用保守抽象描述或省略，不自行補心理敘事。
 - Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick，並可拆解 social target ranking 的 Memory / Relationship / distance derived influence。
 - Relationship Debug 也可即時計算 responder `base score + Relationship delta → final score / response band`；這只是 authoritative Relationship + responder policy 的 derived observability，不建立 `talkResponseScore / petResponseScore / relationshipResponseDelta` persistent mirror。
-- Physical Debug 顯示 authoritative `mass / volume / bodyGeometry` 與即時計算的 standing `MovementEnvelope`；UI 不保存 `movementEnvelope` mirror，也不把第一版 coarse geometry 宣稱為 Anatomy 級精度。
+- Physical Debug 顯示 authoritative `mass / volume / bodyGeometry` 與所有 supported locomotion mode 的即時 `MovementEnvelope`；UI 不保存 `movementEnvelope` mirror，也不把第一版 coarse geometry 宣稱為 Anatomy 級精度。`posture: standing` 與 locomotion `walk` 在 Debug 文案中保持不同語意。
 - Container / Source / Furniture / Tile / Room / Event 也有玩家可讀投影：優先顯示名稱、位置、內容物、容量、持有人、實際用途／使用者、表面內容、空間中的居民／家具與 canonical event text 等直接可理解資訊。
 - 非居民 Readable View 不直接顯示 raw entity ID、工程座標、Footprint、interaction Port、Surface cell、slot reservation、cause tree 或其他 debug provenance；這些仍留在 Debug Inspector。家具 readable status 只顯示實際使用者，不把 reservation 當成已發生事實或玩家可見心理資訊。
 - readable entity projection 只從現有 Container / Source / Furniture / Spatial / Event truth 即時推導，不新增 `playerContents`、`readableFurnitureState` 等 persistent mirror。
@@ -111,6 +116,8 @@ Subsystem 使用具名 hook + explicit order，不再靠「最後載入的 wrapp
 
 Relationship 對 ordinary observed episodic memory 使用 `episodicMemoryCreated` order 350：specialized Appraisal 100～300 → Relationship consolidation 350 → Affect 400。Requester-private `privateSocialOutcome` 目前仍是專用建立路徑，在自己的 Appraisal 完成後呼叫同一 `E.consolidateRelationshipFromMemory(...)` policy，再進 Affect / prune；兩種 experience lifecycle 的全面統一保留為後續 architecture cleanup，不阻塞本 slice。
 
+Physical / Passage Profile Slice 2 只提供同步 derived query，沒有新增 runtime hook，也不改 tick ordering。A* 只在既有 traversal neighbor expansion 時讀 `walk` feasibility。
+
 ## Memory event observation lifecycle
 
 Core 保有 canonical event creation ownership。`E.addEvent` commit `state.events / state.causes` 後會發出具名 event-created notification；Memory 透過 listener 消費 notification，不覆寫 `E.addEvent`，也不再用 marker sweep 掃描 `state.events` 猜測新事件。
@@ -131,7 +138,8 @@ State regression 目前涵蓋：
 
 - syntax / base state invariant；
 - sleep / social / logistics / spatial / surface environment；
-- Physical Profile Foundation 的 authoritative individual state、derived MovementEnvelope、default behavior parity、individual geometry override、Spatial clearance consumer、validator 與 no-cache boundary；
+- Physical Profile 的 authoritative individual state、multi-mode derived MovementEnvelope、`standing → walk` terminology boundary、default behavior parity、individual geometry override、validator 與 no-cache boundary；
+- Passage Profile 的 edge-derived height / width、`null = unconstrained`、normal / low / lower / width-only deterministic fixture，以及「crawl query 可行但 A* 不自動 crawl」的 subsystem boundary；
 - Action terminology / canonical construction；
 - Active Intent / Social Bid / replan / soft reconsideration；
 - Episodic Memory / Appraisal / Affect / salience；
@@ -141,9 +149,9 @@ State regression 目前涵蓋：
 - Relationship Target Preference 的 bounded directional delta、Memory + Relationship + distance decomposition、負向不 hard-ban、action-utility isolation，以及 generic animal affordance target eligibility；
 - Relationship Responder Bias 的 directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy boundary 與 derived Debug observability；
 - Runtime Hook Pipeline；
-- presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則、Relationship readable/debug 分層、Physical Debug derived-state boundary，以及非居民 Entity Readable / Debug 分層。
+- presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則、Relationship readable/debug 分層、Physical multi-mode Debug derived-state boundary，以及非居民 Entity Readable / Debug 分層。
 
-另有 Chromium Browser QA 驗證 Social Response、Human Social Response、Memory、Resident View、Relationship、Entity Readable View、mobile controls 與 UI state-inert behavior。Regression 優先鎖 authoritative state、truth boundary、causal linkage 與 deterministic invariants，而不是要求 emergent simulation 每次都走唯一固定劇情。
+另有 Chromium Browser QA 驗證 Social Response、Human Social Response、Memory、Resident View、Relationship、Physical multi-mode Debug、Entity Readable View、mobile controls 與 UI state-inert behavior。Regression 優先鎖 authoritative state、truth boundary、causal linkage 與 deterministic invariants，而不是要求 emergent simulation 每次都走唯一固定劇情。
 
 ## 執行
 
