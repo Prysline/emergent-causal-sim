@@ -250,47 +250,34 @@
     }
     return seen;
   }
-  function dedupePositions(list){
+  function dedupePositions(authoring,list){
     const out=new Map();
-    for(const p of list||[])if(p&&baseWalkable(currentAuthoringForDedupe,p))out.set(posKey(p),{x:p.x,y:p.y,z:0});
+    for(const p of list||[])if(p&&baseWalkable(authoring,p))out.set(posKey(p),{x:p.x,y:p.y,z:0});
     return [...out.values()];
   }
-  let currentAuthoringForDedupe=null;
 
   function reachPositions(authoring,p){
     if(!p)return [];
-    currentAuthoringForDedupe=authoring;
     const out=neighborPositions(authoring,p);
     if(baseWalkable(authoring,p))out.push({x:p.x,y:p.y,z:0});
-    const result=dedupePositions(out);
-    currentAuthoringForDedupe=null;
-    return result;
+    return dedupePositions(authoring,out);
   }
   function supportReachPositions(authoring,supportId){
     const furniture=authoring.furniture?.[supportId];
     if(!furniture)return [];
-    currentAuthoringForDedupe=authoring;
     const out=[];
     for(const p of furniture.footprint||[])out.push(...neighborPositions(authoring,p));
     for(const slot of furniture.slots||[])if(slot.position&&baseWalkable(authoring,slot.position))out.push(slot.position);
-    const result=dedupePositions(out);
-    currentAuthoringForDedupe=null;
-    return result;
+    return dedupePositions(authoring,out);
   }
   function objectAccessPositions(authoring,obj,affordance){
     if(!obj?.position)return [];
     const rule=obj.interactions?.[affordance]||obj.interactions?.default||null;
     if(rule?.mode==='supportReach'&&obj.supportId)return supportReachPositions(authoring,obj.supportId);
-    if(rule?.mode==='port'){
-      currentAuthoringForDedupe=authoring;
-      const result=dedupePositions((obj.interactionPorts||[]).filter(p=>!p.affordances?.length||p.affordances.includes(affordance)).map(p=>p.position));
-      currentAuthoringForDedupe=null;
-      return result;
-    }
+    if(rule?.mode==='port')return dedupePositions(authoring,(obj.interactionPorts||[]).filter(p=>!p.affordances?.length||p.affordances.includes(affordance)).map(p=>p.position));
     return reachPositions(authoring,obj.position);
   }
   function accessTargets(authoring,kind,type){
-    currentAuthoringForDedupe=authoring;
     const out=[];
     if(type==='exit'){
       for(const slot of authoringSlots(authoring))if(slot.canExit&&slot.position&&baseWalkable(authoring,slot.position))out.push(slot.position);
@@ -302,9 +289,7 @@
     }else if(type==='sleep'){
       for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind))&&slot.position&&baseWalkable(authoring,slot.position))out.push(slot.position);
     }
-    const result=dedupePositions(out);
-    currentAuthoringForDedupe=null;
-    return result;
+    return dedupePositions(authoring,out);
   }
 
   function analyzeInitialPlacements(authoring){
