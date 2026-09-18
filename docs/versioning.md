@@ -57,7 +57,7 @@
 1. `src/presentation-schema-v1140.js` 的 current runtime marker；
 2. 本次新增／改變 subsystem 的 schema/runtime marker（本線新增 `SimWorld.LOCOMOTION_SCHEMA_VERSION / SimLocomotion.VERSION`；既有 Physical / Passage / Route / Relationship / Memory marker 只有自身 contract generation 改變時才升），並確認未變更 subsystem 不被假升版；
 3. `state.version` / `SimWorld.PRESENTATION_SCHEMA_VERSION`；
-4. 由 Presentation current marker 持有的 UI version（目前包含 Resident View、Physical View、Entity Readable View；其他 subsystem UI 依其 owner contract 判斷）沒有形成第二份 release marker；
+4. 由 Presentation current marker 持有的 UI version（目前包含 Resident View、Physical View、Locomotion View、Entity Readable View；其他 subsystem UI 依其 owner contract 判斷）沒有形成第二份 release marker；
 5. `index.html` 的 `<title>` 與頁首可見版本；
 6. `README.md` current runtime marker；
 7. `docs/architecture.md` / `docs/tick-pipeline.md` 若記載 current runtime marker，必須同步；若文件刻意只記 subsystem contract，則不得為了版本同步改寫無關語義；
