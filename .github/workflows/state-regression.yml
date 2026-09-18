@@ -36,6 +36,7 @@ jobs:
       - run: node tests/passage-profile-multimode-v1170.mjs
       - run: node tests/route-semantics-v1180.mjs
       - run: node tests/locomotion-execution-posture-v1190.mjs
+      - run: node tests/dynamic-congestion-v1200.mjs
       - run: node tests/action-terminology.mjs
       - run: node tests/action-construction.mjs
       - run: node tests/active-intent-foundation.mjs
