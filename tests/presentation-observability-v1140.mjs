@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 const CURRENT_VERSION='11.18.0-route-semantics-split';
+const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
@@ -19,10 +20,11 @@ E.reset(11700);
 let st=E.getState();
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(W.PHYSICAL_RUNTIME_VERSION,CURRENT_VERSION);
-assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,CURRENT_VERSION);
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
+assert.equal(W.PHYSICAL_RUNTIME_VERSION,PHYSICAL_VERSION);
+assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,PHYSICAL_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
+assert.equal(globalThis.SimSpatial.ROUTE_SEMANTICS_VERSION,CURRENT_VERSION);
 const uiObservabilitySource=fs.readFileSync(new URL('../src/ui-observability-controls-v1133a.js',import.meta.url),'utf8');
 assert.doesNotMatch(uiObservabilitySource,/E\.addEvent\s*=/,'UI observability must not replace addEvent');
 assert.doesNotMatch(uiObservabilitySource,/E\.actionLabel\s*=/,'UI observability must not replace actionLabel');
