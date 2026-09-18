@@ -109,8 +109,10 @@ E.reset(20260911);
   assert.ok(!engine.includes('carriedResourceLoad'),'Engine 不得保留抽象 hauling weight helper');
   const validator=fs.readFileSync(new URL('../src/state-validator.js',import.meta.url),'utf8');
   assert.ok(!validator.includes('E.validateState='));assert.ok(!validator.includes('validationStatus='));assert.ok(!validator.includes('debug.validation'));
+  const authoring=fs.readFileSync(new URL('../src/world-authoring-v1.js',import.meta.url),'utf8');
+  assert.ok(!authoring.includes('carrying:null'),'Authoring package 不得初始化 Agent.carrying');assert.ok(authoring.includes("'logisticsContainer'"),'Canonical authoring 應定義物流容器 capability');assert.ok(!authoring.includes("id==='mealTray'"),'World initialization 不得以 entity ID skip list 決定 blocker');
   const world=fs.readFileSync(new URL('../src/world.js',import.meta.url),'utf8');
-  assert.ok(!world.includes('carrying:null'),'World 不得初始化 Agent.carrying');assert.ok(world.includes("'logisticsContainer'"),'World 應定義物流容器 capability');assert.ok(!world.includes("id==='mealTray'"),'World 初始化不得以 entity ID skip list 決定 blocker');
+  for(const legacyOwner of ['FURNITURE_DEFS','OBJECT_START','AGENT_START'])assert.ok(!world.includes(legacyOwner),'world.js 不應繼續持有 '+legacyOwner+' canonical authoring truth');
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const legacy of ['recovery.js','supply.js','action-guard.js','seating.js','rest-surface.js','spatial-ui.js','furniture-ui.js','recovery-ui.js','supply-ui.js'])assert.ok(!index.includes(legacy));
 }
