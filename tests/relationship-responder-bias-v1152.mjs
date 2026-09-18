@@ -108,4 +108,4 @@ armPet({affinity:-1,seed:11533});E.tick();st=E.getState();
 offer=eventBy(e=>e.data?.action==='petOffer');response=eventBy(e=>e.data?.responseToBid===offer?.id&&['acceptPet','toleratePet','avoidPet'].includes(e.data?.action));
 assert.equal(response?.data?.action,'avoidPet');noIssues('negative animal response');
 
-console.log('v11.15.2 relationship responder bias regression remains valid under v11.17.0');
+console.log('v11.15.2 relationship responder bias regression remains valid under v11.18.0');
