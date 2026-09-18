@@ -9,7 +9,7 @@ for(const file of [
   'state-validator.js','state-validator-v111.js','state-validator-v1160.js'
 ])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const CURRENT_VERSION='11.18.0-route-semantics-split';
+const CURRENT_VERSION='11.17.0-passage-profile-multimode';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
