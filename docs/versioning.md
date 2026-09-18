@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.18.0-route-semantics-split`
+`11.19.0-locomotion-execution-posture`
 
-玩家可見標題使用短版 `v11.18.0`；`state.version` 與 `SimWorld.PRESENTATION_SCHEMA_VERSION` 使用完整 current marker。Subsystem schema/runtime marker 代表各自 contract generation：目前 Physical 使用 `SimWorld.PHYSICAL_SCHEMA_VERSION = 11.17.0-passage-profile-multimode`，Spatial Passage 使用 `SimSpatial.PASSAGE_PROFILE_VERSION = 11.17.0-passage-profile-multimode`，Route Semantics 使用 `SimSpatial.ROUTE_SEMANTICS_VERSION = 11.18.0-route-semantics-split`；Relationship 仍保留自己的 `SimWorld.RELATIONSHIP_SCHEMA_VERSION = 11.15.2-relationship-responder-bias`，Memory→Deliberation 仍保留 `11.13.4-memory-deliberation-influence`，不因整體 current release 推進而假升未換代 subsystem。Resident / Physical / Entity Readable 等 UI version 若以 current Presentation marker 為 owner，則跟隨 current marker。
+玩家可見標題使用短版 `v11.19.0`；`state.version` 與 `SimWorld.PRESENTATION_SCHEMA_VERSION` 使用完整 current marker。Subsystem schema/runtime marker 代表各自 contract generation：目前 Physical 使用 `SimWorld.PHYSICAL_SCHEMA_VERSION = 11.17.0-passage-profile-multimode`，Spatial Passage 使用 `SimSpatial.PASSAGE_PROFILE_VERSION = 11.17.0-passage-profile-multimode`，Route Semantics 使用 `SimSpatial.ROUTE_SEMANTICS_VERSION = 11.18.0-route-semantics-split`，Locomotion Execution 使用 `SimWorld.LOCOMOTION_SCHEMA_VERSION / SimLocomotion.VERSION = 11.19.0-locomotion-execution-posture`；Relationship 仍保留自己的 `SimWorld.RELATIONSHIP_SCHEMA_VERSION = 11.15.2-relationship-responder-bias`，Memory→Deliberation 仍保留 `11.13.4-memory-deliberation-influence`，不因整體 current release 推進而假升未換代 subsystem。Resident / Physical / Entity Readable 等 UI version 若以 current Presentation marker 為 owner，則跟隨 current marker。
 
 ## 何時必須升版
 
@@ -36,7 +36,7 @@
 目前採 `major.minor.patch-slug`：
 
 - `major`：專案世代／大規模不相容重構；目前為 11。
-- `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split，11.15 建立 persistent Relationship Foundation，11.16 建立 Physical Profile Foundation，11.17 建立 Passage Profile + multi-mode traversal feasibility，11.18 建立 Route Semantics Split。
+- `minor`：新的 subsystem / 明確產品 slice 或較大的 current contract 階段；例如 11.14 建立 Player Resident View / Debug Inspector split，11.15 建立 persistent Relationship Foundation，11.16 建立 Physical Profile Foundation，11.17 建立 Passage Profile + multi-mode traversal feasibility，11.18 建立 Route Semantics Split，11.19 建立 Locomotion Execution + Posture Transition。
 - `patch`：同一 minor 線內的可辨識 feature / contract 更新；例如 11.14.1 增加 player-readable action explanations、11.14.2 對齊 Resident Action / Intent / Explanation 的玩家語意、11.14.3 將 Explanation 的玩家文案收斂為自然直接的原因描述、11.14.4 將玩家可讀 Inspector 擴展到 Container / Source / Furniture / Tile / Room / Event、11.15.1 讓既有 Relationship Foundation 第一次以 bounded target preference 影響 initiator-side social target selection、11.15.2 再讓 responder 自己的 directional Relationship 以 bounded modifier 影響 Human talk / animal pet response score。
 - `slug`：描述 current marker 的主要辨識功能，不是完整 changelog。
 
@@ -46,7 +46,7 @@
 
 像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類名稱代表 subsystem / test family，可以跨後續 current release 延續，不需要因 runtime marker 推進就整組複製／改名。`spatial-passage-v1170.js` 則是本 slice 新增的 Passage contract owner。
 
-判斷**整體 current release** 時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 推進到 11.18.0 就把沒有 generation 變更的 Relationship / Memory schema 假升到 11.18.0，也不得從舊 family 檔名反推整體 current release。
+判斷**整體 current release** 時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 推進到 11.19.0 就把沒有 generation 變更的 Physical / Passage / Route / Relationship / Memory marker 假升到 11.19.0，也不得從舊 family 檔名反推整體 current release。
 
 若未來 subsystem generation 改變，舊 family 名稱造成實質誤導，再另行 rename；單純 current marker 推進不要求 rename。
 
@@ -55,7 +55,7 @@
 需要升版的 PR 必須同步確認：
 
 1. `src/presentation-schema-v1140.js` 的 current runtime marker；
-2. 本次新增／改變 subsystem 的 schema/runtime marker（本線新增 `SimSpatial.ROUTE_SEMANTICS_VERSION`；既有 Physical / Passage / Relationship / Memory marker 只有自身 contract generation 改變時才升），並確認未變更 subsystem 不被假升版；
+2. 本次新增／改變 subsystem 的 schema/runtime marker（本線新增 `SimWorld.LOCOMOTION_SCHEMA_VERSION / SimLocomotion.VERSION`；既有 Physical / Passage / Route / Relationship / Memory marker 只有自身 contract generation 改變時才升），並確認未變更 subsystem 不被假升版；
 3. `state.version` / `SimWorld.PRESENTATION_SCHEMA_VERSION`；
 4. 由 Presentation current marker 持有的 UI version（目前包含 Resident View、Physical View、Entity Readable View；其他 subsystem UI 依其 owner contract 判斷）沒有形成第二份 release marker；
 5. `index.html` 的 `<title>` 與頁首可見版本；
@@ -81,3 +81,6 @@ PR #55 / #56 屬 ownership / compatibility lifecycle refactor，未改正式 sim
 11.17.0 正式加入 **Passage Profile + multi-mode traversal feasibility**。Physical locomotion baseline 從舊 `standing` 正名為 `walk`，與 Agent `posture.kind='standing'` 分離；Human 第一批提供 `walk / kneelCrawl / proneCrawl` MovementEnvelope，Cat 本 slice 只保留 `walk`。Spatial 新增 edge-derived `PassageProfile`，第一版比較 height / width，未設定軸以 `null` 表示 unconstrained；`traversalFeasibility(...)` 只回各 supported mode 的 `feasible / failedAxes`，不選 mode、不讀心理狀態。現行 A* 仍是 walk-only execution，但已對每條 edge 消費 walk feasibility，因此 passage width/height 成為真正 routing constraint，同時 crawl-query 可行仍不會自動改姿勢穿越。Deterministic single-passage + water fixture 鎖住 normal / low / lower / width-only 四種情況。本 slice 刻意不加入 PoseEnvelope/static fit、length/turn clearance、traversalCost/travelTime split、locomotion execution/posture transition 或 behavioral willingness。由於 Physical contract、Spatial traversal semantics、Debug observability 與測試契約都實質改變，因此使用新的 minor marker `11.17.0-passage-profile-multimode`。
 
 11.18.0 正式完成 **Route Semantics Split**。原本 `SP.pathDistance()` 實際直接回傳 weighted route cost；本 slice 新增 canonical `SimSpatial.planRoute(...)`，把 selected route 的 `pathDistance / traversalCost / travelTime` 分開，並讓 standalone `pathDistance` 搜尋 physical-feasible shortest topology route、`traversalCost` 搜尋最低客觀 route burden。既有 A* 與 gameplay consumer 全部繼續以 traversal cost 為預設 objective，因此 route preference / AI balance 保持 parity；Memory / Relationship target decomposition 的 `distancePenalty` 正名為 `accessPenalty`，source 改讀 traversal cost，但數值與 target ordering維持。第一版 `travelTime` 只反映 current executable walk edges（一 edge一 tick），不提前使用尚未進 execution 的 `speedFactor`。Debug 同步分開顯示 distance / cost / time。由於 canonical Spatial route API、decision decomposition、observable Debug surface 與 current semantics 都改變，因此使用新的 minor marker `11.18.0-route-semantics-split`。
+
+
+11.19.0 正式完成 **Locomotion Execution + Posture Transition**。Production route planner 可用 `mode:'auto'` 在 supported + passage-feasible locomotion modes 中規劃，route state 正式包含 Spatial Node + locomotion mode；core `moveToward()` 實際執行 selected mode。posture 與 locomotion mode 保持分離但明確 mapping：`walk → standing`、`kneelCrawl → kneeling`、`proneCrawl → prone`，mode/posture 切換固定先消耗 1 tick。MovementEnvelope 的 `speedFactor` 首次進入真正 execution timing，以 `ceil(1 / speedFactor)` 決定每 edge movement ticks；route `travelTime` 因此由 transition + actual edge timing 派生並由 runtime兌現。新增 `agent.locomotion { mode, phase }`、Locomotion validator與 Debug projection；舊 Physical / Passage / Route / Relationship / Memory subsystem marker均不假升。Behavioral willingness、crowding、PoseEnvelope與新的 exertion model仍未納入。由於 persistent Agent execution state、route search semantics、movement timing、posture lifecycle與正式 observability都改變，因此使用新的 minor marker `11.19.0-locomotion-execution-posture`。
