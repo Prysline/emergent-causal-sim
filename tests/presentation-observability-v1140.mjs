@@ -114,7 +114,7 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.17\.0・Passage Profile \+ Multi-mode Feasibility/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.18\.0・Route Semantics Split/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
 assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
