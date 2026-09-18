@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.19.0-locomotion-execution-posture';
+const CURRENT_VERSION='11.20.0-dynamic-congestion';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -177,6 +177,7 @@ assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must r
 assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Familiarity')&&debug.debugText.includes('Affinity'),'Debug must expose exact directional relationship dimensions');
 assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('MovementEnvelopes'),'Debug must expose authoritative Physical Profile and derived multi-mode MovementEnvelopes');
 assert.ok(debug.debugText.includes('Locomotion Execution')&&debug.debugText.includes('Edge Move Ticks'),'Debug must expose current locomotion execution timing and posture state');
+assert.ok(debug.debugText.includes('Dynamic Congestion'),'Debug must expose Dynamic Congestion observability');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
   entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
