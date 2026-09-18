@@ -139,4 +139,4 @@ for(let i=0;i<500;i++){
   if(i%25===0)noIssues(`tick ${i+1}`);
 }
 noIssues('500 tick integration');
-console.log('v11.15 Relationship foundation regression: ok under v11.17.0 app marker');
+console.log('v11.15 Relationship foundation regression: ok under v11.18.0 app marker');
