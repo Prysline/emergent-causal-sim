@@ -97,7 +97,7 @@
     setLocomotionState(a,step.mode,'moving');
     const toKey=SP.nodeKey?SP.nodeKey(state,step.to):`${step.to.x},${step.to.y}`,pending=a.action.locomotionStep;
     if(!pending||pending.mode!==step.mode||pending.toKey!==toKey){
-      const ticks=L.edgeMoveTicks(a,step.mode);if(!Number.isFinite(ticks)||ticks<1){clearLocomotionState(a);return false;}
+      const ticks=Number(step.moveTicks);if(!Number.isFinite(ticks)||ticks<1){clearLocomotionState(a);return false;}
       if(ticks>1){a.action.locomotionStep={mode:step.mode,to:{...step.to},toKey,ticksRemaining:ticks-1};return false;}
     }else if(pending.ticksRemaining>1){pending.ticksRemaining--;return false;}
     else delete a.action.locomotionStep;

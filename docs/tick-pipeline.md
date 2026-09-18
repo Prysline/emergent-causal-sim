@@ -2,7 +2,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.19.0-locomotion-execution-posture`。
+目前 runtime marker：`11.20.0-dynamic-congestion`。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >
@@ -93,7 +93,7 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render | presentation-only；不得影響 simulation ordering |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection | presentation-only；不得影響 simulation ordering |
 
-v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split 與 v11.19.0 Locomotion Execution + Posture Transition 都**不新增 runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage在 state construction、Spatial traversal query與Debug中同步讀／派生 geometry。v11.19.0 的 locomotion lifecycle發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界：mode/posture transition可消耗整個 Agent 的本 tick action step，multi-tick edge movement也由同一 current Action持續，但不建立新的 beforeTick / afterTick phase。`travelTime` 現由 real posture-transition ticks + `speedFactor`-derived edge ticks派生並由 core execution兌現。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表 core movement semantics改變，不代表多一個 runtime hook stage。
+v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition 與 v11.20.0 Dynamic Congestion 都**不新增 runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 只讓每次 route planning / next-edge execution讀取當下 Crowd Profile，將 soft congestion cost加入 route burden並把 delay ticks加入該edge movement timing。沒有 crowding beforeTick / afterTick phase，也沒有 persistent congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
 
 ## 5. `episodicMemoryCreated` 支線
 
@@ -133,7 +133,7 @@ flowchart LR
 | 700 | `residentView.reset` | Presentation | 重設／排程 Resident View |
 | 750 | `relationshipView.reset` | Presentation | 重設／排程 Relationship projection |
 
-Relationship persistent state 由 `relationship-schema-v1150.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `physical-schema-v1160.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。
+Relationship persistent state 由 `relationship-schema-v1150.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `physical-schema-v1160.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20 Crowding完全 derived / uncached，不建立 reset-normalized state，也不新增 afterReset hook。
 
 ## 7. Event-created / Memory observation lifecycle
 
