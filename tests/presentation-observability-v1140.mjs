@@ -74,6 +74,8 @@ const physicalSource=fs.readFileSync(new URL('../src/physical-runtime-v1160.js',
 assert.match(physicalSource,/function getMovementEnvelope\(agent,mode='walk'\)/,'Physical runtime must own the canonical walk-first derived MovementEnvelope interface');
 assert.match(physicalSource,/function requiredClearance\(agent,mode='walk'\)/,'Physical runtime must expose canonical walk clearance to Spatial');
 assert.match(physicalSource,/function supportedLocomotionModes\(agent\)/,'Physical runtime must expose supported locomotion modes without choosing one');
+const physicalSchemaSource=fs.readFileSync(new URL('../src/physical-schema-v1160.js',import.meta.url),'utf8');
+assert.match(physicalSchemaSource,/W\.PRESENTATION_SCHEMA_VERSION\|\|VERSION/,'Physical schema must preserve the canonical Presentation current-release marker when the full app is loaded');
 const passageSource=fs.readFileSync(new URL('../src/spatial-passage-v1170.js',import.meta.url),'utf8');
 assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial must own the canonical derived PassageProfile query');
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
