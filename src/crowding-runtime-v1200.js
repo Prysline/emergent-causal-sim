@@ -7,9 +7,9 @@
     narrownessStartRatio:.75,
     widthPressureScale:1.5,
     costPerPressure:2.5,
-    delayTicksPerPressure:1.5,
+    delayTicksPerPressure:2,
     minSpeedMultiplier:.35,
-    directionWeight:Object.freeze({same:.65,stationary:1,unknown:1,opposite:1.4})
+    directionWeight:Object.freeze({same:.65,stationary:1,unknown:1,opposite:1.7})
   });
 
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
