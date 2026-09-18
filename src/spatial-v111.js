@@ -67,12 +67,18 @@
   }
   function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&a.id!==except&&nodeSame(st,a.position,n));}
 
-  function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t),occupied=nodeOccupantsAt(st,node,a?.id).length;return 1+wet*(a?.kind==='cat'?.015:.07)+occupied*(a?.kind==='cat'?2.5:5);}
+  function crowdingRuntime(){return window.SimCrowding||null;}
+  function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t);let cost=1+wet*(a?.kind==='cat'?.015:.07);if(!crowdingRuntime()){const occupied=nodeOccupantsAt(st,node,a?.id).length;cost+=occupied*(a?.kind==='cat'?2.5:5);}return cost;}
   function surfaceStepCost(st,node,a){const entry=surfaceEntry(st,node.surfaceId),configured=entry?.surface?.moveCost?.[a?.kind];return configured??profile(a).surfaceMoveCost;}
-  function traversalEdgeCost(st,from,to,a){
+  function baseTraversalEdgeCost(st,from,to,a){
     if(from.surfaceId===to.surfaceId)return to.surfaceId===FLOOR?floorStepCost(st,to,a):surfaceStepCost(st,to,a);
     const surfaceNode=from.surfaceId===FLOOR?to:from,entry=surfaceEntry(st,surfaceNode.surfaceId);if(!entry)return Infinity;
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
+  }
+  function traversalEdgeCost(st,from,to,a,mode=null){
+    const base=baseTraversalEdgeCost(st,from,to,a),C=crowdingRuntime();if(!C||!a||!Number.isFinite(base))return base;
+    const resolvedMode=mode||a.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk',crowding=C.getCrowdingProfile?.(st,a,from,to,resolvedMode);
+    return base+(crowding?.congestionCost||0);
   }
   function walkEdgeFeasible(st,a,from,to){
     if(!a)return true;
@@ -143,7 +149,7 @@
   }
   function modeRank(mode){return mode==='walk'?0:mode==='kneelCrawl'?1:mode==='proneCrawl'?2:9;}
   function currentLocomotionMode(a){return locomotionRuntime()?.modeFromPosture?.(a)||null;}
-  function edgeMoveTicks(a,mode){const ticks=locomotionRuntime()?.edgeMoveTicks?.(a,mode);return Number.isFinite(ticks)&&ticks>0?ticks:1;}
+  function edgeMoveTicks(st,a,from,to,mode){const C=crowdingRuntime(),ticks=C?.edgeMoveTicks?.(st,a,from,to,mode)??locomotionRuntime()?.edgeMoveTicks?.(a,mode);return Number.isFinite(ticks)&&ticks>0?ticks:1;}
   function transitionTicks(fromMode,toMode){const ticks=locomotionRuntime()?.transitionTicks?.(fromMode,toMode);return Number.isFinite(ticks)&&ticks>=0?ticks:(fromMode===toMode?0:0);}
   function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
   function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank);}
@@ -166,7 +172,7 @@
       for(const q of candidateTraversalNeighbors(st,cur.node,a)){
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode))continue;
-          const transition=transitionTicks(cur.mode,nextMode),moveTicks=edgeMoveTicks(a,nextMode),edgeCost=traversalEdgeCost(st,cur.node,q,a);
+          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks))continue;
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?1:edgeCost),
@@ -176,7 +182,7 @@
           };
           const qk=routeStateKey(st,q,nextMode);
           if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
-          const step={from:cloneNode(cur.node),to:cloneNode(q),mode:nextMode,transitionTicks:transition,moveTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1};
+          const step={from:cloneNode(cur.node),to:cloneNode(q),mode:nextMode,transitionTicks:transition,moveTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,edgeTraversalCost:edgeCost,congestion:crowding};
           came[qk]={prev:ck,step};score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
         }
       }
@@ -186,7 +192,7 @@
   function routeMetrics(st,a,route){
     if(!route?.path?.length)return {pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
     let traversalCost=0,travelTime=0,transitions=0;
-    for(const step of route.steps||[]){traversalCost+=traversalEdgeCost(st,step.from,step.to,a);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
+    for(const step of route.steps||[]){traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
     return {pathDistance:Math.max(0,route.path.length-1),traversalCost,travelTime,transitionTicks:transitions};
   }
   function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost'}={}){
@@ -250,9 +256,9 @@
   }
   function interactionPositions(st,target,agent,affordance='default'){return interactionGeometry(st,target,agent,affordance).positions;}
   function bestInteractionPosition(st,a,target,affordance='default'){
-    let list=interactionPositions(st,target,a,affordance).map(p=>({p,d:pathCost(st,a,p),occ:nodeOccupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
+    const C=crowdingRuntime();let list=interactionPositions(st,target,a,affordance).map(p=>({p,d:pathCost(st,a,p),occ:nodeOccupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
     const current=nodeForAgent(st,a),differentNodeSameXY=x=>xySame(current,x.p)&&!nodeSame(st,current,x.p);if(list.some(x=>!differentNodeSameXY(x)))list=list.filter(x=>!differentNodeSameXY(x));
-    list.sort((x,y)=>x.occ-y.occ||x.d-y.d||SP.manhattan(a.position,x.p)-SP.manhattan(a.position,y.p));return list[0]?.p||null;
+    list.sort((x,y)=>(C?0:x.occ-y.occ)||x.d-y.d||SP.manhattan(a.position,x.p)-SP.manhattan(a.position,y.p));return list[0]?.p||null;
   }
   function isAtInteraction(st,a,target,affordance='default'){const here=nodeForAgent(st,a);return interactionPositions(st,target,a,affordance).some(p=>nodeSame(st,here,p));}
   function canInteract(st,a,target,affordance='default'){return isAtInteraction(st,a,target,affordance);}
