@@ -29,10 +29,11 @@
     return template?clone(template):null;
   }
 
-  W.VERSION=VERSION;
+  const currentReleaseVersion=()=>W.PRESENTATION_SCHEMA_VERSION||VERSION;
+  W.VERSION=currentReleaseVersion();
   W.createInitialState=(seed)=>{
     const st=baseCreateInitialState(seed);
-    st.version=VERSION;
+    st.version=currentReleaseVersion();
     for(const a of Object.values(st.agents||{})){
       if(a.physical)continue;
       const profile=defaultPhysicalProfile(a.kind);
