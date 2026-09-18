@@ -535,6 +535,7 @@ SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
 正式邊界：
 
 - mass、volume、body geometry 分開保存，不用單一 `bodySize` 取代；default Human / Cat profile 是 coarse MVP template，clone 成每個 Agent 自己的 state，個體可 override；
+- **canonical unit contract**：`mass` 使用 kg、`volume` 使用 m³；所有 Physical / MovementEnvelope / Passage 的絕對長度（`bodyGeometry.{height,width,length}`、`clearanceHeight / clearanceWidth / clearanceLength`、Furniture `spatial.under.clearance / clearanceWidth`、`map.passageConstraints` 的 clearance）使用 m。locomotion geometry factors、`speedFactor`、Crowding width ratio / direction weights 等為無量綱。這是 schema-level meaning，不在每個 persistent value 上重複保存 `unit` 欄位；若未來外部 protocol 需要自描述 payload，再在 protocol boundary 做明確 unit/version envelope，而不是污染 Agent state；
 - `MovementEnvelope` 與 `PassageProfile` 都是 derived output，不保存 persistent cache；
 - Physical locomotion baseline 由舊 `standing` 正名為 `walk`，與 Agent `posture.kind='standing'` 分離；Validator 會拒絕 legacy standing locomotion alias；
 - Human 第一批 supported modes 為 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不假定所有 body plan 共享 Human mode 名稱；
