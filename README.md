@@ -29,6 +29,7 @@
 - Interaction Geometry 依 affordance + target data 決定合法接觸位置。
 - Container / Source / Surface Environment 的實體資源 transfer、Serving、Carry Load、Restock、External Supply。
 - **Physical Profile Foundation**：每個 Agent 保存獨立 `mass / volume / bodyGeometry` 與 locomotion capability/profile；Human / Cat 現行模板只提供 coarse MVP default，不把物種名稱當作永久通行規則。
+- **Physical / Passage canonical units**：目前絕對 physical 數值統一採 SI contract：`mass`＝kg、`volume`＝m³、`bodyGeometry.{height,width,length}`、MovementEnvelope `clearanceHeight / clearanceWidth / clearanceLength`、Furniture / Passage `clearance / clearanceWidth` 與 explicit edge clearance＝m；各 locomotion factor、`speedFactor` 與 Crowding ratio/weights 保持無量綱。unit 是 schema-level contract，不在每個 value 旁持久化重複 metadata。
 - Physical locomotion baseline 已由舊 `standing` 正名為 `walk`，與 Agent `posture.kind = 'standing'` 分離。Human 第一批支援 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不硬套 Human 姿勢名稱。
 - `SimPhysical.getMovementEnvelope(agent, mode)` 依個體 geometry + locomotion profile 產生 derived `clearanceHeight / clearanceWidth / clearanceLength / speedFactor`；profile 可提供 absolute clearance override。
 - **Passage Profile + multi-mode feasibility**：`SimSpatial.getPassageProfile(...)` 從 edge 兩端的 overhead geometry 與可選 explicit edge constraint 派生 `clearanceHeight / clearanceWidth`；`null` 表示該軸目前沒有明確限制，不代表 0。
