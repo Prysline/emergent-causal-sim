@@ -36,6 +36,7 @@
 - **Locomotion Execution + Posture Transition**：production route planning 現以 `mode:'auto'` 在 Agent 支援且 passage-feasible 的 locomotion modes 間規劃；Human 可實際執行 `walk / kneelCrawl / proneCrawl`，Cat 目前仍只有 `walk`。
 - Route search state 現包含 **Spatial Node + locomotion mode**。同一 objective traversal cost 下，以實際 executable `travelTime`、transition 次數與 mode rank 作 deterministic tie-break；這不是 personality preference。
 - posture 與 locomotion mode 維持分離但正式接線：`walk → standing`、`kneelCrawl → kneeling`、`proneCrawl → prone`。mode 改變必須先消耗 **1 tick posture transition**，不能在 pathfinder 中免費瞬間變形。
+- current occupancy validity 與 walk-entry feasibility 正式分開：`nodeWalkable(...)` 仍回答 walk 能否進入 node；`nodeLocomotionAccessible(...)` 回答 node 結構上能否被目前 locomotion posture 佔據。Validator 使用後者，避免合法跪爬／匍匐停在低矮 passage 時被誤判為「站立不可通行」。
 - `speedFactor` 現真正影響 execution timing：每條 edge 的 movement ticks 為 `ceil(1 / speedFactor)`。現行預設因此為 walk 1 tick、kneelCrawl 2 ticks、proneCrawl 3 ticks；個體 profile override 會同步改變 route `travelTime` 與實際抵達時間。
 - `agent.locomotion = { mode, phase }` 保存 current execution state；`phase` 為 `idle / transition / moving`。多 tick edge 的剩餘進度只存在 current Action 的 `locomotionStep`，不建立 route cache。
 - crawl 抵達後不會自動站起；posture 是 authoritative state，下一次需要不同 locomotion mode 時再支付 transition。這避免角色在仍可能低矮的空間裡被免費強制站立。
