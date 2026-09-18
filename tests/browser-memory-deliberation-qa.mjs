@@ -36,7 +36,7 @@ async function snapshot(){
     const evals=E.currentSocialTargetEvaluations(st,a).filter(x=>x.intentKind==='socialize');
     const zhou=evals.find(x=>x.targetAgent==='zhou'),mei=evals.find(x=>x.targetAgent==='mei');
     const section=document.querySelector('[data-v1134-memory-deliberation]');
-    const forbidden=['memoryPreference','socialMemoryBias','targetAssociation','memoryUtilityDelta','targetPreference','memoryInfluenceScore'];
+    const forbidden=['memoryPreference','socialMemoryBias','targetAssociation','memoryUtilityDelta','targetPreference','accessPenalty','memoryInfluenceScore'];
     return {
       version:st.version,memoryDeliberationVersion:E.MEMORY_DELIBERATION_SCHEMA_VERSION,
       actionKind:E.actionKind(a.action),actionTarget:a.action?.targetAgent??null,thoughtTarget:st.thoughts?.zhen?.pick?.targetAgent??null,
@@ -68,6 +68,10 @@ assert.equal(desktop.sectionVisible,true,'Memory + Relationship target Inspector
 assert.ok(desktop.inspectorText.includes('Memory + Relationship → Social Target'));
 assert.ok(desktop.inspectorText.includes('memory delta'));
 assert.ok(desktop.inspectorText.includes('relationship'));
+assert.ok(desktop.inspectorText.includes('access penalty'));
+assert.ok(desktop.inspectorText.includes('path distance'));
+assert.ok(desktop.inspectorText.includes('traversal cost'));
+assert.ok(desktop.inspectorText.includes('travel time'));
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 await page.screenshot({path:`${outDir}/desktop.png`,fullPage:true});
