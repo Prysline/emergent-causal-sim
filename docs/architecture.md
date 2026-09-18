@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.18.0-route-semantics-split`。
+目前 runtime marker：`11.19.0-locomotion-execution-posture`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -578,6 +578,22 @@ SimSpatial.planRoute(state, agent, goal, {
 - `speedFactor` 尚未接入 timing。若 Debug 提前顯示 `distance / speedFactor`，會比 runtime 多出一份假的 travel-time truth；真正 mode speed / posture-transition duration 必須與後續 locomotion execution 同時落地。
 - social target ranking 的舊 `distancePenalty` 已正名為 `accessPenalty`，source 改讀 `traversalCost`；公式尺度與 v11.17 保持 parity，Relationship / Memory target ordering 不因 semantic cleanup 偷換心理模型。
 - deterministic regression 必須能同時存在「4-edge 但 wet / cost 14.5」與「6-edge dry / cost 6」兩條 route：standalone `pathDistance=4`、`traversalCost=6`，default plan / A* 選 6-edge route，而 selected plan 回報 `pathDistance=6 / traversalCost=6 / travelTime=6`。
+
+### Locomotion Execution + Posture Transition
+
+v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route metrics正式接到 core movement execution，但仍不加入主觀 willingness：
+
+- **authoritative state 分層**：`agent.posture.kind` 仍是角色當下姿勢；`agent.locomotion = { mode, phase }` 只描述 current locomotion execution，`phase ∈ { idle, transition, moving }`。MovementEnvelope 仍是 derived truth，不持久化。
+- **mode → posture**：目前 canonical mapping 為 `walk → standing`、`kneelCrawl → kneeling`、`proneCrawl → prone`。既有 `sitting / lying` 仍由休息／睡眠系統擁有，不改名成 locomotion mode。
+- **explicit transition**：locomotion mode要求的 posture 與目前 posture不同時，先消耗 1 tick transition；該 tick 不同時位移。不能在 route search或 edge traversal 中免費變形。
+- **mode-aware route graph**：production `planRoute(...,{mode:'auto'})` 的 search state 是 `Spatial Node + locomotion mode`；每條 candidate edge以 `traversalFeasibility(...).modes[mode]` 驗證。舊 focused harness若未載入 Locomotion subsystem，仍保留 walk-only compatibility。
+- **objective 與 tie-break**：route primary objective仍是 `traversalCost`，以維持既有 AI balance；primary cost同分時才以 executable `travelTime`、transition數、mode rank作 deterministic tie-break。這些都是客觀 execution facts，不是人格偏好。
+- **timing truth**：`edgeMoveTicks = ceil(1 / speedFactor)`；現行 Human default因此 walk=1、kneelCrawl=2、proneCrawl=3 ticks/edge。route `travelTime` 為所有 edge move ticks + posture-transition ticks之和，並由同一 execution state machine實際兌現。
+- **execution boundary**：core `moveToward()` 仍是單一 movement owner；所有既有 Action透過 `moveToExact / moveToInteraction` 共用同一 locomotion lifecycle，不建立 crawl-specific Action type。multi-tick edge進度暫存在 current Action 的 `locomotionStep`，不是 persistent route cache。
+- **arrival semantics**：crawl抵達後 posture不自動改回 standing；完成 Action只清除 active locomotion phase。下一次需要其他 mode時再支付 transition，避免在低矮幾何中出現免費站立。
+- **observability / validation**：Locomotion Debug顯示 posture、active mode、phase、speedFactor、edge ticks與 pending edge；Validator檢查 locomotion phase、posture/mode一致性與 pending step timing，不建立第二份 UI truth。
+- **心理層明確未接線**：v11.19 只會依 objective route facts選擇 physically executable mode。Relationship、Memory、traits、goal pressure、discomfort / embarrassment / dirt aversion尚未參與「願不願意爬」；它們未來只能影響 behavioral choice，不能回寫 Physical feasibility或把客觀 travel time變成零。
+- **仍未包含**：crowding / dynamic congestion、PoseEnvelope/static fit、length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。現有 exertion維持 per-edge parity，避免本 slice同時偷改 energy balance。
 
 ### Resources / logistics
 
