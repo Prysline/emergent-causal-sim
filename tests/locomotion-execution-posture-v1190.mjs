@@ -114,15 +114,16 @@ assert.deepEqual(plan.path,[]);
 assert.equal(plan.travelTime,Infinity);
 assert.equal(f.human.posture.kind,'standing');
 
-// E: individual speedFactor override changes both plan time and actual execution time.
+// E: individual speedFactor override can change executable mode choice on an equal traversal-cost route.
 f=resetFixture({height:.95,width:.8,kneelSpeed:.25});
 plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
-assert.equal(L.edgeMoveTicks(f.human,'kneelCrawl'),4);
-assert.equal(plan.travelTime,9,'one transition tick plus two four-tick crawl edges');
-armWander(f);tickN(8);
-assert.ok(!SP.nodeSame(E.getState(),f.human.position,f.goal),'agent must not arrive before planned execution time');
+assert.equal(L.edgeMoveTicks(f.human,'kneelCrawl'),4,'individual profile override must change kneel edge timing');
+assert.deepEqual(plan.steps.map(x=>x.mode),['proneCrawl','proneCrawl'],'when kneel becomes slower than prone, executable-time tie-break may choose prone');
+assert.equal(plan.travelTime,7,'selected prone route is one transition tick plus two three-tick edges');
+armWander(f);tickN(6);
+assert.ok(!SP.nodeSame(E.getState(),f.human.position,f.goal),'agent must not arrive before the selected plan travelTime');
 E.tick();
-assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'actual movement must honor the individual speedFactor-derived travel time');
+assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'actual movement must honor the speedFactor-sensitive selected mode timing');
 
 // Validator owns locomotion/posture consistency and pending edge timing.
 let validation=V.validateState(E.getState());
