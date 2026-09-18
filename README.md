@@ -12,6 +12,7 @@
 
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
 - Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v1`。map terrain/material、Furniture instance、Container / Source 開場配置與 Resident opening placement 不再散落在 `world.js`；`SimWorldInitializer` 將 authoring package 編譯成既有 runtime state shape。
+- Resident opening placement 支援 `exact` 與 explicit `furnitureSlot` anchor。`SimWorldInitializer.analyzeInitialPlacements(...)` 分開回傳 hard errors 與 diagnostic-only 問題：missing/conflicting/blocked slot 或 position 會拒絕初始化；密室、無出口、資源不可達與非 exclusive node overlap 只提示，不自動搬人或修改世界。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。
 - authored passage geometry 仍由 Furniture / Spatial edge constraint 持有；`PassageProfile` 由 `SimSpatial.getPassageProfile(state, fromNode, toNode)` 即時計算，不建立第二份 passage cache。
