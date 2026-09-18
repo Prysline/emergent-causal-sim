@@ -7,7 +7,8 @@
   function roomLabel(st,spaceId){return st.map?.rooms?.[spaceId]?.name||spaceId||'world';}
   function surfaceLabel(st,surfaceId){if(!surfaceId||surfaceId===FLOOR)return'地板';const entry=SP.surfaceEntry?.(st,surfaceId);return entry?.surface?.label||surfaceId;}
   function clearanceFor(st,node){if(!node||node.surfaceId!==FLOOR)return null;const values=(SP.overheadAt?.(st,node)||[]).map(f=>f.spatial?.under?.clearance).filter(Number.isFinite);return values.length?Math.min(...values):null;}
-  function movementEnvelope(agent){return agent?(window.SimPhysical?.getMovementEnvelope?.(agent,'walk')??null):null;}
+  function locomotionMode(agent){return agent?.locomotion?.mode||window.SimLocomotion?.modeFromPosture?.(agent)||'walk';}
+  function movementEnvelope(agent){return agent?(window.SimPhysical?.getMovementEnvelope?.(agent,locomotionMode(agent))??null):null;}
   function requiredClearance(agent){return agent?(movementEnvelope(agent)?.clearanceHeight??SP.TRAVERSAL_PROFILES?.[agent.kind]?.requiredClearance??null):null;}
   function nodeObservation(st,p,agent=null){
     const node=SP.normalizeNode(st,p);if(!node)return null;
@@ -26,6 +27,7 @@
       clearance,
       requiredClearance:required,
       movementEnvelope:envelope,
+      movementMode:agent?locomotionMode(agent):null,
       walkable:agent?SP.nodeWalkable(st,node,agent):SP.nodeWalkable(st,node,null)
     };
   }
@@ -34,8 +36,10 @@
     const current=nodeObservation(st,SP.nodeForAgent(st,a),a);
     if(!current)return null;
     current.agentId=a.id;
+    current.currentPosture=a.posture?.kind||null;
+    current.currentLocomotion=a.locomotion?{...a.locomotion}:null;
     current.spatialGoal=a.action?.spatialGoal?nodeObservation(st,a.action.spatialGoal,a):null;
-    current.routePlan=a.action?.spatialGoal&&SP.planRoute?SP.planRoute(st,a,a.action.spatialGoal,{mode:'walk',objective:'traversalCost'}):null;
+    current.routePlan=a.action?.spatialGoal&&SP.planRoute?SP.planRoute(st,a,a.action.spatialGoal,{mode:'auto',objective:'traversalCost'}):null;
     current.lastPath=(a.action?.lastPath||[]).map(p=>nodeObservation(st,p,a)).filter(Boolean);
     return current;
   }

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.18.0-route-semantics-split';
+const CURRENT_VERSION='11.19.0-locomotion-execution-posture';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -13,7 +13,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openStory(){
   await page.goto('http://127.0.0.1:4173/?scenario=talk-no-response',{waitUntil:'networkidle'});
-  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version&&window.SimEngine?.UI_RELATIONSHIP_VERSION===version&&window.SimEngine?.UI_PHYSICAL_VERSION===version,CURRENT_VERSION);
+  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version&&window.SimEngine?.UI_RELATIONSHIP_VERSION===version&&window.SimEngine?.UI_PHYSICAL_VERSION===version&&window.SimEngine?.UI_LOCOMOTION_VERSION===version,CURRENT_VERSION);
   for(let i=0;i<8;i++){
     const ready=await page.evaluate(()=>window.SimEngine.getState().agents.zhou.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'));
     if(ready)break;
@@ -30,7 +30,7 @@ async function snapshot(){
     const activeMode=root?.querySelector('[data-v1140-mode].active')?.dataset.v1140Mode??null;
     const activeTab=root?.querySelector('[data-v1140-tab].active')?.dataset.v1140Tab??null;
     return {
-      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,relationshipUiVersion:E.UI_RELATIONSHIP_VERSION,physicalUiVersion:E.UI_PHYSICAL_VERSION,
+      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,relationshipUiVersion:E.UI_RELATIONSHIP_VERSION,physicalUiVersion:E.UI_PHYSICAL_VERSION,locomotionUiVersion:E.UI_LOCOMOTION_VERSION,
       activeMode,activeTab,
       residentVisible:!!resident&&!resident.hidden&&!!resident.getClientRects().length,
       debugVisible:!!debug&&!debug.hidden&&!!debug.getClientRects().length,
@@ -80,6 +80,7 @@ assert.equal(desktop.uiVersion,CURRENT_VERSION);
 assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
+assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -93,6 +94,7 @@ assert.deepEqual(desktop.inspectorDecorators,[
   {id:'residentView.layer',order:1000},
   {id:'relationship.view',order:1025},
   {id:'physical.view',order:1026},
+  {id:'locomotion.view',order:1027},
   {id:'entityReadable.layer',order:1050}
 ],'Inspector presentation ownership must be explicit and deterministically ordered');
 assert.equal(desktop.activeMode,'resident','desktop: Agent should open readable Resident View by default');
@@ -174,6 +176,7 @@ assert.ok(debug.debugText.includes('Memory + Relationship → Social Target'),'D
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
 assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Familiarity')&&debug.debugText.includes('Affinity'),'Debug must expose exact directional relationship dimensions');
 assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('MovementEnvelopes'),'Debug must expose authoritative Physical Profile and derived multi-mode MovementEnvelopes');
+assert.ok(debug.debugText.includes('Locomotion Execution')&&debug.debugText.includes('Edge Move Ticks'),'Debug must expose current locomotion execution timing and posture state');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
   entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
@@ -185,9 +188,10 @@ const debugOwnership=await page.evaluate(()=>({
   deliberation:document.querySelectorAll('[data-v1134-memory-deliberation]').length,
   socialOutcome:document.querySelectorAll('[data-v1135-social-outcome-memory]').length,
   relationship:document.querySelectorAll('[data-v1150-relationship-debug]').length,
-  physical:document.querySelectorAll('[data-v1160-physical-debug]').length
+  physical:document.querySelectorAll('[data-v1160-physical-debug]').length,
+  locomotion:document.querySelectorAll('[data-v1190-locomotion-debug]').length
 }));
-assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1,relationship:1,physical:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
+assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1,relationship:1,physical:1,locomotion:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
 
 await page.click('[data-v1140-mode="resident"]');
 await page.click('[data-v1140-tab="memory"]');

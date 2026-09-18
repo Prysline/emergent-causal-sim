@@ -33,7 +33,7 @@
         else if(!SP.walkable(st,a.position))add('agent_on_blocked_tile',`${a.name}位於不可通行 Tile ${SP.key(a.position)}。`,{agentId:a.id,position:SP.key(a.position),blocker:SP.blockerAt(st,a.position)});
         else{const list=byTile.get(SP.key(a.position))||[];list.push(a.id);byTile.set(SP.key(a.position),list);}
       }
-      if(!a.posture||!['standing','sitting','lying'].includes(a.posture.kind))add('invalid_posture',`${a.name}的 posture 無效。`,{agentId:a.id});
+      if(!a.posture||!['standing','sitting','lying','kneeling','prone'].includes(a.posture.kind))add('invalid_posture',`${a.name}的 posture 無效。`,{agentId:a.id});
       const usesSlot=!!a.posture?.slotId;
       if(usesSlot){
         const slot=SP.getSlot(st,a.posture.slotId);

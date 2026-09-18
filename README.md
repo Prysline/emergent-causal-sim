@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.18.0・Route Semantics Split**（`11.18.0-route-semantics-split`）。
+目前 runtime marker：**v11.19.0・Locomotion Execution + Posture Transition**（`11.19.0-locomotion-execution-posture`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -33,13 +33,16 @@
 - `SimPhysical.getMovementEnvelope(agent, mode)` 依個體 geometry + locomotion profile 產生 derived `clearanceHeight / clearanceWidth / clearanceLength / speedFactor`；profile 可提供 absolute clearance override。
 - **Passage Profile + multi-mode feasibility**：`SimSpatial.getPassageProfile(...)` 從 edge 兩端的 overhead geometry 與可選 explicit edge constraint 派生 `clearanceHeight / clearanceWidth`；`null` 表示該軸目前沒有明確限制，不代表 0。
 - `SimSpatial.traversalFeasibility(...)` 將各 supported mode 的 MovementEnvelope 與 PassageProfile 比較，只回 `feasible / failedAxes`。它不選 `bestMode`、不讀 Relationship / Memory / traits / goal pressure，也不修改 Agent posture。
-- 現行 A* **仍然只執行 `walk`**，但每條 edge 已消費 canonical `walk` Passage feasibility。因此 width / height constraint 會真正阻擋 walk route，同時系統即使知道 `kneelCrawl / proneCrawl` 物理可行，也不會在 Slice 2 偷偷自動趴下穿越。
-- 既有預設行為保持可解釋：Cat `walk` clearance `0.32 m` 可過 `0.72 m` 餐桌下，Human `walk` clearance `1.65 m` 不可；Human `proneCrawl` query 可以在更低空間中判定可行，但 routing / execution 尚未使用它。
-- **Route Semantics Split**：`SimSpatial.planRoute(state, agent, goal, { mode:'walk', objective })` 是 canonical route query；同一 selected path 同時回傳 `pathDistance / traversalCost / travelTime`。
-- standalone `SimSpatial.pathDistance(...)` 現表示 physical-feasible shortest topology edge count；`SimSpatial.traversalCost(...)` 表示最低客觀 route burden。既有 `pathCost(...)` 只保留為 traversal-cost compatibility alias。
-- A* / gameplay target selection 仍以 `traversalCost` 為預設 objective，因此濕地、occupancy、Surface move / transition cost 的既有 route preference 保持 parity；「最近」不再等同「最省力／最好走」。
-- `travelTime` 第一版表示 current executable walk movement time：每個 selected edge = 1 tick。雖然 MovementEnvelope 已有 `speedFactor`，v11.18.0 **不提前用它改 timing**；真正 mode speed 與 posture transition 留給後續 locomotion execution slice。
-- 本 slice 仍未加入 locomotion execution / posture transition、PoseEnvelope / static fit、length / turn clearance、crowding geometry、Anatomy / Injury / Collision；Physical / Spatial 仍只回答客觀幾何／route事實，不決定「願不願意」採用 crawl。
+- **Locomotion Execution + Posture Transition**：production route planning 現以 `mode:'auto'` 在 Agent 支援且 passage-feasible 的 locomotion modes 間規劃；Human 可實際執行 `walk / kneelCrawl / proneCrawl`，Cat 目前仍只有 `walk`。
+- Route search state 現包含 **Spatial Node + locomotion mode**。同一 objective traversal cost 下，以實際 executable `travelTime`、transition 次數與 mode rank 作 deterministic tie-break；這不是 personality preference。
+- posture 與 locomotion mode 維持分離但正式接線：`walk → standing`、`kneelCrawl → kneeling`、`proneCrawl → prone`。mode 改變必須先消耗 **1 tick posture transition**，不能在 pathfinder 中免費瞬間變形。
+- current occupancy validity 與 walk-entry feasibility 正式分開：`nodeWalkable(...)` 仍回答 walk 能否進入 node；`nodeLocomotionAccessible(...)` 回答 node 結構上能否被目前 locomotion posture 佔據。Validator 使用後者，避免合法跪爬／匍匐停在低矮 passage 時被誤判為「站立不可通行」。
+- `speedFactor` 現真正影響 execution timing：每條 edge 的 movement ticks 為 `ceil(1 / speedFactor)`。現行預設因此為 walk 1 tick、kneelCrawl 2 ticks、proneCrawl 3 ticks；個體 profile override 會同步改變 route `travelTime` 與實際抵達時間。
+- `agent.locomotion = { mode, phase }` 保存 current execution state；`phase` 為 `idle / transition / moving`。多 tick edge 的剩餘進度只存在 current Action 的 `locomotionStep`，不建立 route cache。
+- crawl 抵達後不會自動站起；posture 是 authoritative state，下一次需要不同 locomotion mode 時再支付 transition。這避免角色在仍可能低矮的空間裡被免費強制站立。
+- **Route Semantics Split** 仍維持：`pathDistance` 是 physical-feasible topology distance、`traversalCost` 是 objective burden、`travelTime` 是真實 current execution timing；`pathCost` 只保留 traversal-cost compatibility alias。
+- A* / resource / interaction / nearest target / social access consumer 現可認得 executable crawl route；`accessPenalty` 仍由 `traversalCost` 派生，沒有改 Memory / Relationship 心理公式尺度。
+- 本 slice **沒有加入 behavioral willingness / aversion**。因此目前只要 objective route 選中 crawl，Agent 就會執行；「怕髒／嫌麻煩／為重要的人願意爬」等主觀選擇留待後續 behavior layer。Crowding、PoseEnvelope/static fit、turn clearance、Anatomy / Injury / Collision 也仍未加入。
 
 ### Agent decision / action
 

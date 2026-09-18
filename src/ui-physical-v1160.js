@@ -20,7 +20,7 @@
     const p=P.getPhysicalProfile(a);if(!p)return null;
     const section=document.createElement('div');section.className='inspect-section';section.dataset.v1160PhysicalDebug='';
     const g=p.bodyGeometry||{};
-    section.innerHTML=`<h3>Physical Profile</h3><div class="kv"><div class="k">Mass</div><div>${esc(kg(p.mass))}</div><div class="k">Volume</div><div>${esc(cubic(p.volume))}</div><div class="k">Body Geometry</div><div>H ${esc(meters(g.height))}・W ${esc(meters(g.width))}・L ${esc(meters(g.length))}</div><div class="k">MovementEnvelopes</div><div>${envelopeText(a)}</div></div><p class="hint">mass / volume / bodyGeometry 是 Agent authoritative physical state；MovementEnvelope 由 locomotion mode 即時計算，不保存第二份 cache。posture 的 standing 與 locomotion 的 walk 是不同語意；Spatial Passage feasibility 只比較物理可行性，不替 Agent 選擇 crawl。</p>`;
+    section.innerHTML=`<h3>Physical Profile</h3><div class="kv"><div class="k">Mass</div><div>${esc(kg(p.mass))}</div><div class="k">Volume</div><div>${esc(cubic(p.volume))}</div><div class="k">Body Geometry</div><div>H ${esc(meters(g.height))}・W ${esc(meters(g.width))}・L ${esc(meters(g.length))}</div><div class="k">MovementEnvelopes</div><div>${envelopeText(a)}</div></div><p class="hint">mass / volume / bodyGeometry 是 Agent authoritative physical state；MovementEnvelope 由 locomotion mode 即時計算，不保存第二份 cache。posture 與 locomotion mode 是不同語意；Spatial Passage feasibility 只回答物理可行性，v11.19 的 Locomotion Execution 會依 objective route 選擇並實際執行可行 mode，但人格／Relationship willingness 仍未接入。</p>`;
     return section;
   }
   function decorateInspector({host:renderHost,selected,state:providedState}){

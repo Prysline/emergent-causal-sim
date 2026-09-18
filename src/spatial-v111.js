@@ -97,31 +97,110 @@
     }
     return [...out.values()];
   }
-  function heuristic(st,a,b){const x=normalizeNode(st,a),y=normalizeNode(st,b);return Math.abs(x.x-y.x)+Math.abs(x.y-y.y)+(x.surfaceId===y.surfaceId?0:1);}
-  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost'}={}){
+  function locomotionRuntime(){return window.SimLocomotion||null;}
+  function physicalRuntime(){return window.SimPhysical||null;}
+  function resolvedRequestedMode(mode){return mode||(locomotionRuntime()?'auto':'walk');}
+  function availableModes(a,requestedMode){
+    const requested=resolvedRequestedMode(requestedMode),supported=physicalRuntime()?.supportedLocomotionModes?.(a);
+    if(requested!=='auto'){
+      if(Array.isArray(supported)&&!supported.includes(requested))throw new RangeError(`Unsupported locomotion mode: ${requested}`);
+      if(!Array.isArray(supported)&&requested!=='walk')throw new RangeError(`Route execution currently supports walk only, got: ${requested}`);
+      return [requested];
+    }
+    const modes=Array.isArray(supported)&&supported.length?supported:['walk'];
+    return [...modes];
+  }
+  function nodeLocomotionAccessible(st,p,a=null){
+    const n=normalizeNode(st,p);if(!n)return false;
+    return n.surfaceId===FLOOR?!fixedFloorBlocker(st,n):surfaceWalkable(st,n,a);
+  }
+  function candidateTraversalNeighbors(st,p,aOrId=null){
+    const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeLocomotionAccessible(st,n,a))return [];
+    if(n.surfaceId===FLOOR){
+      for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:n.x+dx,y:n.y+dy},FLOOR);if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);}
+      for(const entry of surfaceEntries(st)){
+        if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
+        for(const cell of entry.surface.cells||[]){
+          if(Math.abs(cell.x-n.x)+Math.abs(cell.y-n.y)!==1||isFootprintCell(entry,n))continue;
+          const q=normalizeNode(st,cell,entry.surface.id);if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
+        }
+      }
+    }else{
+      const entry=surfaceEntry(st,n.surfaceId);if(!entry)return [];
+      for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:n.x+dx,y:n.y+dy},n.surfaceId);if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);}
+      for(const cell of entry.surface.cells||[])for(const [dx,dy] of DIRS){
+        const p={x:cell.x+dx,y:cell.y+dy};if(isFootprintCell(entry,p))continue;
+        const q=normalizeNode(st,p,FLOOR);if(Math.abs(q.x-n.x)+Math.abs(q.y-n.y)===1&&nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
+      }
+    }
+    return [...out.values()];
+  }
+  function modeEdgeFeasible(st,a,from,to,mode){
+    if(!a)return nodeLocomotionAccessible(st,to,null);
+    const check=SP.traversalFeasibility?.(st,a,from,to),result=check?.modes?.[mode];
+    if(result)return result.feasible===true;
+    return mode==='walk'&&nodeWalkable(st,to,a)&&walkEdgeFeasible(st,a,from,to);
+  }
+  function modeRank(mode){return mode==='walk'?0:mode==='kneelCrawl'?1:mode==='proneCrawl'?2:9;}
+  function currentLocomotionMode(a){return locomotionRuntime()?.modeFromPosture?.(a)||null;}
+  function edgeMoveTicks(a,mode){const ticks=locomotionRuntime()?.edgeMoveTicks?.(a,mode);return Number.isFinite(ticks)&&ticks>0?ticks:1;}
+  function transitionTicks(fromMode,toMode){const ticks=locomotionRuntime()?.transitionTicks?.(fromMode,toMode);return Number.isFinite(ticks)&&ticks>=0?ticks:(fromMode===toMode?0:0);}
+  function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
+  function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank);}
+  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost',mode=null}={}){
     if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
-    const a=agentFor(st,aOrId),s=normalizeNode(st,start),g=normalizeNode(st,goal);if(!s||!g||!nodeWalkable(st,s,a)||!nodeWalkable(st,g,a))return [];if(nodeSame(st,s,g))return [cloneNode(s)];
-    const sk=nodeKey(st,s),gk=nodeKey(st,g),open=new Set([sk]),came={},score={[sk]:0},f={[sk]:heuristic(st,s,g)},pos={[sk]:s};
-    while(open.size){let ck=null,best=Infinity;for(const k of open){const v=f[k]??Infinity;if(v<best){best=v;ck=k;}}const cur=pos[ck];if(ck===gk){const path=[cloneNode(g)];let k=ck;while(came[k]){k=came[k];path.unshift(cloneNode(pos[k]));}return path;}open.delete(ck);for(const q of traversalNeighbors(st,cur,a)){const qk=nodeKey(st,q),edge=objective==='pathDistance'?1:traversalEdgeCost(st,cur,q,a),tent=(score[ck]??Infinity)+edge;if(tent<(score[qk]??Infinity)){came[qk]=ck;score[qk]=tent;f[qk]=tent+heuristic(st,q,g);pos[qk]=q;open.add(qk);}}}
-    return [];
+    const a=agentFor(st,aOrId),s=normalizeNode(st,start),g=normalizeNode(st,goal),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested);
+    if(!s||!g||!nodeLocomotionAccessible(st,s,a)||!nodeLocomotionAccessible(st,g,a))return {path:[],steps:[],startMode:currentLocomotionMode(a),requestedMode:requested};
+    const startMode=currentLocomotionMode(a);
+    if(nodeSame(st,s,g))return {path:[cloneNode(s)],steps:[],startMode,requestedMode:requested};
+    const sk=routeStateKey(st,s,startMode),open=new Set([sk]),came={},score={[sk]:{primary:0,time:0,transitions:0,modeRank:0}},states={[sk]:{node:s,mode:startMode}};
+    while(open.size){
+      let ck=null,best=null;
+      for(const k of open){const value=score[k];if(!best||compareRouteScore(value,best)<0){best=value;ck=k;}}
+      const cur=states[ck];open.delete(ck);
+      if(nodeSame(st,cur.node,g)){
+        const steps=[];let k=ck;
+        while(came[k]){steps.unshift(came[k].step);k=came[k].prev;}
+        return {path:[cloneNode(s),...steps.map(step=>cloneNode(step.to))],steps,startMode,requestedMode:requested};
+      }
+      for(const q of candidateTraversalNeighbors(st,cur.node,a)){
+        for(const nextMode of modes){
+          if(!modeEdgeFeasible(st,a,cur.node,q,nextMode))continue;
+          const transition=transitionTicks(cur.mode,nextMode),moveTicks=edgeMoveTicks(a,nextMode),edgeCost=traversalEdgeCost(st,cur.node,q,a);
+          if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks))continue;
+          const nextScore={
+            primary:best.primary+(objective==='pathDistance'?1:edgeCost),
+            time:best.time+transition+moveTicks,
+            transitions:best.transitions+(transition>0?1:0),
+            modeRank:best.modeRank+modeRank(nextMode)
+          };
+          const qk=routeStateKey(st,q,nextMode);
+          if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
+          const step={from:cloneNode(cur.node),to:cloneNode(q),mode:nextMode,transitionTicks:transition,moveTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1};
+          came[qk]={prev:ck,step};score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
+        }
+      }
+    }
+    return {path:[],steps:[],startMode,requestedMode:requested};
   }
-  function routeMetrics(st,a,path){
-    if(!path?.length)return {pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity};
-    let traversalCost=0;for(let i=1;i<path.length;i++)traversalCost+=traversalEdgeCost(st,path[i-1],path[i],a);
-    const pathDistance=Math.max(0,path.length-1);
-    return {pathDistance,traversalCost,travelTime:pathDistance};
+  function routeMetrics(st,a,route){
+    if(!route?.path?.length)return {pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
+    let traversalCost=0,travelTime=0,transitions=0;
+    for(const step of route.steps||[]){traversalCost+=traversalEdgeCost(st,step.from,step.to,a);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
+    return {pathDistance:Math.max(0,route.path.length-1),traversalCost,travelTime,transitionTicks:transitions};
   }
-  function planRoute(st,aOrId,goal,{mode='walk',objective='traversalCost'}={}){
-    const a=agentFor(st,aOrId);if(!a)return {path:[],mode,objective,pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity};
-    if(mode!=='walk')throw new RangeError(`Route execution currently supports walk only, got: ${mode}`);
-    const path=routeSearch(st,a.position,goal,a,{objective}),metrics=routeMetrics(st,a,path);
-    return {path,mode,objective,...metrics};
+  function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost'}={}){
+    const a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
+    if(!a)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
+    const route=routeSearch(st,a.position,goal,a,{objective,mode:requested}),metrics=routeMetrics(st,a,route),used=[...new Set((route.steps||[]).map(step=>step.mode))];
+    const selectedMode=used.length===1?used[0]:used.length>1?'mixed':route.startMode||requested;
+    return {path:route.path,steps:route.steps,mode:selectedMode,requestedMode:requested,objective,startMode:route.startMode,...metrics};
   }
-  function astar(st,start,goal,agentId=null){return routeSearch(st,start,goal,agentId,{objective:'traversalCost'});}
-  function traversalCost(st,aOrId,p){return planRoute(st,aOrId,p,{mode:'walk',objective:'traversalCost'}).traversalCost;}
+  function astar(st,start,goal,agentId=null){const a=agentFor(st,agentId),requested=locomotionRuntime()?'auto':'walk';return routeSearch(st,start,goal,a,{objective:'traversalCost',mode:requested}).path;}
+  function traversalCost(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}).traversalCost;}
   function pathCost(st,aOrId,p){return traversalCost(st,aOrId,p);}
-  function pathDistance(st,aOrId,p){return planRoute(st,aOrId,p,{mode:'walk',objective:'pathDistance'}).pathDistance;}
-  function travelTime(st,aOrId,p){return planRoute(st,aOrId,p,{mode:'walk',objective:'traversalCost'}).travelTime;}
+  function pathDistance(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'pathDistance'}).pathDistance;}
+  function travelTime(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}).travelTime;}
 
   function floorReachNodes(st,p,agent,{includeSelf=true}={}){const out=new Map(),target=normalizeNode(st,p,FLOOR);for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:target.x+dx,y:target.y+dy},FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}if(includeSelf&&nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);return [...out.values()];}
   function surfaceLocalReachNodes(st,node,agent){const target=normalizeNode(st,node),out=new Map();if(nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:target.x+dx,y:target.y+dy},target.surfaceId);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}return [...out.values()];}
@@ -201,5 +280,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,ROUTE_SEMANTICS_VERSION:'11.18.0-route-semantics-split',TRAVERSAL_PROFILES,normalizeNode,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
+  Object.assign(SP,{VERSION,ROUTE_SEMANTICS_VERSION:'11.18.0-route-semantics-split',TRAVERSAL_PROFILES,normalizeNode,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
 })();
