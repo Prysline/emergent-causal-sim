@@ -176,6 +176,7 @@ assert.ok(debug.debugText.includes('Memory + Relationship → Social Target'),'D
 assert.ok(debug.debugText.includes('Requester 社交結果記憶'),'Debug must retain requester outcome diagnostics');
 assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Familiarity')&&debug.debugText.includes('Affinity'),'Debug must expose exact directional relationship dimensions');
 assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('MovementEnvelopes'),'Debug must expose authoritative Physical Profile and derived multi-mode MovementEnvelopes');
+assert.ok(debug.debugText.includes('Locomotion Execution')&&debug.debugText.includes('Edge Move Ticks'),'Debug must expose current locomotion execution timing and posture state');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
   entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
@@ -187,9 +188,10 @@ const debugOwnership=await page.evaluate(()=>({
   deliberation:document.querySelectorAll('[data-v1134-memory-deliberation]').length,
   socialOutcome:document.querySelectorAll('[data-v1135-social-outcome-memory]').length,
   relationship:document.querySelectorAll('[data-v1150-relationship-debug]').length,
-  physical:document.querySelectorAll('[data-v1160-physical-debug]').length
+  physical:document.querySelectorAll('[data-v1160-physical-debug]').length,
+  locomotion:document.querySelectorAll('[data-v1190-locomotion-debug]').length
 }));
-assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1,relationship:1,physical:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
+assert.deepEqual(debugOwnership,{roots:1,entityRoots:0,intent:1,memory:1,appraisal:1,affect:1,retention:1,deliberation:1,socialOutcome:1,relationship:1,physical:1,locomotion:1},'Agent selection must keep a single Resident shell and each Inspector layer exactly once');
 
 await page.click('[data-v1140-mode="resident"]');
 await page.click('[data-v1140-tab="memory"]');
