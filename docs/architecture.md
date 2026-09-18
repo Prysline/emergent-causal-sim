@@ -25,6 +25,18 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 
 Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
 
+### World Authoring / Initialization boundary
+
+Current default world 的 authored instance truth 由 `src/world-authoring-v1.js` 的 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，package 以 `authoringSchema: "world-authoring-v1"` 標記自己的 authoring contract generation。這個 generation 與 current simulation runtime marker 分離。
+
+Authoring package 保存「這個 world instance 開場是什麼」：map terrain / material、Furniture instance / footprint / slot、Container / Source instance config與初始內容物／位置、Resident identity / traits / opening Needs / wellbeing / status與 initial placement。它不保存可由 runtime推導的 `walkable / roomId / map.rooms / roomRevision / tile.furnitureIds / slot.furnitureId / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+
+`src/world-initializer.js` 是 authoring → runtime compatibility adapter。Base `SimWorld.createInitialState(seed)` public facade仍存在，現有 versioned `createInitialState` wrapper chain與順序在本 slice保持不變；Authoring Foundation不新增一層 wrapper。Initializer只把 canonical package編譯成既有 `state.map / furniture / containers / sources / agents` shape，再由現有 subsystem schema wrappers加入各自 initial state。
+
+Slice A 的 authoring positions可攜帶 `z:0`，但 current runtime Spatial identity仍是單層；adapter只接受 exactly one `z=0` layer，遇到 multi-layer或 non-zero z必須 loud failure，不得 silent flatten。真正把 z納入 Spatial Node / occupancy / route / contact identity屬後續 runtime semantic slice。
+
+`SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
+
 Physical / Passage contract 同樣遵守 single-source rule：Agent 保存可重用的物理事實；`MovementEnvelope` 是由 `SimPhysical.getMovementEnvelope(agent, locomotionMode)` 根據 profile 即時計算的 derived geometry；`PassageProfile` 則由 `SimSpatial.getPassageProfile(state, fromNode, toNode)` 根據既有 Spatial geometry 即時計算。兩者都不保存 persistent cache。未來 Anatomy 可替換 envelope 的推導來源，但 Spatial 仍只消費 canonical Physical interface，不直接知道 limb tree。
 
 ### Agent-private Truth
