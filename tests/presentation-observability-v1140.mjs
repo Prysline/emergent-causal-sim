@@ -91,7 +91,10 @@ assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expos
 assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
 assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must keep pathDistance distinct from traversalCost');
 assert.match(routeSource,/function routeStateKey\(st,node,mode\)/,'current routing must include locomotion mode in route state');
+assert.match(routeSource,/function nodeLocomotionAccessible\(st,p,a=null\)/,'Spatial must separate structural locomotion occupancy from walk-only node entry');
 assert.match(routeSource,/step\.transitionTicks\+step\.moveTicks/,'travelTime must sum real transition and movement timing');
+const spatialValidatorSource=fs.readFileSync(new URL('../src/state-validator-v111.js',import.meta.url),'utf8');
+assert.match(spatialValidatorSource,/SP\.nodeLocomotionAccessible\?\.\(st,node,a\)/,'Spatial validator must validate current occupancy without reusing walk-only node feasibility');
 const memoryDeliberationSource=fs.readFileSync(new URL('../src/memory-deliberation-runtime-v1134.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');
 assert.match(memoryDeliberationSource,/SP\.planRoute\(st,a,target\.position,\{mode:'auto',objective:'traversalCost'\}\)/,'target ranking must read canonical traversal-cost route facts');
