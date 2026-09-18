@@ -94,7 +94,7 @@
   function speciesProfile(a){return SPECIES_PROFILES?.[a?.kind]||null;}
   function isAnimalAgent(a){return speciesProfile(a)?.socialClass==='animal';}
   function canPetAnimal(actor,target){if(!actor||actor.kind!=='human'||!target||target.id===actor.id||target.offMap)return false;const profile=speciesProfile(target);return profile?.socialClass==='animal'&&profile?.interactionAffordances?.pet===true;}
-  function routeBurden(a,p){return typeof SP.traversalCost==='function'?routeBurden(a,p):SP.pathDistance(state,a,p);}
+  function routeBurden(a,p){return typeof SP.traversalCost==='function'?SP.traversalCost(state,a,p):SP.pathDistance(state,a,p);}
   function targetTraversalCost(a,target,affordance='default'){const p=SP.bestInteractionPosition(state,a,target,affordance);return p?routeBurden(a,p):Infinity;}
   function nearestAgent(a,kind,{allowSleeping=true}={}){return agentsByKind(kind).filter(x=>x.id!==a.id&&(allowSleeping||!isSleeping(x))).map(x=>({x,d:routeBurden(a,x.position)})).sort((m,n)=>m.d-n.d)[0]?.x||null;}
   function nearestPettableAnimal(a){return Object.values(state.agents).filter(target=>canPetAnimal(a,target)).map(target=>({target,d:routeBurden(a,target.position)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d||String(x.target.id).localeCompare(String(y.target.id)))[0]?.target||null;}
