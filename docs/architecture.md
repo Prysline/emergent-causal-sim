@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.17.0-passage-profile-multimode`。
+目前 runtime marker：`11.18.0-route-semantics-split`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -185,7 +185,7 @@ relationshipTargetDelta = 8 × familiarity × affinity
 
 targetPreference = memoryUtilityDelta
                  + relationshipTargetDelta
-                 - distancePenalty
+                 - accessPenalty
 
 finalUtility = baseUtility + memoryUtilityDelta
 ```
@@ -448,7 +448,7 @@ Resident overview 額外顯示 Relationship 的 read-only 長期摘要。Readabl
 - Familiarity 顯示「還不太熟／有些熟悉／熟悉／很熟悉／非常熟悉」等相處歷史程度；
 - 低 Familiarity 時不顯示 Affinity 判斷，避免一兩次 encounter 就產生「很喜歡／很討厭」式過度敘事；
 - 有足夠 Familiarity 時，Affinity 只描述「相處大致中性／愉快／不順」等 experience trend，不使用 friendship / trust / love / hate label；
-- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / distancePenalty / targetPreference` decomposition；
+- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / accessPenalty / targetPreference` decomposition；
 - v11.15.2 Debug 另可即時計算 Human / animal responder 的 `base response score + Relationship response delta → final score / response band`。這是 derived observability，不保存 `talkResponseScore / petResponseScore / relationshipResponseDelta` mirror，也不把 private score decomposition寫入 World Event。
 
 ### Physical Profile Debug projection
@@ -548,6 +548,37 @@ SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
 - `clearanceLength / turn clearance / maneuverability`、locomotion execution / posture transition、`pathDistance / traversalCost / travelTime` 分家、crowding、Anatomy / Injury / Collision 都延後；
 - 「能不能過」由 Physical + Spatial 決定；未來「願不願意為某目標趴著過」屬行為／動機選擇層，不能回寫 physical feasibility，也不能把真實 traversal / exertion burden 抹成 0。
 
+### Route Semantics Split
+
+v11.18.0 將原本名為 `SP.pathDistance()`、實際卻直接回傳 weighted route cost 的語意拆開：
+
+```text
+SimSpatial.planRoute(state, agent, goal, {
+  mode: 'walk',
+  objective: 'traversalCost' | 'pathDistance'
+})
+→ {
+  path,
+  mode,
+  objective,
+  pathDistance,
+  traversalCost,
+  travelTime
+}
+```
+
+正式邊界：
+
+- `pathDistance`＝所描述 path 的 topology edge count；standalone `SP.pathDistance(...)` 搜尋 physical-feasible shortest topology route。
+- `traversalCost`＝`traversalEdgeCost` 累積的客觀 route burden；包含既有 floor wet / occupancy、Surface move cost、Surface transition cost。standalone `SP.traversalCost(...)` 搜尋最低 traversal-cost route。
+- `travelTime`＝current executable movement time。v11.18.0 仍是 walk-only、一 edge 一 movement tick，因此 selected route 的 `travelTime === pathDistance`；這是 execution contract，不代表兩者永久同義。
+- A* compatibility surface 仍以 `traversalCost` 作 route objective，既有 gameplay/resource/interaction/nearest target consumers 也遷移到 `traversalCost`，因此本 slice 不偷偷改 route preference / AI balance。
+- 舊 `SP.pathCost(...)` 暫時只作 traversal-cost compatibility alias；新 consumer 不應再把它當 distance。
+- `planRoute(...)` 本 slice 只允許 executable mode `walk`。即使 `traversalFeasibility(...)` 已知道 `kneelCrawl / proneCrawl` 物理可行，也不得在 pathfinder 內自動切 mode 或 posture。
+- `speedFactor` 尚未接入 timing。若 Debug 提前顯示 `distance / speedFactor`，會比 runtime 多出一份假的 travel-time truth；真正 mode speed / posture-transition duration 必須與後續 locomotion execution 同時落地。
+- social target ranking 的舊 `distancePenalty` 已正名為 `accessPenalty`，source 改讀 `traversalCost`；公式尺度與 v11.17 保持 parity，Relationship / Memory target ordering 不因 semantic cleanup 偷換心理模型。
+- deterministic regression 必須能同時存在「4-edge 但 wet / cost 14.5」與「6-edge dry / cost 6」兩條 route：standalone `pathDistance=4`、`traversalCost=6`，default plan / A* 選 6-edge route，而 selected plan 回報 `pathDistance=6 / traversalCost=6 / travelTime=6`。
+
 ### Resources / logistics
 
 - `Agent.held + Container.contents` 是搬運與資源位置的正式 truth。
@@ -598,7 +629,7 @@ Physical / Locomotion Current invariant：
 - locomotion baseline 是 `walk`，不得再把 Agent posture `standing` 當成同一個 locomotion mode；
 - Human 目前可查詢 `walk / kneelCrawl / proneCrawl` feasibility，Cat 目前只定義 `walk`；capability 只表示物理支援，不代表行為意願；
 - Spatial A* 本 slice 仍只有 walk execution。若 passage 對 walk blocked，即使 crawl query 可行，也不得自動 crawl 或修改 posture；
-- 下一個 product slice 是 route semantics 分家：`pathDistance` 回到幾何／拓樸距離，`traversalCost` 表示客觀通行負擔，`travelTime` 表示耗時；之後才接 locomotion execution / posture transition；
+- v11.18.0 已完成 Route Semantics Split：`pathDistance`＝physical-feasible shortest topology edge count、`traversalCost`＝最低客觀通行負擔、`travelTime`＝current executable selected-walk-route ticks；A* 預設 objective 仍為 traversal cost。下一個 locomotion slice 才接 mode execution / posture transition 與 `speedFactor` timing；
 - mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
 - Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
 

@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.17.0・Passage Profile + Multi-mode Feasibility**（`11.17.0-passage-profile-multimode`）。
+目前 runtime marker：**v11.18.0・Route Semantics Split**（`11.18.0-route-semantics-split`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -35,7 +35,11 @@
 - `SimSpatial.traversalFeasibility(...)` 將各 supported mode 的 MovementEnvelope 與 PassageProfile 比較，只回 `feasible / failedAxes`。它不選 `bestMode`、不讀 Relationship / Memory / traits / goal pressure，也不修改 Agent posture。
 - 現行 A* **仍然只執行 `walk`**，但每條 edge 已消費 canonical `walk` Passage feasibility。因此 width / height constraint 會真正阻擋 walk route，同時系統即使知道 `kneelCrawl / proneCrawl` 物理可行，也不會在 Slice 2 偷偷自動趴下穿越。
 - 既有預設行為保持可解釋：Cat `walk` clearance `0.32 m` 可過 `0.72 m` 餐桌下，Human `walk` clearance `1.65 m` 不可；Human `proneCrawl` query 可以在更低空間中判定可行，但 routing / execution 尚未使用它。
-- 本 slice 尚未加入 locomotion execution / posture transition、`pathDistance / traversalCost / travelTime` 分家、PoseEnvelope / static fit、length / turn clearance、crowding geometry、Anatomy / Injury / Collision；Physical / Spatial 只回答客觀幾何可行性，不決定「願不願意」採用 crawl。
+- **Route Semantics Split**：`SimSpatial.planRoute(state, agent, goal, { mode:'walk', objective })` 是 canonical route query；同一 selected path 同時回傳 `pathDistance / traversalCost / travelTime`。
+- standalone `SimSpatial.pathDistance(...)` 現表示 physical-feasible shortest topology edge count；`SimSpatial.traversalCost(...)` 表示最低客觀 route burden。既有 `pathCost(...)` 只保留為 traversal-cost compatibility alias。
+- A* / gameplay target selection 仍以 `traversalCost` 為預設 objective，因此濕地、occupancy、Surface move / transition cost 的既有 route preference 保持 parity；「最近」不再等同「最省力／最好走」。
+- `travelTime` 第一版表示 current executable walk movement time：每個 selected edge = 1 tick。雖然 MovementEnvelope 已有 `speedFactor`，v11.18.0 **不提前用它改 timing**；真正 mode speed 與 posture transition 留給後續 locomotion execution slice。
+- 本 slice 仍未加入 locomotion execution / posture transition、PoseEnvelope / static fit、length / turn clearance、crowding geometry、Anatomy / Injury / Collision；Physical / Spatial 仍只回答客觀幾何／route事實，不決定「願不願意」採用 crawl。
 
 ### Agent decision / action
 
@@ -74,7 +78,7 @@
 - 一次 encounter 對每個 Agent 最多 consolidation 一次，但雙方可使用不同 subjective outcome：完整 Human conversation 中 requester 使用 `acceptTalk`，responder 使用 `talk`；`avoidPet` 則可讓人與動物從同一 observable event 得到相反方向的 Affinity evidence。
 - `privateSocialOutcome` 只可更新 requester → counterpart；counterpart 不會因 requester 的 private timeout 被遠端改寫 Relationship。
 - Relationship 是 persistent slow state，不因來源 episodic memory 後續被 pruning 而倒退；第一版不做時間衰退，也不保存 contributing-memory history。
-- **v11.15.1 Relationship Target Preference**：`relationshipTargetDelta = 8 × familiarity × affinity`，只影響 `socialize / interactWithAnimal / seekSocialContact` 的「找誰」。`targetPreference = memoryUtilityDelta + relationshipTargetDelta - distancePenalty`；action-level `finalUtility` 仍不加入 Relationship。負向 Relationship 不構成 hard ban。
+- **v11.15.1 Relationship Target Preference**：`relationshipTargetDelta = 8 × familiarity × affinity`，只影響 `socialize / interactWithAnimal / seekSocialContact` 的「找誰」。`targetPreference = memoryUtilityDelta + relationshipTargetDelta - accessPenalty`；`accessPenalty` 由 `traversalCost` 派生，數值尺度與 v11.17 的舊 weighted-route penalty 保持 parity；action-level `finalUtility` 仍不加入 Relationship。負向 Relationship 不構成 hard ban。
 - **v11.15.2 Relationship Responder Bias**：Relationship 提供單一 directional downstream signal `relationshipSignal = familiarity × affinity`（bounded `[-1,+1]`）；Human talk 與 animal pet responder subsystem 各自將它縮放為 response-score delta。目前兩者各自 cap 為 `±0.18`，但 ownership 分離，未要求未來永遠同係數。
 - Familiarity 本身不是正向意願：`affinity = 0` 時 responder Relationship delta 必為 0。Human 只讀 human responder → requester；animal 只讀 animal responder → human requester。
 - responder score decomposition 不寫入 World Event、不保存 Agent cache；World truth 只保留實際發生的 accept / brief / decline / tolerate / avoid 等結果。Current Affect 與 responder-specific Memory 仍未直接進入 responder scoring。
@@ -87,7 +91,7 @@
 - Agent Action 會把 raw phase 名稱與工程座標轉成玩家可讀描述；完整 phase / spatial goal 仍留在 Debug。
 - Agent Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
 - Player Explanation 優先使用可由同一 evidence 直接支持的日常說法，例如「因為肚子餓了」「因為口渴」「因為累了」「因為想睡了」「因為想找人說說話」；不把 engine threshold 翻成「需求已經變得明顯」之類系統語言。精確需求強度仍留在 Needs / Debug；若沒有可靠的具體原因，使用保守抽象描述或省略，不自行補心理敘事。
-- Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick，並可拆解 social target ranking 的 Memory / Relationship / distance derived influence。
+- Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick，並可拆解 social target ranking 的 Memory / Relationship / access penalty，以及 route 的 path distance / traversal cost / travel time。
 - Relationship Debug 也可即時計算 responder `base score + Relationship delta → final score / response band`；這只是 authoritative Relationship + responder policy 的 derived observability，不建立 `talkResponseScore / petResponseScore / relationshipResponseDelta` persistent mirror。
 - Physical Debug 顯示 authoritative `mass / volume / bodyGeometry` 與所有 supported locomotion mode 的即時 `MovementEnvelope`；UI 不保存 `movementEnvelope` mirror，也不把第一版 coarse geometry 宣稱為 Anatomy 級精度。`posture: standing` 與 locomotion `walk` 在 Debug 文案中保持不同語意。
 - Container / Source / Furniture / Tile / Room / Event 也有玩家可讀投影：優先顯示名稱、位置、內容物、容量、持有人、實際用途／使用者、表面內容、空間中的居民／家具與 canonical event text 等直接可理解資訊。

@@ -2,7 +2,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.17.0-passage-profile-multimode`。
+目前 runtime marker：`11.18.0-route-semantics-split`。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >
@@ -93,7 +93,7 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render | presentation-only；不得影響 simulation ordering |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection | presentation-only；不得影響 simulation ordering |
 
-v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation 與 v11.17.0 Passage Profile + multi-mode feasibility 都**不新增 runtime hook、也不改上述 order**。Relationship consumers 仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage 則在 state construction、Spatial traversal query 與 Debug 中同步讀／派生 geometry。v11.17.0 的 A* 仍在原本 neighbor expansion 階段只讀 `walk` feasibility，不新增 locomotion lifecycle stage。因此本版 pipeline ordering仍與 11.15.0 Foundation 相同，版本同步是 Current contract 對齊，不代表新增 lifecycle stage。
+v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility 與 v11.18.0 Route Semantics Split 都**不新增 runtime hook、也不改上述 order**。Relationship consumers 仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage 則在 state construction、Spatial traversal query 與 Debug 中同步讀／派生 geometry。v11.17.0 的 A* 仍在原本 neighbor expansion 階段只讀 `walk` feasibility；v11.18.0 只把同步 route query 的 distance / cost / time 語意拆開，沒有新增 locomotion lifecycle stage。`travelTime` 目前仍由 current walk execution（一 edge一 tick）派生，不新增 timing hook。因此 pipeline ordering仍與 11.15.0 Foundation 相同，版本同步是 Current contract 對齊，不代表新增 lifecycle stage。
 
 ## 5. `episodicMemoryCreated` 支線
 

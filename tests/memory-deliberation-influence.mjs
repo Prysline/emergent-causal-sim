@@ -175,7 +175,7 @@ noIssues('initial plan provisional normalization contract');
 
 // Long-run integration remains bounded and stores no memory influence mirrors.
 E.reset(61340);
-const forbidden=['memoryPreference','socialMemoryBias','targetAssociation','memoryUtilityDelta','targetPreference','memoryInfluenceScore'];
+const forbidden=['memoryPreference','socialMemoryBias','targetAssociation','memoryUtilityDelta','targetPreference','accessPenalty','memoryInfluenceScore'];
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
   for(const agent of Object.values(st.agents)){

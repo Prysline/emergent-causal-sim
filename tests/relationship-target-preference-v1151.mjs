@@ -13,7 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const APP_VERSION='11.17.0-passage-profile-multimode';
+const APP_VERSION='11.18.0-route-semantics-split';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const clone=x=>structuredClone(x);
@@ -86,7 +86,7 @@ actor.relationships.zhou={familiarity:.8,affinity:.5,lastUpdatedTick:st.tick};
 const coexist=E.targetEvaluation(st,actor,target,'socialize',base);
 assert.ok(coexist.memoryUtilityDelta<0);
 near(coexist.relationshipTargetDelta,3.2);
-near(coexist.targetPreference,coexist.memoryUtilityDelta+coexist.relationshipTargetDelta-coexist.distancePenalty);
+near(coexist.targetPreference,coexist.memoryUtilityDelta+coexist.relationshipTargetDelta-coexist.accessPenalty);
 near(coexist.finalUtility,base+coexist.memoryUtilityDelta);
 
 // Generic animal affordance: current cat works, a future pettable species works, and an explicit no-pet profile is excluded.
@@ -119,4 +119,4 @@ assert.equal(E.talkEngagementScore(responder),talkBefore,'no-counterpart Human b
 assert.equal(E.petResponseScore(animal),petBefore,'no-counterpart animal base helper remains neutral');
 noIssues('target preference boundary remains isolated');
 
-console.log('v11.15.1 relationship target preference regression remains valid under v11.17.0');
+console.log('v11.15.1 relationship target preference regression remains valid under v11.18.0');

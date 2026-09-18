@@ -3,7 +3,8 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.17.0-passage-profile-multimode';
+const CURRENT_VERSION='11.18.0-route-semantics-split';
+const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
@@ -19,10 +20,11 @@ E.reset(11700);
 let st=E.getState();
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(W.PHYSICAL_RUNTIME_VERSION,CURRENT_VERSION);
-assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,CURRENT_VERSION);
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
+assert.equal(W.PHYSICAL_RUNTIME_VERSION,PHYSICAL_VERSION);
+assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,PHYSICAL_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
+assert.equal(globalThis.SimSpatial.ROUTE_SEMANTICS_VERSION,CURRENT_VERSION);
 const uiObservabilitySource=fs.readFileSync(new URL('../src/ui-observability-controls-v1133a.js',import.meta.url),'utf8');
 assert.doesNotMatch(uiObservabilitySource,/E\.addEvent\s*=/,'UI observability must not replace addEvent');
 assert.doesNotMatch(uiObservabilitySource,/E\.actionLabel\s*=/,'UI observability must not replace actionLabel');
@@ -74,10 +76,27 @@ const physicalSource=fs.readFileSync(new URL('../src/physical-runtime-v1160.js',
 assert.match(physicalSource,/function getMovementEnvelope\(agent,mode='walk'\)/,'Physical runtime must own the canonical walk-first derived MovementEnvelope interface');
 assert.match(physicalSource,/function requiredClearance\(agent,mode='walk'\)/,'Physical runtime must expose canonical walk clearance to Spatial');
 assert.match(physicalSource,/function supportedLocomotionModes\(agent\)/,'Physical runtime must expose supported locomotion modes without choosing one');
+const physicalSchemaSource=fs.readFileSync(new URL('../src/physical-schema-v1160.js',import.meta.url),'utf8');
+assert.match(physicalSchemaSource,/W\.PRESENTATION_SCHEMA_VERSION\|\|VERSION/,'Physical schema must preserve the canonical Presentation current-release marker when the full app is loaded');
 const passageSource=fs.readFileSync(new URL('../src/spatial-passage-v1170.js',import.meta.url),'utf8');
 assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial must own the canonical derived PassageProfile query');
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
 assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
+const routeSource=fs.readFileSync(new URL('../src/spatial-v111.js',import.meta.url),'utf8');
+assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.18\.0-route-semantics-split'/,'Spatial must expose the Route Semantics contract marker');
+assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expose canonical planRoute');
+assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
+assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must keep pathDistance distinct from traversalCost');
+assert.match(routeSource,/travelTime:pathDistance/,'current travelTime must reflect executable one-tick-per-walk-edge behavior');
+const memoryDeliberationSource=fs.readFileSync(new URL('../src/memory-deliberation-runtime-v1134.js',import.meta.url),'utf8');
+assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');
+assert.match(memoryDeliberationSource,/SP\.planRoute\(st,a,target\.position,\{mode:'walk',objective:'traversalCost'\}\)/,'target ranking must read canonical traversal-cost route facts');
+assert.doesNotMatch(memoryDeliberationSource,/distancePenalty/,'current target-ranking decomposition must not retain the stale distancePenalty field');
+const memoryDeliberationUiSource=fs.readFileSync(new URL('../src/ui-memory-deliberation-v1134.js',import.meta.url),'utf8');
+assert.match(memoryDeliberationUiSource,/path distance/,'Debug target ranking must show real path distance');
+assert.match(memoryDeliberationUiSource,/traversal cost/,'Debug target ranking must show traversal cost');
+assert.match(memoryDeliberationUiSource,/travel time/,'Debug target ranking must show travel time');
+assert.match(memoryDeliberationUiSource,/access penalty/,'Debug target ranking must show access penalty');
 const physicalUiSource=fs.readFileSync(new URL('../src/ui-physical-v1160.js',import.meta.url),'utf8');
 assert.match(physicalUiSource,/registerInspectorDecorator\('physical\.view',decorateInspector,1026\)/,'Physical Debug must use the explicit Inspector lifecycle');
 assert.match(physicalUiSource,/MovementEnvelope 由 locomotion mode 即時計算/,'Physical Debug must identify MovementEnvelope as derived truth');
@@ -95,7 +114,7 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.17\.0・Passage Profile \+ Multi-mode Feasibility/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.18\.0・Route Semantics Split/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
 assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
@@ -112,7 +131,9 @@ assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker 
 assert.match(readmeSource,/Relationship Foundation/,'README must document the long-term dyadic state foundation');
 assert.match(readmeSource,/Responder Bias/,'README must retain current Relationship responder influence');
 assert.match(readmeSource,/Physical Profile Foundation/,'README must retain the Physical Foundation boundary');
-assert.match(readmeSource,/Passage Profile/,'README must document the current multi-mode traversal-feasibility slice');
+assert.match(readmeSource,/Passage Profile/,'README must retain the multi-mode traversal-feasibility boundary');
+assert.match(readmeSource,/Route Semantics Split/,'README must document the current Route Semantics contract');
+assert.match(readmeSource,/accessPenalty/,'README must document the target access-penalty migration');
 assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must retain the generalized readable entity boundary');
 assert.match(readmeSource,/slot reservation/,'README must document the reservation/debug privacy boundary');
 const architectureSource=fs.readFileSync(new URL('../docs/architecture.md',import.meta.url),'utf8');
@@ -128,6 +149,11 @@ assert.match(architectureSource,/Physical Profile \+ Passage Profile \/ Multi-mo
 assert.match(architectureSource,/MovementEnvelope/,'Architecture must define the derived locomotion geometry boundary');
 assert.match(architectureSource,/PassageProfile/,'Architecture must define the derived passage geometry boundary');
 assert.match(architectureSource,/traversalFeasibility/,'Architecture must define the physical multi-mode feasibility boundary');
+assert.match(architectureSource,/### Route Semantics Split/,'Architecture must define the current Route Semantics ownership boundary');
+assert.match(architectureSource,/pathDistance/,'Architecture must define topology distance');
+assert.match(architectureSource,/traversalCost/,'Architecture must define objective traversal burden');
+assert.match(architectureSource,/travelTime/,'Architecture must define executable travel time');
+assert.match(architectureSource,/accessPenalty/,'Architecture must define accessPenalty instead of stale distancePenalty');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
@@ -172,4 +198,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.17.0 presentation observability + Passage Profile multi-mode feasibility regression: ok');
+console.log('v11.18.0 presentation observability + Route Semantics split regression: ok');

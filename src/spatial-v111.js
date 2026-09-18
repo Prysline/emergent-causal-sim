@@ -98,14 +98,30 @@
     return [...out.values()];
   }
   function heuristic(st,a,b){const x=normalizeNode(st,a),y=normalizeNode(st,b);return Math.abs(x.x-y.x)+Math.abs(x.y-y.y)+(x.surfaceId===y.surfaceId?0:1);}
-  function astar(st,start,goal,agentId=null){
-    const a=agentFor(st,agentId),s=normalizeNode(st,start),g=normalizeNode(st,goal);if(!s||!g||!nodeWalkable(st,s,a)||!nodeWalkable(st,g,a))return [];if(nodeSame(st,s,g))return [cloneNode(s)];
+  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost'}={}){
+    if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
+    const a=agentFor(st,aOrId),s=normalizeNode(st,start),g=normalizeNode(st,goal);if(!s||!g||!nodeWalkable(st,s,a)||!nodeWalkable(st,g,a))return [];if(nodeSame(st,s,g))return [cloneNode(s)];
     const sk=nodeKey(st,s),gk=nodeKey(st,g),open=new Set([sk]),came={},score={[sk]:0},f={[sk]:heuristic(st,s,g)},pos={[sk]:s};
-    while(open.size){let ck=null,best=Infinity;for(const k of open){const v=f[k]??Infinity;if(v<best){best=v;ck=k;}}const cur=pos[ck];if(ck===gk){const path=[cloneNode(g)];let k=ck;while(came[k]){k=came[k];path.unshift(cloneNode(pos[k]));}return path;}open.delete(ck);for(const q of traversalNeighbors(st,cur,a)){const qk=nodeKey(st,q),tent=(score[ck]??Infinity)+traversalEdgeCost(st,cur,q,a);if(tent<(score[qk]??Infinity)){came[qk]=ck;score[qk]=tent;f[qk]=tent+heuristic(st,q,g);pos[qk]=q;open.add(qk);}}}
+    while(open.size){let ck=null,best=Infinity;for(const k of open){const v=f[k]??Infinity;if(v<best){best=v;ck=k;}}const cur=pos[ck];if(ck===gk){const path=[cloneNode(g)];let k=ck;while(came[k]){k=came[k];path.unshift(cloneNode(pos[k]));}return path;}open.delete(ck);for(const q of traversalNeighbors(st,cur,a)){const qk=nodeKey(st,q),edge=objective==='pathDistance'?1:traversalEdgeCost(st,cur,q,a),tent=(score[ck]??Infinity)+edge;if(tent<(score[qk]??Infinity)){came[qk]=ck;score[qk]=tent;f[qk]=tent+heuristic(st,q,g);pos[qk]=q;open.add(qk);}}}
     return [];
   }
-  function pathCost(st,a,p){const path=astar(st,a.position,p,a.id);if(!path.length)return Infinity;let total=0;for(let i=1;i<path.length;i++)total+=traversalEdgeCost(st,path[i-1],path[i],a);return total;}
-  function pathDistance(st,a,p){return pathCost(st,a,p);}
+  function routeMetrics(st,a,path){
+    if(!path?.length)return {pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity};
+    let traversalCost=0;for(let i=1;i<path.length;i++)traversalCost+=traversalEdgeCost(st,path[i-1],path[i],a);
+    const pathDistance=Math.max(0,path.length-1);
+    return {pathDistance,traversalCost,travelTime:pathDistance};
+  }
+  function planRoute(st,aOrId,goal,{mode='walk',objective='traversalCost'}={}){
+    const a=agentFor(st,aOrId);if(!a)return {path:[],mode,objective,pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity};
+    if(mode!=='walk')throw new RangeError(`Route execution currently supports walk only, got: ${mode}`);
+    const path=routeSearch(st,a.position,goal,a,{objective}),metrics=routeMetrics(st,a,path);
+    return {path,mode,objective,...metrics};
+  }
+  function astar(st,start,goal,agentId=null){return routeSearch(st,start,goal,agentId,{objective:'traversalCost'});}
+  function traversalCost(st,aOrId,p){return planRoute(st,aOrId,p,{mode:'walk',objective:'traversalCost'}).traversalCost;}
+  function pathCost(st,aOrId,p){return traversalCost(st,aOrId,p);}
+  function pathDistance(st,aOrId,p){return planRoute(st,aOrId,p,{mode:'walk',objective:'pathDistance'}).pathDistance;}
+  function travelTime(st,aOrId,p){return planRoute(st,aOrId,p,{mode:'walk',objective:'traversalCost'}).travelTime;}
 
   function floorReachNodes(st,p,agent,{includeSelf=true}={}){const out=new Map(),target=normalizeNode(st,p,FLOOR);for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:target.x+dx,y:target.y+dy},FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}if(includeSelf&&nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);return [...out.values()];}
   function surfaceLocalReachNodes(st,node,agent){const target=normalizeNode(st,node),out=new Map();if(nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);for(const [dx,dy] of DIRS){const q=normalizeNode(st,{x:target.x+dx,y:target.y+dy},target.surfaceId);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}return [...out.values()];}
@@ -177,10 +193,13 @@
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
   SP.pathDistance=pathDistance;
+  SP.traversalCost=traversalCost;
+  SP.travelTime=travelTime;
+  SP.planRoute=planRoute;
   SP.interactionGeometry=interactionGeometry;
   SP.interactionPositions=interactionPositions;
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,TRAVERSAL_PROFILES,normalizeNode,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,traversalNeighbors,traversalEdgeCost,pathCost,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
+  Object.assign(SP,{VERSION,ROUTE_SEMANTICS_VERSION:'11.18.0-route-semantics-split',TRAVERSAL_PROFILES,normalizeNode,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
 })();

@@ -13,7 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const APP_VERSION='11.17.0-passage-profile-multimode';
+const APP_VERSION='11.18.0-route-semantics-split';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,V=globalThis.SimValidator,W=globalThis.SimWorld;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
@@ -139,4 +139,4 @@ for(let i=0;i<500;i++){
   if(i%25===0)noIssues(`tick ${i+1}`);
 }
 noIssues('500 tick integration');
-console.log('v11.15 Relationship foundation regression: ok under v11.17.0 app marker');
+console.log('v11.15 Relationship foundation regression: ok under v11.18.0 app marker');

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.17.0-passage-profile-multimode';
+const CURRENT_VERSION='11.18.0-route-semantics-split';
 const outDir='artifacts/browser-resident-view-v1140-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});

@@ -35,6 +35,7 @@
     if(!current)return null;
     current.agentId=a.id;
     current.spatialGoal=a.action?.spatialGoal?nodeObservation(st,a.action.spatialGoal,a):null;
+    current.routePlan=a.action?.spatialGoal&&SP.planRoute?SP.planRoute(st,a,a.action.spatialGoal,{mode:'walk',objective:'traversalCost'}):null;
     current.lastPath=(a.action?.lastPath||[]).map(p=>nodeObservation(st,p,a)).filter(Boolean);
     return current;
   }
