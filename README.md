@@ -151,7 +151,7 @@ State regression 目前涵蓋：
 - syntax / base state invariant；
 - sleep / social / logistics / spatial / surface environment；
 - Physical Profile 的 authoritative individual state、multi-mode derived MovementEnvelope、`standing → walk` terminology boundary、default behavior parity、individual geometry override、validator 與 no-cache boundary；
-- Passage Profile 的 edge-derived height / width、`null = unconstrained`、normal / low / lower / width-only deterministic fixture，以及「crawl query 可行但 A* 不自動 crawl」的 subsystem boundary；
+- Passage Profile 的 edge-derived height / width、`null = unconstrained`、normal / low / lower / width-only deterministic fixture，以及 **v11.17 isolated Passage focused regression** 所鎖的「crawl query 可行但當時 A* 不自動 crawl」subsystem boundary；current production v11.19+ 的 mode-aware crawl execution 由 Locomotion regression 另行驗證；
 - Action terminology / canonical construction；
 - Active Intent / Social Bid / replan / soft reconsideration；
 - Episodic Memory / Appraisal / Affect / salience；
