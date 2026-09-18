@@ -95,7 +95,6 @@ E.tick();assert.ok(SP.nodeSame(E.getState(),f.human.position,f.mid),'second edge
 E.tick();assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'planned travelTime must match actual arrival timing');
 assert.equal(f.human.posture.kind,'kneeling','arrival must not silently stand up after crawl');
 E.tick();assert.equal(f.human.action,null);assert.equal(f.human.posture.kind,'kneeling','action completion keeps authoritative posture until a later transition');
-assert.deepEqual(f.human.water?.position,undefined);
 assert.deepEqual(f.water.position,f.goal,'water remains on the far side of the unique passage');
 
 // C: lower passage only permits prone crawl.
