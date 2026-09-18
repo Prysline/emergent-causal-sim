@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
-  const VERSION='11.19.0-locomotion-execution-posture';
+  const VERSION='11.20.0-dynamic-congestion';
   const baseCreateInitialState=W.createInitialState;
   const INTERACTION_LABELS=Object.freeze({
     talk:'聊天',
