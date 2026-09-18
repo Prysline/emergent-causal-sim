@@ -10,6 +10,12 @@
 
 玩家可見的 app 頁首 current-version display 使用短版 `v11.20.0`；瀏覽器 document `<title>` 使用不帶 runtime 版本的穩定產品名稱 `因果湧現模擬器｜Emergent Causal Sim`，不持有 release truth。`state.version` 與 `SimWorld.PRESENTATION_SCHEMA_VERSION` 使用完整 current marker。Subsystem schema/runtime marker 代表各自 contract generation：目前 Physical 使用 `SimWorld.PHYSICAL_SCHEMA_VERSION = 11.17.0-passage-profile-multimode`，Spatial Passage 使用 `SimSpatial.PASSAGE_PROFILE_VERSION = 11.17.0-passage-profile-multimode`，Route Semantics 使用 `SimSpatial.ROUTE_SEMANTICS_VERSION = 11.18.0-route-semantics-split`，Locomotion Execution 使用 `SimWorld.LOCOMOTION_SCHEMA_VERSION / SimLocomotion.VERSION = 11.19.0-locomotion-execution-posture`，Dynamic Congestion 使用 `SimCrowding.VERSION / SimSpatial.CROWDING_VERSION = 11.20.0-dynamic-congestion`；Relationship 仍保留自己的 `SimWorld.RELATIONSHIP_SCHEMA_VERSION = 11.15.2-relationship-responder-bias`，Memory→Deliberation 仍保留 `11.13.4-memory-deliberation-influence`，不因整體 current release 推進而假升未換代 subsystem。Resident / Physical / Locomotion / Entity Readable 等 UI version 若以 current Presentation marker 為 owner，則跟隨 current marker。
 
+### World authoring contract version
+
+World authoring 另有獨立 contract generation：`SimWorldAuthoring.VERSION = "world-authoring-v1"`，canonical package 同時保存 `authoringSchema: "world-authoring-v1"`。它不是 current runtime marker，也不是 Physical / Spatial 等 simulation subsystem generation。
+
+只有 authoring package shape / migration compatibility需要新 generation時才升 `world-authoring-vN`；單純 current runtime從 11.20 推進，不得順手假升 authoring schema。反過來，若 authoring ownership / serialization重構最後仍編譯成相同 runtime state shape、observable behavior與 product surface，也可以維持 current runtime marker不變。本 Slice A 因此仍使用 `11.20.0-dynamic-congestion`。
+
 ## 何時必須升版
 
 只要合併後的 `main` 出現下列任一類 current contract 變更，就必須在同一個 PR 內更新 runtime marker：
