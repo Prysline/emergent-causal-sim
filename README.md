@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.19.0・Locomotion Execution + Posture Transition**（`11.19.0-locomotion-execution-posture`）。
+目前 runtime marker：**v11.20.0・Dynamic Congestion**（`11.20.0-dynamic-congestion`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -42,7 +42,12 @@
 - crawl 抵達後不會自動站起；posture 是 authoritative state，下一次需要不同 locomotion mode 時再支付 transition。這避免角色在仍可能低矮的空間裡被免費強制站立。
 - **Route Semantics Split** 仍維持：`pathDistance` 是 physical-feasible topology distance、`traversalCost` 是 objective burden、`travelTime` 是真實 current execution timing；`pathCost` 只保留 traversal-cost compatibility alias。
 - A* / resource / interaction / nearest target / social access consumer 現可認得 executable crawl route；`accessPenalty` 仍由 `traversalCost` 派生，沒有改 Memory / Relationship 心理公式尺度。
-- 本 slice **沒有加入 behavioral willingness / aversion**。因此目前只要 objective route 選中 crawl，Agent 就會執行；「怕髒／嫌麻煩／為重要的人願意爬」等主觀選擇留待後續 behavior layer。Crowding、PoseEnvelope/static fit、turn clearance、Anatomy / Injury / Collision 也仍未加入。
+- **Dynamic Congestion**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 由當下 Agent occupancy、movement direction、MovementEnvelope width 與已知 PassageProfile width 即時計算；不保存 persistent crowding cache，也不修改 PassageProfile。
+- Crowding 第一版只形成 **soft congestion cost + movement slowdown**，不 hard-block 通行。狹窄處錯身的額外時間代表側身、錯步、短暫停頓與調整移動方式，而不是宣稱兩個名義身寬相加超過通道寬度就物理上不能過。
+- known passage width 會增加 maneuvering-space pressure；width 未知時只依 occupancy / direction 產生 soft penalty，不推導「一格最多幾人」的虛假 capacity。方向 severity 目前為 `same < stationary/unknown < opposite`。
+- route planning 使用當下 congestion snapshot，`traversalCost` 加入 `congestionCost`，`travelTime` 加入 crowding delay；core movement 每次開始下一條 edge 前重新規劃，所以人群散開／聚集後的 actual travel time 可以不同於較早的 estimate。
+- 舊 floor `occupiedCount × 5/2.5` 固定 penalty 在 v11.20 production 停用；`bestInteractionPosition()` 也不再額外先按 occupancy 排序，避免同一擁擠被 double count。
+- Dynamic Congestion 仍**沒有加入 behavioral willingness / aversion**。因此目前擁擠只改變客觀 route burden / movement timing；Relationship、personality、courtesy、yielding 等主觀或社交規則不參與。第一版也不禁止 Agent spatial overlap、不做 edge reservation / 誰先走 / deadlock / collision；PoseEnvelope/static fit、turn clearance、Anatomy / Injury / Collision 仍未加入。
 
 ### Agent decision / action
 
