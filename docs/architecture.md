@@ -542,8 +542,8 @@ SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
 - PassageProfile 第一版只正式比較 `clearanceHeight / clearanceWidth`。某軸沒有明確限制時為 `null = unconstrained`；不發明每格固定公尺數，也不把 body length 誤當成直線 passage length requirement；
 - passage geometry 可來自 Furniture `spatial.under.clearance / clearanceWidth` 與可選 edge-local `map.passageConstraints`，Spatial 將這些 world facts 收斂成 canonical edge query；
 - `traversalFeasibility` 只回答 physical feasibility，不回傳 `bestMode / recommendedMode / utility`，不讀 Relationship、Memory、traits、goal pressure，也不修改 posture；
-- 現行 A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此 crawl-query 可行不代表 routing 會自動 crawl；
-- deterministic single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；low/lower 情況下另一側水源仍不可由現行 walk-only A* 到達；
+- **v11.17 當時**的 production A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此該 slice 的 crawl-query 可行不代表 routing 會自動 crawl；v11.19+ current production 已由後述 Locomotion Execution contract 接上 mode-aware routing / execution；
+- v11.17 isolated single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；在該 focused harness 的 walk-only execution boundary 下，low/lower 情況的另一側水源仍不可達；
 - Static fit 與 Traversable 概念仍分離，但本 slice **不實作 PoseEnvelope / static occupancy API**；不能拿 MovementEnvelope 假裝靜態 body bounds；
 - `clearanceLength / turn clearance / maneuverability`、locomotion execution / posture transition、`pathDistance / traversalCost / travelTime` 分家、crowding、Anatomy / Injury / Collision 都延後；
 - 「能不能過」由 Physical + Spatial 決定；未來「願不願意為某目標趴著過」屬行為／動機選擇層，不能回寫 physical feasibility，也不能把真實 traversal / exertion burden 抹成 0。
