@@ -3,13 +3,14 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.19.0-locomotion-execution-posture';
+const CURRENT_VERSION='11.20.0-dynamic-congestion';
+const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
-  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js',
+  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js','crowding-runtime-v1200.js',
   'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
   'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','relationship-runtime-v1150.js','affect-runtime-v1132.js','social-response-runtime-v1132a.js','memory-retention-runtime-v1133.js','human-social-response-runtime-v1133a.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js','state-validator-v1190.js'
@@ -26,8 +27,10 @@ assert.equal(W.PHYSICAL_RUNTIME_VERSION,PHYSICAL_VERSION);
 assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,PHYSICAL_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
 assert.equal(globalThis.SimSpatial.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
-assert.equal(W.LOCOMOTION_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(globalThis.SimLocomotion.VERSION,CURRENT_VERSION);
+assert.equal(W.LOCOMOTION_SCHEMA_VERSION,LOCOMOTION_VERSION);
+assert.equal(globalThis.SimLocomotion.VERSION,LOCOMOTION_VERSION);
+assert.equal(globalThis.SimCrowding.VERSION,CURRENT_VERSION);
+assert.equal(globalThis.SimSpatial.CROWDING_VERSION,CURRENT_VERSION);
 const uiObservabilitySource=fs.readFileSync(new URL('../src/ui-observability-controls-v1133a.js',import.meta.url),'utf8');
 assert.doesNotMatch(uiObservabilitySource,/E\.addEvent\s*=/,'UI observability must not replace addEvent');
 assert.doesNotMatch(uiObservabilitySource,/E\.actionLabel\s*=/,'UI observability must not replace actionLabel');
@@ -116,6 +119,11 @@ assert.match(locomotionSource,/Math\.ceil\(1\/speed\)/,'Locomotion runtime must 
 const locomotionUiSource=fs.readFileSync(new URL('../src/ui-locomotion-v1190.js',import.meta.url),'utf8');
 assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use explicit Inspector lifecycle');
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
+const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
+assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode='walk'\)/,'Crowding must expose a derived edge profile');
+assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 5');
+assert.match(crowdingSource,/directionWeight:Object\.freeze\(\{same:\.65,stationary:1,unknown:1,opposite:1\.7\}\)/,'Crowding direction severity must remain deterministic');
+assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
 const entityUiSource=fs.readFileSync(new URL('../src/ui-entity-readable-v1141.js',import.meta.url),'utf8');
 assert.match(entityUiSource,/const VERSION=W\.PRESENTATION_SCHEMA_VERSION;/,'Entity Readable View must inherit the canonical current runtime marker');
 assert.match(entityUiSource,/new Set\(\['container','source','furniture','tile','room','event'\]\)/,'Entity Readable View must explicitly cover all current non-agent Inspector entity types');
@@ -127,7 +135,7 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-assert.match(indexSource,/v11\.19\.0・Locomotion Execution \+ Posture Transition/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.20\.0・Dynamic Congestion/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
 assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
@@ -140,6 +148,7 @@ assert.match(indexSource,/state-validator-v1160\.js/,'app shell must load Physic
 assert.match(indexSource,/ui-physical-v1160\.js/,'app shell must load Physical Debug projection');
 assert.match(indexSource,/locomotion-schema-v1190\.js/,'app shell must load Locomotion schema');
 assert.match(indexSource,/locomotion-runtime-v1190\.js/,'app shell must load Locomotion runtime');
+assert.match(indexSource,/crowding-runtime-v1200\.js/,'app shell must load Dynamic Congestion runtime');
 assert.match(indexSource,/state-validator-v1190\.js/,'app shell must load Locomotion validator');
 assert.match(indexSource,/ui-locomotion-v1190\.js/,'app shell must load Locomotion Debug projection');
 assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must keep the non-agent readable entity layer');
@@ -150,7 +159,8 @@ assert.match(readmeSource,/Responder Bias/,'README must retain current Relations
 assert.match(readmeSource,/Physical Profile Foundation/,'README must retain the Physical Foundation boundary');
 assert.match(readmeSource,/Passage Profile/,'README must retain the multi-mode traversal-feasibility boundary');
 assert.match(readmeSource,/Route Semantics Split/,'README must retain the Route Semantics contract');
-assert.match(readmeSource,/Locomotion Execution/,'README must document current locomotion execution and posture transitions');
+assert.match(readmeSource,/Locomotion Execution/,'README must retain locomotion execution and posture transitions');
+assert.match(readmeSource,/Dynamic Congestion/,'README must document the current Dynamic Congestion contract');
 assert.match(readmeSource,/accessPenalty/,'README must document the target access-penalty migration');
 assert.match(readmeSource,/Player-readable Entity View 與 Debug Inspector 共用同一 authoritative simulation state/,'README must retain the generalized readable entity boundary');
 assert.match(readmeSource,/slot reservation/,'README must document the reservation/debug privacy boundary');
@@ -172,7 +182,8 @@ assert.match(architectureSource,/pathDistance/,'Architecture must define topolog
 assert.match(architectureSource,/traversalCost/,'Architecture must define objective traversal burden');
 assert.match(architectureSource,/travelTime/,'Architecture must define executable travel time');
 assert.match(architectureSource,/accessPenalty/,'Architecture must define accessPenalty instead of stale distancePenalty');
-assert.match(architectureSource,/### Locomotion Execution \+ Posture Transition/,'Architecture must define current locomotion execution ownership');
+assert.match(architectureSource,/### Locomotion Execution \+ Posture Transition/,'Architecture must retain locomotion execution ownership');
+assert.match(architectureSource,/### Dynamic Congestion/,'Architecture must define current Dynamic Congestion ownership');
 const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
@@ -188,6 +199,7 @@ for(const file of explicitInspectorDecoratorFiles){
 }
 const spatialUiSource=fs.readFileSync(new URL('../src/ui-spatial-observability.js',import.meta.url),'utf8');
 assert.match(spatialUiSource,/registerInspectorDecorator\('spatial\.observability'/,'spatial Inspector must use explicit decorator lifecycle');
+assert.match(spatialUiSource,/Dynamic Congestion/,'Spatial Debug must expose current next-edge congestion');
 assert.doesNotMatch(spatialUiSource,/\['inspector','map','actions'\]/,'spatial DOM observer must no longer own Inspector rendering');
 const probeEventId=E.addEvent('presentation event tick probe','system',[],{action:'presentationProbe'});
 assert.equal(st.causes[probeEventId]?.tick,st.tick,'canonical events must preserve creation tick for derived presentation recency');
@@ -217,4 +229,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.19.0 presentation observability + Locomotion Execution regression: ok');
+console.log('v11.20.0 presentation observability + Dynamic Congestion regression: ok');
