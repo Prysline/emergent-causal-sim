@@ -40,6 +40,7 @@
     current.currentLocomotion=a.locomotion?{...a.locomotion}:null;
     current.spatialGoal=a.action?.spatialGoal?nodeObservation(st,a.action.spatialGoal,a):null;
     current.routePlan=a.action?.spatialGoal&&SP.planRoute?SP.planRoute(st,a,a.action.spatialGoal,{mode:'auto',objective:'traversalCost'}):null;
+    current.nextCongestion=current.routePlan?.steps?.[0]?.congestion||null;
     current.lastPath=(a.action?.lastPath||[]).map(p=>nodeObservation(st,p,a)).filter(Boolean);
     return current;
   }
