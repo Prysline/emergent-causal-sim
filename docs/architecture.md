@@ -37,6 +37,12 @@ Slice A 的 authoring positions可攜帶 `z:0`，但 current runtime Spatial ide
 
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 
+Resident initial placement 在同一 `world-authoring-v1` contract內支援兩種 mode：`exact` 與 explicit `{kind:'furnitureSlot', id}` anchor。Anchor resolution 必須 deterministic；anchor 需存在且唯一、允許該 resident kind，並要求明確 `initial.posture.kind`。posture 指向不同 slot / furniture、exclusive slot double assignment、blocked / missing exact node 都是 hard error。
+
+`SimWorldInitializer.analyzeInitialPlacements(authoring)` 是 authoring-time analysis surface，回傳 `hardErrors / diagnostics / resolvedPlacements`，但 diagnostics 不寫入 runtime state。sealed room、no-exit route、食物／飲水／睡眠 target 不可達，以及 current overlap contract仍允許的 same-node overlap都屬 diagnostic-only；Initializer不得為了「合理」自動搬人、開門、補出口或修改 geometry。
+
+Initializer 的 hard validation只判斷自己擁有的 authoring/reference/base-floor occupancy facts。Physical / locomotion / posture 的正式 runtime invariant仍由既有 Spatial / Physical / Validator owners負責，不在 initializer 複製第二套 subsystem rule。
+
 Physical / Passage contract 同樣遵守 single-source rule：Agent 保存可重用的物理事實；`MovementEnvelope` 是由 `SimPhysical.getMovementEnvelope(agent, locomotionMode)` 根據 profile 即時計算的 derived geometry；`PassageProfile` 則由 `SimSpatial.getPassageProfile(state, fromNode, toNode)` 根據既有 Spatial geometry 即時計算。兩者都不保存 persistent cache。未來 Anatomy 可替換 envelope 的推導來源，但 Spatial 仍只消費 canonical Physical interface，不直接知道 limb tree。
 
 ### Agent-private Truth
