@@ -296,8 +296,8 @@ let runtimePreview=await page.evaluate(()=>{
     bannerHidden:document.querySelector('#editorPreviewBanner')?.hidden,
     bannerText:document.querySelector('#editorPreviewBanner')?.textContent||'',
     chair:state.furniture.chairNW.footprint,
-    basket:{position:state.containers.basket.position,supportId:state.containers.basket.supportId||null},
-    zhen:state.agents.zhen.position,
+    basket:{position:{x:state.containers.basket.position.x,y:state.containers.basket.position.y},supportId:state.containers.basket.supportId||null,spaceId:state.containers.basket.position.spaceId||null,surfaceId:state.containers.basket.position.surfaceId||null},
+    zhen:{x:state.agents.zhen.position.x,y:state.agents.zhen.position.y},
     opening:{terrain:state.map.tiles['2,2'].terrain,derivedOpen:topology.cells['2,2'].open,runtimeWalkable:window.SimSpatial.walkable(state,{x:2,y:2}),blocker:window.SimSpatial.blockerAt(state,{x:2,y:2})},
     under:{authored:active.authoring.furniture.diningTable.spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance}
   };
@@ -310,6 +310,8 @@ assert.match(runtimePreview.bannerText,/Editor Preview/);
 assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'Simulator preview must use the Editor furniture position');
 assert.deepEqual(runtimePreview.basket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
 assert.equal(runtimePreview.basket.supportId,'diningTable');
+assert.equal(runtimePreview.basket.surfaceId,'diningTable:surface','runtime may enrich the canonical supported-object position with derived surface identity');
+assert.ok(runtimePreview.basket.spaceId,'runtime may enrich the canonical object position with derived room/space identity');
 assert.deepEqual(runtimePreview.zhen,{x:8,y:4},'Simulator preview must use the Editor resident position');
 assert.equal(runtimePreview.opening.terrain,'doorway');
 assert.equal(runtimePreview.opening.derivedOpen,false);
@@ -321,8 +323,8 @@ await page.click('#reset');
 await page.waitForTimeout(30);
 runtimePreview=await page.evaluate(()=>({
   chair:window.SimEngine.getState().furniture.chairNW.footprint,
-  basket:window.SimEngine.getState().containers.basket.position,
-  zhen:window.SimEngine.getState().agents.zhen.position,
+  basket:{x:window.SimEngine.getState().containers.basket.position.x,y:window.SimEngine.getState().containers.basket.position.y},
+  zhen:{x:window.SimEngine.getState().agents.zhen.position.x,y:window.SimEngine.getState().agents.zhen.position.y},
   previewMode:window.SimEngine.PREVIEW_MODE
 }));
 assert.equal(runtimePreview.previewMode,true);
