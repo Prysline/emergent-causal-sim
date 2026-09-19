@@ -1,7 +1,7 @@
 (() => {
   const A=window.SimWorldAuthoring;
   if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring){
-    throw new Error('world-authoring-v1 helpers must load before editor-ui.js.');
+    throw new Error('World authoring helpers must load before editor-ui.js.');
   }
 
   const $=id=>document.getElementById(id);
@@ -19,6 +19,7 @@
   function fingerprint(){return A.semanticFingerprint(authored);}
   function isDirty(){return fingerprint()!==baselineFingerprint;}
   function report(){return A.validateAuthoring(authored);}
+  function derivedTopology(z=currentZ){return A.deriveHorizontalTopology(authored,{z});}
   function zLabel(z){return z===0?'Z 0・地面':z>0?`Z +${z}`:`Z ${z}`;}
   function cellId(x,y){return `${x},${y}`;}
   function cellAt(layer,x,y){return layer?.cells?.[cellId(x,y)]||null;}
@@ -248,7 +249,7 @@
     select.disabled=!entries.length;
   }
 
-  function renderSummary(validation){
+  function renderSummary(validation,topology){
     const layerList=layers(),furnitureCount=Object.keys(authored.furniture||{}).length,residentCount=Object.keys(authored.residents||{}).length;
     $('documentSummary').innerHTML=[
       ['ID',authored.id||'—'],
@@ -257,12 +258,15 @@
       ['Z-levels',layerList.map(layer=>layer.z).join(', ')],
       ['Furniture',furnitureCount],
       ['Residents',residentCount],
+      ['Horizontal components',topology?topology.components.length:'—'],
       ['Validation',validation.ok?'valid':`${validation.errors.length} error(s)`]
     ].map(([key,value])=>`<div class="key">${esc(key)}</div><div>${esc(value)}</div>`).join('');
 
     if(selectedCell){
       const layer=layerAt(selectedCell.z),cell=cellAt(layer,selectedCell.x,selectedCell.y),furniture=furnitureAtCell(selectedCell.x,selectedCell.y,selectedCell.z);
-      $('selectionSummary').innerHTML=`<b>Cell (${selectedCell.x}, ${selectedCell.y}, ${selectedCell.z})</b><br>terrain: <code>${esc(cell?.terrain||'void')}</code>${cell?.material?`<br>material: <code>${esc(cell.material)}</code>`:''}${furniture.length?`<br>furniture: ${furniture.map(([id,f])=>esc(f.name||id)).join('、')}`:''}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;
+      const derived=topology?.cells?.[cellId(selectedCell.x,selectedCell.y)];
+      const derivedText=derived?`<br>derived: <code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>${derived.componentId?` · ${esc(derived.componentId)}`:''}${derived.blockedBy.length?`<br>blocked by: ${derived.blockedBy.map(esc).join('、')}`:''}${derived.under.length?`<br>under clearance: ${derived.under.map(item=>`${esc(item.furnitureId)} ${item.clearanceHeight??'—'}m`).join('、')}`:''}`:'';
+      $('selectionSummary').innerHTML=`<b>Cell (${selectedCell.x}, ${selectedCell.y}, ${selectedCell.z})</b><br>terrain: <code>${esc(cell?.terrain||'void')}</code>${cell?.material?`<br>material: <code>${esc(cell.material)}</code>`:''}${furniture.length?`<br>furniture: ${furniture.map(([id,f])=>esc(f.name||id)).join('、')}`:''}${derivedText}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;
     }else $('selectionSummary').textContent=transientMessage||'尚未選取。';
   }
 
@@ -277,11 +281,11 @@
   }
 
   function render(){
-    const validation=report();
+    const validation=report(),topology=validation.ok?derivedTopology():null;
     renderLayers();
     renderTools();
     renderMap();
-    renderSummary(validation);
+    renderSummary(validation,topology);
     renderValidation(validation);
   }
 
@@ -323,7 +327,8 @@
     getDocument:()=>A.cloneAuthoring(authored),
     getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selectedCell:selectedCell?{...selectedCell}:null,dirty:isDirty(),validation:report()}),
     loadDocument:next=>loadDocument(next,{clean:true,message:'Test/API document loaded.'}),
-    semanticFingerprint:fingerprint
+    semanticFingerprint:fingerprint,
+    getDerivedTopology:(z=currentZ)=>derivedTopology(z)
   };
 
   render();
