@@ -11,7 +11,7 @@ for(const file of [
 ])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.21.1-editor-scene-inspector';
+const CURRENT_VERSION='11.21.2-editor-entity-lifecycle';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
