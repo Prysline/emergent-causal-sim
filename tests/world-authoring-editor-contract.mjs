@@ -59,6 +59,14 @@ assert.throws(
 }
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
+  invalid.furniture.diningTable.footprint=invalid.furniture.diningTable.footprint.map(p=>({...p,x:p.x+1}));
+  invalid.furniture.diningTable.displayAt={...invalid.furniture.diningTable.displayAt,x:invalid.furniture.diningTable.displayAt.x+1};
+  report=A.validateAuthoring(invalid);
+  assert.equal(report.ok,false);
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_support_position_mismatch'&&issue.supportId==='diningTable'));
+}
+{
+  const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
   delete invalid.residents.zhen.initial.placement.node.z;
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
