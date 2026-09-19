@@ -49,13 +49,14 @@
       <section>
         <h2>Cell 工具</h2>
         <div class="tool-grid" role="group" aria-label="地圖工具">
-          <button class="tool active" data-tool="floor" type="button"><span>▫️</span>Floor</button>
+          <button class="tool active" data-tool="select" type="button"><span>↖</span>選取／瀏覽</button>
+          <button class="tool" data-tool="floor" type="button"><span>▫️</span>Floor</button>
           <button class="tool" data-tool="wall" type="button"><span>🧱</span>Wall</button>
-          <button class="tool" data-tool="opening" type="button"><span>🚪</span>Opening</button>
+          <button class="tool" data-tool="opening" type="button"><span>🚪</span>開口／門洞</button>
           <button class="tool" data-tool="erase" type="button"><span>⌫</span>Erase</button>
-          <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>Furniture placement</button>
+          <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>家具放置</button>
         </div>
-        <p class="hint">Opening author 為 <code>terrain: "doorway"</code>；horizontal connectivity、blocker 與 clearance preview 由 shared geometry compiler 即時計算，不寫回 authoring JSON。</p>
+        <p class="hint"><strong>開口／門洞</strong> author 為 <code>terrain: "doorway"</code>，表示牆體中的可通行 opening，本身不是「世界出口」也不是 Door 實體。是否可離開世界由 entity slot 的 <code>canExit</code> 決定；實際 Door 是否阻擋則由 Door entity/runtime state 決定。</p>
       </section>
 
       <section>
@@ -74,7 +75,7 @@
         <div class="legend">
           <span><i class="swatch floor"></i>floor</span>
           <span><i class="swatch wall"></i>wall</span>
-          <span><i class="swatch opening"></i>opening</span>
+          <span><i class="swatch opening"></i>開口／門洞</span>
           <span><i class="swatch void"></i>void</span>
           <span><i class="marker-key resident">👤</i>resident</span>
           <span><i class="marker-key object">◈</i>object</span>
