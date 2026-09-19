@@ -117,8 +117,12 @@ assert.ok(editorUi.includes('dragState'),'D.1B2 drag preview state must remain e
 assert.ok(editorUi.includes('SimEditorPreviewBridge'),'D.1C launch must delegate browser-session handoff to the explicit preview bridge');
 assert.ok(editorUi.includes('P.storePreview(authored)'),'D.1C must preflight/store the same canonical Editor document before navigation');
 assert.ok(editorUi.includes('allowPreviewNavigation'),'D.1C preview navigation must bypass only the intentional dirty-document unload guard');
+assert.ok(editorUi.includes('P.getRestorePreview?.()'),'Preview return must restore only through the explicit handoff query path');
+assert.ok(editorUi.includes("clean:false,message:'已從 Editor Preview 恢復工作稿"),'restored Preview snapshot must remain an unsaved Editor working document');
 assert.ok(editorUi.includes("active?'select':'furniture'"),'Furniture placement action must toggle back to neutral select mode');
 assert.ok(editorUi.includes("chair:'餐椅'"),'Furniture instance presentation must expose the shared chair type independently from A/B/C/D instance names');
+assert.ok(editorUi.includes('>複製家具<'),'duplicateFurniture must be presented as duplication, not as catalog-style furniture creation');
+assert.ok(!editorUi.includes('新增同型家具'),'clone-existing-instance UI must not be mislabeled as furniture-library creation');
 assert.ok(editorUi.includes('移動自由位置'),'Resident UI must describe the exact-only move in user language');
 assert.ok(editorUi.includes('解除家具綁定並移動（站立）'),'Resident UI must describe the explicit detach + standing conversion');
 assert.ok(editorUi.includes('取消目前操作'),'pendingOperation may remain an internal key, but visible cancellation copy must be localized');
