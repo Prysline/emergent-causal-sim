@@ -13,7 +13,7 @@ const files=[
 ];
 for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const APP_VERSION='11.21.3-editor-furniture-drag';
+const APP_VERSION='11.21.4-editor-playtest-bridge';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const clone=x=>structuredClone(x);

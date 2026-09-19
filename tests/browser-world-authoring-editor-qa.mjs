@@ -18,6 +18,7 @@ let snapshot=await page.evaluate(()=>({
   document:window.SimWorldEditor.getDocument(),
   runtimeGlobals:{
     initializer:typeof window.SimWorldInitializer,
+    previewBridge:typeof window.SimEditorPreviewBridge,
     world:typeof window.SimWorld,
     spatial:typeof window.SimSpatial,
     engine:typeof window.SimEngine,
@@ -44,7 +45,9 @@ assert.equal(snapshot.sceneItems,
 assert.ok(snapshot.residentMarkers>0,'resident authored positions must use typed map markers');
 assert.ok(snapshot.objectMarkers>0,'container/source authored positions must use typed map markers');
 assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed');
-for(const value of Object.values(snapshot.runtimeGlobals))assert.equal(value,'undefined','Editor must not bootstrap runtime simulation modules');
+assert.equal(snapshot.runtimeGlobals.initializer,'object','D.1C Editor may load the pure world initializer only for runtime compatibility preflight');
+assert.equal(snapshot.runtimeGlobals.previewBridge,'object','D.1C Editor must expose the explicit browser-session preview bridge');
+for(const key of ['world','spatial','engine','validator'])assert.equal(snapshot.runtimeGlobals[key],'undefined',`Editor must not bootstrap runtime module: ${key}`);
 assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snapshot.docWidth}>${snapshot.width}`);
 
 const defaultDocument=snapshot.document;
@@ -257,6 +260,88 @@ assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyW
 assert.ok(['auto','scroll'].includes(mobile.mapScroll),'map should scroll internally on narrow screens');
 assert.equal(mobile.session.validation.ok,true);
 await page.screenshot({path:`${outDir}/mobile-editor.png`,fullPage:true});
+
+await page.setViewportSize({width:1400,height:820});
+await page.waitForTimeout(50);
+const previewDocument=await page.evaluate(()=>window.SimWorldEditor.getDocument());
+const unsupportedDocument=structuredClone(previewDocument);
+unsupportedDocument.map.layers.push({z:1,cells:{}});
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),unsupportedDocument);
+await page.click('#testWorld');
+await page.waitForTimeout(50);
+let previewCheck=await page.evaluate(()=>({
+  path:location.pathname,
+  status:document.querySelector('#validationStatus')?.textContent||'',
+  details:document.querySelector('#validationList')?.textContent||''
+}));
+assert.match(previewCheck.path,/editor\.html$/,'unsupported Z must stay in Editor instead of launching Simulator');
+assert.match(previewCheck.status,/Runtime preview blocked/);
+assert.match(previewCheck.details,/requires exactly one z=0 layer/,'unsupported multi-layer authoring must loud-fail before launch');
+
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),previewDocument);
+const previewFingerprint=await page.evaluate(()=>window.SimWorldEditor.semanticFingerprint());
+await Promise.all([
+  page.waitForURL('**/index.html?preview=editor'),
+  page.click('#testWorld')
+]);
+await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimEditorPreviewBridge?.getActivePreview);
+let runtimePreview=await page.evaluate(()=>{
+  const state=window.SimEngine.getState();
+  const active=window.SimEditorPreviewBridge.getActivePreview();
+  const topology=window.SimWorldAuthoring.deriveHorizontalTopology(active.authoring,{z:0});
+  return {
+    previewMode:window.SimEngine.PREVIEW_MODE,
+    previewFingerprint:window.SimEngine.PREVIEW_FINGERPRINT,
+    activeFingerprint:active.fingerprint,
+    bannerHidden:document.querySelector('#editorPreviewBanner')?.hidden,
+    bannerText:document.querySelector('#editorPreviewBanner')?.textContent||'',
+    chair:state.furniture.chairNW.footprint,
+    basket:{position:{x:state.containers.basket.position.x,y:state.containers.basket.position.y},supportId:state.containers.basket.supportId||null,spaceId:state.containers.basket.position.spaceId||null,surfaceId:state.containers.basket.position.surfaceId||null},
+    zhen:{x:state.agents.zhen.position.x,y:state.agents.zhen.position.y},
+    opening:{terrain:state.map.tiles['2,2'].terrain,derivedOpen:topology.cells['2,2'].open,runtimeWalkable:window.SimSpatial.walkable(state,{x:2,y:2}),blocker:window.SimSpatial.blockerAt(state,{x:2,y:2})},
+    under:{authored:active.authoring.furniture.diningTable.spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance}
+  };
+});
+assert.equal(runtimePreview.previewMode,true);
+assert.equal(runtimePreview.previewFingerprint,previewFingerprint);
+assert.equal(runtimePreview.activeFingerprint,previewFingerprint);
+assert.equal(runtimePreview.bannerHidden,false);
+assert.match(runtimePreview.bannerText,/Editor Preview/);
+assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'Simulator preview must use the Editor furniture position');
+assert.deepEqual(runtimePreview.basket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
+assert.equal(runtimePreview.basket.supportId,'diningTable');
+assert.equal(runtimePreview.basket.surfaceId,'diningTable:surface','runtime may enrich the canonical supported-object position with derived surface identity');
+assert.ok(runtimePreview.basket.spaceId,'runtime may enrich the canonical object position with derived room/space identity');
+assert.deepEqual(runtimePreview.zhen,{x:8,y:4},'Simulator preview must use the Editor resident position');
+assert.equal(runtimePreview.opening.terrain,'doorway');
+assert.equal(runtimePreview.opening.derivedOpen,false);
+assert.equal(runtimePreview.opening.runtimeWalkable,false,'runtime blocker interpretation must match the Editor derived preview');
+assert.ok(runtimePreview.opening.blocker,'blocked Editor opening must retain a runtime blocker');
+assert.equal(runtimePreview.under.runtime,runtimePreview.under.authored,'under-clearance geometry must survive the same canonical initializer path');
+
+await page.click('#reset');
+await page.waitForTimeout(30);
+runtimePreview=await page.evaluate(()=>({
+  chair:window.SimEngine.getState().furniture.chairNW.footprint,
+  basket:{x:window.SimEngine.getState().containers.basket.position.x,y:window.SimEngine.getState().containers.basket.position.y},
+  zhen:{x:window.SimEngine.getState().agents.zhen.position.x,y:window.SimEngine.getState().agents.zhen.position.y},
+  previewMode:window.SimEngine.PREVIEW_MODE
+}));
+assert.equal(runtimePreview.previewMode,true);
+assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'preview Reset must rebuild the same authoring snapshot');
+assert.deepEqual(runtimePreview.basket,{x:6,y:2});
+assert.deepEqual(runtimePreview.zhen,{x:8,y:4});
+
+await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>window.SimEngine?.getState);
+const normalLoad=await page.evaluate(()=>({
+  previewMode:window.SimEngine.PREVIEW_MODE,
+  bannerHidden:document.querySelector('#editorPreviewBanner')?.hidden,
+  chair:window.SimEngine.getState().furniture.chairNW.footprint
+}));
+assert.equal(normalLoad.previewMode,false,'normal simulator load must ignore a stored Editor preview without the explicit query flag');
+assert.equal(normalLoad.bannerHidden,true);
+assert.notDeepEqual(normalLoad.chair,[{x:3,y:4}],'normal simulator load must still use DEFAULT_WORLD_AUTHORING');
 
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);

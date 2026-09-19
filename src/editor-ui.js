@@ -1,8 +1,9 @@
 (() => {
   const A=window.SimWorldAuthoring;
   const M=window.SimEditorAuthoringMutations;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!M?.moveFurniture||!M?.moveObject){
-    throw new Error('World authoring helpers and editor mutation owner must load before editor-ui.js.');
+  const P=window.SimEditorPreviewBridge;
+  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!M?.moveFurniture||!M?.moveObject||!P?.storePreview){
+    throw new Error('World authoring helpers, preview bridge, and editor mutation owner must load before editor-ui.js.');
   }
 
   const $=id=>document.getElementById(id);
@@ -18,6 +19,9 @@
   let operationIssues=[];
   let lastOperationMeta=null;
   let transientMessage='';
+  let previewIssues=[];
+  let previewIssuesFingerprint=null;
+  let allowPreviewNavigation=false;
   const DRAG_THRESHOLD_PX=6;
   let dragState=null;
   let suppressMapClick=false;
@@ -440,6 +444,8 @@
     pendingOperation=null;
     operationIssues=[];
     lastOperationMeta=null;
+    previewIssues=[];
+    previewIssuesFingerprint=null;
     cancelFurnitureDrag();
     setMessage(message);
     render();
@@ -632,12 +638,31 @@
 
   function renderValidation(validation){
     const dirty=isDirty();
+    const currentPreviewIssues=previewIssuesFingerprint===fingerprint()?previewIssues:[];
     $('dirtyStatus').textContent=dirty?'有未匯出修改':'未修改';
     $('dirtyStatus').className=`status-pill ${dirty?'dirty':'clean'}`;
-    $('validationStatus').textContent=validation.ok?'Schema valid':`Schema invalid · ${validation.errors.length}`;
-    $('validationStatus').className=`status-pill ${validation.ok?'clean':'invalid'}`;
+    $('validationStatus').textContent=validation.ok?(currentPreviewIssues.length?`Runtime preview blocked · ${currentPreviewIssues.length}`:'Schema valid'):`Schema invalid · ${validation.errors.length}`;
+    $('validationStatus').className=`status-pill ${validation.ok&&!currentPreviewIssues.length?'clean':'invalid'}`;
     $('exportWorld').disabled=!validation.ok;
-    $('validationList').innerHTML=validation.ok?'<div class="validation-ok">✓ canonical authoring schema valid</div>':validation.errors.slice(0,12).map(issue=>`<div class="validation-item"><b>${esc(issue.code)}</b><br><code>${esc(issue.path)}</code><br>${esc(issue.message)}</div>`).join('');
+    $('testWorld').disabled=!validation.ok;
+    const schemaMarkup=validation.ok?'<div class="validation-ok">✓ canonical authoring schema valid</div>':validation.errors.slice(0,12).map(issue=>`<div class="validation-item"><b>${esc(issue.code)}</b><br><code>${esc(issue.path)}</code><br>${esc(issue.message)}</div>`).join('');
+    const previewMarkup=currentPreviewIssues.length?`<div class="validation-item"><b>Editor Preview compatibility</b><br>${currentPreviewIssues.slice(0,12).map(issue=>`<code>${esc(issue.code||'runtime_authoring_incompatible')}</code> ${esc(issue.message||'Runtime compatibility check failed.')}`).join('<br>')}</div>`:'';
+    $('validationList').innerHTML=schemaMarkup+previewMarkup;
+  }
+
+  function testInSimulator(){
+    previewIssues=[];
+    previewIssuesFingerprint=null;
+    const result=P.storePreview(authored);
+    if(!result.ok){
+      previewIssues=cloneUi(result.issues||[]);
+      previewIssuesFingerprint=fingerprint();
+      setMessage('無法啟動 Editor Preview；請先處理 runtime compatibility 問題。');
+      render();
+      return;
+    }
+    allowPreviewNavigation=true;
+    window.location.assign(P.previewUrl);
   }
 
   function render(){
@@ -715,13 +740,14 @@
   $('addLayer').addEventListener('click',addLayer);
   $('deleteLayer').addEventListener('click',deleteCurrentLayer);
   $('importWorld').addEventListener('change',event=>importFile(event.target.files?.[0]));
+  $('testWorld').addEventListener('click',testInSimulator);
   $('exportWorld').addEventListener('click',exportWorld);
   $('resetWorld').addEventListener('click',()=>{
     if(isDirty()&&!confirm('放棄尚未匯出的修改並載入預設世界？'))return;
     loadDocument(A.DEFAULT_WORLD_AUTHORING,{clean:true,message:'已重新載入預設 canonical world。'});
   });
   addEventListener('beforeunload',event=>{
-    if(!isDirty())return;
+    if(allowPreviewNavigation||!isDirty())return;
     event.preventDefault();
     event.returnValue='';
   });

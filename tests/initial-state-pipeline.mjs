@@ -33,12 +33,14 @@ for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','sp
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
+const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 for(const file of initializerFiles){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
 const W=globalThis.SimWorld;
 assert.equal(W.createInitialState,canonicalCreateInitialState,'subsystem extensions must not replace the canonical createInitialState owner');
+assert.equal(W.createInitialStateFromAuthoring,canonicalCreateInitialStateFromAuthoring,'subsystem extensions must not replace the explicit authoring initial-state factory');
 const EXPECTED=[
   {id:'spatial.schema',order:10},
   {id:'spatialObservability.schema',order:20},
@@ -71,7 +73,7 @@ assert.throws(()=>W.registerInitialStateInitializer('',()=>{},1),/non-empty stri
 assert.throws(()=>W.registerInitialStateInitializer('bad.handler',null,1),/must be a function/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.21.3-editor-furniture-drag','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.21.4-editor-playtest-bridge','full production schema set must preserve current release marker');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
@@ -86,6 +88,18 @@ assert.ok(st.furniture?.diningTable?.spatial?.surface?.cells?.every(cell=>cell.c
 
 const again=W.createInitialState(20260911);
 assert.deepEqual(again,st,'same seed must remain deterministic after lifecycle consolidation');
+
+const A=globalThis.SimWorldAuthoring;
+const custom=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+const chair=custom.furniture.chairNW,source=chair.footprint[0],dx=3-source.x,dy=4-source.y;
+chair.footprint=chair.footprint.map(p=>({...p,x:p.x+dx,y:p.y+dy}));
+chair.displayAt={...chair.displayAt,x:chair.displayAt.x+dx,y:chair.displayAt.y+dy};
+chair.slots=chair.slots.map(slot=>({...slot,position:{...slot.position,x:slot.position.x+dx,y:slot.position.y+dy}}));
+const customState=W.createInitialStateFromAuthoring(custom,20260911);
+assert.deepEqual(customState.furniture.chairNW.footprint,[{x:3,y:4}],'explicit authoring factory must compile the supplied canonical document');
+assert.equal(customState.version,'11.21.4-editor-playtest-bridge');
+assert.deepEqual(W.createInitialState(20260911).furniture.chairNW.footprint,st.furniture.chairNW.footprint,'explicit preview initialization must not mutate the default world factory');
+assert.deepEqual(W.createInitialStateFromAuthoring(custom,20260911),customState,'preview reset source must remain deterministic for the same snapshot and seed');
 
 const srcDir=new URL('../src/',import.meta.url);
 const wrapperAssignments=[];
