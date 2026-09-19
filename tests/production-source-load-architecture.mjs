@@ -71,6 +71,7 @@ const P=globalThis.SimPhysical;
 const L=globalThis.SimLocomotion;
 const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
+const E=globalThis.SimEngine;
 
 assert.equal(A.VERSION,'world-authoring-v2');
 assert.equal(W.VERSION,CURRENT_VERSION);
@@ -86,8 +87,8 @@ assert.equal(C.VERSION,'11.20.0-dynamic-congestion');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(V.isValidationRegistryFinalized(),true);
 
-const state=W.createInitialState(20260911);
-assert.equal(state.version,CURRENT_VERSION,'full production initialization must preserve the current release marker');
+const state=E.reset(20260911);
+assert.equal(state.version,CURRENT_VERSION,'full production runtime reset must preserve the current release marker');
 const validation=V.validateState(state);
 assert.equal(validation.issueCount,0,validation.issues.map(issue=>issue.code+': '+issue.message).join(' | '));
 
