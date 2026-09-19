@@ -1,17 +1,16 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('social-bid-schema-v1122.js requires world.js initial-state pipeline.');
   const VERSION='11.12.2-social-bid-lifecycle';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('socialBid.schema',(st)=>{
     st.version=VERSION;
     for(const a of Object.values(st.agents||{})){
       a.observedSocialBids=[];
     }
     return st;
-  };
+  },300);
   W.SOCIAL_BID_SCHEMA_VERSION=VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.bidId='Social Bid';
