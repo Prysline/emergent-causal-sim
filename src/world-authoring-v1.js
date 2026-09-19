@@ -278,8 +278,8 @@
   }
 
   function deriveHorizontalTopology(authoring,{z=0}={}){
-    assertValidAuthoring(authoring);
-    const layer=(authoring.map.layers||[]).find(item=>item.z===z);
+    if(!isRecord(authoring)||authoring.authoringSchema!==VERSION)throw new Error('deriveHorizontalTopology requires '+VERSION+' authoring.');
+    const layer=(authoring.map?.layers||[]).find(item=>item.z===z);
     if(!layer)throw new RangeError('Missing authored Z-level '+z+'.');
     const width=authoring.map.width,height=authoring.map.height,cells={};
     for(let y=0;y<height;y++)for(let x=0;x<width;x++){
