@@ -87,13 +87,18 @@ assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
 assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
 assert.ok(editorHtml.includes('src/editor-ui.js'));
 assert.ok(editorHtml.includes('shared geometry compiler'));
+assert.ok(editorHtml.includes('id="sceneList"'),'Editor must expose one scene-list surface for furniture, objects and residents');
+assert.ok(!editorHtml.includes('id="furnitureSelect"'),'D.1A replaces the furniture-only dropdown with the shared scene list');
 
 const editorUi=fs.readFileSync(new URL('../src/editor-ui.js',import.meta.url),'utf8');
 for(const forbidden of ['SimEngine','SimSpatial','createInitialState','PassageProfile','passageConstraints']){
   assert.ok(!editorUi.includes(forbidden),`Editor UI must not consume runtime traversal truth: ${forbidden}`);
 }
 assert.ok(editorUi.includes('deriveHorizontalTopology'),'Editor preview must use the shared authoring-side topology derivation');
-for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','baselineFingerprint']){
+assert.ok(editorUi.includes('sceneEntries'),'Editor must derive the scene list from canonical authoring data rather than persist a second scene registry');
+assert.ok(editorUi.includes('residentPosition'),'Editor scene selection must resolve exact and furnitureSlot-anchored resident positions from authoring truth');
+assert.ok(!editorUi.includes('entity-dot'),'generic untyped entity dots must not remain after D.1A');
+for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','selection','baselineFingerprint']){
   assert.ok(editorUi.includes(ephemeral),`Expected Editor ephemeral state: ${ephemeral}`);
 }
 assert.ok(!exported.includes('"currentZ"'));
