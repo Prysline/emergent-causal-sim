@@ -1,42 +1,19 @@
 import fs from 'node:fs';
-import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadScriptsInThisContext,productionScriptPaths,readRepoFile} from './helpers/production-loader.mjs';
 
 globalThis.window=globalThis;
 
-const initializerFiles=[
-  'spatial-v111.js',
-  'spatial-observability.js',
-  'contact-v1112.js',
-  'spatial-v1113.js',
-  'spatial-v1114.js',
-  'action-schema-v1120.js',
-  'intent-schema-v1121.js',
-  'social-bid-schema-v1122.js',
-  'interruption-schema-v1123.js',
-  'deliberation-schema-v1124.js',
-  'memory-schema-v1130.js',
-  'appraisal-schema-v1131.js',
-  'affect-schema-v1132.js',
-  'social-response-schema-v1132a.js',
-  'memory-retention-schema-v1133.js',
-  'human-social-response-schema-v1133a.js',
-  'memory-deliberation-schema-v1134.js',
-  'social-outcome-memory-schema-v1135.js',
-  'presentation-schema-v1140.js',
-  'relationship-schema-v1150.js',
-  'physical-schema-v1160.js',
-  'locomotion-schema-v1190.js'
-];
+const productionScripts=productionScriptPaths();
+const initializerPaths=productionScripts.filter(path=>
+  path!=='src/world.js'&&readRepoFile(path).includes('registerInitialStateInitializer(')
+);
+const initializerFiles=initializerPaths.map(path=>path.replace(/^src\//,''));
 
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js']){
-  vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
-}
+loadScriptsInThisContext(['src/world-authoring-v1.js','src/world-initializer.js','src/world.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
-for(const file of initializerFiles){
-  vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
-}
+loadScriptsInThisContext(initializerPaths);
 
 const W=globalThis.SimWorld;
 assert.equal(W.createInitialState,canonicalCreateInitialState,'subsystem extensions must not replace the canonical createInitialState owner');
@@ -116,12 +93,11 @@ for(const name of initializerFiles){
   assert.doesNotMatch(source,/baseCreateInitialState|W\.createInitialState\s*=/,`${name} must not recreate the wrapper chain`);
 }
 
-const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-const worldIndex=indexSource.indexOf('src/world.js');
-const engineIndex=indexSource.indexOf('src/engine.js');
+const worldIndex=productionScripts.indexOf('src/world.js');
+const engineIndex=productionScripts.indexOf('src/engine.js');
 assert.ok(worldIndex>=0&&engineIndex>worldIndex,'world.js must load before engine.js');
 for(const name of initializerFiles){
-  const initializerIndex=indexSource.indexOf('src/'+name);
+  const initializerIndex=productionScripts.indexOf('src/'+name);
   assert.ok(initializerIndex>worldIndex&&initializerIndex<engineIndex,`${name} must register after world.js and before engine.js captures createInitialState`);
 }
 
