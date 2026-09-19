@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.20.0-dynamic-congestion`。
+目前 runtime marker：`11.21.0-geometry-derived-topology`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -27,9 +27,9 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `src/world-authoring-v1.js` 的 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，package 以 `authoringSchema: "world-authoring-v1"` 標記自己的 authoring contract generation。這個 generation 與 current simulation runtime marker 分離。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；目前 contract generation 是 `authoringSchema: "world-authoring-v2"`。現行 loader asset 暫時沿用 `src/world-authoring-v1.js` 檔名，但 authoring contract truth 只由 `SimWorldAuthoring.VERSION / authoringSchema` 決定，不能從檔名推斷。這個 generation 與 current simulation runtime marker 分離。
 
-Authoring package 保存「這個 world instance 開場是什麼」：map terrain / material、Furniture instance / footprint / slot、Container / Source instance config與初始內容物／位置、Resident identity / traits / opening Needs / wellbeing / status與 initial placement。它不保存可由 runtime推導的 `walkable / roomId / map.rooms / roomRevision / tile.furnitureIds / slot.furnitureId / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+Authoring package 保存「這個 world instance 開場是什麼」：map terrain / material、Furniture instance / footprint / slot / concrete under-clearance、Container / Source instance config與初始內容物／位置、Resident identity / traits / opening Needs / wellbeing / status與 initial placement。它不保存可由 geometry/runtime推導的 `walkable / crawlOnly / roomId / map.rooms / roomRevision / tile.furnitureIds / slot.furnitureId / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
 `src/world-initializer.js` 是 authoring → runtime compatibility adapter；`src/world.js` 則是唯一 `SimWorld.createInitialState(seed)` lifecycle owner。Base authoring package先由 initializer 編譯成既有 `state.map / furniture / containers / sources / agents` shape，再由 `world.js` 的 named initial-state pipeline依 explicit order執行 subsystem initializer。任何需要參與開場 state 建構的 subsystem extension / schema 都只能呼叫 `registerInitialStateInitializer(id, handler, order)`，不得再用 `const baseCreateInitialState = W.createInitialState` 疊 wrapper。duplicate initializer ID、缺少 canonical pipeline都必須 loud failure；exact registry / order由 `tests/initial-state-pipeline.mjs` 鎖定。
 
@@ -37,11 +37,15 @@ Slice A 的 authoring positions可攜帶 `z:0`，但 current runtime Spatial ide
 
 Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time validation / canonical serialization與獨立 Editor surface，不建立新的 runtime schema generation。Canonical world truth仍是 authoring document本身；Editor session 的 `currentZ`、selected tool / furniture / cell、dirty baseline等只屬 ephemeral UI state，不可輸出到 authoring JSON。Z-level切換只改 presentation，不得改 canonical document fingerprint。
 
-`editor.html` 只載入 `world-authoring-v1.js` 與 editor presentation code，不載入 `world-initializer.js`、`world.js`、Spatial、Engine或 runtime Validator。這讓 multi-layer authoring可以合法 import / export / round-trip，同時保留 current runtime adapter 對 multi-layer / non-zero z 的 explicit failure，避免用 Editor presentation偷渡 runtime Z identity。
+Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})`。它從 authored terrain/opening、Furniture footprint / under-clearance、fixed Container / Source blocker 派生 structural openness、static blocker、furniture membership、cardinal adjacency、connected components與 under-clearance diagnostics；結果只存在 query/preview/compiler 邊界，不 serialize 成第二份 world truth。`doorway` 是 authored opening：本身提供 floor-level structural openness；blocking door / Furniture / fixed entity 可再依 concrete geometry 關閉通行。Runtime compatibility `tile.walkable / tile.furnitureIds` 仍可存在，但只能由 compiler 產生，Editor 不直接 author。Initializer placement diagnostics與 Editor derived preview共用同一 geometry interpretation。
+
+`world-authoring-v1 → v2` migration 是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，migration 會一次性寫入正式 Furniture geometry；v2 runtime 不再以 `diningTable` ID hidden fallback補值。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
+
+`editor.html` 只載入 authoring helper asset 與 editor presentation code，不載入 `world-initializer.js`、`world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，但不得載入或複製 runtime traversal owner。這讓 multi-layer authoring可以合法 import / export / round-trip，同時保留 current runtime adapter 對 multi-layer / non-zero z 的 explicit failure，避免用 Editor presentation偷渡 runtime Z identity。
 
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 
-Resident initial placement 在同一 `world-authoring-v1` contract內支援兩種 mode：`exact` 與 explicit `{kind:'furnitureSlot', id}` anchor。Anchor resolution 必須 deterministic；anchor 需存在且唯一、允許該 resident kind，並要求明確 `initial.posture.kind`。posture 指向不同 slot / furniture、exclusive slot double assignment、blocked / missing exact node 都是 hard error。
+Resident initial placement 在 current authoring contract內支援兩種 mode：`exact` 與 explicit `{kind:'furnitureSlot', id}` anchor。Anchor resolution 必須 deterministic；anchor 需存在且唯一、允許該 resident kind，並要求明確 `initial.posture.kind`。posture 指向不同 slot / furniture、exclusive slot double assignment、blocked / missing exact node 都是 hard error。
 
 `SimWorldInitializer.analyzeInitialPlacements(authoring)` 是 authoring-time analysis surface，回傳 `hardErrors / diagnostics / resolvedPlacements`，但 diagnostics 不寫入 runtime state。sealed room、no-exit route、食物／飲水／睡眠 target 不可達，以及 current overlap contract仍允許的 same-node overlap都屬 diagnostic-only；Initializer不得為了「合理」自動搬人、開門、補出口或修改 geometry。
 
@@ -563,7 +567,7 @@ SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
 - Human 第一批 supported modes 為 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不假定所有 body plan 共享 Human mode 名稱；
 - locomotion profile 可用各軸 factor 或 absolute clearance override；Spatial 不自行推導 torso thickness / Anatomy；
 - PassageProfile 第一版只正式比較 `clearanceHeight / clearanceWidth`。某軸沒有明確限制時為 `null = unconstrained`；不發明每格固定公尺數，也不把 body length 誤當成直線 passage length requirement；
-- passage geometry 可來自 Furniture `spatial.under.clearance / clearanceWidth` 與可選 edge-local `map.passageConstraints`，Spatial 將這些 world facts 收斂成 canonical edge query；
+- passage geometry 可來自 canonical Furniture `spatial.under.clearance / clearanceWidth` 與可選 edge-local `map.passageConstraints`；前者由 `world-authoring-v2` 正式持有，後者只保留 low-level compatibility / regression override，Spatial 將這些 world facts 收斂成 canonical edge query；
 - `traversalFeasibility` 只回答 physical feasibility，不回傳 `bestMode / recommendedMode / utility`，不讀 Relationship、Memory、traits、goal pressure，也不修改 posture；
 - **v11.17 當時**的 production A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此該 slice 的 crawl-query 可行不代表 routing 會自動 crawl；v11.19+ current production 已由後述 Locomotion Execution contract 接上 mode-aware routing / execution；
 - v11.17 isolated single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；在該 focused harness 的 walk-only execution boundary 下，low/lower 情況的另一側水源仍不可達；
