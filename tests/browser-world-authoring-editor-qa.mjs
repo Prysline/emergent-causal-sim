@@ -47,6 +47,8 @@ assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed
 for(const value of Object.values(snapshot.runtimeGlobals))assert.equal(value,'undefined','Editor must not bootstrap runtime simulation modules');
 assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snapshot.docWidth}>${snapshot.width}`);
 
+const defaultDocument=snapshot.document;
+
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
 assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'resident',id:'zhen'});
@@ -81,6 +83,7 @@ assert.equal(afterLayerSwitch.session.currentZ,0);
 assert.equal(afterLayerSwitch.session.dirty,false,'Z-level presentation switch must not dirty authoring truth');
 assert.equal(afterLayerSwitch.fingerprint,cleanFingerprint,'Z-level presentation switch must be state-inert');
 
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 await page.click('[data-scene-type="furniture"][data-scene-id="chairNW"]');
 let furnitureSelection=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.deepEqual(furnitureSelection.selection,{kind:'entity',type:'furniture',id:'chairNW'});
@@ -88,11 +91,95 @@ assert.equal(furnitureSelection.selectedFurnitureId,'chairNW');
 assert.equal(furnitureSelection.selectedTool,'floor','selecting a scene entity must not silently change the active authoring tool');
 await page.click('[data-tool="furniture"]');
 await page.click('[data-cell="3,4"]');
-snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.equal(snapshot.session.dirty,true);
+let clickPlacement=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  fingerprint:window.SimWorldEditor.semanticFingerprint()
+}));
+assert.equal(clickPlacement.session.dirty,true);
+assert.deepEqual(clickPlacement.document.furniture.chairNW.footprint,[{x:3,y:4,z:0}]);
+assert.deepEqual(clickPlacement.document.furniture.chairNW.slots[0].position,{x:3,y:4,z:0});
+assert.deepEqual(clickPlacement.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
+
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+await page.click('[data-tool="floor"]');
+const dragSource=page.locator('[data-entity-type="furniture"][data-entity-id="chairNW"]').first();
+const dragTarget=page.locator('[data-cell="3,4"]');
+const dragSourceBox=await dragSource.boundingBox();
+const dragTargetBox=await dragTarget.boundingBox();
+assert.ok(dragSourceBox&&dragTargetBox,'chair drag source/target must have browser geometry');
+await page.mouse.move(dragSourceBox.x+dragSourceBox.width/2,dragSourceBox.y+dragSourceBox.height/2);
+await page.mouse.down();
+await page.mouse.move(dragTargetBox.x+dragTargetBox.width/2,dragTargetBox.y+dragTargetBox.height/2,{steps:8});
+let dragPreview=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  ghostCount:document.querySelectorAll('#editorMap .drag-ghost-cell').length,
+  mapDragState:document.querySelector('#editorMap')?.dataset.dragState||''
+}));
+assert.equal(dragPreview.session.dragState?.active,true,'desktop mouse movement past threshold must enter drag mode');
+assert.equal(dragPreview.session.dragState?.valid,true,'valid chair target must preview as valid');
+assert.equal(dragPreview.ghostCount,1,'chair drag preview must expose its full one-cell footprint');
+assert.equal(dragPreview.mapDragState,'valid');
+await page.mouse.up();
+
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  fingerprint:window.SimWorldEditor.semanticFingerprint()
+}));
+assert.equal(snapshot.session.dragState,null,'drop must clear ephemeral drag state');
+assert.equal(snapshot.session.selectedTool,'floor','direct drag must not silently change the active Cell tool');
+assert.equal(snapshot.fingerprint,clickPlacement.fingerprint,'click placement and drag drop must produce the same canonical semantic fingerprint');
 assert.deepEqual(snapshot.document.furniture.chairNW.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(snapshot.document.furniture.chairNW.slots[0].position,{x:3,y:4,z:0});
-assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
+assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'dragging unrelated chair must not affect diningTable followers');
+
+const beforeTablePreview=await page.evaluate(()=>window.SimWorldEditor.semanticFingerprint());
+const tableSource=page.locator('[data-entity-type="furniture"][data-entity-id="diningTable"]').first();
+const tableValidTarget=page.locator('[data-cell="8,4"]');
+const tableInvalidTarget=page.locator('[data-cell="11,7"]');
+const tableSourceBox=await tableSource.boundingBox();
+const tableValidBox=await tableValidTarget.boundingBox();
+const tableInvalidBox=await tableInvalidTarget.boundingBox();
+assert.ok(tableSourceBox&&tableValidBox&&tableInvalidBox,'table drag preview geometry must be available');
+await page.mouse.move(tableSourceBox.x+tableSourceBox.width/2,tableSourceBox.y+tableSourceBox.height/2);
+await page.mouse.down();
+await page.mouse.move(tableValidBox.x+tableValidBox.width/2,tableValidBox.y+tableValidBox.height/2,{steps:8});
+dragPreview=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  ghostCount:document.querySelectorAll('#editorMap .drag-ghost-cell').length,
+  followerCount:document.querySelectorAll('#editorMap .drag-follower-cell').length,
+  mapDragState:document.querySelector('#editorMap')?.dataset.dragState||''
+}));
+assert.equal(dragPreview.session.dragState?.valid,true);
+assert.equal(dragPreview.session.dragState?.preview?.footprint?.length,4,'table preview metadata must contain the complete translated footprint');
+assert.equal(dragPreview.ghostCount,4,'desktop drag must render every translated table footprint cell');
+assert.ok(dragPreview.followerCount>0,'explicit supported Containers should appear in drag follower preview');
+assert.equal(dragPreview.mapDragState,'valid');
+
+await page.mouse.move(tableInvalidBox.x+tableInvalidBox.width/2,tableInvalidBox.y+tableInvalidBox.height/2,{steps:8});
+dragPreview=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  ghostCount:document.querySelectorAll('#editorMap .drag-ghost-cell').length,
+  mapDragState:document.querySelector('#editorMap')?.dataset.dragState||''
+}));
+assert.equal(dragPreview.session.dragState?.valid,false,'out-of-bounds translated footprint must preview invalid');
+assert.equal(dragPreview.session.dragState?.preview?.footprint?.length,4,'invalid preview must still expose the complete projected footprint metadata');
+assert.ok(dragPreview.session.dragState?.issues?.some(issue=>issue.code==='authoring_position_out_of_bounds'));
+assert.equal(dragPreview.mapDragState,'invalid');
+assert.ok(dragPreview.ghostCount>=1,'in-bounds portion of an invalid footprint should remain visible as invalid ghost cells');
+
+await page.mouse.move(12,12,{steps:4});
+await page.mouse.up();
+await page.waitForTimeout(0);
+const afterCancelledTablePreview=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  fingerprint:window.SimWorldEditor.semanticFingerprint(),
+  ghostCount:document.querySelectorAll('#editorMap .drag-ghost-cell').length
+}));
+assert.equal(afterCancelledTablePreview.session.dragState,null);
+assert.equal(afterCancelledTablePreview.fingerprint,beforeTablePreview,'cancelled/outside drag must remain presentation-only');
+assert.equal(afterCancelledTablePreview.ghostCount,0,'cancelled drag must clear footprint ghost');
 
 await page.click('[data-editor-action="duplicate-furniture"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());

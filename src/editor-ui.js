@@ -18,6 +18,9 @@
   let operationIssues=[];
   let lastOperationMeta=null;
   let transientMessage='';
+  const DRAG_THRESHOLD_PX=6;
+  let dragState=null;
+  let suppressMapClick=false;
 
   function layers(){return [...(authored.map.layers||[])].sort((a,b)=>a.z-b.z);}
   function layerAt(z){return (authored.map.layers||[]).find(layer=>layer.z===z)||null;}
@@ -29,6 +32,142 @@
   function cellId(x,y){return `${x},${y}`;}
   function cellAt(layer,x,y){return layer?.cells?.[cellId(x,y)]||null;}
   function setMessage(message=''){transientMessage=message;}
+
+  function clearDragPreviewDom(){
+    const host=$('editorMap');
+    if(!host)return;
+    host.classList.remove('drag-active','drag-valid','drag-invalid');
+    delete host.dataset.dragFurnitureId;
+    delete host.dataset.dragState;
+    for(const cell of host.querySelectorAll('.drag-ghost-cell,.drag-follower-cell,.drag-drop-target')){
+      cell.classList.remove('drag-ghost-cell','drag-follower-cell','drag-drop-target','drag-valid','drag-invalid');
+    }
+    for(const marker of host.querySelectorAll('.furniture-mark.drag-source'))marker.classList.remove('drag-source');
+  }
+
+  function dragCellAt(position){
+    if(!position||(position.z??0)!==currentZ)return null;
+    return $('editorMap')?.querySelector(`[data-cell="${position.x},${position.y}"]`)||null;
+  }
+
+  function applyDragPreviewDom(){
+    clearDragPreviewDom();
+    if(!dragState?.active)return;
+    const host=$('editorMap');
+    if(!host)return;
+    const validity=dragState.valid?'drag-valid':'drag-invalid';
+    host.classList.add('drag-active',validity);
+    host.dataset.dragFurnitureId=dragState.furnitureId;
+    host.dataset.dragState=dragState.valid?'valid':'invalid';
+    const targetCell=dragCellAt(dragState.target);
+    if(targetCell)targetCell.classList.add('drag-drop-target',validity);
+    for(const position of dragState.preview?.footprint||[]){
+      const cell=dragCellAt(position);
+      if(cell)cell.classList.add('drag-ghost-cell',validity);
+    }
+    for(const follower of dragState.preview?.followerPositions||[]){
+      const cell=dragCellAt(follower.position);
+      if(cell)cell.classList.add('drag-follower-cell',validity);
+    }
+    for(const marker of host.querySelectorAll('.furniture-mark')){
+      if(marker.dataset.entityId===dragState.furnitureId)marker.classList.add('drag-source');
+    }
+  }
+
+  function dragTargetFromPoint(clientX,clientY){
+    const hit=document.elementFromPoint(clientX,clientY);
+    const cell=hit?.closest?.('[data-cell]');
+    if(!cell||!$('editorMap')?.contains(cell))return null;
+    const [x,y]=cell.dataset.cell.split(',').map(Number);
+    return {x,y,z:currentZ};
+  }
+
+  function updateFurnitureDragPreview(event){
+    if(!dragState?.active)return;
+    const target=dragTargetFromPoint(event.clientX,event.clientY);
+    dragState.target=target;
+    if(!target){
+      dragState.valid=false;
+      dragState.preview=null;
+      dragState.issues=[];
+      dragState.meta=null;
+      applyDragPreviewDom();
+      return;
+    }
+    const result=M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target});
+    dragState.valid=!!result.ok;
+    dragState.preview=cloneUi(result?.meta?.preview||null);
+    dragState.issues=cloneUi(result?.issues||[]);
+    dragState.meta=cloneUi(result?.meta||null);
+    applyDragPreviewDom();
+  }
+
+  function beginFurnitureDrag(event){
+    if(event.button!==0||event.pointerType!=='mouse'||pendingOperation)return;
+    const marker=event.target.closest('.furniture-mark[data-entity-id]');
+    if(!marker)return;
+    dragState={
+      pointerId:event.pointerId,
+      furnitureId:marker.dataset.entityId,
+      startX:event.clientX,
+      startY:event.clientY,
+      active:false,
+      target:null,
+      valid:null,
+      preview:null,
+      issues:[],
+      meta:null
+    };
+    marker.setPointerCapture?.(event.pointerId);
+  }
+
+  function continueFurnitureDrag(event){
+    if(!dragState||event.pointerId!==dragState.pointerId)return;
+    if(!dragState.active){
+      const distance=Math.hypot(event.clientX-dragState.startX,event.clientY-dragState.startY);
+      if(distance<DRAG_THRESHOLD_PX)return;
+      dragState.active=true;
+      operationIssues=[];
+      lastOperationMeta=null;
+    }
+    event.preventDefault();
+    updateFurnitureDragPreview(event);
+  }
+
+  function finishFurnitureDrag(event){
+    if(!dragState||event.pointerId!==dragState.pointerId)return;
+    const completed=dragState;
+    const wasActive=completed.active;
+    if(wasActive)event.preventDefault();
+    clearDragPreviewDom();
+    dragState=null;
+    if(!wasActive)return;
+    suppressMapClick=true;
+    setTimeout(()=>{suppressMapClick=false;},0);
+    if(!completed.target){
+      setMessage('拖曳取消：請在目前 Z-level 的 map cell 上放開。');
+      render();
+      return;
+    }
+    const furniture=authored.furniture?.[completed.furnitureId];
+    const result=M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target});
+    commitMutation(result,{
+      message:result.ok?`已拖曳 ${furniture?.name||completed.furnitureId}；drop 與 click placement 共用同一 mutation owner。`:'',
+      select:result.ok?{type:'furniture',id:completed.furnitureId}:null
+    });
+  }
+
+  function cancelFurnitureDrag(event){
+    if(!dragState||(event&&event.pointerId!==dragState.pointerId))return;
+    const wasActive=dragState.active;
+    clearDragPreviewDom();
+    dragState=null;
+    if(wasActive){
+      setMessage('家具拖曳已取消。');
+      render();
+    }
+  }
+
   function clearOperationState({clearIssues=true}={}){
     pendingOperation=null;
     if(clearIssues)operationIssues=[];
@@ -301,6 +440,7 @@
     pendingOperation=null;
     operationIssues=[];
     lastOperationMeta=null;
+    cancelFurnitureDrag();
     setMessage(message);
     render();
   }
@@ -370,6 +510,7 @@
       html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="(${x},${y},${currentZ}) ${esc(terrain)}" title="(${x}, ${y}, ${currentZ})・${esc(terrain)}${furnitureName?'・Furniture: '+esc(furnitureName):''}${entityName?'・Entities: '+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${furnitureMarkup}${entityMarkup}</button>`;
     }
     host.innerHTML=html;
+    applyDragPreviewDom();
   }
 
   function renderLayers(){
@@ -510,7 +651,13 @@
     renderValidation(validation);
   }
 
+  $('editorMap').addEventListener('pointerdown',beginFurnitureDrag);
+  $('editorMap').addEventListener('pointermove',continueFurnitureDrag);
+  $('editorMap').addEventListener('pointerup',finishFurnitureDrag);
+  $('editorMap').addEventListener('pointercancel',cancelFurnitureDrag);
+
   $('editorMap').addEventListener('click',event=>{
+    if(suppressMapClick){event.preventDefault();return;}
     const cell=event.target.closest('[data-cell]');
     if(cell&&pendingOperation){
       const [x,y]=cell.dataset.cell.split(',').map(Number);
@@ -581,7 +728,7 @@
 
   window.SimWorldEditor={
     getDocument:()=>A.cloneAuthoring(authored),
-    getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selection:selection?{...selection}:null,selectedCell:selectionPosition()?{...selectionPosition()}:null,pendingOperation:cloneUi(pendingOperation),operationIssues:cloneUi(operationIssues),lastOperationMeta:cloneUi(lastOperationMeta),dirty:isDirty(),validation:report()}),
+    getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selection:selection?{...selection}:null,selectedCell:selectionPosition()?{...selectionPosition()}:null,pendingOperation:cloneUi(pendingOperation),operationIssues:cloneUi(operationIssues),lastOperationMeta:cloneUi(lastOperationMeta),dragState:dragState?{furnitureId:dragState.furnitureId,active:dragState.active,target:cloneUi(dragState.target),valid:dragState.valid,preview:cloneUi(dragState.preview),issues:cloneUi(dragState.issues)}:null,dirty:isDirty(),validation:report()}),
     loadDocument:next=>loadDocument(next,{clean:true,message:'Test/API document loaded.'}),
     semanticFingerprint:fingerprint,
     getDerivedTopology:(z=currentZ)=>derivedTopology(z),

@@ -26,6 +26,8 @@ assert.equal(A.VERSION,'world-authoring-v2');
   const result=M.moveFurniture(doc,{furnitureId:'diningTable',target:{x:4,y:4,z:0}});
   assert.equal(result.ok,true,result.issues.map(x=>x.code).join(','));
   const moved=result.candidate;
+  assert.deepEqual(result.meta.preview.footprint,moved.furniture.diningTable.footprint,'move preview footprint must come from the same translated candidate');
+  assert.ok(result.meta.preview.followerPositions.some(item=>item.id==='mealTray'&&item.position.x===4&&item.position.y===4),'move preview must expose explicit support followers from the same mutation');
   for(const id of ['mealTray','plateA','plateB','cupA','cupB','alcoholBottle','syntheticPort']){
     assert.equal(moved.entities.containers[id].supportId,'diningTable');
   }
@@ -175,6 +177,8 @@ assert.equal(A.VERSION,'world-authoring-v2');
   assert.equal(result.ok,false);
   assert.equal(fp(doc),before,'failed geometry mutation must leave semantic fingerprint unchanged');
   assert.ok(result.issues.some(x=>x.code==='authoring_position_out_of_bounds'));
+  assert.deepEqual(result.meta.preview.footprint,[{x:11,y:7,z:0},{x:12,y:7,z:0},{x:11,y:8,z:0},{x:12,y:8,z:0}],'invalid candidate must still expose the projected full footprint for drag preview');
+  assert.ok(result.meta.preview.followerPositions.length>0,'invalid candidate preview must retain follower projection without mutating source authoring');
 }
 
 console.log('editor authoring mutations: ok');

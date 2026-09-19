@@ -11,7 +11,7 @@
   <header class="editor-appbar">
     <div>
       <div class="eyebrow">WORLD AUTHORING · world-authoring-v2</div>
-      <h1>地圖編輯器 <span>Entity lifecycle + Scene inspector</span></h1>
+      <h1>地圖編輯器 <span>Furniture drag + Entity lifecycle</span></h1>
     </div>
     <div class="header-actions">
       <a class="button ghost" href="index.html">返回模擬器</a>
@@ -100,8 +100,8 @@
         <div id="validationList" class="validation-list"></div>
       </section>
       <section class="boundary-note">
-        <h2>Slice D.1B1 boundary</h2>
-        <p>Entity move / duplicate / delete / Resident placement 由 pure authoring mutation owner 執行 atomic clone → apply → validate → commit；selection、pending operation 與操作結果仍只屬 ephemeral Editor state，不 serialize。此頁仍不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator；drag、playtest bridge 與 runtime Z identity 不屬本 slice。</p>
+        <h2>Slice D.1B2 boundary</h2>
+        <p>Furniture desktop drag 只新增 Pointer input、full-footprint / follower ghost 與 valid-invalid preview；pointer move 不改 canonical document，drop 與既有 click placement 都呼叫同一個 pure <code>SimEditorAuthoringMutations.moveFurniture</code>，維持 atomic clone → apply → validate → commit。Touch / mobile 繼續使用 click/tap placement；selection、pending operation、drag preview 與操作結果都只屬 ephemeral Editor state，不 serialize。此頁仍不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator；playtest bridge 與 runtime Z identity 不屬本 slice。</p>
       </section>
     </aside>
   </main>

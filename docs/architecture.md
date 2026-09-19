@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.21.2-editor-entity-lifecycle`。
+目前 runtime marker：`11.21.3-editor-furniture-drag`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -45,7 +45,9 @@ Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `Sim
 
 Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furniture、Container、Source、Resident 清單與地圖 typed marker都由 canonical authoring document即時投影；sidebar 選取、map marker選取與 Inspector focus共用同一個 ephemeral `selection` owner，不建立 serialized scene registry。Furniture placement target仍是 Editor operation state；選取 furniture只更新 target，不會偷改 active authoring tool。Resident marker位置可從 exact placement 或唯一 furnitureSlot anchor解析，但這仍是 authoring-side presentation，不啟動 runtime initializer。主模擬器只新增通往 `editor.html` 的入口；Editor→Simulator world handoff仍留在 D.1C。
 
-Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor canonical mutation ownership boundary**。它不保存 world state，也不是 simulation subsystem；Furniture / Container / Source / Resident lifecycle operation只接收 canonical authoring document，clone candidate、套用單一 operation、呼叫 `SimWorldAuthoring.validateAuthoring(...)`，candidate valid才回傳可 commit document。`editor-ui.js` 只保存 `selection / selectedTool / selectedFurnitureId / pendingOperation` 與 structured operation result 等 ephemeral state，不得複製 move / delete / duplicate semantics。Furniture support follower、explicit support choice、deterministic duplicate ID、guarded delete與 Resident explicit placement transition都屬 authoring mutation contract；Editor仍不載入 runtime Initializer / Spatial / Engine / Validator。D.1B2 drag只能重用這個 owner，不能另寫 movement semantics。
+Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor canonical mutation ownership boundary**。它不保存 world state，也不是 simulation subsystem；Furniture / Container / Source / Resident lifecycle operation只接收 canonical authoring document，clone candidate、套用單一 operation、呼叫 `SimWorldAuthoring.validateAuthoring(...)`，candidate valid才回傳可 commit document。`editor-ui.js` 只保存 `selection / selectedTool / selectedFurnitureId / pendingOperation` 與 structured operation result 等 ephemeral state，不得複製 move / delete / duplicate semantics。Furniture support follower、explicit support choice、deterministic duplicate ID、guarded delete與 Resident explicit placement transition都屬 authoring mutation contract；Editor仍不載入 runtime Initializer / Spatial / Engine / Validator。
+
+Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
 
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 
