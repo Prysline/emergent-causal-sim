@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP?.normalizeNode)return;
+  if(!W.registerInitialStateInitializer)throw new Error('contact-v1112.js requires world.js initial-state pipeline.');
   const VERSION='11.11.2-supported-contact-audit';
-  const baseCreateInitialState=W.createInitialState;
   const baseInit=SP.init;
 
   function mergeInteractions(container,defs){
@@ -36,12 +36,10 @@
   }
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('contact.schema',(st)=>{
     st.version=VERSION;
     installSupportedContactDefs(st);
-    return st;
-  };
+  },30);
   SP.init=(st)=>{const result=baseInit(st);installSupportedContactDefs(st);return result;};
   Object.assign(SP,{CONTACT_VERSION:VERSION,installSupportedContactDefs});
 })();

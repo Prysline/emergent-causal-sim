@@ -6,7 +6,7 @@
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
-目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Physical、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 app lifecycle 由 `runtime-hook-pipeline.js` 明確排序，不以 script-wrapper 疊接順序作為正式語義。
+目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Physical、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 tick/reset lifecycle 由 `runtime-hook-pipeline.js` 明確排序；initial-state lifecycle 由 `world.js` 的 named initializer pipeline明確排序。兩者都不以 script-wrapper 疊接順序作為正式語義。
 
 ## 1. Truth boundaries
 
@@ -31,7 +31,7 @@ Current default world 的 authored instance truth 由 `src/world-authoring-v1.js
 
 Authoring package 保存「這個 world instance 開場是什麼」：map terrain / material、Furniture instance / footprint / slot、Container / Source instance config與初始內容物／位置、Resident identity / traits / opening Needs / wellbeing / status與 initial placement。它不保存可由 runtime推導的 `walkable / roomId / map.rooms / roomRevision / tile.furnitureIds / slot.furnitureId / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
-`src/world-initializer.js` 是 authoring → runtime compatibility adapter。Base `SimWorld.createInitialState(seed)` public facade仍存在，現有 versioned `createInitialState` wrapper chain與順序在本 slice保持不變；Authoring Foundation不新增一層 wrapper。Initializer只把 canonical package編譯成既有 `state.map / furniture / containers / sources / agents` shape，再由現有 subsystem schema wrappers加入各自 initial state。
+`src/world-initializer.js` 是 authoring → runtime compatibility adapter；`src/world.js` 則是唯一 `SimWorld.createInitialState(seed)` lifecycle owner。Base authoring package先由 initializer 編譯成既有 `state.map / furniture / containers / sources / agents` shape，再由 `world.js` 的 named initial-state pipeline依 explicit order執行 subsystem initializer。任何需要參與開場 state 建構的 subsystem extension / schema 都只能呼叫 `registerInitialStateInitializer(id, handler, order)`，不得再用 `const baseCreateInitialState = W.createInitialState` 疊 wrapper。duplicate initializer ID、缺少 canonical pipeline都必須 loud failure；exact registry / order由 `tests/initial-state-pipeline.mjs` 鎖定。
 
 Slice A 的 authoring positions可攜帶 `z:0`，但 current runtime Spatial identity仍是單層；adapter只接受 exactly one `z=0` layer，遇到 multi-layer或 non-zero z必須 loud failure，不得 silent flatten。真正把 z納入 Spatial Node / occupancy / route / contact identity屬後續 runtime semantic slice。
 

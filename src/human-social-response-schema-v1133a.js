@@ -1,14 +1,13 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('human-social-response-schema-v1133a.js requires world.js initial-state pipeline.');
   const VERSION='11.13.3a-human-social-response';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('humanSocialResponse.schema',(st)=>{
     st.version=VERSION;
     return st;
-  };
+  },1100);
   W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION=VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.talkOfferId='聊天邀請';

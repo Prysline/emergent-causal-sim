@@ -1,7 +1,8 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP?.normalizeNode||!SP?.surfaceEntry)return;
+  if(!W.registerInitialStateInitializer)throw new Error('spatial-v1114.js requires world.js initial-state pipeline.');
   const VERSION='11.11.4-surface-liquid-foundation',FLOOR='floor';
-  const baseCreateInitialState=W.createInitialState,baseInit=SP.init;
+  const baseInit=SP.init;
 
   function installSurfaceEnvironment(st){
     for(const f of Object.values(st?.furniture||{})){
@@ -73,7 +74,7 @@
   }
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{const st=baseCreateInitialState(seed);st.version=VERSION;installSurfaceEnvironment(st);return st;};
+  W.registerInitialStateInitializer('spatialSurfaceEnvironment.schema',(st)=>{st.version=VERSION;installSurfaceEnvironment(st);},50);
   SP.init=(st)=>{const result=baseInit(st);installSurfaceEnvironment(st);return result;};
   Object.assign(SP,{SPATIAL_ENVIRONMENT_VERSION:VERSION,installSurfaceEnvironment,surfaceCellAt,environmentAt,environmentContentsAt,environmentResourceAmount,environmentLiquidAmount,putEnvironmentResource,takeEnvironmentResource,nodeFromKey,environmentEndpointId,environmentFromEndpointId,resolveEffectNode});
 })();

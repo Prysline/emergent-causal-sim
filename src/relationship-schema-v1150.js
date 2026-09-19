@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('relationship-schema-v1150.js requires world.js initial-state pipeline.');
   const VERSION='11.15.2-relationship-responder-bias';
-  const baseCreateInitialState=W.createInitialState;
   const ENCOUNTER_WEIGHTS=Object.freeze({
     acceptTalk:1,
     talk:1,
@@ -13,12 +13,11 @@
   });
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('relationship.schema',(st)=>{
     st.version=VERSION;
     for(const a of Object.values(st.agents||{}))a.relationships={};
     return st;
-  };
+  },1500);
   W.RELATIONSHIP_SCHEMA_VERSION=VERSION;
   W.RELATIONSHIP_MIN_RELEVANCE=.15;
   W.RELATIONSHIP_FAMILIARITY_RATE=.08;

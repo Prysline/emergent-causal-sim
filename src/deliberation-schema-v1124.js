@@ -1,14 +1,13 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('deliberation-schema-v1124.js requires world.js initial-state pipeline.');
   const VERSION='11.12.4-soft-reconsideration';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('deliberation.schema',(st)=>{
     st.version=VERSION;
     return st;
-  };
+  },500);
   W.DELIBERATION_SCHEMA_VERSION=VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.currentUtility='目前意圖效用';
