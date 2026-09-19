@@ -11,11 +11,12 @@
   <header class="editor-appbar">
     <div>
       <div class="eyebrow">WORLD AUTHORING · world-authoring-v2</div>
-      <h1>地圖編輯器 <span>Furniture drag + Entity lifecycle</span></h1>
+      <h1>地圖編輯器 <span>Editor → Simulator Playtest Bridge</span></h1>
     </div>
     <div class="header-actions">
       <a class="button ghost" href="index.html">返回模擬器</a>
       <button id="resetWorld" class="button ghost" type="button">載入預設世界</button>
+      <button id="testWorld" class="button primary" type="button">▶ 在模擬器中測試</button>
       <label class="button ghost file-button" for="importWorld">匯入 JSON</label>
       <input id="importWorld" type="file" accept=".json,application/json" hidden>
       <button id="exportWorld" class="button primary" type="button">匯出 JSON</button>
@@ -100,14 +101,16 @@
         <div id="validationList" class="validation-list"></div>
       </section>
       <section class="boundary-note">
-        <h2>Slice D.1B2 boundary</h2>
-        <p>Furniture desktop drag 只新增 Pointer input、full-footprint / follower ghost 與 valid-invalid preview；pointer move 不改 canonical document，drop 與既有 click placement 都呼叫同一個 pure <code>SimEditorAuthoringMutations.moveFurniture</code>，維持 atomic clone → apply → validate → commit。Touch / mobile 繼續使用 click/tap placement；selection、pending operation、drag preview 與操作結果都只屬 ephemeral Editor state，不 serialize。此頁仍不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator；playtest bridge 與 runtime Z identity 不屬本 slice。</p>
+        <h2>Slice D.1C boundary</h2>
+        <p>「在模擬器中測試」會先用 current authoring validation 與 <code>SimWorldInitializer</code> runtime compatibility preflight 檢查同一份 canonical document；invalid schema、broken references、multi-layer / non-zero Z 都會在 Editor 端 loud failure，不 flatten。通過後只把 snapshot 寫入同 origin <code>sessionStorage</code>，並以明確 <code>?preview=editor</code> 啟動模擬器。Simulator 仍由 <code>world.js</code> 的 canonical initial-state pipeline 建立 state；一般直接開 <code>index.html</code> 不讀 preview snapshot，Reset 則重建同一份 Editor Preview。Runtime Spatial Z identity 仍留給 Slice E。</p>
       </section>
     </aside>
   </main>
 </div>
 
 <script src="src/world-authoring-v1.js" defer></script>
+<script src="src/world-initializer.js" defer></script>
+<script src="src/editor-preview-bridge.js" defer></script>
 <script src="src/editor-authoring-mutations.js" defer></script>
 <script src="src/editor-ui.js" defer></script>
 </body>
