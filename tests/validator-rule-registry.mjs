@@ -10,8 +10,7 @@ const EXPECTED=[
   ['social-response',1100],['memory-retention',1200],['human-social-response',1300],['memory-deliberation',1400],['social-outcome-memory',1500],
   ['relationship',1600]
 ];
-const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-const scripts=[...html.matchAll(/<script src="(src\/[^"]+\.js)" defer><\/script>/g)].map(m=>m[1]);
+const scripts=productionScriptPaths();
 const manifestIndex=scripts.indexOf('src/state-validator-manifest.js');
 assert.ok(manifestIndex>0,'production index must load a validator manifest');
 assert.ok(manifestIndex<scripts.findIndex(p=>p==='src/ui.js'),'validator registry must finalize before UI starts');
