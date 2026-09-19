@@ -23,7 +23,7 @@
         const supported=P.supportedLocomotionModes?.(a)||[];
         if(!supported.includes(pending.mode))add('locomotion_step_mode_invalid',`${a.name} 的 pending locomotion step 使用不支援的 mode。`,{agentId:a.id,mode:pending.mode});
         if(!positiveInt(pending.ticksRemaining))add('locomotion_step_ticks_invalid',`${a.name} 的 pending locomotion step ticksRemaining 必須是正整數。`,{agentId:a.id,ticksRemaining:pending.ticksRemaining});
-        if(!pending.to||!Number.isFinite(Number(pending.to.x))||!Number.isFinite(Number(pending.to.y))||typeof pending.toKey!=='string')add('locomotion_step_target_invalid',`${a.name} 的 pending locomotion step 缺少有效 target node。`,{agentId:a.id});
+        if(!pending.to||!Number.isFinite(Number(pending.to.x))||!Number.isFinite(Number(pending.to.y))||!Number.isInteger(Number(pending.to.z??0))||typeof pending.toKey!=='string')add('locomotion_step_target_invalid',`${a.name} 的 pending locomotion step 缺少有效 target node。`,{agentId:a.id});
       }
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};

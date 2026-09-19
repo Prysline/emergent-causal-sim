@@ -15,7 +15,7 @@
   function surfaceCellAt(st,node){
     const n=normalize(st,node);if(!n||n.surfaceId===FLOOR)return null;
     const entry=SP.surfaceEntry(st,n.surfaceId);if(!entry)return null;
-    return (entry.surface.cells||[]).find(c=>c.x===n.x&&c.y===n.y)||null;
+    return (entry.surface.cells||[]).find(c=>c.x===n.x&&c.y===n.y&&(SP.zOf?.(c)??c.z??0)===(SP.zOf?.(n)??n.z??0))||null;
   }
   function environmentAt(st,p,{create=true}={}){
     const node=normalize(st,p);if(!node)return null;
@@ -46,8 +46,8 @@
   }
   function nodeFromKey(st,key){
     if(typeof key!=='string')return null;const parts=key.split('|');if(parts.length<3)return null;
-    const xy=parts.pop(),surfaceId=parts.pop(),spaceId=parts.join('|'),[x,y]=xy.split(',').map(Number);
-    if(!Number.isFinite(x)||!Number.isFinite(y))return null;return SP.normalizeNode(st,{x,y,spaceId,surfaceId},surfaceId);
+    const xyz=parts.pop(),surfaceId=parts.pop(),spaceId=parts.join('|'),[x,y,z=0]=xyz.split(',').map(Number);
+    if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isInteger(z))return null;const p={x,y,spaceId,surfaceId};if(z!==0)p.z=z;return SP.normalizeNode(st,p,surfaceId);
   }
   function environmentEndpointId(st,p){const n=normalize(st,p);return n?`environment:${SP.nodeKey(st,n)}`:null;}
   function environmentFromEndpointId(st,id,{create=true}={}){

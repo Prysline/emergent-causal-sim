@@ -1,7 +1,7 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial;if(!E||!SP?.agentObservation)return;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const pos=o=>o?`(${o.position.x}, ${o.position.y})`:'無';
+  const pos=o=>{if(!o)return'無';const z=SP.zOf?.(o.position)??o.position?.z??0;return `(${o.position.x}, ${o.position.y}, Z ${z})`;};
   const meters=v=>Number.isFinite(v)?`${v.toFixed(2)} m`:'—';
   const nodeText=o=>o?`${o.spaceLabel}・${o.surfaceLabel} ${pos(o)}`:'無';
   const overheadText=o=>o?.covered?o.overhead.map(x=>`${x.name}下（淨空 ${meters(x.clearance)}）`).join('、'):(o?.surfaceId!=='floor'?'家具表面':'一般地板');
@@ -26,7 +26,7 @@
     }
     if(type==='Furniture'){
       const o=SP.furnitureObservation(s,id);if(!o||(!o.surfaceId&&!Number.isFinite(o.clearance)))return'';
-      const cells=o.cells.length?o.cells.map(p=>`(${p.x}, ${p.y})`).join('、'):'無';
+      const cells=o.cells.length?o.cells.map(p=>`(${p.x}, ${p.y}, Z ${SP.zOf?.(p)??p.z??0})`).join('、'):'無';
       return `<h3>Spatial Geometry</h3><div class="kv spatial-kv"><div class="k">Surface</div><div>${esc(o.surfaceLabel||'無')} ${o.surfaceId?`<small>${esc(o.surfaceId)}</small>`:''}</div><div class="k">可 Traversal</div><div>${o.traversable?'是':'否'}</div><div class="k">Surface Cells</div><div>${esc(cells)}</div><div class="k">允許類型</div><div>${esc(o.allowKinds.join('、')||'—')}</div><div class="k">桌下／家具下淨空</div><div>${esc(meters(o.clearance))}</div></div>`;
     }
     return'';
@@ -56,7 +56,7 @@
       const spatial=SP.furnitureObservation?.(s,f.id);
       map.querySelectorAll(`.furniture-footprint[data-entity="furniture:${f.id}"]`).forEach(seg=>seg.classList.toggle('spatial-traversable-surface',!!spatial?.surfaceId&&!!spatial?.traversable));
       if(!f.displayAt)continue;
-      const tile=map.querySelector(`.sim-tile[data-tile="${f.displayAt.x},${f.displayAt.y}"]`);if(!tile||!tile.querySelector('.tile-entities .map-entity'))continue;
+      const tile=map.querySelector(`.sim-tile[data-tile="${SP.key(f.displayAt)}"]`);if(!tile||!tile.querySelector('.tile-entities .map-entity'))continue;
       let handle=tile.querySelector(`.spatial-furniture-handle[data-furniture-id="${f.id}"]`);
       if(!handle){handle=document.createElement('button');handle.className='spatial-furniture-handle';handle.dataset.entity=`furniture:${f.id}`;handle.dataset.furnitureId=f.id;handle.title=`檢視${f.name}空間`;handle.setAttribute('aria-label',`檢視${f.name}空間`);handle.textContent=f.icon||'▰';tile.append(handle);}
       const footprint=tile.querySelector(`.furniture-footprint[data-entity="furniture:${f.id}"]`);handle.classList.toggle('selected',!!footprint?.classList.contains('selected'));

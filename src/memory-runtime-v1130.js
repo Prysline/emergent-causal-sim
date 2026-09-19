@@ -16,15 +16,15 @@
     return st;
   }
   function parsePositionRef(ref){
-    if(ref&&typeof ref==='object'&&Number.isFinite(ref.x)&&Number.isFinite(ref.y))return {x:Number(ref.x),y:Number(ref.y)};
+    if(ref&&typeof ref==='object'&&Number.isFinite(ref.x)&&Number.isFinite(ref.y)){const p={x:Number(ref.x),y:Number(ref.y)},z=Number(ref.z??0);if(Number.isInteger(z)&&z!==0)p.z=z;return p;}
     if(typeof ref!=='string')return null;
     let tail=ref.split('|').pop()||ref;if(tail.startsWith('tile:'))tail=tail.slice(5);
-    const m=tail.match(/^(-?\d+),(-?\d+)$/);return m?{x:Number(m[1]),y:Number(m[2])}:null;
+    const m=tail.match(/^(-?\d+),(-?\d+)(?:,(-?\d+))?$/);if(!m)return null;const p={x:Number(m[1]),y:Number(m[2])},z=Number(m[3]??0);if(Number.isInteger(z)&&z!==0)p.z=z;return p;
   }
   function eventPosition(st,e){
     const d=e?.data||{},fromData=parsePositionRef(d.position);if(fromData)return fromData;
-    const actor=d.actor&&st.agents?.[d.actor];if(actor?.position)return {x:actor.position.x,y:actor.position.y};
-    const target=d.target&&st.agents?.[d.target];if(target?.position)return {x:target.position.x,y:target.position.y};
+    const actor=d.actor&&st.agents?.[d.actor];if(actor?.position)return SP.clonePos(actor.position);
+    const target=d.target&&st.agents?.[d.target];if(target?.position)return SP.clonePos(target.position);
     return null;
   }
   function isSuccessfulResourceTransferConsequence(st,e){
@@ -52,7 +52,7 @@
   }
   function observableProjection(st,e){
     const d=e?.data||{},p=eventPosition(st,e);let positionRef=null;
-    if(typeof d.position==='string')positionRef=d.position;else if(d.position&&typeof d.position==='object')positionRef=E.positionRef?.(d.position)||`${d.position.x},${d.position.y}`;else if(p)positionRef=E.positionRef?.(p)||`${p.x},${p.y}`;
+    if(typeof d.position==='string')positionRef=d.position;else if(d.position&&typeof d.position==='object')positionRef=E.positionRef?.(d.position)||SP.key(d.position);else if(p)positionRef=E.positionRef?.(p)||SP.key(p);
     return {action:String(d.action||''),actorId:d.actor||null,targetId:d.target||null,positionRef:positionRef||null};
   }
   function pruneAgentMemories(st,a){

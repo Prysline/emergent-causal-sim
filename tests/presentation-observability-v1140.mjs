@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.21.4-editor-playtest-bridge';
+const CURRENT_VERSION='11.22.0-spatial-z-identity';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
@@ -41,6 +41,8 @@ assert.deepEqual(E.listActionLabelResolvers(),[],'headless simulation should sta
 
 const baseUiSource=fs.readFileSync(new URL('../src/ui.js',import.meta.url),'utf8');
 assert.match(baseUiSource,/registerInspectorDecorator/,'base UI must own explicit Inspector decorator lifecycle');
+assert.match(baseUiSource,/kneeling:'跪姿'/,'base UI must render kneeling posture explicitly instead of falling back to standing');
+assert.match(baseUiSource,/prone:'俯臥'/,'base UI must render prone posture explicitly instead of falling back to standing');
 const residentUiSource=fs.readFileSync(new URL('../src/ui-resident-view-v1140.js',import.meta.url),'utf8');
 assert.match(residentUiSource,/const VERSION=W\.PRESENTATION_SCHEMA_VERSION;/,'Resident View must inherit the canonical current runtime marker instead of hardcoding a second version');
 assert.match(residentUiSource,/REQUIRED_INTENT_LABELS/,'Resident View must verify canonical Intent label coverage');
@@ -131,14 +133,18 @@ assert.match(entityUiSource,/new Set\(\['container','source','furniture','tile',
 assert.match(entityUiSource,/registerInspectorDecorator\('entityReadable\.layer',decorateInspector,1050\)/,'Entity Readable View must use the explicit Inspector decorator lifecycle after the Resident layer');
 assert.match(entityUiSource,/selected\?\.type==='agent'/,'Entity Readable View must leave Agent rendering owned by the existing Resident layer');
 assert.match(entityUiSource,/slotOccupant/,'Furniture readable projection should use actual occupancy');
+assert.match(entityUiSource,/SP\.clonePos\?\.\(cell\)/,'Furniture readable surface projection must preserve non-zero z');
 assert.doesNotMatch(entityUiSource,/slotReservedBy/,'Furniture readable projection must not expose slot reservation as player-facing state');
 assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|entityReadableState)\s*=/,'Entity Readable View must not persist player-facing mirror state');
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
+const environmentUiSource=fs.readFileSync(new URL('../src/ui-spatial-environment.js',import.meta.url),'utf8');
+assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI must preserve non-zero z when projecting surface cells');
+
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.21\.4・Editor Playtest Bridge/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.22\.0・Spatial Z Identity/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');

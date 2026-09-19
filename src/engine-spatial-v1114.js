@@ -10,7 +10,7 @@
     if(event?.data?.reason!=='coordination'||!(event.data.amount>0)||!event.data.resource)return;
     const attempt=(event.causeIds||[]).map(id=>st.causes?.[id]).find(e=>e?.data?.action==='pour');if(!attempt)return;
     const actor=st.agents?.[event.data.actor],target=targetFromSource(st,attempt.data.from);if(!actor||!target)return;
-    const actorAtAttempt=SP.nodeFromKey(st,attempt.data.position)||SP.nodeForAgent(st,actor),floorNode=SP.normalizeNode(st,{x:actorAtAttempt.x,y:actorAtAttempt.y,spaceId:actorAtAttempt.spaceId},FLOOR);
+    const actorAtAttempt=SP.nodeFromKey(st,attempt.data.position)||SP.nodeForAgent(st,actor),floorPosition={x:actorAtAttempt.x,y:actorAtAttempt.y,spaceId:actorAtAttempt.spaceId},actorZ=SP.zOf?.(actorAtAttempt)??actorAtAttempt.z??0;if(actorZ!==0)floorPosition.z=actorZ;const floorNode=SP.normalizeNode(st,floorPosition,FLOOR);
     const effectNode=SP.resolveEffectNode(st,{actor,target,affordance:'fill'})||actorAtAttempt;
     const targetEnv=SP.environmentAt(st,effectNode,{create:true});if(!targetEnv)return;
     const floorEndpoint=E.tileEndpointId(floorNode),floorCauseKey=`${floorEndpoint}|${event.data.resource}`;

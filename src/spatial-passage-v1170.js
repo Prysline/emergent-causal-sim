@@ -7,7 +7,7 @@
 
   function edgeAdjacent(st,from,to){
     const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b)return false;
-    return Math.abs(a.x-b.x)+Math.abs(a.y-b.y)===1;
+    return (SP.zOf?.(a)??a.z??0)===(SP.zOf?.(b)??b.z??0)&&Math.abs(a.x-b.x)+Math.abs(a.y-b.y)===1;
   }
   function nullableMin(values){const list=values.map(constrained).filter(v=>v!==null);return list.length?Math.min(...list):null;}
   function underConstraints(st,node){

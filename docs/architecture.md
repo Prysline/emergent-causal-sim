@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.21.4-editor-playtest-bridge`。
+目前 runtime marker：`11.22.0-spatial-z-identity`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -33,7 +33,7 @@ Authoring package 保存「這個 world instance 開場是什麼」：map terrai
 
 `src/world-initializer.js` 是 authoring → runtime compatibility adapter；`src/world.js` 則是唯一 `SimWorld.createInitialState(seed)` lifecycle owner。Base authoring package先由 initializer 編譯成既有 `state.map / furniture / containers / sources / agents` shape，再由 `world.js` 的 named initial-state pipeline依 explicit order執行 subsystem initializer。任何需要參與開場 state 建構的 subsystem extension / schema 都只能呼叫 `registerInitialStateInitializer(id, handler, order)`，不得再用 `const baseCreateInitialState = W.createInitialState` 疊 wrapper。duplicate initializer ID、缺少 canonical pipeline都必須 loud failure；exact registry / order由 `tests/initial-state-pipeline.mjs` 鎖定。
 
-Slice A 的 authoring positions可攜帶 `z:0`，但 current runtime Spatial identity仍是單層；adapter只接受 exactly one `z=0` layer，遇到 multi-layer或 non-zero z必須 loud failure，不得 silent flatten。真正把 z納入 Spatial Node / occupancy / route / contact identity屬後續 runtime semantic slice。
+Slice E 起 authoring positions 的 `z` 已正式進入 runtime Spatial identity。Initializer可編譯 multi-layer authoring成單一 flattened `map.tiles` index；z=0保留 legacy-compatible `x,y` key，non-zero z使用 `x,y,z`，不建立 alias雙份 truth。Runtime position / Spatial Node以 `z ?? 0` 比較，same XY different Z不共享 occupancy / crowding / contact / route identity。Horizontal neighbor與surface transition仍只在同 z；本 slice不新增 stair / ramp / vertical edge，因此沒有 concrete vertical structure時跨 Z route必須 unreachable。
 
 Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time validation / canonical serialization與獨立 Editor surface，不建立新的 runtime schema generation。Canonical world truth仍是 authoring document本身；Editor session 的 `currentZ`、selected tool / furniture / cell、dirty baseline等只屬 ephemeral UI state，不可輸出到 authoring JSON。Z-level切換只改 presentation，不得改 canonical document fingerprint。
 
@@ -41,7 +41,7 @@ Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `Sim
 
 `world-authoring-v1 → v2` migration 是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，migration 會一次性寫入正式 Furniture geometry；v2 runtime 不再以 `diningTable` ID hidden fallback補值。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
 
-Slice D.1C 起，`editor.html` 除 authoring helper / mutation / presentation code外，會載入 pure `world-initializer.js` 與 `editor-preview-bridge.js`，只用於 runtime compatibility preflight與同 origin browser-session handoff；它仍不載入 `world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，也可用 `SimWorldInitializer.analyzeRuntimeCompatibility(...)` 驗證 current runtime 是否可接受同一 canonical document，但不得複製 runtime traversal owner。這讓 multi-layer authoring仍可合法 import / export / round-trip，同時在「在模擬器中測試」前對 multi-layer / non-zero z explicit failure，避免 silent flatten或偷渡 runtime Z identity。
+Slice D.1C 起，`editor.html` 除 authoring helper / mutation / presentation code外，會載入 pure `world-initializer.js` 與 `editor-preview-bridge.js`，只用於 runtime compatibility preflight與同 origin browser-session handoff；它仍不載入 `world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，也可用 `SimWorldInitializer.analyzeRuntimeCompatibility(...)` 驗證 current runtime 是否可接受同一 canonical document，但不得複製 runtime traversal owner。這讓 multi-layer authoring可合法 import / export / round-trip；Slice E 起 runtime compatibility preflight也接受可編譯的 multi-layer document，Simulator則以 z-aware identity與 layer filter呈現。Editor presentation仍不能建立 vertical traversal truth。
 
 Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furniture、Container、Source、Resident 清單與地圖 typed marker都由 canonical authoring document即時投影；sidebar 選取、map marker選取與 Inspector focus共用同一個 ephemeral `selection` owner，不建立 serialized scene registry。Furniture placement target仍是 Editor operation state；選取 furniture只更新 target，不會偷改 active authoring tool。Resident marker位置可從 exact placement 或唯一 furnitureSlot anchor解析，但這仍是 authoring-side presentation，不啟動 runtime initializer。主模擬器只新增通往 `editor.html` 的入口；Editor→Simulator world handoff仍留在 D.1C。
 
@@ -49,7 +49,9 @@ Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor cano
 
 Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
 
-Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**。`SimEditorPreviewBridge` 只在明確 `?preview=editor` 時讀取同 origin `sessionStorage` handoff；沒有 query flag 的一般 simulator load 永遠使用 `DEFAULT_WORLD_AUTHORING`。`world.js` 新增 `createInitialStateFromAuthoring(authoring, seed)`，與既有 `createInitialState(seed)` 共用同一 canonical named initializer pipeline；Engine 在頁面啟動時只捕捉一次有效 preview snapshot，因此 Reset deterministic 重建同一 snapshot，不形成可持久污染 default world 的 hidden override。
+Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**。`SimEditorPreviewBridge` 只在明確 `?preview=editor` 時讀取同 origin `sessionStorage` handoff；沒有 query flag 的一般 simulator load 永遠使用 `DEFAULT_WORLD_AUTHORING`。`world.js` 的 `createInitialStateFromAuthoring(authoring, seed)` 與既有 `createInitialState(seed)` 共用同一 canonical named initializer pipeline；Engine 在頁面啟動時只捕捉一次有效 preview snapshot，因此 Reset deterministic 重建同一 snapshot，不形成可持久污染 default world 的 hidden override。
+
+Slice E 建立 **Runtime Spatial Z Identity**：base `SP.key / same / manhattan / clonePos`、`normalizeNode / nodeKey / nodeSame / routeStateKey`、Tile storage、Room derivation、Surface Environment endpoint、Memory spatial refs與 simulator map presentation共用同一 z semantics。Simulator `currentZ` / layer selector是 ephemeral presentation state；切層不得改 pathfinding或simulation truth。`SimSpatial.SPATIAL_IDENTITY_VERSION = 11.22.0-spatial-z-identity`；既有 Passage / Route / Locomotion / Crowding generation只有消費新的 node identity，未各自換代。
 
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 

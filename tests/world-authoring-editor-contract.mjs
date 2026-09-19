@@ -29,14 +29,11 @@ assert.equal(topology.cells['0,6'].structuralOpen,true,'opening must derive stru
 assert.equal(topology.cells['0,6'].open,false,'blocking front door must close the opening in derived topology');
 assert.ok(!exported.includes('"componentId"')&&!exported.includes('"adjacent"'),'derived topology must not serialize into world truth');
 
-assert.throws(
-  ()=>I.createInitialState(imported,{seed:1,version:'test'}),
-  /requires exactly one z=0 layer/,
-  'current runtime adapter must loud-fail multi-layer authoring'
-);
 const layeredCompatibility=I.analyzeRuntimeCompatibility(imported);
-assert.equal(layeredCompatibility.ok,false,'D.1C preflight must reject unsupported multi-layer authoring before simulator launch');
-assert.ok(layeredCompatibility.hardErrors.some(issue=>/requires exactly one z=0 layer/.test(issue.message)),'compatibility report must preserve the loud runtime Z boundary');
+assert.equal(layeredCompatibility.ok,true,layeredCompatibility.hardErrors.map(issue=>issue.code+': '+issue.message).join(' | '));
+const layeredRuntime=I.createInitialState(imported,{seed:1,version:'test'});
+assert.deepEqual(layeredRuntime.map.zLevels,[0,1],'Slice E runtime compiler must preserve authored layer identity');
+assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor','non-zero authored layer must compile into a distinct runtime tile key');
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -97,8 +94,10 @@ assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
 assert.ok(editorHtml.includes('src/world-initializer.js'));
 assert.ok(editorHtml.includes('src/editor-preview-bridge.js'));
 assert.ok(editorHtml.includes('id="testWorld"'));
+assert.ok(editorHtml.includes('data-tool="select"'),'Editor must expose a neutral select/browse tool so placement modes can be exited without authoring terrain');
+assert.ok(editorHtml.includes('開口／門洞'),'doorway terrain must be labeled as an opening, not conflated with exit capability');
 assert.ok(editorHtml.includes('src/editor-ui.js'));
-assert.ok(editorHtml.includes('shared geometry compiler'));
+assert.ok(editorHtml.includes('terrain: "doorway"'),'Editor must expose doorway terrain semantics without requiring internal compiler terminology in visible copy');
 assert.ok(editorHtml.includes('id="sceneList"'),'Editor must expose one scene-list surface for furniture, objects and residents');
 assert.ok(!editorHtml.includes('id="furnitureSelect"'),'D.1A replaces the furniture-only dropdown with the shared scene list');
 
@@ -118,6 +117,16 @@ assert.ok(editorUi.includes('dragState'),'D.1B2 drag preview state must remain e
 assert.ok(editorUi.includes('SimEditorPreviewBridge'),'D.1C launch must delegate browser-session handoff to the explicit preview bridge');
 assert.ok(editorUi.includes('P.storePreview(authored)'),'D.1C must preflight/store the same canonical Editor document before navigation');
 assert.ok(editorUi.includes('allowPreviewNavigation'),'D.1C preview navigation must bypass only the intentional dirty-document unload guard');
+assert.ok(editorUi.includes('P.getRestorePreview?.()'),'Preview return must restore only through the explicit handoff query path');
+assert.ok(editorUi.includes("clean:false,message:'已從 Editor Preview 恢復工作稿"),'restored Preview snapshot must remain an unsaved Editor working document');
+assert.ok(editorUi.includes("active?'select':'furniture'"),'Furniture placement action must toggle back to neutral select mode');
+assert.ok(editorUi.includes("chair:'餐椅'"),'Furniture instance presentation must expose the shared chair type independently from A/B/C/D instance names');
+assert.ok(editorUi.includes('>複製家具<'),'duplicateFurniture must be presented as duplication, not as catalog-style furniture creation');
+assert.ok(!editorUi.includes('新增同型家具'),'clone-existing-instance UI must not be mislabeled as furniture-library creation');
+assert.ok(editorUi.includes('移動自由位置'),'Resident UI must describe the exact-only move in user language');
+assert.ok(editorUi.includes('解除家具綁定並移動（站立）'),'Resident UI must describe the explicit detach + standing conversion');
+assert.ok(editorUi.includes('取消目前操作'),'pendingOperation may remain an internal key, but visible cancellation copy must be localized');
+assert.ok(!editorUi.includes('取消 pending operation'),'internal pendingOperation terminology must not leak into the primary Editor UI');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"),'drag drop commit must delegate to the canonical Furniture mutation owner');
 assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');

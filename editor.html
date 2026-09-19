@@ -42,20 +42,21 @@
           <input id="newLayerZ" type="number" step="1" value="1" aria-label="新 Z-level">
           <button id="addLayer" type="button">新增層</button>
         </div>
-        <button id="deleteLayer" class="danger-text" type="button">刪除目前空層</button>
-        <p class="hint">切換 Z 只改 Editor 畫面，不改 world truth。新層以 sparse cells 開始。</p>
+        <button id="deleteLayer" class="danger-text" type="button">刪除目前層（必須全空）</button>
+        <p class="hint">切換 Z 只改 Editor 畫面，不改 world truth。新層以 sparse cells 開始；刪除層前必須沒有 authored cells 或 position references。</p>
       </section>
 
       <section>
         <h2>Cell 工具</h2>
         <div class="tool-grid" role="group" aria-label="地圖工具">
-          <button class="tool active" data-tool="floor" type="button"><span>▫️</span>Floor</button>
+          <button class="tool active" data-tool="select" type="button"><span>↖</span>選取／瀏覽</button>
+          <button class="tool" data-tool="floor" type="button"><span>▫️</span>Floor</button>
           <button class="tool" data-tool="wall" type="button"><span>🧱</span>Wall</button>
-          <button class="tool" data-tool="opening" type="button"><span>🚪</span>Opening</button>
+          <button class="tool" data-tool="opening" type="button"><span>🚪</span>開口／門洞</button>
           <button class="tool" data-tool="erase" type="button"><span>⌫</span>Erase</button>
-          <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>Furniture placement</button>
+          <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>家具放置</button>
         </div>
-        <p class="hint">Opening author 為 <code>terrain: "doorway"</code>；horizontal connectivity、blocker 與 clearance preview 由 shared geometry compiler 即時計算，不寫回 authoring JSON。</p>
+        <p class="hint"><strong>開口／門洞</strong> author 為 <code>terrain: "doorway"</code>，表示牆體中的可通行 opening，本身不是「世界出口」也不是 Door 實體。是否可離開世界由 entity slot 的 <code>canExit</code> 決定；實際 Door 是否阻擋則由 Door entity/runtime state 決定。</p>
       </section>
 
       <section>
@@ -74,7 +75,7 @@
         <div class="legend">
           <span><i class="swatch floor"></i>floor</span>
           <span><i class="swatch wall"></i>wall</span>
-          <span><i class="swatch opening"></i>opening</span>
+          <span><i class="swatch opening"></i>開口／門洞</span>
           <span><i class="swatch void"></i>void</span>
           <span><i class="marker-key resident">👤</i>resident</span>
           <span><i class="marker-key object">◈</i>object</span>
@@ -101,8 +102,8 @@
         <div id="validationList" class="validation-list"></div>
       </section>
       <section class="boundary-note">
-        <h2>Slice D.1C boundary</h2>
-        <p>「在模擬器中測試」會先用 current authoring validation 與 <code>SimWorldInitializer</code> runtime compatibility preflight 檢查同一份 canonical document；invalid schema、broken references、multi-layer / non-zero Z 都會在 Editor 端 loud failure，不 flatten。通過後只把 snapshot 寫入同 origin <code>sessionStorage</code>，並以明確 <code>?preview=editor</code> 啟動模擬器。Simulator 仍由 <code>world.js</code> 的 canonical initial-state pipeline 建立 state；一般直接開 <code>index.html</code> 不讀 preview snapshot，Reset 則重建同一份 Editor Preview。Runtime Spatial Z identity 仍留給 Slice E。</p>
+        <h2>Slice E runtime boundary</h2>
+        <p>「在模擬器中測試」仍先用 current authoring validation 與 <code>SimWorldInitializer</code> runtime compatibility preflight 檢查同一份 canonical document，再以同 origin <code>sessionStorage</code> + explicit <code>?preview=editor</code> 啟動模擬器。Slice E 起 multi-layer / non-zero Z authoring可進入 runtime；Simulator以 z-aware Spatial identity與 layer selector 分層呈現，同 XY 不同 Z 不共用 occupancy / contact / crowding identity。此 slice仍<strong>不</strong>新增 stair / ramp / 任意 vertical edge；沒有 concrete vertical structure時跨 Z route必須 unreachable。一般直接開 <code>index.html</code> 不讀 preview snapshot，Preview Reset仍重建同一份 canonical authoring。</p>
       </section>
     </aside>
   </main>
