@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>World Authoring Editor｜Emergent Causal Sim</title>
+  <link rel="stylesheet" href="styles/editor.css">
+</head>
+<body>
+<div class="editor-shell">
+  <header class="editor-appbar">
+    <div>
+      <div class="eyebrow">WORLD AUTHORING · world-authoring-v1</div>
+      <h1>地圖編輯器 <span>Z-aware authoring shell</span></h1>
+    </div>
+    <div class="header-actions">
+      <a class="button ghost" href="index.html">返回模擬器</a>
+      <button id="resetWorld" class="button ghost" type="button">載入預設世界</button>
+      <label class="button ghost file-button" for="importWorld">匯入 JSON</label>
+      <input id="importWorld" type="file" accept=".json,application/json" hidden>
+      <button id="exportWorld" class="button primary" type="button">匯出 JSON</button>
+    </div>
+  </header>
+
+  <div class="editor-statusbar">
+    <span id="dirtyStatus" class="status-pill clean">未修改</span>
+    <span id="validationStatus" class="status-pill">Schema 檢查中</span>
+    <span class="status-note">Editor 只修改 canonical authoring data；不啟動 runtime simulation。</span>
+  </div>
+
+  <main class="editor-workspace">
+    <aside class="editor-panel tools-panel">
+      <section>
+        <h2>Z-level</h2>
+        <div class="layer-nav">
+          <button id="layerPrev" type="button" title="上一個 Z-level">←</button>
+          <select id="layerSelect" aria-label="目前 Z-level"></select>
+          <button id="layerNext" type="button" title="下一個 Z-level">→</button>
+        </div>
+        <div class="layer-create">
+          <input id="newLayerZ" type="number" step="1" value="1" aria-label="新 Z-level">
+          <button id="addLayer" type="button">新增層</button>
+        </div>
+        <button id="deleteLayer" class="danger-text" type="button">刪除目前空層</button>
+        <p class="hint">切換 Z 只改 Editor 畫面，不改 world truth。新層以 sparse cells 開始。</p>
+      </section>
+
+      <section>
+        <h2>Cell 工具</h2>
+        <div class="tool-grid" role="group" aria-label="地圖工具">
+          <button class="tool active" data-tool="floor" type="button"><span>▫️</span>Floor</button>
+          <button class="tool" data-tool="wall" type="button"><span>🧱</span>Wall</button>
+          <button class="tool" data-tool="opening" type="button"><span>🚪</span>Opening</button>
+          <button class="tool" data-tool="erase" type="button"><span>⌫</span>Erase</button>
+          <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>Furniture placement</button>
+        </div>
+        <p class="hint">Opening 目前 author 為 <code>terrain: "doorway"</code>。本 slice 不推導 adjacency / PassageProfile。</p>
+      </section>
+
+      <section>
+        <h2>Furniture</h2>
+        <label class="field-label" for="furnitureSelect">既有 canonical instance</label>
+        <select id="furnitureSelect"></select>
+        <p class="hint">點地圖可平移整個 instance 的 footprint / displayAt / slots；不自動搬動承載物件或居民。</p>
+      </section>
+    </aside>
+
+    <section class="editor-panel canvas-panel">
+      <div class="panel-head">
+        <div>
+          <b id="layerTitle">Z = 0</b>
+          <small id="layerSummary">—</small>
+        </div>
+        <div class="legend">
+          <span><i class="swatch floor"></i>floor</span>
+          <span><i class="swatch wall"></i>wall</span>
+          <span><i class="swatch opening"></i>opening</span>
+          <span><i class="swatch void"></i>void</span>
+        </div>
+      </div>
+      <div class="map-scroll">
+        <div id="editorMap" class="editor-map" aria-label="Authoring map grid"></div>
+      </div>
+    </section>
+
+    <aside class="editor-panel inspector-panel">
+      <section>
+        <h2>Authoring document</h2>
+        <div id="documentSummary" class="summary-grid"></div>
+      </section>
+      <section>
+        <h2>Selection</h2>
+        <div id="selectionSummary" class="selection-card">尚未選取。</div>
+      </section>
+      <section>
+        <h2>Validation</h2>
+        <div id="validationList" class="validation-list"></div>
+      </section>
+      <section class="boundary-note">
+        <h2>Slice C boundary</h2>
+        <p>此頁不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator。多層 JSON 可以 author / round-trip；current runtime adapter 仍會對 multi-layer / non-zero Z loud failure。</p>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<script src="src/world-authoring-v1.js" defer></script>
+<script src="src/editor-ui.js" defer></script>
+</body>
+</html>
