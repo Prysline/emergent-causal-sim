@@ -64,6 +64,14 @@ assert.equal(A.VERSION,'world-authoring-v2');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  const result=M.moveObject(doc,{entityType:'source',entityId:'tap',target:{x:7,y:5,z:0}});
+  assert.equal(result.ok,true);
+  assert.deepEqual(result.candidate.entities.sources.tap.position,{x:7,y:5,z:0});
+  assert.deepEqual(result.candidate.entities.sources.tap.interactionPorts[0].position,{x:6,y:5,z:0});
+  assert.equal(result.candidate.entities.sources.tap.supportId,undefined,'Source must not gain a supportId contract');
+}
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   let result=M.moveObject(doc,{entityType:'container',entityId:'basket',target:{x:5,y:2,z:0}});
   assert.equal(result.ok,false);
   assert.equal(result.issues[0].code,'support_choice_required');
@@ -89,6 +97,22 @@ assert.equal(A.VERSION,'world-authoring-v2');
   assert.equal(result.ok,true);
   assert.equal(result.meta.newId,'chairNW-copy-2');
   assert.equal(result.candidate.furniture['chairNW-copy-2'].slots[0].id,'chairNW-copy-2:seat');
+}
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  doc.furniture.chairNE.slots[0].id='legacy-seat-id';
+  doc.furniture.sofa.slots[0].id='chairNE-copy:slot-1';
+  const result=M.duplicateFurniture(doc,{sourceId:'chairNE',target:{x:8,y:4,z:0}});
+  assert.equal(result.ok,true);
+  assert.equal(result.meta.newId,'chairNE-copy');
+  assert.equal(result.candidate.furniture['chairNE-copy'].slots[0].id,'chairNE-copy:slot-1-2','non-prefixed slot IDs and global collisions must resolve deterministically');
+}
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  const result=M.duplicateFurniture(doc,{sourceId:'diningTable',target:{x:3,y:4,z:0}});
+  assert.equal(result.ok,true);
+  assert.equal(result.candidate.entities.containers.mealTray.supportId,'diningTable','duplicate must not copy or retarget external supported objects');
+  assert.equal(result.candidate.entities.containers.mealTray.position.x,5);
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -125,6 +149,16 @@ assert.equal(A.VERSION,'world-authoring-v2');
   assert.deepEqual(result.candidate.residents.zhen.initial.placement,{mode:'exact',node:{x:8,y:4,z:0}});
   assert.deepEqual(result.candidate.residents.zhen.initial.posture,{kind:'standing'});
   assert.deepEqual(I.analyzeInitialPlacements(result.candidate).hardErrors,[]);
+}
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  doc.residents.zhen.initial.placement={mode:'exact',node:{x:4,y:2,z:0}};
+  doc.residents.zhen.initial.posture={kind:'sitting',slotId:'chairNW:seat',furnitureId:'chairNW'};
+  const before=fp(doc);
+  const result=M.moveResidentExact(doc,{residentId:'zhen',target:{x:8,y:4,z:0}});
+  assert.equal(result.ok,false);
+  assert.equal(result.issues[0].code,'resident_move_bound');
+  assert.equal(fp(doc),before,'bound exact Resident generic move must be atomic rejection');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);

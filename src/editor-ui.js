@@ -74,10 +74,14 @@
     return null;
   }
 
+  function furniturePosition(furniture){
+    return furniture?.displayAt||furniture?.footprint?.[0]||furniture?.slots?.[0]?.position||null;
+  }
+
   function sceneEntries(){
     const out=[];
     const push=(type,id,entity,position,icon,label)=>out.push({type,id,entity,position:position||null,icon:icon||'•',label});
-    for(const [id,furniture] of Object.entries(authored.furniture||{}))push('furniture',id,furniture,furnitureAnchor(furniture),furniture.icon||'▰','Furniture');
+    for(const [id,furniture] of Object.entries(authored.furniture||{}))push('furniture',id,furniture,furniturePosition(furniture),furniture.icon||'▰','Furniture');
     for(const [id,container] of Object.entries(authored.entities?.containers||{}))push('container',id,container,container.position,container.icon||'◈','Object · Container');
     for(const [id,source] of Object.entries(authored.entities?.sources||{}))push('source',id,source,source.position,source.icon||'◆','Object · Source');
     for(const [id,resident] of Object.entries(authored.residents||{}))push('resident',id,resident,residentPosition(resident),resident.icon||(resident.kind==='cat'?'🐈':'👤'),'Resident');

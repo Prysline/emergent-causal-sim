@@ -25,6 +25,7 @@ jobs:
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/initial-population-placement.mjs
       - run: node tests/world-authoring-editor-contract.mjs
+      - run: node tests/editor-authoring-mutations.mjs
       - run: node tests/geometry-derived-horizontal-topology.mjs
       - run: node tests/initial-state-pipeline.mjs
       - run: node tests/sleep-pressure.mjs
