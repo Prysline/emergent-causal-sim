@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('physical-schema-v1160.js requires world.js initial-state pipeline.');
   const VERSION='11.17.0-passage-profile-multimode';
-  const baseCreateInitialState=W.createInitialState;
   const clone=o=>JSON.parse(JSON.stringify(o));
   const DEFAULT_PHYSICAL_PROFILES=Object.freeze({
     human:Object.freeze({
@@ -31,8 +31,7 @@
 
   const currentReleaseVersion=()=>W.PRESENTATION_SCHEMA_VERSION||VERSION;
   W.VERSION=currentReleaseVersion();
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('physical.schema',(st)=>{
     st.version=currentReleaseVersion();
     for(const a of Object.values(st.agents||{})){
       if(a.physical)continue;
@@ -40,7 +39,7 @@
       if(profile)a.physical=profile;
     }
     return st;
-  };
+  },1600);
   W.PHYSICAL_SCHEMA_VERSION=VERSION;
   W.PHYSICAL_DEFAULT_PROFILES=DEFAULT_PHYSICAL_PROFILES;
   W.defaultPhysicalProfile=defaultPhysicalProfile;
