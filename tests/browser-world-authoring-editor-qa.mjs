@@ -92,7 +92,17 @@ let furnitureSelection=await page.evaluate(()=>window.SimWorldEditor.getSession(
 assert.deepEqual(furnitureSelection.selection,{kind:'entity',type:'furniture',id:'chairNW'});
 assert.equal(furnitureSelection.selectedFurnitureId,'chairNW');
 assert.equal(furnitureSelection.selectedTool,'floor','selecting a scene entity must not silently change the active authoring tool');
-await page.click('[data-tool="furniture"]');
+let placementButton=page.locator('[data-editor-action="arm-furniture-placement"]');
+assert.match(await placementButton.textContent(),/啟用家具放置/);
+await placementButton.click();
+furnitureSelection=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(furnitureSelection.selectedTool,'furniture');
+assert.match(await placementButton.textContent(),/停止家具放置/);
+await placementButton.click();
+furnitureSelection=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(furnitureSelection.selectedTool,'select','furniture placement must have an explicit neutral exit mode');
+assert.match(await placementButton.textContent(),/啟用家具放置/);
+await placementButton.click();
 await page.click('[data-cell="3,4"]');
 let clickPlacement=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
