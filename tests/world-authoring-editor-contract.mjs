@@ -34,6 +34,9 @@ assert.throws(
   /requires exactly one z=0 layer/,
   'current runtime adapter must loud-fail multi-layer authoring'
 );
+const layeredCompatibility=I.analyzeRuntimeCompatibility(imported);
+assert.equal(layeredCompatibility.ok,false,'D.1C preflight must reject unsupported multi-layer authoring before simulator launch');
+assert.ok(layeredCompatibility.hardErrors.some(issue=>/requires exactly one z=0 layer/.test(issue.message)),'compatibility report must preserve the loud runtime Z boundary');
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -80,15 +83,20 @@ assert.throws(
 }
 
 const editorHtml=fs.readFileSync(new URL('../editor.html',import.meta.url),'utf8');
-for(const forbidden of ['src/world-initializer.js','src/world.js','src/spatial.js','src/engine.js','src/state-validator.js']){
+for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/state-validator.js']){
   assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
 }
 const authoringScript=editorHtml.indexOf('src/world-authoring-v1.js');
+const initializerScript=editorHtml.indexOf('src/world-initializer.js');
+const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
-assert.ok(authoringScript>=0&&mutationScript>authoringScript&&editorScript>mutationScript,'Editor load order must be authoring → pure mutation owner → UI');
+assert.ok(authoringScript>=0&&initializerScript>authoringScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'D.1C Editor load order must be authoring → compatibility initializer → preview bridge → pure mutation owner → UI');
 assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
 assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
+assert.ok(editorHtml.includes('src/world-initializer.js'));
+assert.ok(editorHtml.includes('src/editor-preview-bridge.js'));
+assert.ok(editorHtml.includes('id="testWorld"'));
 assert.ok(editorHtml.includes('src/editor-ui.js'));
 assert.ok(editorHtml.includes('shared geometry compiler'));
 assert.ok(editorHtml.includes('id="sceneList"'),'Editor must expose one scene-list surface for furniture, objects and residents');
@@ -107,6 +115,9 @@ assert.ok(editorUi.includes('pendingOperation'),'D.1B1 must keep pending mutatio
 assert.ok(editorUi.includes('DRAG_THRESHOLD_PX'),'D.1B2 must distinguish click selection from desktop drag with an explicit movement threshold');
 for(const eventName of ['pointerdown','pointermove','pointerup','pointercancel'])assert.ok(editorUi.includes(eventName),`D.1B2 must use Pointer Events for furniture drag: ${eventName}`);
 assert.ok(editorUi.includes('dragState'),'D.1B2 drag preview state must remain explicit ephemeral Editor state');
+assert.ok(editorUi.includes('SimEditorPreviewBridge'),'D.1C launch must delegate browser-session handoff to the explicit preview bridge');
+assert.ok(editorUi.includes('P.storePreview(authored)'),'D.1C must preflight/store the same canonical Editor document before navigation');
+assert.ok(editorUi.includes('allowPreviewNavigation'),'D.1C preview navigation must bypass only the intentional dirty-document unload guard');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"),'drag drop commit must delegate to the canonical Furniture mutation owner');
 assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');
