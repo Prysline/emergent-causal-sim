@@ -4,7 +4,12 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 
-const schemaFiles=[
+const initializerFiles=[
+  'spatial-v111.js',
+  'spatial-observability.js',
+  'contact-v1112.js',
+  'spatial-v1113.js',
+  'spatial-v1114.js',
   'action-schema-v1120.js',
   'intent-schema-v1121.js',
   'social-bid-schema-v1122.js',
@@ -24,12 +29,17 @@ const schemaFiles=[
   'locomotion-schema-v1190.js'
 ];
 
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js',...schemaFiles]){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js',...initializerFiles]){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
 const W=globalThis.SimWorld;
 const EXPECTED=[
+  {id:'spatial.schema',order:10},
+  {id:'spatialObservability.schema',order:20},
+  {id:'contact.schema',order:30},
+  {id:'spatialFloorEffects.schema',order:40},
+  {id:'spatialSurfaceEnvironment.schema',order:50},
   {id:'action.schema',order:100},
   {id:'intent.schema',order:200},
   {id:'socialBid.schema',order:300},
@@ -65,6 +75,9 @@ for(const agent of Object.values(st.agents||{})){
   assert.ok(agent.affect&&agent.affect.valence===0&&agent.affect.activation===0&&agent.affect.frustration===0,`${agent.id}: neutral affect initialization parity`);
   assert.ok(agent.physical,`${agent.id}: physical profile initialization parity`);
 }
+assert.ok(st.furniture?.diningTable?.spatial?.surface,'Spatial initializer must install authored surface traversal definitions');
+assert.equal(st.containers?.mealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
+assert.ok(st.furniture?.diningTable?.spatial?.surface?.cells?.every(cell=>cell.contents&&typeof cell.contents==='object'),'Surface environment initializer must install per-cell contents');
 
 const again=W.createInitialState(20260911);
 assert.deepEqual(again,st,'same seed must remain deterministic after lifecycle consolidation');
@@ -77,7 +90,7 @@ for(const name of fs.readdirSync(srcDir).filter(name=>name.endsWith('.js'))){
 }
 assert.deepEqual(wrapperAssignments,[],'world.js must remain the only createInitialState lifecycle owner');
 
-for(const name of schemaFiles){
+for(const name of initializerFiles){
   const source=fs.readFileSync(new URL(name,srcDir),'utf8');
   assert.ok(source.includes('registerInitialStateInitializer('),`${name} must register through the canonical initial-state pipeline`);
   assert.ok(source.includes(`${name} requires world.js initial-state pipeline.`),`${name} must fail loudly when the pipeline is missing`);
@@ -88,9 +101,9 @@ const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8
 const worldIndex=indexSource.indexOf('src/world.js');
 const engineIndex=indexSource.indexOf('src/engine.js');
 assert.ok(worldIndex>=0&&engineIndex>worldIndex,'world.js must load before engine.js');
-for(const name of schemaFiles){
-  const schemaIndex=indexSource.indexOf('src/'+name);
-  assert.ok(schemaIndex>worldIndex&&schemaIndex<engineIndex,`${name} must register after world.js and before engine.js captures createInitialState`);
+for(const name of initializerFiles){
+  const initializerIndex=indexSource.indexOf('src/'+name);
+  assert.ok(initializerIndex>worldIndex&&initializerIndex<engineIndex,`${name} must register after world.js and before engine.js captures createInitialState`);
 }
 
 console.log('initial-state pipeline regression: ok');
