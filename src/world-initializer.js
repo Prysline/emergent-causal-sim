@@ -354,6 +354,33 @@
     return report;
   }
 
+  function analyzeRuntimeCompatibility(authoring){
+    const schema=A.validateAuthoring(authoring);
+    if(!schema.ok)return {ok:false,stage:'schema',hardErrors:clone(schema.errors||[]),diagnostics:[]};
+    try{
+      const placement=analyzeInitialPlacements(authoring);
+      return {
+        ok:placement.hardErrors.length===0,
+        stage:'runtime',
+        hardErrors:clone(placement.hardErrors),
+        diagnostics:clone(placement.diagnostics),
+        resolvedPlacements:clone(placement.resolvedPlacements)
+      };
+    }catch(error){
+      return {ok:false,stage:'runtime',hardErrors:[issue(error.code||'runtime_authoring_incompatible',error.message||String(error))],diagnostics:[]};
+    }
+  }
+
+  function assertRuntimeCompatibleAuthoring(authoring){
+    const report=analyzeRuntimeCompatibility(authoring);
+    if(!report.ok){
+      const error=new Error('Runtime authoring incompatible: '+report.hardErrors.map(x=>x.code||x.message).join(', '));
+      error.code='runtime_authoring_incompatible';
+      error.issues=clone(report.hardErrors);
+      throw error;
+    }
+    return report;
+  }
   function buildResidents(authoring,resolvedPlacements){
     const agents={};
     for(const [id,entry] of Object.entries(authoring.residents||{})){
@@ -400,5 +427,5 @@
     return state;
   }
 
-  window.SimWorldInitializer={createInitialState,analyzeInitialPlacements,assertInitialPlacements};
+  window.SimWorldInitializer={createInitialState,analyzeInitialPlacements,assertInitialPlacements,analyzeRuntimeCompatibility,assertRuntimeCompatibleAuthoring};
 })();
