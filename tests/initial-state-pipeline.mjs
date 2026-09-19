@@ -73,7 +73,7 @@ assert.throws(()=>W.registerInitialStateInitializer('',()=>{},1),/non-empty stri
 assert.throws(()=>W.registerInitialStateInitializer('bad.handler',null,1),/must be a function/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.21.4-editor-playtest-bridge','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.22.0-spatial-z-identity','full production schema set must preserve current release marker');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
@@ -97,7 +97,7 @@ chair.displayAt={...chair.displayAt,x:chair.displayAt.x+dx,y:chair.displayAt.y+d
 chair.slots=chair.slots.map(slot=>({...slot,position:{...slot.position,x:slot.position.x+dx,y:slot.position.y+dy}}));
 const customState=W.createInitialStateFromAuthoring(custom,20260911);
 assert.deepEqual(customState.furniture.chairNW.footprint,[{x:3,y:4}],'explicit authoring factory must compile the supplied canonical document');
-assert.equal(customState.version,'11.21.4-editor-playtest-bridge');
+assert.equal(customState.version,'11.22.0-spatial-z-identity');
 assert.deepEqual(W.createInitialState(20260911).furniture.chairNW.footprint,st.furniture.chairNW.footprint,'explicit preview initialization must not mutate the default world factory');
 assert.deepEqual(W.createInitialStateFromAuthoring(custom,20260911),customState,'preview reset source must remain deterministic for the same snapshot and seed');
 
