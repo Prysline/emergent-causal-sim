@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.21.0・Geometry-derived Topology**（`11.21.0-geometry-derived-topology`）。
+目前 runtime marker：**v11.21.1・Editor Scene Inspector**（`11.21.1-editor-scene-inspector`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -12,7 +12,7 @@
 
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
 - Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v2`。map terrain/material、Furniture instance、Container / Source 開場配置與 Resident opening placement 不再散落在 `world.js`；`SimWorldInitializer` 將 authoring package 編譯成既有 runtime state shape。
-- `world-authoring-v2` 的 canonical positions / layers 使用 `x / y / z`，並把 Furniture under-clearance 等 concrete geometry 放回 authoring truth。舊 `world-authoring-v1` JSON 透過 explicit migration 升為 v2；legacy default dining-table 的 `.72m` under-clearance只在 migration 時轉成正式 geometry，不在 runtime 以 ID fallback 補回。獨立 `editor.html` 直接編輯同一份 canonical authoring document，Editor 的 current Z、選取工具與 dirty-state 都只是 ephemeral UI state，不 serialize，也不建立第二份 runtime truth。多層 authoring 可 import / export / round-trip；current runtime adapter 仍只接受 exactly one `z=0` layer並對其他情況 loud failure。
+- `world-authoring-v2` 的 canonical positions / layers 使用 `x / y / z`，並把 Furniture under-clearance 等 concrete geometry 放回 authoring truth。舊 `world-authoring-v1` JSON 透過 explicit migration 升為 v2；legacy default dining-table 的 `.72m` under-clearance只在 migration 時轉成正式 geometry，不在 runtime 以 ID fallback 補回。獨立 `editor.html` 直接編輯同一份 canonical authoring document，Editor 的 current Z、選取工具與 dirty-state 都只是 ephemeral UI state，不 serialize，也不建立第二份 runtime truth。多層 authoring 可 import / export / round-trip；current runtime adapter 仍只接受 exactly one `z=0` layer並對其他情況 loud failure。 D.1A 新增由 canonical Furniture / Container / Source / Resident 即時投影的 Scene Inspector：sidebar scene list、typed map markers與 selection/focus共用單一 ephemeral selection state；主模擬器 toolbar 也提供 Editor 入口。這些 presentation 不寫回 authoring JSON，也不載入 runtime simulation modules。
 - Resident opening placement 支援 `exact` 與 explicit `furnitureSlot` anchor。`SimWorldInitializer.analyzeInitialPlacements(...)` 分開回傳 hard errors 與 diagnostic-only 問題：missing/conflicting/blocked slot 或 position 會拒絕初始化；密室、無出口、資源不可達與非 exclusive node overlap 只提示，不自動搬人或修改世界。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。
