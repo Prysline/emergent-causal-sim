@@ -24,6 +24,10 @@ let snapshot=await page.evaluate(()=>({
     validator:typeof window.SimValidator
   },
   mapCells:document.querySelectorAll('#editorMap [data-cell]').length,
+  sceneItems:document.querySelectorAll('#sceneList [data-scene-type][data-scene-id]').length,
+  residentMarkers:document.querySelectorAll('#editorMap [data-entity-type="resident"]').length,
+  objectMarkers:document.querySelectorAll('#editorMap [data-entity-type="container"], #editorMap [data-entity-type="source"]').length,
+  oldEntityDots:document.querySelectorAll('#editorMap .entity-dot').length,
   width:innerWidth,
   docWidth:document.documentElement.scrollWidth
 }));
@@ -31,8 +35,24 @@ assert.equal(snapshot.session.currentZ,0);
 assert.equal(snapshot.session.dirty,false);
 assert.equal(snapshot.session.validation.ok,true);
 assert.equal(snapshot.mapCells,96);
+assert.equal(snapshot.sceneItems,
+  Object.keys(snapshot.document.furniture||{}).length+
+  Object.keys(snapshot.document.entities?.containers||{}).length+
+  Object.keys(snapshot.document.entities?.sources||{}).length+
+  Object.keys(snapshot.document.residents||{}).length,
+  'scene list must expose every current furniture/object/resident instance');
+assert.ok(snapshot.residentMarkers>0,'resident authored positions must use typed map markers');
+assert.ok(snapshot.objectMarkers>0,'container/source authored positions must use typed map markers');
+assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed');
 for(const value of Object.values(snapshot.runtimeGlobals))assert.equal(value,'undefined','Editor must not bootstrap runtime simulation modules');
 assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snapshot.docWidth}>${snapshot.width}`);
+
+await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
+assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'resident',id:'zhen'});
+assert.deepEqual(snapshot.session.selectedCell,{x:9,y:3,z:0});
+assert.equal(snapshot.session.dirty,false,'scene selection must remain presentation-only');
+assert.match(snapshot.selectionText,/阿真/,'Inspector must identify the selected resident by name');
 
 await page.fill('#newLayerZ','1');
 await page.click('#addLayer');
@@ -61,13 +81,23 @@ assert.equal(afterLayerSwitch.session.currentZ,0);
 assert.equal(afterLayerSwitch.session.dirty,false,'Z-level presentation switch must not dirty authoring truth');
 assert.equal(afterLayerSwitch.fingerprint,cleanFingerprint,'Z-level presentation switch must be state-inert');
 
-await page.selectOption('#furnitureSelect','chairNW');
+await page.click('[data-scene-type="furniture"][data-scene-id="chairNW"]');
+let furnitureSelection=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.deepEqual(furnitureSelection.selection,{kind:'entity',type:'furniture',id:'chairNW'});
+assert.equal(furnitureSelection.selectedFurnitureId,'chairNW');
+assert.equal(furnitureSelection.selectedTool,'floor','selecting a scene entity must not silently change the active authoring tool');
+await page.click('[data-tool="furniture"]');
 await page.click('[data-cell="3,4"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
 assert.equal(snapshot.session.dirty,true);
 assert.deepEqual(snapshot.document.furniture.chairNW.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(snapshot.document.furniture.chairNW.slots[0].position,{x:3,y:4,z:0});
 assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'furniture placement must not auto-move separately authored entities');
+
+await page.click('[data-entity-type="resident"][data-entity-id="orange"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
+assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'resident',id:'orange'},'map marker selection must share the scene-list selection owner');
+assert.match(snapshot.selectionText,/橘子/);
 
 await page.click('[data-tool="opening"]');
 await page.click('[data-cell="2,2"]');
