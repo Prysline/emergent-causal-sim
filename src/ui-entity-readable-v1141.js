@@ -49,7 +49,7 @@
     const cells=f?.spatial?.surface?.cells||[];
     const totals={};
     for(const cell of cells){
-      const node=SP.normalizeNode?.(st,{x:cell.x,y:cell.y},f.spatial.surface.id);
+      const node=SP.normalizeNode?.(st,SP.clonePos?.(cell)||{...cell},f.spatial.surface.id);
       const env=node&&SP.environmentAt?.(st,node,{create:false});
       for(const [r,v] of Object.entries(env?.contents||{}))totals[r]=(totals[r]||0)+(Number(v)||0);
     }
