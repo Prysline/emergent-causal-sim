@@ -9,7 +9,7 @@
   function runtimePosition(position){
     if(!position)return null;
     const z=position.z??0;
-    if(z!==0)throw new Error('world-authoring-v1 runtime adapter only supports z=0; received z='+z+'.');
+    if(z!==0)throw new Error(A.VERSION+' runtime adapter only supports z=0; received z='+z+'.');
     const out={x:position.x,y:position.y};
     if(position.spaceId!==undefined)out.spaceId=position.spaceId;
     if(position.surfaceId!==undefined)out.surfaceId=position.surfaceId;
@@ -19,20 +19,21 @@
   function singleRuntimeLayer(authoring){
     if(authoring?.authoringSchema!==A.VERSION)throw new Error('Unsupported authoringSchema: '+String(authoring?.authoringSchema));
     const layers=authoring?.map?.layers;
-    if(!Array.isArray(layers)||layers.length!==1||layers[0]?.z!==0)throw new Error('world-authoring-v1 runtime adapter requires exactly one z=0 layer.');
+    if(!Array.isArray(layers)||layers.length!==1||layers[0]?.z!==0)throw new Error(A.VERSION+' runtime adapter requires exactly one z=0 layer.');
     return layers[0];
   }
 
-  function buildTiles(authoring){
+  function buildTiles(authoring,topology=A.deriveHorizontalTopology(authoring,{z:0})){
     const layer=singleRuntimeLayer(authoring),width=authoring.map.width,height=authoring.map.height,tiles={};
     if(!Number.isInteger(width)||width<=0||!Number.isInteger(height)||height<=0)throw new Error('World authoring map width/height must be positive integers.');
     for(const [id,cell] of Object.entries(layer.cells||{})){
       const parts=id.split(','),x=Number(parts[0]),y=Number(parts[1]);
       if(parts.length!==2||!Number.isInteger(x)||!Number.isInteger(y)||x<0||y<0||x>=width||y>=height)throw new Error('Invalid authored cell id: '+id);
       if(!cell?.terrain)throw new Error('Authored cell '+id+' is missing terrain.');
-      tiles[id]={id,x,y,terrain:cell.terrain,material:cell.material??null,walkable:cell.terrain==='floor',surface:{contents:{}},roomId:null,furnitureIds:[]};
+      const derived=topology.cells[id];
+      tiles[id]={id,x,y,terrain:cell.terrain,material:cell.material??null,walkable:!!derived?.structuralOpen,surface:{contents:{}},roomId:null,furnitureIds:[...(derived?.furnitureIds||[])]};
     }
-    if(Object.keys(tiles).length!==width*height)throw new Error('Authored z=0 layer must define every map cell for Slice A.');
+    if(Object.keys(tiles).length!==width*height)throw new Error('Authored z=0 layer must define every map cell for runtime initialization.');
     return tiles;
   }
 
@@ -94,16 +95,11 @@
 
   function authoredBlockerAt(authoring,p){
     const cell=authoredCellAt(authoring,p);
-    if(!cell||cell.terrain!=='floor')return cell?`terrain:${cell.terrain}`:'out-of-bounds';
-    for(const furniture of Object.values(authoring.furniture||{})){
-      if(furniture.blocksMovement&&(furniture.footprint||[]).some(fp=>sameAuthoredPos(fp,p)))return `furniture:${furniture.id}`;
-    }
-    for(const container of Object.values(authoring.entities?.containers||{})){
-      if(container.portable===false&&!container.supportId&&sameAuthoredPos(container.position,p))return `container:${container.id}`;
-    }
-    for(const source of Object.values(authoring.entities?.sources||{})){
-      if(source.blocksMovement!==false&&sameAuthoredPos(source.position,p))return `source:${source.id}`;
-    }
+    if(!cell)return 'out-of-bounds';
+    const topology=A.deriveHorizontalTopology(authoring,{z:p?.z??0}),derived=topology.cells[posKey(p)];
+    if(!derived?.structuralOpen)return `terrain:${cell.terrain}`;
+    if(derived.staticBlocked)return derived.blockedBy[0]||'static-blocker';
+    if(derived.under?.length)return `furniture:${derived.under[0].furnitureId}`;
     return null;
   }
 
@@ -227,73 +223,74 @@
     return null;
   }
 
-  function baseWalkable(authoring,p){return !authoredBlockerAt(authoring,p);}
-  function neighborPositions(authoring,p){
+  function baseWalkable(authoring,p,topology=null){const derived=(topology||A.deriveHorizontalTopology(authoring,{z:p?.z??0})).cells[posKey(p)];return !!derived?.open;}
+  function neighborPositions(authoring,p,topology=null){
     const out=[];
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
       const q={x:p.x+dx,y:p.y+dy,z:0};
-      if(baseWalkable(authoring,q))out.push(q);
+      if(baseWalkable(authoring,q,topology))out.push(q);
     }
     return out;
   }
-  function reachableKeys(authoring,start){
+  function reachableKeys(authoring,start,topology=null){
     const seen=new Set();
-    if(!start||!baseWalkable(authoring,start))return seen;
+    if(!start||!baseWalkable(authoring,start,topology))return seen;
     const queue=[{x:start.x,y:start.y,z:0}];
     seen.add(posKey(start));
     while(queue.length){
       const cur=queue.shift();
-      for(const q of neighborPositions(authoring,cur)){
+      for(const q of neighborPositions(authoring,cur,topology)){
         const k=posKey(q);
         if(!seen.has(k)){seen.add(k);queue.push(q);}
       }
     }
     return seen;
   }
-  function dedupePositions(authoring,list){
+  function dedupePositions(authoring,list,topology=null){
     const out=new Map();
-    for(const p of list||[])if(p&&baseWalkable(authoring,p))out.set(posKey(p),{x:p.x,y:p.y,z:0});
+    for(const p of list||[])if(p&&baseWalkable(authoring,p,topology))out.set(posKey(p),{x:p.x,y:p.y,z:0});
     return [...out.values()];
   }
 
-  function reachPositions(authoring,p){
+  function reachPositions(authoring,p,topology=null){
     if(!p)return [];
-    const out=neighborPositions(authoring,p);
-    if(baseWalkable(authoring,p))out.push({x:p.x,y:p.y,z:0});
-    return dedupePositions(authoring,out);
+    const out=neighborPositions(authoring,p,topology);
+    if(baseWalkable(authoring,p,topology))out.push({x:p.x,y:p.y,z:0});
+    return dedupePositions(authoring,out,topology);
   }
-  function supportReachPositions(authoring,supportId){
+  function supportReachPositions(authoring,supportId,topology=null){
     const furniture=authoring.furniture?.[supportId];
     if(!furniture)return [];
     const out=[];
-    for(const p of furniture.footprint||[])out.push(...neighborPositions(authoring,p));
-    for(const slot of furniture.slots||[])if(slot.position&&baseWalkable(authoring,slot.position))out.push(slot.position);
-    return dedupePositions(authoring,out);
+    for(const p of furniture.footprint||[])out.push(...neighborPositions(authoring,p,topology));
+    for(const slot of furniture.slots||[])if(slot.position&&baseWalkable(authoring,slot.position,topology))out.push(slot.position);
+    return dedupePositions(authoring,out,topology);
   }
-  function objectAccessPositions(authoring,obj,affordance){
+  function objectAccessPositions(authoring,obj,affordance,topology=null){
     if(!obj?.position)return [];
     const rule=obj.interactions?.[affordance]||obj.interactions?.default||null;
-    if(rule?.mode==='supportReach'&&obj.supportId)return supportReachPositions(authoring,obj.supportId);
-    if(rule?.mode==='port')return dedupePositions(authoring,(obj.interactionPorts||[]).filter(p=>!p.affordances?.length||p.affordances.includes(affordance)).map(p=>p.position));
-    return reachPositions(authoring,obj.position);
+    if(rule?.mode==='supportReach'&&obj.supportId)return supportReachPositions(authoring,obj.supportId,topology);
+    if(rule?.mode==='port')return dedupePositions(authoring,(obj.interactionPorts||[]).filter(p=>!p.affordances?.length||p.affordances.includes(affordance)).map(p=>p.position),topology);
+    return reachPositions(authoring,obj.position,topology);
   }
-  function accessTargets(authoring,kind,type){
+  function accessTargets(authoring,kind,type,topology=null){
     const out=[];
     if(type==='exit'){
-      for(const slot of authoringSlots(authoring))if(slot.canExit&&slot.position&&baseWalkable(authoring,slot.position))out.push(slot.position);
+      for(const slot of authoringSlots(authoring))if(slot.canExit&&slot.position&&baseWalkable(authoring,slot.position,topology))out.push(slot.position);
     }else if(type==='food'){
-      for(const c of Object.values(authoring.entities?.containers||{}))if(c.canEatFrom&&Number(c.contents?.food)>0)out.push(...objectAccessPositions(authoring,c,'eatFrom'));
+      for(const c of Object.values(authoring.entities?.containers||{}))if(c.canEatFrom&&Number(c.contents?.food)>0)out.push(...objectAccessPositions(authoring,c,'eatFrom',topology));
     }else if(type==='water'){
-      for(const c of Object.values(authoring.entities?.containers||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom'));
-      for(const s of Object.values(authoring.entities?.sources||{}))if(s.resource==='water')out.push(...objectAccessPositions(authoring,s,'fill'));
+      for(const c of Object.values(authoring.entities?.containers||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom',topology));
+      for(const s of Object.values(authoring.entities?.sources||{}))if(s.resource==='water')out.push(...objectAccessPositions(authoring,s,'fill',topology));
     }else if(type==='sleep'){
-      for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind))&&slot.position&&baseWalkable(authoring,slot.position))out.push(slot.position);
+      for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind))&&slot.position&&baseWalkable(authoring,slot.position,topology))out.push(slot.position);
     }
-    return dedupePositions(authoring,out);
+    return dedupePositions(authoring,out,topology);
   }
 
   function analyzeInitialPlacements(authoring){
     singleRuntimeLayer(authoring);
+    const topology=A.deriveHorizontalTopology(authoring,{z:0});
     const hardErrors=[],diagnostics=[],resolvedPlacements={},index=slotIndex(authoring);
     const residentIds=Object.keys(authoring.residents||{}).sort();
     for(const residentId of residentIds){
@@ -327,14 +324,14 @@
     for(const residentId of residentIds){
       const resolved=resolvedPlacements[residentId];
       if(!resolved)continue;
-      const entry=authoring.residents[residentId],reachable=reachableKeys(authoring,resolved.position);
+      const entry=authoring.residents[residentId],reachable=reachableKeys(authoring,resolved.position,topology);
       for(const [type,code,label] of [
         ['exit','initial_no_exit_route','出口'],
         ['food','initial_food_unreachable','食物'],
         ['water','initial_water_unreachable','飲水'],
         ['sleep','initial_sleep_unreachable','可睡眠位置']
       ]){
-        const targets=accessTargets(authoring,entry.kind,type);
+        const targets=accessTargets(authoring,entry.kind,type,topology);
         if(!targets.length){
           if(type!=='exit')diagnostics.push(issue(`initial_${type}_unavailable`,`${residentId} 的 authored world沒有可用${label} target。`,{residentId}));
           continue;
@@ -385,8 +382,8 @@
   }
 
   function createInitialState(authoring,{seed=20260911,version,supplyTrigger=70}={}){
-    const n=(Number(seed)>>>0)||20260911,placementReport=assertInitialPlacements(authoring);
-    const map={width:authoring.map.width,height:authoring.map.height,tiles:buildTiles(authoring),rooms:{},roomRevision:0};
+    const n=(Number(seed)>>>0)||20260911,placementReport=assertInitialPlacements(authoring),topology=A.deriveHorizontalTopology(authoring,{z:0});
+    const map={width:authoring.map.width,height:authoring.map.height,tiles:buildTiles(authoring,topology),rooms:{},roomRevision:0};
     const lowLevel=authoring.compatibility?.passageConstraints;
     if(lowLevel&&Object.keys(lowLevel).length)map.passageConstraints=clone(lowLevel);
     const furniture=buildFurniture(authoring);
@@ -400,10 +397,6 @@
       agents:buildResidents(authoring,placementReport.resolvedPlacements),
       events:[],causes:{},thoughts:{}
     };
-    for(const f of Object.values(furniture))for(const p of f.footprint||[]){
-      const tile=state.map.tiles[p.x+','+p.y];
-      if(tile&&!tile.furnitureIds.includes(f.id))tile.furnitureIds.push(f.id);
-    }
     return state;
   }
 
