@@ -119,6 +119,10 @@ assert.ok(editorUi.includes('P.storePreview(authored)'),'D.1C must preflight/sto
 assert.ok(editorUi.includes('allowPreviewNavigation'),'D.1C preview navigation must bypass only the intentional dirty-document unload guard');
 assert.ok(editorUi.includes("active?'select':'furniture'"),'Furniture placement action must toggle back to neutral select mode');
 assert.ok(editorUi.includes("chair:'餐椅'"),'Furniture instance presentation must expose the shared chair type independently from A/B/C/D instance names');
+assert.ok(editorUi.includes('移動自由位置'),'Resident UI must describe the exact-only move in user language');
+assert.ok(editorUi.includes('解除家具綁定並移動（站立）'),'Resident UI must describe the explicit detach + standing conversion');
+assert.ok(editorUi.includes('取消目前操作'),'pendingOperation may remain an internal key, but visible cancellation copy must be localized');
+assert.ok(!editorUi.includes('取消 pending operation'),'internal pendingOperation terminology must not leak into the primary Editor UI');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"),'drag drop commit must delegate to the canonical Furniture mutation owner');
 assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');
