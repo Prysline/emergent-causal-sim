@@ -376,7 +376,7 @@ const restoredEditor=await page.evaluate(()=>({
 assert.equal(restoredEditor.search,'?restore=preview');
 assert.equal(restoredEditor.fingerprint,previewFingerprint,'Preview → Editor return must restore the exact canonical snapshot');
 assert.equal(restoredEditor.session.dirty,true,'restored sessionStorage snapshot must remain an unsaved working document');
-assert.deepEqual(restoredEditor.chair,[{x:3,y:4}]);
+assert.deepEqual(restoredEditor.chair,[{x:3,y:4,z:0}],'restored Editor document must retain canonical authored z=0 positions');
 assert.deepEqual(restoredEditor.zLevels,[0,1]);
 
 page.once('dialog',dialog=>dialog.accept());
