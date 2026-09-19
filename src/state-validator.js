@@ -12,7 +12,7 @@
 
     for(const [id,t] of Object.entries(st.map?.tiles||{})){
       if(t.terrain==='floor'&&!t.roomId)add('room_missing',`Floor Tile ${id} 沒有由拓撲推導出的 roomId。`,{position:id});
-      if(t.terrain!=='floor'&&t.walkable)add('non_floor_base_walkable',`${id} 的 terrain=${t.terrain} 卻把 base walkable 標成 true。`,{position:id});
+      if(!['floor','doorway'].includes(t.terrain)&&t.walkable)add('non_open_base_walkable',`${id} 的 terrain=${t.terrain} 卻把 base walkable 標成 true。`,{position:id});
       if(Object.prototype.hasOwnProperty.call(t,'staticBlockedBy'))add('cached_blocker_present',`${id} 仍保存 staticBlockedBy；阻擋應由目前實體推導。`,{position:id});
     }
 
