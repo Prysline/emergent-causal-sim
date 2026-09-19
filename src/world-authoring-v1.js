@@ -84,6 +84,7 @@
   function authoringIssue(code,path,message,data={}){
     return {code,path,message,...data};
   }
+  const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&a.z===b.z;
 
   function validateAuthoring(authoring){
     const errors=[];
@@ -208,7 +209,13 @@
       if(container.id!==undefined&&container.id!==key)errors.push(authoringIssue('authoring_container_id_mismatch',`${basePath}.id`,`Container key ${key} does not match id ${String(container.id)}.`));
       if(container.position)validatePosition(container.position,`${basePath}.position`);
       for(let i=0;i<(container.interactionPorts||[]).length;i++)if(container.interactionPorts[i]?.position)validatePosition(container.interactionPorts[i].position,`${basePath}.interactionPorts[${i}].position`);
-      if(container.supportId&&!authoring.furniture?.[container.supportId])errors.push(authoringIssue('authoring_support_missing',`${basePath}.supportId`,`Container supportId ${container.supportId} does not exist.`,{supportId:container.supportId}));
+      if(container.supportId){
+        const support=authoring.furniture?.[container.supportId];
+        if(!support)errors.push(authoringIssue('authoring_support_missing',`${basePath}.supportId`,`Container supportId ${container.supportId} does not exist.`,{supportId:container.supportId}));
+        else if(container.position&&!((support.footprint||[]).some(p=>samePosition(p,container.position)))){
+          errors.push(authoringIssue('authoring_support_position_mismatch',`${basePath}.position`,`Container ${key} is positioned outside support ${container.supportId} footprint.`,{containerId:key,supportId:container.supportId}));
+        }
+      }
     }
     for(const [key,source] of Object.entries(authoring.entities?.sources||{})){
       const basePath=`entities.sources.${key}`;
