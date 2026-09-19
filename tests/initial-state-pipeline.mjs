@@ -29,11 +29,16 @@ const initializerFiles=[
   'locomotion-schema-v1190.js'
 ];
 
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js',...initializerFiles]){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js']){
+  vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
+}
+const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
+for(const file of initializerFiles){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
 const W=globalThis.SimWorld;
+assert.equal(W.createInitialState,canonicalCreateInitialState,'subsystem extensions must not replace the canonical createInitialState owner');
 const EXPECTED=[
   {id:'spatial.schema',order:10},
   {id:'spatialObservability.schema',order:20},
@@ -86,7 +91,7 @@ const srcDir=new URL('../src/',import.meta.url);
 const wrapperAssignments=[];
 for(const name of fs.readdirSync(srcDir).filter(name=>name.endsWith('.js'))){
   const source=fs.readFileSync(new URL(name,srcDir),'utf8');
-  if(name!=='world.js'&&/\b(?:W|SimWorld|window\.SimWorld)\.createInitialState\s*=/.test(source))wrapperAssignments.push(name);
+  if(name!=='world.js'&&/\.createInitialState\s*=/.test(source))wrapperAssignments.push(name);
 }
 assert.deepEqual(wrapperAssignments,[],'world.js must remain the only createInitialState lifecycle owner');
 
