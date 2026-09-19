@@ -11,7 +11,7 @@
   <header class="editor-appbar">
     <div>
       <div class="eyebrow">WORLD AUTHORING · world-authoring-v2</div>
-      <h1>地圖編輯器 <span>Scene inspector + Z-aware authoring</span></h1>
+      <h1>地圖編輯器 <span>Entity lifecycle + Scene inspector</span></h1>
     </div>
     <div class="header-actions">
       <a class="button ghost" href="index.html">返回模擬器</a>
@@ -93,20 +93,22 @@
       <section>
         <h2>Selection</h2>
         <div id="selectionSummary" class="selection-card">尚未選取。</div>
+        <div id="selectionActions" class="selection-actions"></div>
       </section>
       <section>
         <h2>Validation</h2>
         <div id="validationList" class="validation-list"></div>
       </section>
       <section class="boundary-note">
-        <h2>Slice D.1A boundary</h2>
-        <p>Scene list、typed marker 與 selection 都是 ephemeral Editor presentation，不 serialize。此頁仍不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator；runtime Spatial identity 仍維持 2D，multi-layer / non-zero Z runtime adapter仍 loud failure。</p>
+        <h2>Slice D.1B1 boundary</h2>
+        <p>Entity move / duplicate / delete / Resident placement 由 pure authoring mutation owner 執行 atomic clone → apply → validate → commit；selection、pending operation 與操作結果仍只屬 ephemeral Editor state，不 serialize。此頁仍不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator；drag、playtest bridge 與 runtime Z identity 不屬本 slice。</p>
       </section>
     </aside>
   </main>
 </div>
 
 <script src="src/world-authoring-v1.js" defer></script>
+<script src="src/editor-authoring-mutations.js" defer></script>
 <script src="src/editor-ui.js" defer></script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.21.1-editor-scene-inspector`。
+目前 runtime marker：`11.21.2-editor-entity-lifecycle`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -44,6 +44,8 @@ Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `Sim
 `editor.html` 只載入 authoring helper asset 與 editor presentation code，不載入 `world-initializer.js`、`world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，但不得載入或複製 runtime traversal owner。這讓 multi-layer authoring可以合法 import / export / round-trip，同時保留 current runtime adapter 對 multi-layer / non-zero z 的 explicit failure，避免用 Editor presentation偷渡 runtime Z identity。
 
 Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furniture、Container、Source、Resident 清單與地圖 typed marker都由 canonical authoring document即時投影；sidebar 選取、map marker選取與 Inspector focus共用同一個 ephemeral `selection` owner，不建立 serialized scene registry。Furniture placement target仍是 Editor operation state；選取 furniture只更新 target，不會偷改 active authoring tool。Resident marker位置可從 exact placement 或唯一 furnitureSlot anchor解析，但這仍是 authoring-side presentation，不啟動 runtime initializer。主模擬器只新增通往 `editor.html` 的入口；Editor→Simulator world handoff仍留在 D.1C。
+
+Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor canonical mutation ownership boundary**。它不保存 world state，也不是 simulation subsystem；Furniture / Container / Source / Resident lifecycle operation只接收 canonical authoring document，clone candidate、套用單一 operation、呼叫 `SimWorldAuthoring.validateAuthoring(...)`，candidate valid才回傳可 commit document。`editor-ui.js` 只保存 `selection / selectedTool / selectedFurnitureId / pendingOperation` 與 structured operation result 等 ephemeral state，不得複製 move / delete / duplicate semantics。Furniture support follower、explicit support choice、deterministic duplicate ID、guarded delete與 Resident explicit placement transition都屬 authoring mutation contract；Editor仍不載入 runtime Initializer / Spatial / Engine / Validator。D.1B2 drag只能重用這個 owner，不能另寫 movement semantics。
 
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 

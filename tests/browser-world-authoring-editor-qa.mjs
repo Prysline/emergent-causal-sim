@@ -92,7 +92,53 @@ snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),do
 assert.equal(snapshot.session.dirty,true);
 assert.deepEqual(snapshot.document.furniture.chairNW.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(snapshot.document.furniture.chairNW.slots[0].position,{x:3,y:4,z:0});
-assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'furniture placement must not auto-move separately authored entities');
+assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
+
+await page.click('[data-editor-action="duplicate-furniture"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(snapshot.pendingOperation.kind,'duplicate-furniture');
+await page.click('[data-cell="3,5"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.ok(snapshot.document.furniture['chairNW-copy'],'duplicate must create a canonical Furniture only after placement click');
+assert.equal(snapshot.document.furniture['chairNW-copy'].id,'chairNW-copy');
+assert.equal(snapshot.document.furniture['chairNW-copy'].slots[0].id,'chairNW-copy:seat');
+assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
+
+await page.click('[data-scene-type="container"][data-scene-id="basket"]');
+await page.click('[data-editor-action="move-object"]');
+await page.click('[data-cell="5,2"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),actions:document.querySelector('#selectionActions')?.textContent||''}));
+assert.equal(snapshot.session.pendingOperation.kind,'resolve-object-support');
+assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:3,y:2,z:0},'ambiguous support target must reject atomically before explicit choice');
+assert.match(snapshot.actions,/Floor/);
+assert.match(snapshot.actions,/餐桌/);
+await page.click('[data-editor-action="resolve-support"][data-support-kind="floor"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:5,y:2,z:0});
+assert.equal(snapshot.document.entities.containers.basket.supportId,undefined);
+
+await page.click('[data-scene-type="container"][data-scene-id="basket"]');
+await page.click('[data-editor-action="move-object"]');
+await page.click('[data-cell="6,2"]');
+await page.click('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:6,y:2,z:0});
+assert.equal(snapshot.document.entities.containers.basket.supportId,'diningTable');
+
+await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
+await page.click('[data-editor-action="move-resident-exact"]');
+await page.click('[data-cell="8,4"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.deepEqual(snapshot.document.residents.zhen.initial.placement.node,{x:8,y:4,z:0});
+assert.equal(snapshot.document.residents.zhen.initial.posture.kind,'standing');
+
+await page.click('[data-scene-type="furniture"][data-scene-id="diningTable"]');
+await page.click('[data-editor-action="delete-furniture"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),actions:document.querySelector('#selectionActions')?.textContent||''}));
+assert.ok(snapshot.document.furniture.diningTable,'referenced Furniture delete must be rejected');
+assert.ok(snapshot.session.operationIssues.some(issue=>issue.code==='furniture_delete_blocked'));
+assert.match(snapshot.actions,/mealTray/);
+assert.match(snapshot.actions,/supportId/);
 
 await page.click('[data-entity-type="resident"][data-entity-id="orange"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
