@@ -104,6 +104,11 @@ assert.ok(editorUi.includes('residentPosition'),'Editor scene selection must res
 assert.ok(!editorUi.includes('entity-dot'),'generic untyped entity dots must not remain after D.1A');
 assert.ok(editorUi.includes('SimEditorAuthoringMutations'),'Editor UI must delegate entity lifecycle semantics to the pure mutation owner');
 assert.ok(editorUi.includes('pendingOperation'),'D.1B1 must keep pending mutation intent separate from generic scene selection');
+assert.ok(editorUi.includes('DRAG_THRESHOLD_PX'),'D.1B2 must distinguish click selection from desktop drag with an explicit movement threshold');
+for(const eventName of ['pointerdown','pointermove','pointerup','pointercancel'])assert.ok(editorUi.includes(eventName),`D.1B2 must use Pointer Events for furniture drag: ${eventName}`);
+assert.ok(editorUi.includes('dragState'),'D.1B2 drag preview state must remain explicit ephemeral Editor state');
+assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
+assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"),'drag drop commit must delegate to the canonical Furniture mutation owner');
 assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');
 for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','selection','pendingOperation','baselineFingerprint']){
   assert.ok(editorUi.includes(ephemeral),`Expected Editor ephemeral state: ${ephemeral}`);
@@ -112,5 +117,6 @@ assert.ok(!exported.includes('"currentZ"'));
 assert.ok(!exported.includes('"selectedTool"'));
 assert.ok(!exported.includes('"dirty"'));
 assert.ok(!exported.includes('"pendingOperation"'));
+assert.ok(!exported.includes('"dragState"'));
 
 console.log('world authoring editor contract: ok');
