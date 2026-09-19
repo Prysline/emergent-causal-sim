@@ -11,7 +11,7 @@
   let currentZ=authored.map.layers.some(layer=>layer.z===0)?0:authored.map.layers[0].z;
   let selectedTool='floor';
   let selectedFurnitureId=Object.keys(authored.furniture||{})[0]||null;
-  let selectedCell=null;
+  let selection=null;
   let transientMessage='';
 
   function layers(){return [...(authored.map.layers||[])].sort((a,b)=>a.z-b.z);}
@@ -24,6 +24,48 @@
   function cellId(x,y){return `${x},${y}`;}
   function cellAt(layer,x,y){return layer?.cells?.[cellId(x,y)]||null;}
   function setMessage(message=''){transientMessage=message;}
+
+  function residentPosition(resident){
+    const placement=resident?.initial?.placement;
+    if(placement?.mode==='exact')return placement.node||null;
+    if(placement?.mode==='anchor'&&placement.anchor?.kind==='furnitureSlot'){
+      const matches=[];
+      for(const furniture of Object.values(authored.furniture||{})){
+        for(const slot of furniture.slots||[])if(slot.id===placement.anchor.id)matches.push(slot.position);
+      }
+      return matches.length===1?matches[0]:null;
+    }
+    return null;
+  }
+
+  function sceneEntries(){
+    const out=[];
+    const push=(type,id,entity,position,icon,label)=>out.push({type,id,entity,position:position||null,icon:icon||'•',label});
+    for(const [id,furniture] of Object.entries(authored.furniture||{}))push('furniture',id,furniture,furnitureAnchor(furniture),furniture.icon||'▰','Furniture');
+    for(const [id,container] of Object.entries(authored.entities?.containers||{}))push('container',id,container,container.position,container.icon||'◈','Object · Container');
+    for(const [id,source] of Object.entries(authored.entities?.sources||{}))push('source',id,source,source.position,source.icon||'◆','Object · Source');
+    for(const [id,resident] of Object.entries(authored.residents||{}))push('resident',id,resident,residentPosition(resident),resident.icon||(resident.kind==='cat'?'🐈':'👤'),'Resident');
+    return out;
+  }
+
+  function sceneEntry(type,id){return sceneEntries().find(entry=>entry.type===type&&entry.id===id)||null;}
+
+  function selectionPosition(){
+    if(!selection)return null;
+    if(selection.kind==='cell')return {x:selection.x,y:selection.y,z:selection.z};
+    if(selection.kind==='entity')return sceneEntry(selection.type,selection.id)?.position||null;
+    return null;
+  }
+
+  function selectSceneEntity(type,id){
+    const entry=sceneEntry(type,id);
+    if(!entry)return;
+    selection={kind:'entity',type,id};
+    if(type==='furniture')selectedFurnitureId=id;
+    if(entry.position&&layerAt(entry.position.z??0))currentZ=entry.position.z??0;
+    setMessage('');
+    render();
+  }
 
   function allAuthoredPositions(){
     const out=[];
@@ -42,7 +84,8 @@
       for(const port of source.interactionPorts||[])push(port.position,`source-port:${id}`);
     }
     for(const [id,resident] of Object.entries(authored.residents||{})){
-      if(resident.initial?.placement?.mode==='exact')push(resident.initial.placement.node,`resident:${id}`);
+      const position=residentPosition(resident);
+      if(position)push(position,`resident:${id}`);
     }
     return out;
   }
@@ -67,7 +110,7 @@
       layer.cells[id]={...previous,terrain};
       for(const derived of ['walkable','roomId','furnitureIds'])delete layer.cells[id][derived];
     }
-    selectedCell={x,y,z:currentZ};
+    selection={kind:'cell',x,y,z:currentZ};
     setMessage(tool==='erase'?`已清除 cell ${id}`:`${id} → ${terrainForTool(tool)}`);
     render();
   }
@@ -103,7 +146,7 @@
     if(furniture.displayAt)furniture.displayAt=translatePosition(furniture.displayAt,dx,dy,dz);
     for(const slot of furniture.slots||[])slot.position=translatePosition(slot.position,dx,dy,dz);
     selectedFurnitureId=id;
-    selectedCell={x:target.x,y:target.y,z:target.z};
+    selection={kind:'entity',type:'furniture',id};
     setMessage(`已移動 ${furniture.name||id}；其他獨立 authored entity 不會自動跟隨。`);
     render();
   }
@@ -124,7 +167,7 @@
     authored.map.layers.push({z,cells:{}});
     authored.map.layers.sort((a,b)=>a.z-b.z);
     currentZ=z;
-    selectedCell=null;
+    selection=null;
     setMessage(`已新增 Z ${z} 空層。`);
     render();
   }
@@ -139,7 +182,7 @@
     authored.map.layers=authored.map.layers.filter(item=>item!==layer);
     const list=layers();
     currentZ=list.reduce((best,item)=>Math.abs(item.z-oldZ)<Math.abs(best.z-oldZ)?item:best,list[0]).z;
-    selectedCell=null;
+    selection=null;
     setMessage(`已刪除空層 Z ${oldZ}。`);
     render();
   }
@@ -148,7 +191,7 @@
     const list=layers(),index=list.findIndex(layer=>layer.z===currentZ),target=list[index+delta];
     if(!target)return;
     currentZ=target.z;
-    selectedCell=null;
+    selection=null;
     setMessage('');
     render();
   }
@@ -156,7 +199,7 @@
   function setCurrentLayer(z){
     if(!layerAt(z))return;
     currentZ=z;
-    selectedCell=null;
+    selection=null;
     setMessage('');
     render();
   }
@@ -168,7 +211,7 @@
     const list=layers();
     currentZ=list.some(layer=>layer.z===0)?0:list[0].z;
     selectedFurnitureId=Object.keys(authored.furniture||{})[0]||null;
-    selectedCell=null;
+    selection=null;
     setMessage(message);
     render();
   }
@@ -211,20 +254,31 @@
     return Object.entries(authored.furniture||{}).filter(([,furniture])=>(furniture.footprint||[]).some(p=>p.x===x&&p.y===y&&(p.z??0)===z));
   }
 
-  function entityCountAt(x,y,z){
-    return allAuthoredPositions().filter(({position,label})=>position.x===x&&position.y===y&&position.z===z&&!label.startsWith('furniture')&&!label.startsWith('slot:')).length;
+  function nonFurnitureEntitiesAtCell(x,y,z){
+    return sceneEntries().filter(entry=>entry.type!=='furniture'&&entry.position?.x===x&&entry.position?.y===y&&(entry.position?.z??0)===z);
   }
 
   function renderMap(){
     const host=$('editorMap'),layer=layerAt(currentZ),width=authored.map.width,height=authored.map.height;
     host.style.setProperty('--grid-w',width);
     host.style.setProperty('--grid-h',height);
+    const selectedPosition=selectionPosition();
     let html='';
     for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-      const cell=cellAt(layer,x,y),terrain=cell?.terrain||'void',furniture=furnitureAtCell(x,y,currentZ),entities=entityCountAt(x,y,currentZ);
-      const selected=selectedCell?.x===x&&selectedCell?.y===y&&selectedCell?.z===currentZ;
-      const furnitureName=furniture.map(([id,f])=>f.name||id).join('、');
-      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="(${x},${y},${currentZ}) ${esc(terrain)}" title="(${x}, ${y}, ${currentZ})・${esc(terrain)}${furnitureName?'・'+esc(furnitureName):''}"><span class="cell-coord">${x},${y}</span>${furniture.length?`<span class="furniture-mark ${furniture.some(([id])=>id===selectedFurnitureId)?'selected':''} ${furniture.length>1?'multi':''}">${furniture.length>1?furniture.length:esc(furniture[0][1].icon||'▰')}</span>`:''}${entities?'<span class="entity-dot"></span>':''}</button>`;
+      const cell=cellAt(layer,x,y),terrain=cell?.terrain||'void',furniture=furnitureAtCell(x,y,currentZ),entities=nonFurnitureEntitiesAtCell(x,y,currentZ);
+      const selected=selectedPosition?.x===x&&selectedPosition?.y===y&&(selectedPosition?.z??0)===currentZ;
+      const furnitureName=furniture.map(([id,item])=>item.name||id).join('、');
+      const entityName=entities.map(entry=>entry.entity.name||entry.id).join('、');
+      const furnitureMarkup=furniture.length?furniture.map(([id,item])=>{
+        const isSelected=selection?.kind==='entity'&&selection.type==='furniture'&&selection.id===id;
+        const isTarget=id===selectedFurnitureId;
+        return `<span class="furniture-mark ${isSelected?'selected':''} ${isTarget?'placement-target':''} ${furniture.length>1?'multi':''}" data-entity-type="furniture" data-entity-id="${esc(id)}" title="Furniture：${esc(item.name||id)}${isTarget?' · placement target':''}">${esc(item.icon||'▰')}</span>`;
+      }).join(''):'';
+      const entityMarkup=entities.length?`<span class="entity-markers">${entities.slice(0,3).map(entry=>{
+        const isSelected=selection?.kind==='entity'&&selection.type===entry.type&&selection.id===entry.id;
+        return `<span class="entity-marker marker-${esc(entry.type)} ${isSelected?'selected':''}" data-entity-type="${esc(entry.type)}" data-entity-id="${esc(entry.id)}" title="${esc(entry.label)}：${esc(entry.entity.name||entry.id)}">${esc(entry.icon)}</span>`;
+      }).join('')}${entities.length>3?`<span class="entity-overflow">+${entities.length-3}</span>`:''}</span>`:'';
+      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="(${x},${y},${currentZ}) ${esc(terrain)}" title="(${x}, ${y}, ${currentZ})・${esc(terrain)}${furnitureName?'・Furniture: '+esc(furnitureName):''}${entityName?'・Entities: '+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${furnitureMarkup}${entityMarkup}</button>`;
     }
     host.innerHTML=html;
   }
@@ -244,9 +298,21 @@
 
   function renderTools(){
     document.querySelectorAll('[data-tool]').forEach(button=>button.classList.toggle('active',button.dataset.tool===selectedTool));
-    const select=$('furnitureSelect'),entries=Object.entries(authored.furniture||{});
-    select.innerHTML=entries.length?entries.map(([id,furniture])=>`<option value="${esc(id)}" ${id===selectedFurnitureId?'selected':''}>${esc(furniture.name||id)} · ${esc(id)}</option>`).join(''):'<option value="">沒有 furniture</option>';
-    select.disabled=!entries.length;
+  }
+
+  function renderSceneList(){
+    const host=$('sceneList'),entries=sceneEntries();
+    const groups=[
+      ['Furniture',entries.filter(entry=>entry.type==='furniture')],
+      ['Objects',entries.filter(entry=>entry.type==='container'||entry.type==='source')],
+      ['Residents',entries.filter(entry=>entry.type==='resident')]
+    ];
+    host.innerHTML=groups.map(([label,items])=>`<div class="scene-group"><div class="scene-group-head"><span>${esc(label)}</span><span>${items.length}</span></div><div class="scene-items">${items.length?items.map(entry=>{
+      const selected=selection?.kind==='entity'&&selection.type===entry.type&&selection.id===entry.id;
+      const placementTarget=entry.type==='furniture'&&entry.id===selectedFurnitureId;
+      const position=entry.position?`(${entry.position.x}, ${entry.position.y}, ${entry.position.z??0})`:'position unresolved';
+      return `<button class="scene-item ${selected?'selected':''} ${placementTarget?'placement-target':''}" type="button" data-scene-type="${esc(entry.type)}" data-scene-id="${esc(entry.id)}"><span class="scene-icon">${esc(entry.icon)}</span><span class="scene-copy"><b>${esc(entry.entity.name||entry.id)}</b><small>${esc(entry.label)} · ${esc(position)}${placementTarget?' · placement target':''}</small></span></button>`;
+    }).join(''):'<div class="scene-empty">目前沒有項目</div>'}</div></div>`).join('');
   }
 
   function renderSummary(validation,topology){
@@ -262,12 +328,39 @@
       ['Validation',validation.ok?'valid':`${validation.errors.length} error(s)`]
     ].map(([key,value])=>`<div class="key">${esc(key)}</div><div>${esc(value)}</div>`).join('');
 
-    if(selectedCell){
-      const layer=layerAt(selectedCell.z),cell=cellAt(layer,selectedCell.x,selectedCell.y),furniture=furnitureAtCell(selectedCell.x,selectedCell.y,selectedCell.z);
-      const derived=topology?.cells?.[cellId(selectedCell.x,selectedCell.y)];
-      const derivedText=derived?`<br>derived: <code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>${derived.componentId?` · ${esc(derived.componentId)}`:''}${derived.blockedBy.length?`<br>blocked by: ${derived.blockedBy.map(esc).join('、')}`:''}${derived.under.length?`<br>under clearance: ${derived.under.map(item=>`${esc(item.furnitureId)} ${item.clearanceHeight??'—'}m`).join('、')}`:''}`:'';
-      $('selectionSummary').innerHTML=`<b>Cell (${selectedCell.x}, ${selectedCell.y}, ${selectedCell.z})</b><br>terrain: <code>${esc(cell?.terrain||'void')}</code>${cell?.material?`<br>material: <code>${esc(cell.material)}</code>`:''}${furniture.length?`<br>furniture: ${furniture.map(([id,f])=>esc(f.name||id)).join('、')}`:''}${derivedText}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;
-    }else $('selectionSummary').textContent=transientMessage||'尚未選取。';
+    const position=selectionPosition();
+    let heading='',details='';
+    if(selection?.kind==='entity'){
+      const entry=sceneEntry(selection.type,selection.id);
+      if(entry){
+        heading=`${esc(entry.icon)} ${esc(entry.entity.name||entry.id)}`;
+        details=`<br>${esc(entry.label)} · <code>${esc(entry.id)}</code>`;
+        if(entry.type==='furniture')details+=`<br>footprint: ${(entry.entity.footprint||[]).length} cell(s)`;
+        if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>support: <code>${esc(entry.entity.supportId)}</code>`;
+        if(entry.type==='resident'){
+          const placement=entry.entity.initial?.placement;
+          details+=`<br>placement: <code>${esc(placement?.mode||'—')}</code>`;
+          if(placement?.mode==='anchor')details+=` · <code>${esc(placement.anchor?.id||'—')}</code>`;
+        }
+      }
+    }else if(selection?.kind==='cell'){
+      heading=`Cell (${selection.x}, ${selection.y}, ${selection.z})`;
+    }
+
+    if(position){
+      const z=position.z??0,layer=layerAt(z),cell=cellAt(layer,position.x,position.y),furniture=furnitureAtCell(position.x,position.y,z);
+      const derived=z===currentZ?topology?.cells?.[cellId(position.x,position.y)]:null;
+      details+=`<br>position: <code>(${position.x}, ${position.y}, ${z})</code><br>terrain: <code>${esc(cell?.terrain||'void')}</code>`;
+      if(cell?.material)details+=`<br>material: <code>${esc(cell.material)}</code>`;
+      if(furniture.length)details+=`<br>furniture here: ${furniture.map(([id,item])=>esc(item.name||id)).join('、')}`;
+      if(derived){
+        details+=`<br>derived: <code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>${derived.componentId?` · ${esc(derived.componentId)}`:''}`;
+        if(derived.blockedBy.length)details+=`<br>blocked by: ${derived.blockedBy.map(esc).join('、')}`;
+        if(derived.under.length)details+=`<br>under clearance: ${derived.under.map(item=>`${esc(item.furnitureId)} ${item.clearanceHeight??'—'}m`).join('、')}`;
+      }
+    }
+    if(heading)$('selectionSummary').innerHTML=`<b>${heading}</b>${details}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;
+    else $('selectionSummary').textContent=transientMessage||'尚未選取。';
   }
 
   function renderValidation(validation){
@@ -284,12 +377,18 @@
     const validation=report(),topology=validation.ok?derivedTopology():null;
     renderLayers();
     renderTools();
+    renderSceneList();
     renderMap();
     renderSummary(validation,topology);
     renderValidation(validation);
   }
 
   $('editorMap').addEventListener('click',event=>{
+    const entity=event.target.closest('[data-entity-type][data-entity-id]');
+    if(entity){
+      selectSceneEntity(entity.dataset.entityType,entity.dataset.entityId);
+      return;
+    }
     const cell=event.target.closest('[data-cell]');
     if(!cell)return;
     const [x,y]=cell.dataset.cell.split(',').map(Number);
@@ -300,11 +399,10 @@
     setMessage('');
     renderTools();
   }));
-  $('furnitureSelect').addEventListener('change',event=>{
-    selectedFurnitureId=event.target.value||null;
-    selectedTool='furniture';
-    setMessage('');
-    render();
+  $('sceneList').addEventListener('click',event=>{
+    const item=event.target.closest('[data-scene-type][data-scene-id]');
+    if(!item)return;
+    selectSceneEntity(item.dataset.sceneType,item.dataset.sceneId);
   });
   $('layerPrev').addEventListener('click',()=>navigateLayer(-1));
   $('layerNext').addEventListener('click',()=>navigateLayer(1));
@@ -325,10 +423,11 @@
 
   window.SimWorldEditor={
     getDocument:()=>A.cloneAuthoring(authored),
-    getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selectedCell:selectedCell?{...selectedCell}:null,dirty:isDirty(),validation:report()}),
+    getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selection:selection?{...selection}:null,selectedCell:selectionPosition()?{...selectionPosition()}:null,dirty:isDirty(),validation:report()}),
     loadDocument:next=>loadDocument(next,{clean:true,message:'Test/API document loaded.'}),
     semanticFingerprint:fingerprint,
-    getDerivedTopology:(z=currentZ)=>derivedTopology(z)
+    getDerivedTopology:(z=currentZ)=>derivedTopology(z),
+    selectEntity:(type,id)=>selectSceneEntity(type,id)
   };
 
   render();
