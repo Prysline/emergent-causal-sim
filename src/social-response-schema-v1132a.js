@@ -1,14 +1,13 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('social-response-schema-v1132a.js requires world.js initial-state pipeline.');
   const VERSION='11.13.2a-social-response-agency';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('socialResponse.schema',(st)=>{
     st.version=VERSION;
     return st;
-  };
+  },900);
   W.SOCIAL_RESPONSE_SCHEMA_VERSION=VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.petOfferId='撫摸邀請';
