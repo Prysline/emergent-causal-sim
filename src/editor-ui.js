@@ -418,7 +418,7 @@
     const list=layers();
     currentZ=list.reduce((best,item)=>Math.abs(item.z-oldZ)<Math.abs(best.z-oldZ)?item:best,list[0]).z;
     selection=null;
-    setMessage(`已刪除空層 Z ${oldZ}。`);
+    setMessage(`已刪除層 Z ${oldZ}。`);
     render();
   }
 
@@ -618,7 +618,7 @@
     let pendingMarkup='';
     if(pendingOperation){
       const operation=pendingOperation;
-      const labels={'duplicate-furniture':'下一次點擊：放置新增同型家具','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident-exact':'下一次點擊：移動自由位置','convert-resident-exact':'下一次點擊：解除家具綁定並移動（站立）','rebind-resident-slot':'重新綁定家具位置'};
+      const labels={'duplicate-furniture':'下一次點擊：放置家具副本','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident-exact':'下一次點擊：移動自由位置','convert-resident-exact':'下一次點擊：解除家具綁定並移動（站立）','rebind-resident-slot':'重新綁定家具位置'};
       pendingMarkup+=`<div class="pending-operation"><b>${esc(labels[operation.kind]||operation.kind)}</b>`;
       if(operation.kind==='resolve-object-support'){
         pendingMarkup+=`<small>target: <code>(${operation.target.x}, ${operation.target.y}, ${operation.target.z})</code></small><div class="action-row"><button type="button" data-editor-action="resolve-support" data-support-kind="floor">Floor</button>${(operation.candidates||[]).map(candidate=>`<button type="button" data-editor-action="resolve-support" data-support-kind="furniture" data-support-id="${esc(candidate.id)}">Support：${esc(candidate.name||candidate.id)}</button>`).join('')}</div>`;
@@ -635,7 +635,7 @@
     let entityMarkup='';
     if(entry?.type==='furniture'){
       const placementActive=selectedTool==='furniture'&&selectedFurnitureId===entry.id;
-      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">新增同型家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · instance：<code>${esc(entry.id)}</code></small>`;
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">複製家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · instance：<code>${esc(entry.id)}</code></small>`;
     }else if(entry?.type==='container'||entry?.type==='source'){
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
     }else if(entry?.type==='resident'){
@@ -732,7 +732,7 @@
     if(action==='confirm-resident-rebind'){confirmResidentRebind();return;}
     if(!entry)return;
     if(action==='arm-furniture-placement'&&entry.type==='furniture'){const active=selectedTool==='furniture'&&selectedFurnitureId===entry.id;selectedFurnitureId=entry.id;selectedTool=active?'select':'furniture';clearOperationState();setMessage(active?'家具放置已停止。':'家具放置已啟用；點擊地圖決定新 anchor。');render();return;}
-    if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'新增同型家具：下一次點擊決定 anchor。');return;}
+    if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'複製家具：下一次點擊決定新副本位置。');return;}
     if(action==='delete-furniture'&&entry.type==='furniture'){deleteSelectedFurniture(entry.id);return;}
     if(action==='move-object'&&(entry.type==='container'||entry.type==='source')){beginOperation({kind:'move-object',entityType:entry.type,entityId:entry.id},'移動物件：下一次點擊決定 target。');return;}
     if(action==='move-resident-exact'&&entry.type==='resident'){beginOperation({kind:'move-resident-exact',residentId:entry.id},'移動自由位置：下一次點擊決定新位置；不解除家具綁定、不修改姿勢。');return;}
