@@ -41,14 +41,21 @@
     return initialStateInitializers.map(({id,order})=>({id,order}));
   }
 
-  function createInitialState(seed=20260911){
+  function createInitialStateFromAuthoring(authoring,seed=20260911){
     const n=(Number(seed)>>>0)||20260911;
-    const st=I.createInitialState(A.DEFAULT_WORLD_AUTHORING,{seed:n,version:VERSION,supplyTrigger:SUPPLY_TRIGGER});
+    const canonical=A.canonicalizeAuthoring(A.cloneAuthoring(authoring));
+    A.assertValidAuthoring(canonical);
+    I.assertRuntimeCompatibleAuthoring(canonical);
+    const st=I.createInitialState(canonical,{seed:n,version:VERSION,supplyTrigger:SUPPLY_TRIGGER});
     return runInitialStateInitializers(st,{seed:n});
   }
 
+  function createInitialState(seed=20260911){
+    return createInitialStateFromAuthoring(A.DEFAULT_WORLD_AUTHORING,seed);
+  }
+
   window.SimWorld={
-    VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,
+    VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring,
     INITIAL_STATE_PIPELINE_VERSION:'initial-state-pipeline-1',
     registerInitialStateInitializer,runInitialStateInitializers,listInitialStateInitializers
   };
