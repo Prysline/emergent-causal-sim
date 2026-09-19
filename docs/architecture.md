@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.21.0-geometry-derived-topology`。
+目前 runtime marker：`11.21.1-editor-scene-inspector`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -42,6 +42,8 @@ Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `Sim
 `world-authoring-v1 → v2` migration 是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，migration 會一次性寫入正式 Furniture geometry；v2 runtime 不再以 `diningTable` ID hidden fallback補值。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
 
 `editor.html` 只載入 authoring helper asset 與 editor presentation code，不載入 `world-initializer.js`、`world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，但不得載入或複製 runtime traversal owner。這讓 multi-layer authoring可以合法 import / export / round-trip，同時保留 current runtime adapter 對 multi-layer / non-zero z 的 explicit failure，避免用 Editor presentation偷渡 runtime Z identity。
+
+Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furniture、Container、Source、Resident 清單與地圖 typed marker都由 canonical authoring document即時投影；sidebar 選取、map marker選取與 Inspector focus共用同一個 ephemeral `selection` owner，不建立 serialized scene registry。Furniture placement target仍是 Editor operation state；選取 furniture只更新 target，不會偷改 active authoring tool。Resident marker位置可從 exact placement 或唯一 furnitureSlot anchor解析，但這仍是 authoring-side presentation，不啟動 runtime initializer。主模擬器只新增通往 `editor.html` 的入口；Editor→Simulator world handoff仍留在 D.1C。
 
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 
