@@ -97,7 +97,7 @@ assert.ok(editorHtml.includes('id="testWorld"'));
 assert.ok(editorHtml.includes('data-tool="select"'),'Editor must expose a neutral select/browse tool so placement modes can be exited without authoring terrain');
 assert.ok(editorHtml.includes('開口／門洞'),'doorway terrain must be labeled as an opening, not conflated with exit capability');
 assert.ok(editorHtml.includes('src/editor-ui.js'));
-assert.ok(editorHtml.includes('shared geometry compiler'));
+assert.ok(editorHtml.includes('terrain: "doorway"'),'Editor must expose doorway terrain semantics without requiring internal compiler terminology in visible copy');
 assert.ok(editorHtml.includes('id="sceneList"'),'Editor must expose one scene-list surface for furniture, objects and residents');
 assert.ok(!editorHtml.includes('id="furnitureSelect"'),'D.1A replaces the furniture-only dropdown with the shared scene list');
 
