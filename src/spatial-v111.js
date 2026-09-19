@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
+  if(!W.registerInitialStateInitializer)throw new Error('spatial-v111.js requires world.js initial-state pipeline.');
   const VERSION='11.11-spatial-traversal';
-  const baseCreateInitialState=W.createInitialState;
   const baseInit=SP.init;
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -273,7 +273,7 @@
     const overhead=overheadAt(st,n);if(overhead.length)return `${overhead[0].name}下`;return baseDescribePlace(st,aOrPos);}
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{const st=baseCreateInitialState(seed);st.version=VERSION;installSpatialDefs(st);return st;};
+  W.registerInitialStateInitializer('spatial.schema',(st)=>{st.version=VERSION;installSpatialDefs(st);},10);
   SP.init=init;
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
