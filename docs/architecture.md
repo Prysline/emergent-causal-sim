@@ -35,6 +35,10 @@ Authoring package 保存「這個 world instance 開場是什麼」：map terrai
 
 Slice A 的 authoring positions可攜帶 `z:0`，但 current runtime Spatial identity仍是單層；adapter只接受 exactly one `z=0` layer，遇到 multi-layer或 non-zero z必須 loud failure，不得 silent flatten。真正把 z納入 Spatial Node / occupancy / route / contact identity屬後續 runtime semantic slice。
 
+Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time validation / canonical serialization與獨立 Editor surface，不建立新的 runtime schema generation。Canonical world truth仍是 authoring document本身；Editor session 的 `currentZ`、selected tool / furniture / cell、dirty baseline等只屬 ephemeral UI state，不可輸出到 authoring JSON。Z-level切換只改 presentation，不得改 canonical document fingerprint。
+
+`editor.html` 只載入 `world-authoring-v1.js` 與 editor presentation code，不載入 `world-initializer.js`、`world.js`、Spatial、Engine或 runtime Validator。這讓 multi-layer authoring可以合法 import / export / round-trip，同時保留 current runtime adapter 對 multi-layer / non-zero z 的 explicit failure，避免用 Editor presentation偷渡 runtime Z identity。
+
 `SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
 
 Resident initial placement 在同一 `world-authoring-v1` contract內支援兩種 mode：`exact` 與 explicit `{kind:'furnitureSlot', id}` anchor。Anchor resolution 必須 deterministic；anchor 需存在且唯一、允許該 resident kind，並要求明確 `initial.posture.kind`。posture 指向不同 slot / furniture、exclusive slot double assignment、blocked / missing exact node 都是 hard error。

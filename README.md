@@ -12,6 +12,7 @@
 
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
 - Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v1`。map terrain/material、Furniture instance、Container / Source 開場配置與 Resident opening placement 不再散落在 `world.js`；`SimWorldInitializer` 將 authoring package 編譯成既有 runtime state shape。
+- `world-authoring-v1` 的 canonical positions / layers 使用 `x / y / z`。獨立 `editor.html` 直接編輯同一份 canonical authoring document，Editor 的 current Z、選取工具與 dirty-state 都只是 ephemeral UI state，不 serialize，也不建立第二份 runtime truth。多層 authoring 可 import / export / round-trip；current runtime adapter 仍只接受 exactly one `z=0` layer並對其他情況 loud failure。
 - Resident opening placement 支援 `exact` 與 explicit `furnitureSlot` anchor。`SimWorldInitializer.analyzeInitialPlacements(...)` 分開回傳 hard errors 與 diagnostic-only 問題：missing/conflicting/blocked slot 或 position 會拒絕初始化；密室、無出口、資源不可達與非 exclusive node overlap 只提示，不自動搬人或修改世界。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。
