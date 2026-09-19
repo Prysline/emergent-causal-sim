@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.21.2-editor-entity-lifecycle';
+const CURRENT_VERSION='11.21.3-editor-furniture-drag';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
@@ -138,7 +138,7 @@ assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readabl
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.21\.2・Editor Entity Lifecycle/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.21\.3・Editor Furniture Drag/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
