@@ -7,11 +7,17 @@
   const STORAGE_KEY='emergent-causal-sim.editor-preview.v1';
   const PREVIEW_PARAM='preview';
   const PREVIEW_VALUE='editor';
+  const RESTORE_PARAM='restore';
+  const RESTORE_VALUE='preview';
   const clone=value=>value==null?value:JSON.parse(JSON.stringify(value));
   const issue=(code,message,data={})=>({code,message,...data});
 
   function isPreviewRequested(){
     try{return new URLSearchParams(window.location.search).get(PREVIEW_PARAM)===PREVIEW_VALUE;}
+    catch{return false;}
+  }
+  function isRestoreRequested(){
+    try{return new URLSearchParams(window.location.search).get(RESTORE_PARAM)===RESTORE_VALUE;}
     catch{return false;}
   }
 
@@ -75,6 +81,12 @@
     };
   }
 
+  function getRestorePreview(){
+    if(!isRestoreRequested())return {requested:false,ok:true,stage:'default',authoring:null,fingerprint:null,issues:[],diagnostics:[]};
+    const result=loadStoredPreview();
+    return {requested:true,...result,authoring:result.authoring?A.cloneAuthoring(result.authoring):null};
+  }
+
   function updateIndicator(){
     const banner=document.getElementById('editorPreviewBanner');
     if(!banner)return;
@@ -83,6 +95,8 @@
     banner.classList.toggle('preview-error',!active.ok);
     const title=banner.querySelector('[data-preview-title]');
     const detail=banner.querySelector('[data-preview-detail]');
+    const editorLink=document.getElementById('worldEditorLink');
+    if(editorLink)editorLink.href=requested&&active.ok?'editor.html?restore=preview':'editor.html';
     if(active.ok){
       if(title)title.textContent='Editor Preview';
       if(detail)detail.textContent='此模擬器由本次 Editor snapshot 啟動；重置會重建同一份 preview world。';
@@ -100,12 +114,14 @@
   }
 
   window.SimEditorPreviewBridge={
-    STORAGE_KEY,PREVIEW_PARAM,PREVIEW_VALUE,
-    isPreviewRequested,
+    STORAGE_KEY,PREVIEW_PARAM,PREVIEW_VALUE,RESTORE_PARAM,RESTORE_VALUE,
+    isPreviewRequested,isRestoreRequested,
     preflight,
     storePreview,
     loadStoredPreview,
     getActivePreview,
-    previewUrl:'index.html?preview=editor'
+    getRestorePreview,
+    previewUrl:'index.html?preview=editor',
+    restoreUrl:'editor.html?restore=preview'
   };
 })();
