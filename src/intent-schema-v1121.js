@@ -1,15 +1,14 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('intent-schema-v1121.js requires world.js initial-state pipeline.');
   const VERSION='11.12.1-active-intent-foundation';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('intent.schema',(st)=>{
     st.version=VERSION;
     for(const a of Object.values(st.agents||{}))a.activeIntent=null;
     return st;
-  };
+  },200);
   W.INTENT_SCHEMA_VERSION=VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.actionKind='Action 類型';
