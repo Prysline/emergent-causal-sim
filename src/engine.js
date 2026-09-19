@@ -1,9 +1,14 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
-  const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
+  const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6;
   const CIRCADIAN_PATTERN_ZH={diurnal:'日行性',nocturnal:'夜行性',crepuscular:'晨昏性'};
   const SOCIAL_STIMULUS={petAnimal:{intensity:18,kind:'touch'},seekHuman:{intensity:34,kind:'touch+sound'}};
+  const previewBootstrap=window.SimEditorPreviewBridge?.getActivePreview?.()||{requested:false,ok:true,authoring:null,fingerprint:null,issues:[]};
+  if(previewBootstrap.requested&&!previewBootstrap.ok){
+    throw new Error('Editor Preview bootstrap failed: '+(previewBootstrap.issues||[]).map(item=>item.code||item.message).join(', '));
+  }
+  const previewAuthoring=previewBootstrap.requested?previewBootstrap.authoring:null;
   let state=null,eventSeq=0,coreTickDepth=0;
   const eventCreatedListeners=[];
   const decisionOptionProviders=[];
@@ -220,8 +225,8 @@
   function getEntity(type,id){if(type==='agent')return state.agents[id];if(type==='container')return state.containers[id];if(type==='source')return state.sources[id];if(type==='furniture')return state.furniture[id];if(type==='room')return state.map.rooms[id];return null;}
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`,kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}
   function supplyStatus(){const worker=activeSupplyActor();return {stock:foodStock(),trigger:state.supply.trigger,workerId:worker?.id||null,workerName:worker?.name||null,trips:state.supply.trips,totalProduced:state.supply.totalProduced};}
-  function reset(seed=DEFAULT_SEED){eventSeq=0;state=createInitialState(normalizeSeed(seed));SP.init(state);addEvent(`${VERSION} 初始化：活動疲勞、睡眠需求、物種節律、睡眠中互動刺激、物流容器與 Interaction Geometry 使用單一 core state。`,'system',[],{seed:state.seed});return state;}
+  function reset(seed=DEFAULT_SEED){eventSeq=0;const normalizedSeed=normalizeSeed(seed);state=previewAuthoring?createInitialStateFromAuthoring(previewAuthoring,normalizedSeed):createInitialState(normalizedSeed);SP.init(state);addEvent(`${VERSION} 初始化：活動疲勞、睡眠需求、物種節律、睡眠中互動刺激、物流容器與 Interaction Geometry 使用單一 core state。`,'system',[],{seed:state.seed});return state;}
   reset(DEFAULT_SEED);
 
-  window.SimEngine={VERSION,RESOURCE_TYPES,ZH,DATA_ZH,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,registerEventCreatedListener,listEventCreatedListeners,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,sleepProfile,circadianPatternName,circadianSleepBias,sleepPropensity,naturalWakeDrive,isSleeping,interactionWakeChance,tryWakeFromInteraction,foodStock,supplyStatus,actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,positionRef,reservationOwner,holderOf,buildAction,baseUtilityForAction,speciesProfile,isAnimalAgent,canPetAnimal,nearestPettableAnimal,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};
+  window.SimEngine={VERSION,RESOURCE_TYPES,ZH,DATA_ZH,PREVIEW_MODE:!!previewAuthoring,PREVIEW_FINGERPRINT:previewBootstrap.fingerprint||null,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,registerEventCreatedListener,listEventCreatedListeners,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,sleepProfile,circadianPatternName,circadianSleepBias,sleepPropensity,naturalWakeDrive,isSleeping,interactionWakeChance,tryWakeFromInteraction,foodStock,supplyStatus,actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,positionRef,reservationOwner,holderOf,buildAction,baseUtilityForAction,speciesProfile,isAnimalAgent,canPetAnimal,nearestPettableAnimal,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};
 })();
