@@ -74,6 +74,18 @@ async function entitySnapshot(){
 }
 
 await openStory();
+const postureProjection=await page.evaluate(()=>{
+  const st=window.SimEngine.getState(),a=st.agents.zhou,original=structuredClone(a.posture);
+  a.posture={kind:'prone',slotId:null,furnitureId:null};
+  window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());
+  const actionLocation=document.querySelector('.action-card.agent-zhou .action-location')?.textContent||'';
+  const debugText=document.querySelector('[data-v1140-debug-view]')?.textContent||'';
+  a.posture=original;
+  window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());
+  return {actionLocation,debugText};
+});
+assert.match(postureProjection.actionLocation,/俯臥/,'Action Card must render runtime prone posture instead of falling back to standing');
+assert.match(postureProjection.debugText,/俯臥/,'Debug Inspector projection must use the same runtime posture label');
 let desktop=await snapshot();
 assert.equal(desktop.version,CURRENT_VERSION);
 assert.equal(desktop.uiVersion,CURRENT_VERSION);
