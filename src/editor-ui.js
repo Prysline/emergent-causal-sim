@@ -319,7 +319,7 @@
     if(operation.kind==='duplicate-furniture'){
       const result=M.duplicateFurniture(authored,{sourceId:operation.furnitureId,target});
       const newId=result?.meta?.newId;
-      commitMutation(result,{message:result.ok?`已新增同型家具 ${newId}。`:'',select:result.ok?{type:'furniture',id:newId}:null});
+      commitMutation(result,{message:result.ok?`已建立家具副本 ${newId}。`:'',select:result.ok?{type:'furniture',id:newId}:null});
       return true;
     }
     if(operation.kind==='move-object'){
