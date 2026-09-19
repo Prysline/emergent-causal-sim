@@ -18,7 +18,7 @@
     }
     if(type==='Furniture'){
       const f=s.furniture?.[id],surface=f?.spatial?.surface;if(!surface?.cells?.length)return'';
-      const rows=surface.cells.map(cell=>{const n=SP.normalizeNode(s,{x:cell.x,y:cell.y},surface.id),env=SP.environmentAt(s,n,{create:false});return `<div class="content-item"><div class="content-head"><span>(${cell.x}, ${cell.y})</span><b>${esc(contentsText(env?.contents||{}))}</b></div></div>`;}).join('');
+      const rows=surface.cells.map(cell=>{const p=SP.clonePos(cell),n=SP.normalizeNode(s,p,surface.id),env=SP.environmentAt(s,n,{create:false}),z=SP.zOf?.(cell)??cell.z??0;return `<div class="content-item"><div class="content-head"><span>(${cell.x}, ${cell.y}, Z ${z})</span><b>${esc(contentsText(env?.contents||{}))}</b></div></div>`;}).join('');
       return `<h3>Surface Environment</h3><div class="content-list">${rows}</div>`;
     }
     return'';
