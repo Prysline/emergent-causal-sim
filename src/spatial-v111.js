@@ -26,7 +26,6 @@
     if(table){
       table.spatial??={};
       table.spatial.surface={id:'diningTable:surface',label:'餐桌桌面',traversable:true,allowKinds:['human','cat'],cells:(table.footprint||[]).map(p=>({x:p.x,y:p.y})),moveCost:{human:4,cat:1.1},transitionCost:{human:9,cat:1.6}};
-      table.spatial.under={clearance:.72,cover:'overhead'};
     }
     return st;
   }
@@ -39,7 +38,7 @@
   function agentFor(st,aOrId){if(typeof aOrId==='string')return st.agents?.[aOrId]||null;return aOrId||null;}
 
   function fixedFloorBlocker(st,p){
-    const t=SP.tileByPos(st,p);if(!t||!t.walkable||t.terrain!=='floor')return t?`terrain:${t.terrain}`:'out-of-bounds';
+    const t=SP.tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
     const furniture=(t.furnitureIds||[]).map(id=>st.furniture?.[id]).filter(Boolean);
     const solid=furniture.find(f=>f.blocksMovement&&!f.spatial?.under);if(solid)return `furniture:${solid.id}`;
     const fixedContainer=Object.values(st.containers||{}).find(c=>c.portable===false&&!c.supportId&&xySame(baseObjectPosition(st,c.id),p));if(fixedContainer)return `container:${fixedContainer.id}`;
