@@ -94,6 +94,8 @@ assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
 assert.ok(editorHtml.includes('src/world-initializer.js'));
 assert.ok(editorHtml.includes('src/editor-preview-bridge.js'));
 assert.ok(editorHtml.includes('id="testWorld"'));
+assert.ok(editorHtml.includes('data-tool="select"'),'Editor must expose a neutral select/browse tool so placement modes can be exited without authoring terrain');
+assert.ok(editorHtml.includes('開口／門洞'),'doorway terrain must be labeled as an opening, not conflated with exit capability');
 assert.ok(editorHtml.includes('src/editor-ui.js'));
 assert.ok(editorHtml.includes('shared geometry compiler'));
 assert.ok(editorHtml.includes('id="sceneList"'),'Editor must expose one scene-list surface for furniture, objects and residents');
@@ -115,6 +117,8 @@ assert.ok(editorUi.includes('dragState'),'D.1B2 drag preview state must remain e
 assert.ok(editorUi.includes('SimEditorPreviewBridge'),'D.1C launch must delegate browser-session handoff to the explicit preview bridge');
 assert.ok(editorUi.includes('P.storePreview(authored)'),'D.1C must preflight/store the same canonical Editor document before navigation');
 assert.ok(editorUi.includes('allowPreviewNavigation'),'D.1C preview navigation must bypass only the intentional dirty-document unload guard');
+assert.ok(editorUi.includes("active?'select':'furniture'"),'Furniture placement action must toggle back to neutral select mode');
+assert.ok(editorUi.includes("chair:'餐椅'"),'Furniture instance presentation must expose the shared chair type independently from A/B/C/D instance names');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"),'drag drop commit must delegate to the canonical Furniture mutation owner');
 assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');
