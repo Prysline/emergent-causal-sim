@@ -102,6 +102,7 @@ assert.deepEqual(clickPlacement.document.furniture.chairNW.slots[0].position,{x:
 assert.deepEqual(clickPlacement.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
 
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+await page.click('[data-tool="floor"]');
 const dragSource=page.locator('[data-entity-type="furniture"][data-entity-id="chairNW"]').first();
 const dragTarget=page.locator('[data-cell="3,4"]');
 const dragSourceBox=await dragSource.boundingBox();
