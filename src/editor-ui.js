@@ -774,5 +774,14 @@
     selectEntity:(type,id)=>selectSceneEntity(type,id)
   };
 
-  render();
+  const restorePreview=P.getRestorePreview?.();
+  if(restorePreview?.requested){
+    if(restorePreview.ok&&restorePreview.authoring){
+      loadDocument(restorePreview.authoring,{clean:false,message:'已從 Editor Preview 恢復工作稿；這份 snapshot 仍視為未匯出修改。'});
+    }else{
+      const reason=(restorePreview.issues||[]).map(issue=>issue.message||issue.code).join('；')||'找不到可恢復的 Preview snapshot。';
+      setMessage(`無法恢復 Editor Preview：${reason}`);
+      render();
+    }
+  }else render();
 })();
