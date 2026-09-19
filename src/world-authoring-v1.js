@@ -88,7 +88,7 @@
   function validateAuthoring(authoring){
     const errors=[];
     if(!isRecord(authoring)){
-      return {ok:false,errors:[authoringIssue('authoring_document_invalid','
+      return {ok:false,errors:[authoringIssue('authoring_document_invalid','document','Authoring document must be an object.')]};
     }
     if(authoring.authoringSchema!==VERSION){
       errors.push(authoringIssue('authoring_schema_unsupported','authoringSchema',`Expected ${VERSION}; received ${String(authoring.authoringSchema)}.`));
