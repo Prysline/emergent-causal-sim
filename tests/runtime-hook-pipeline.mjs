@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
 
