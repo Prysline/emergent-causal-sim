@@ -58,8 +58,8 @@ const otherSeed=W.createInitialState(7);
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 
-const unsupported=JSON.parse(JSON.stringify(authored));
-unsupported.map.layers[0].z=1;
-assert.throws(()=>I.createInitialState(unsupported,{seed:1,version:'test'}),/exactly one z=0 layer/);
+const missingPlacementLayer=JSON.parse(JSON.stringify(authored));
+missingPlacementLayer.map.layers[0].z=1;
+assert.throws(()=>I.createInitialState(missingPlacementLayer,{seed:1,version:'test'}),/initial_placement_layer_missing/,'runtime must reject resident placements that reference a layer no longer present');
 
 console.log('world authoring foundation: ok');
