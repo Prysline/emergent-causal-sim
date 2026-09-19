@@ -138,13 +138,25 @@
       if(furniture.displayAt)furniture.displayAt=translatePosition(furniture.displayAt,dx,dy,dz);
       for(const slot of furniture.slots||[])if(slot.position)slot.position=translatePosition(slot.position,dx,dy,dz);
       const followers=[];
+      const followerPositions=[];
       for(const [containerId,container] of Object.entries(candidate.entities?.containers||{})){
         if(container.supportId!==furnitureId)continue;
         if(container.position)container.position=translatePosition(container.position,dx,dy,dz);
         for(const port of container.interactionPorts||[])if(port.position)port.position=translatePosition(port.position,dx,dy,dz);
         followers.push(containerId);
+        if(container.position)followerPositions.push({id:containerId,position:clone(container.position)});
       }
-      return {meta:{operation:'moveFurniture',furnitureId,delta:{dx,dy,dz},followers}};
+      return {meta:{
+        operation:'moveFurniture',
+        furnitureId,
+        delta:{dx,dy,dz},
+        followers,
+        preview:{
+          footprint:clone(furniture.footprint||[]),
+          displayAt:clone(furniture.displayAt||null),
+          followerPositions
+        }
+      }};
     });
   }
 
