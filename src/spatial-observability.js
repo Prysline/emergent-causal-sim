@@ -1,8 +1,8 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP?.normalizeNode)return;
+  if(!W.registerInitialStateInitializer)throw new Error('spatial-observability.js requires world.js initial-state pipeline.');
   const VERSION='11.11.1-spatial-observability';
   const FLOOR='floor';
-  const baseCreateInitialState=W.createInitialState;
 
   function roomLabel(st,spaceId){return st.map?.rooms?.[spaceId]?.name||spaceId||'world';}
   function surfaceLabel(st,surfaceId){if(!surfaceId||surfaceId===FLOOR)return'地板';const entry=SP.surfaceEntry?.(st,surfaceId);return entry?.surface?.label||surfaceId;}
@@ -63,6 +63,6 @@
   function formatNode(st,p){const o=nodeObservation(st,p);return o?`${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y})`:'無';}
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{const st=baseCreateInitialState(seed);st.version=VERSION;return st;};
+  W.registerInitialStateInitializer('spatialObservability.schema',(st)=>{st.version=VERSION;},20);
   Object.assign(SP,{OBSERVABILITY_VERSION:VERSION,roomLabel,surfaceLabel,nodeObservation,agentObservation,objectObservation,furnitureObservation,formatNode});
 })();
