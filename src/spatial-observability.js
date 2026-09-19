@@ -21,7 +21,7 @@
       spaceLabel:roomLabel(st,node.spaceId),
       surfaceId:node.surfaceId,
       surfaceLabel:surfaceLabel(st,node.surfaceId),
-      position:{x:node.x,y:node.y},
+      position:SP.clonePos(node),
       covered:overhead.length>0,
       overhead:overhead.map(f=>({id:f.id,name:f.name,clearance:f.spatial?.under?.clearance??null,clearanceWidth:f.spatial?.under?.clearanceWidth??null})),
       clearance,
@@ -53,14 +53,14 @@
       surfaceId:surface?.id||null,
       surfaceLabel:surface?.label||null,
       traversable:!!surface?.traversable,
-      cells:(surface?.cells||[]).map(p=>({x:p.x,y:p.y})),
+      cells:(surface?.cells||[]).map(p=>SP.clonePos(p)),
       allowKinds:[...(surface?.allowKinds||[])],
       clearance:Number.isFinite(under?.clearance)?under.clearance:null,
       clearanceWidth:Number.isFinite(under?.clearanceWidth)?under.clearanceWidth:null,
       cover:under?.cover||null
     };
   }
-  function formatNode(st,p){const o=nodeObservation(st,p);return o?`${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y})`:'無';}
+  function formatNode(st,p){const o=nodeObservation(st,p);if(!o)return'無';const z=SP.zOf?.(o.position)??o.position.z??0;return `${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y}${z!==0?`, z=${z}`:''})`;}
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('spatialObservability.schema',(st)=>{st.version=VERSION;},20);
