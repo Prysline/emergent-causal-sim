@@ -180,9 +180,9 @@
       case'talk':{const other=choice.targetAgent?state.agents[choice.targetAgent]:nearestAgent(a,'human',{allowSleeping:false});action=other&&!other.offMap?{...base,phase:'move',targetAgent:other.id}:null;break;}
       case'petAnimal':{const animal=choice.targetAgent?state.agents[choice.targetAgent]:nearestPettableAnimal(a);action=canPetAnimal(a,animal)?{...base,phase:'move',targetAgent:animal.id}:null;break;}
       case'seekHuman':{const h=choice.targetAgent?state.agents[choice.targetAgent]:nearestAgent(a,'human');action=h&&!h.offMap&&isAnimalAgent(a)?{...base,phase:'move',targetAgent:h.id}:null;break;}
-      case'cleanFloor':{const t=choice.targetTile||SP.wettestTile(state);action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null};break;}
+      case'cleanFloor':{const t=choice.targetTile||SP.wettestTile(state);action={...base,phase:'move',targetTile:t?SP.clonePos(t):null};break;}
       case'groom':action={...base,phase:'groom'};break;
-      case'wander':{const t=choice.targetTile||randomFloorTile(a);action={...base,phase:'move',targetTile:t?{x:t.x,y:t.y}:null,oneShot:true};break;}
+      case'wander':{const t=choice.targetTile||randomFloorTile(a);action={...base,phase:'move',targetTile:t?SP.clonePos(t):null,oneShot:true};break;}
       case'restockContainer':{const j=choice.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;}
       case'externalSupply':{const exit=choice.exitSlot?SP.getSlot(state,choice.exitSlot):exitSlotFor(a);if(exit&&choice.carrierId)action={...base,phase:'toCarrier',exitSlot:exit.id,destinationId:choice.destinationId,resource:choice.resource,carrierId:choice.carrierId,workLeft:Math.floor(rand(7,11)),produced:0};break;}
     }
