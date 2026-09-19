@@ -11,7 +11,7 @@
   <header class="editor-appbar">
     <div>
       <div class="eyebrow">WORLD AUTHORING · world-authoring-v2</div>
-      <h1>地圖編輯器 <span>Z-aware authoring shell</span></h1>
+      <h1>地圖編輯器 <span>Scene inspector + Z-aware authoring</span></h1>
     </div>
     <div class="header-actions">
       <a class="button ghost" href="index.html">返回模擬器</a>
@@ -58,10 +58,9 @@
       </section>
 
       <section>
-        <h2>Furniture</h2>
-        <label class="field-label" for="furnitureSelect">既有 canonical instance</label>
-        <select id="furnitureSelect"></select>
-        <p class="hint">點地圖可平移整個 instance 的 footprint / displayAt / slots；不自動搬動承載物件或居民。</p>
+        <h2>Scene</h2>
+        <p class="hint scene-hint">選取實體會定位到其 authored position。選到 Furniture 時也會更新 Furniture placement target，但不會自動切換目前工具。</p>
+        <div id="sceneList" class="scene-list" aria-label="場景實體列表"></div>
       </section>
     </aside>
 
@@ -76,6 +75,9 @@
           <span><i class="swatch wall"></i>wall</span>
           <span><i class="swatch opening"></i>opening</span>
           <span><i class="swatch void"></i>void</span>
+          <span><i class="marker-key resident">👤</i>resident</span>
+          <span><i class="marker-key object">◈</i>object</span>
+          <span><i class="marker-key furniture">▰</i>furniture</span>
         </div>
       </div>
       <div class="map-scroll">
@@ -97,8 +99,8 @@
         <div id="validationList" class="validation-list"></div>
       </section>
       <section class="boundary-note">
-        <h2>Slice D boundary</h2>
-        <p>此頁不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator。Editor 與 initializer 共用 authoring-side horizontal topology derivation；runtime Spatial identity 仍維持 2D，multi-layer / non-zero Z runtime adapter仍 loud failure。</p>
+        <h2>Slice D.1A boundary</h2>
+        <p>Scene list、typed marker 與 selection 都是 ephemeral Editor presentation，不 serialize。此頁仍不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator；runtime Spatial identity 仍維持 2D，multi-layer / non-zero Z runtime adapter仍 loud failure。</p>
       </section>
     </aside>
   </main>
