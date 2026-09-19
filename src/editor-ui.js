@@ -582,7 +582,8 @@
         if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>support: <code>${esc(entry.entity.supportId)}</code>`;
         if(entry.type==='resident'){
           const placement=entry.entity.initial?.placement;
-          details+=`<br>placement: <code>${esc(placement?.mode||'—')}</code>`;
+          const placementLabel=placement?.mode==='exact'?'自由座標（exact）':placement?.mode==='anchor'?'家具位置綁定（anchor）':placement?.mode||'—';
+          details+=`<br>位置模式：${esc(placementLabel)}`;
           if(placement?.mode==='anchor')details+=` · <code>${esc(placement.anchor?.id||'—')}</code>`;
         }
       }
@@ -617,18 +618,19 @@
     let pendingMarkup='';
     if(pendingOperation){
       const operation=pendingOperation;
-      const labels={'duplicate-furniture':'下一次點擊：放置新增同型家具','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident-exact':'下一次點擊：移動 exact Resident','convert-resident-exact':'下一次點擊：改為 exact（standing）','rebind-resident-slot':'重新綁定 furnitureSlot'};
+      const labels={'duplicate-furniture':'下一次點擊：放置新增同型家具','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident-exact':'下一次點擊：移動自由位置','convert-resident-exact':'下一次點擊：解除家具綁定並移動（站立）','rebind-resident-slot':'重新綁定家具位置'};
       pendingMarkup+=`<div class="pending-operation"><b>${esc(labels[operation.kind]||operation.kind)}</b>`;
       if(operation.kind==='resolve-object-support'){
         pendingMarkup+=`<small>target: <code>(${operation.target.x}, ${operation.target.y}, ${operation.target.z})</code></small><div class="action-row"><button type="button" data-editor-action="resolve-support" data-support-kind="floor">Floor</button>${(operation.candidates||[]).map(candidate=>`<button type="button" data-editor-action="resolve-support" data-support-kind="furniture" data-support-id="${esc(candidate.id)}">Support：${esc(candidate.name||candidate.id)}</button>`).join('')}</div>`;
       }else if(operation.kind==='rebind-resident-slot'){
         const slots=M.listResidentSlots(authored,operation.residentId).filter(slot=>slot.compatible);
-        pendingMarkup+=`<label class="operation-field">Furniture slot<select data-operation-field="slotId"><option value="">請選擇…</option>${slots.map(slot=>`<option value="${esc(slot.id)}" ${operation.slotId===slot.id?'selected':''}>${esc(slot.furnitureName)} · ${esc(slot.label)} (${slot.position.x},${slot.position.y},${slot.position.z??0})</option>`).join('')}</select></label>`;
-        pendingMarkup+=`<label class="operation-field">Posture<select data-operation-field="postureKind"><option value="">請選擇…</option>${['standing','sitting','lying','kneeling','prone'].map(kind=>`<option value="${kind}" ${operation.postureKind===kind?'selected':''}>${kind}</option>`).join('')}</select></label><button type="button" data-editor-action="confirm-resident-rebind" ${!operation.slotId||!operation.postureKind?'disabled':''}>套用 slot rebind</button>`;
+        pendingMarkup+=`<label class="operation-field">家具位置（slot）<select data-operation-field="slotId"><option value="">請選擇…</option>${slots.map(slot=>`<option value="${esc(slot.id)}" ${operation.slotId===slot.id?'selected':''}>${esc(slot.furnitureName)} · ${esc(slot.label)} (${slot.position.x},${slot.position.y},${slot.position.z??0})</option>`).join('')}</select></label>`;
+        const postureLabels={standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥'};
+        pendingMarkup+=`<label class="operation-field">姿勢<select data-operation-field="postureKind"><option value="">請選擇…</option>${['standing','sitting','lying','kneeling','prone'].map(kind=>`<option value="${kind}" ${operation.postureKind===kind?'selected':''}>${postureLabels[kind]}（${kind}）</option>`).join('')}</select></label><button type="button" data-editor-action="confirm-resident-rebind" ${!operation.slotId||!operation.postureKind?'disabled':''}>套用家具位置綁定</button>`;
       }else{
         pendingMarkup+='<small>點擊地圖 cell 執行；失敗時原 canonical document 不會改變。</small>';
       }
-      pendingMarkup+='<button type="button" class="ghost-action" data-editor-action="cancel-operation">取消 pending operation</button></div>';
+      pendingMarkup+='<button type="button" class="ghost-action" data-editor-action="cancel-operation">取消目前操作</button></div>';
     }
     let entityMarkup='';
     if(entry?.type==='furniture'){
@@ -638,9 +640,12 @@
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
     }else if(entry?.type==='resident'){
       const binding=M.residentBinding(authored,entry.id);
-      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-resident-exact">移動居民（exact only）</button><button type="button" data-editor-action="convert-resident-exact">改為 exact（standing）</button><button type="button" data-editor-action="rebind-resident-slot">重新綁定 slot</button></div><small class="operation-note">binding: ${binding?.bound?'bound':'unbound'} · posture: ${esc(binding?.postureKind||'—')}</small>`;
+      const postureLabels={standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥'};
+      const canMoveFree=binding?.placementMode==='exact'&&!binding?.bound;
+      const bindingLabel=binding?.bound?'家具／座位綁定':binding?.placementMode==='exact'?'自由座標':'其他';
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-resident-exact" ${canMoveFree?'':'disabled'}>移動自由位置</button><button type="button" data-editor-action="convert-resident-exact">解除家具綁定並移動（站立）</button><button type="button" data-editor-action="rebind-resident-slot">綁定到家具位置</button></div><small class="operation-note">位置模式：${esc(bindingLabel)} · 姿勢：${esc(postureLabels[binding?.postureKind]||binding?.postureKind||'—')}${canMoveFree?'':' · 「移動自由位置」只適用於未綁家具的自由座標居民'}</small>`;
     }
-    const metaMarkup=lastOperationMeta?`<div class="operation-meta">last operation: <code>${esc(lastOperationMeta.operation||lastOperationMeta.phase||'result')}</code></div>`:'';
+    const metaMarkup=lastOperationMeta?`<div class="operation-meta">最近操作：<code>${esc(lastOperationMeta.operation||lastOperationMeta.phase||'result')}</code></div>`:'';
     host.innerHTML=pendingMarkup+entityMarkup+issueMarkup+metaMarkup;
   }
 
@@ -730,9 +735,9 @@
     if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'新增同型家具：下一次點擊決定 anchor。');return;}
     if(action==='delete-furniture'&&entry.type==='furniture'){deleteSelectedFurniture(entry.id);return;}
     if(action==='move-object'&&(entry.type==='container'||entry.type==='source')){beginOperation({kind:'move-object',entityType:entry.type,entityId:entry.id},'移動物件：下一次點擊決定 target。');return;}
-    if(action==='move-resident-exact'&&entry.type==='resident'){beginOperation({kind:'move-resident-exact',residentId:entry.id},'移動 Resident：只允許 unbound exact placement。');return;}
-    if(action==='convert-resident-exact'&&entry.type==='resident'){beginOperation({kind:'convert-resident-exact',residentId:entry.id},'改為 exact（standing）：下一次點擊決定 target。');return;}
-    if(action==='rebind-resident-slot'&&entry.type==='resident'){beginOperation({kind:'rebind-resident-slot',residentId:entry.id,slotId:'',postureKind:''},'請明確選擇 furnitureSlot 與 posture。');return;}
+    if(action==='move-resident-exact'&&entry.type==='resident'){beginOperation({kind:'move-resident-exact',residentId:entry.id},'移動自由位置：下一次點擊決定新位置；不解除家具綁定、不修改姿勢。');return;}
+    if(action==='convert-resident-exact'&&entry.type==='resident'){beginOperation({kind:'convert-resident-exact',residentId:entry.id},'解除家具／座位綁定並移動：下一次點擊決定新位置，姿勢會明確改為站立。');return;}
+    if(action==='rebind-resident-slot'&&entry.type==='resident'){beginOperation({kind:'rebind-resident-slot',residentId:entry.id,slotId:'',postureKind:''},'請明確選擇家具位置與姿勢。');return;}
   });
   $('selectionActions').addEventListener('change',event=>{
     const field=event.target.closest('[data-operation-field]');
