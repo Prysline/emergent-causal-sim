@@ -1,14 +1,12 @@
 (() => {
   const W=window.SimWorld;if(!W?.MEMORY_RETENTION_SCHEMA_VERSION)return;
   const VERSION='11.13.4-memory-deliberation-influence';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('memoryDeliberation.schema',(st)=>{
     st.version=VERSION;
     return st;
-  };
+  },1200);
   W.MEMORY_DELIBERATION_SCHEMA_VERSION=VERSION;
   W.MEMORY_DELIBERATION_TOP_MEMORIES=6;
   W.MEMORY_DELIBERATION_MAX_DELTA=18;
