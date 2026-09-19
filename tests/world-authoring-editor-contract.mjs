@@ -83,6 +83,10 @@ const editorHtml=fs.readFileSync(new URL('../editor.html',import.meta.url),'utf8
 for(const forbidden of ['src/world-initializer.js','src/world.js','src/spatial.js','src/engine.js','src/state-validator.js']){
   assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
 }
+const authoringScript=editorHtml.indexOf('src/world-authoring-v1.js');
+const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
+const editorScript=editorHtml.indexOf('src/editor-ui.js');
+assert.ok(authoringScript>=0&&mutationScript>authoringScript&&editorScript>mutationScript,'Editor load order must be authoring → pure mutation owner → UI');
 assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
 assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
 assert.ok(editorHtml.includes('src/editor-ui.js'));
@@ -98,11 +102,15 @@ assert.ok(editorUi.includes('deriveHorizontalTopology'),'Editor preview must use
 assert.ok(editorUi.includes('sceneEntries'),'Editor must derive the scene list from canonical authoring data rather than persist a second scene registry');
 assert.ok(editorUi.includes('residentPosition'),'Editor scene selection must resolve exact and furnitureSlot-anchored resident positions from authoring truth');
 assert.ok(!editorUi.includes('entity-dot'),'generic untyped entity dots must not remain after D.1A');
-for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','selection','baselineFingerprint']){
+assert.ok(editorUi.includes('SimEditorAuthoringMutations'),'Editor UI must delegate entity lifecycle semantics to the pure mutation owner');
+assert.ok(editorUi.includes('pendingOperation'),'D.1B1 must keep pending mutation intent separate from generic scene selection');
+assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');
+for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','selection','pendingOperation','baselineFingerprint']){
   assert.ok(editorUi.includes(ephemeral),`Expected Editor ephemeral state: ${ephemeral}`);
 }
 assert.ok(!exported.includes('"currentZ"'));
 assert.ok(!exported.includes('"selectedTool"'));
 assert.ok(!exported.includes('"dirty"'));
+assert.ok(!exported.includes('"pendingOperation"'));
 
 console.log('world authoring editor contract: ok');

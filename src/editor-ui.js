@@ -1,10 +1,12 @@
 (() => {
   const A=window.SimWorldAuthoring;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring){
-    throw new Error('World authoring helpers must load before editor-ui.js.');
+  const M=window.SimEditorAuthoringMutations;
+  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!M?.moveFurniture||!M?.moveObject){
+    throw new Error('World authoring helpers and editor mutation owner must load before editor-ui.js.');
   }
 
   const $=id=>document.getElementById(id);
+  const cloneUi=value=>value==null?value:JSON.parse(JSON.stringify(value));
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   let authored=A.canonicalizeAuthoring(A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING));
   let baselineFingerprint=A.semanticFingerprint(authored);
@@ -12,6 +14,9 @@
   let selectedTool='floor';
   let selectedFurnitureId=Object.keys(authored.furniture||{})[0]||null;
   let selection=null;
+  let pendingOperation=null;
+  let operationIssues=[];
+  let lastOperationMeta=null;
   let transientMessage='';
 
   function layers(){return [...(authored.map.layers||[])].sort((a,b)=>a.z-b.z);}
@@ -24,6 +29,37 @@
   function cellId(x,y){return `${x},${y}`;}
   function cellAt(layer,x,y){return layer?.cells?.[cellId(x,y)]||null;}
   function setMessage(message=''){transientMessage=message;}
+  function clearOperationState({clearIssues=true}={}){
+    pendingOperation=null;
+    if(clearIssues)operationIssues=[];
+  }
+  function beginOperation(operation,message=''){
+    pendingOperation=cloneUi(operation);
+    operationIssues=[];
+    lastOperationMeta=null;
+    setMessage(message);
+    render();
+  }
+  function commitMutation(result,{message='',select=null,keepPendingOnFailure=true}={}){
+    lastOperationMeta=cloneUi(result?.meta||null);
+    if(!result?.ok){
+      operationIssues=cloneUi(result?.issues||[]);
+      if(!keepPendingOnFailure)pendingOperation=null;
+      setMessage(result?.issues?.[0]?.message||'操作被拒絕。');
+      render();
+      return false;
+    }
+    authored=result.candidate;
+    operationIssues=[];
+    pendingOperation=null;
+    if(select){
+      selection={kind:'entity',type:select.type,id:select.id};
+      if(select.type==='furniture')selectedFurnitureId=select.id;
+    }
+    setMessage(message);
+    render();
+    return true;
+  }
 
   function residentPosition(resident){
     const placement=resident?.initial?.placement;
@@ -60,6 +96,8 @@
   function selectSceneEntity(type,id){
     const entry=sceneEntry(type,id);
     if(!entry)return;
+    clearOperationState();
+    lastOperationMeta=null;
     selection={kind:'entity',type,id};
     if(type==='furniture')selectedFurnitureId=id;
     if(entry.position&&layerAt(entry.position.z??0))currentZ=entry.position.z??0;
@@ -115,46 +153,90 @@
     render();
   }
 
-  function translatePosition(position,dx,dy,dz){
-    if(!position)return position;
-    return {...position,x:position.x+dx,y:position.y+dy,z:(position.z??0)+dz};
+  function handleFurniturePlacement(target){
+    if(!selectedFurnitureId){setMessage('請先選擇 furniture instance。');render();return;}
+    const furniture=authored.furniture?.[selectedFurnitureId];
+    const result=M.moveFurniture(authored,{furnitureId:selectedFurnitureId,target});
+    commitMutation(result,{message:result.ok?`已移動 ${furniture?.name||selectedFurnitureId}；explicit supported Containers 已同步平移。`:'',select:result.ok?{type:'furniture',id:selectedFurnitureId}:null});
   }
 
-  function furnitureAnchor(furniture){
-    return furniture?.displayAt||furniture?.footprint?.[0]||furniture?.slots?.[0]?.position||null;
+  function handlePendingCellClick(x,y){
+    if(!pendingOperation)return false;
+    const target={x,y,z:currentZ};
+    const operation=cloneUi(pendingOperation);
+    if(operation.kind==='duplicate-furniture'){
+      const result=M.duplicateFurniture(authored,{sourceId:operation.furnitureId,target});
+      const newId=result?.meta?.newId;
+      commitMutation(result,{message:result.ok?`已新增同型家具 ${newId}。`:'',select:result.ok?{type:'furniture',id:newId}:null});
+      return true;
+    }
+    if(operation.kind==='move-object'){
+      const result=M.moveObject(authored,{entityType:operation.entityType,entityId:operation.entityId,target});
+      if(!result.ok&&result.issues?.some(item=>item.code==='support_choice_required')){
+        pendingOperation={kind:'resolve-object-support',entityType:operation.entityType,entityId:operation.entityId,target:cloneUi(target),candidates:cloneUi(result.meta?.candidates||[])};
+        operationIssues=cloneUi(result.issues||[]);
+        lastOperationMeta=cloneUi(result.meta||null);
+        setMessage('此位置可視為 Floor 或 Furniture support；請明確選擇。');
+        render();
+        return true;
+      }
+      commitMutation(result,{message:result.ok?'已移動物件。':'',select:result.ok?{type:operation.entityType,id:operation.entityId}:null});
+      return true;
+    }
+    if(operation.kind==='move-resident-exact'){
+      const result=M.moveResidentExact(authored,{residentId:operation.residentId,target});
+      commitMutation(result,{message:result.ok?'已移動 exact Resident。':'',select:result.ok?{type:'resident',id:operation.residentId}:null});
+      return true;
+    }
+    if(operation.kind==='convert-resident-exact'){
+      const result=M.convertResidentToExactStanding(authored,{residentId:operation.residentId,target});
+      commitMutation(result,{message:result.ok?'已改為 exact（standing）placement。':'',select:result.ok?{type:'resident',id:operation.residentId}:null});
+      return true;
+    }
+    return false;
   }
 
-  function moveFurniture(id,target){
-    const furniture=authored.furniture?.[id];
-    const anchor=furnitureAnchor(furniture);
-    if(!furniture||!anchor){setMessage('此 furniture 沒有可用 placement anchor。');render();return;}
-    const dx=target.x-anchor.x,dy=target.y-anchor.y,dz=target.z-(anchor.z??0);
-    const candidates=[
-      ...(furniture.footprint||[]).map(p=>translatePosition(p,dx,dy,dz)),
-      ...(furniture.displayAt?[translatePosition(furniture.displayAt,dx,dy,dz)]:[]),
-      ...(furniture.slots||[]).map(slot=>translatePosition(slot.position,dx,dy,dz))
-    ].filter(Boolean);
-    const validLayers=new Set(layers().map(layer=>layer.z));
-    const width=authored.map.width,height=authored.map.height;
-    const invalid=candidates.find(p=>p.x<0||p.y<0||p.x>=width||p.y>=height||!validLayers.has(p.z));
-    if(invalid){
-      setMessage(`無法移動：geometry 會落到不存在／超出邊界的位置 (${invalid.x},${invalid.y},${invalid.z})。`);
+  function resolvePendingSupport(supportChoice){
+    const operation=pendingOperation;
+    if(operation?.kind!=='resolve-object-support')return;
+    const result=M.moveObject(authored,{entityType:operation.entityType,entityId:operation.entityId,target:operation.target,supportChoice});
+    commitMutation(result,{message:result.ok?(supportChoice.kind==='floor'?'已移到 Floor。':`已移到 support ${supportChoice.furnitureId}。`):'',select:result.ok?{type:operation.entityType,id:operation.entityId}:null});
+  }
+
+  function deleteSelectedFurniture(furnitureId){
+    const result=M.deleteFurniture(authored,{furnitureId});
+    lastOperationMeta=cloneUi(result?.meta||null);
+    if(!result.ok){
+      operationIssues=cloneUi(result.issues||[]);
+      setMessage(result.issues?.[0]?.message||'刪除被拒絕。');
       render();
       return;
     }
-    furniture.footprint=(furniture.footprint||[]).map(p=>translatePosition(p,dx,dy,dz));
-    if(furniture.displayAt)furniture.displayAt=translatePosition(furniture.displayAt,dx,dy,dz);
-    for(const slot of furniture.slots||[])slot.position=translatePosition(slot.position,dx,dy,dz);
-    selectedFurnitureId=id;
-    selection={kind:'entity',type:'furniture',id};
-    setMessage(`已移動 ${furniture.name||id}；其他獨立 authored entity 不會自動跟隨。`);
+    authored=result.candidate;
+    operationIssues=[];
+    pendingOperation=null;
+    selection=null;
+    if(selectedFurnitureId===furnitureId)selectedFurnitureId=Object.keys(authored.furniture||{})[0]||null;
+    setMessage(`已刪除 Furniture ${furnitureId}。`);
     render();
+  }
+
+  function confirmResidentRebind(){
+    const operation=pendingOperation;
+    if(operation?.kind!=='rebind-resident-slot')return;
+    if(!operation.slotId||!operation.postureKind){
+      operationIssues=[{code:'resident_rebind_selection_required',message:'請明確選擇 furnitureSlot 與 posture。'}];
+      setMessage(operationIssues[0].message);
+      render();
+      return;
+    }
+    const result=M.rebindResidentToSlot(authored,{residentId:operation.residentId,slotId:operation.slotId,postureKind:operation.postureKind});
+    commitMutation(result,{message:result.ok?'已重新綁定 Resident slot / posture。':'',select:result.ok?{type:'resident',id:operation.residentId}:null});
   }
 
   function handleCellClick(x,y){
     if(selectedTool==='furniture'){
-      if(!selectedFurnitureId){setMessage('請先選擇 furniture instance。');render();return;}
-      moveFurniture(selectedFurnitureId,{x,y,z:currentZ});
+      handleFurniturePlacement({x,y,z:currentZ});
       return;
     }
     setTerrain(x,y,selectedTool);
@@ -212,6 +294,9 @@
     currentZ=list.some(layer=>layer.z===0)?0:list[0].z;
     selectedFurnitureId=Object.keys(authored.furniture||{})[0]||null;
     selection=null;
+    pendingOperation=null;
+    operationIssues=[];
+    lastOperationMeta=null;
     setMessage(message);
     render();
   }
@@ -363,6 +448,43 @@
     else $('selectionSummary').textContent=transientMessage||'尚未選取。';
   }
 
+  function renderSelectionActions(){
+    const host=$('selectionActions');
+    if(!host)return;
+    const entry=selection?.kind==='entity'?sceneEntry(selection.type,selection.id):null;
+    const issueMarkup=operationIssues.length?`<div class="operation-issues">${operationIssues.map(item=>{
+      const blockers=Array.isArray(item.blockers)?item.blockers:[];
+      return `<div class="operation-issue"><b>${esc(item.code||'mutation_rejected')}</b><span>${esc(item.message||'操作被拒絕。')}</span>${blockers.map(blocker=>`<small>${esc(blocker.ownerType)} · ${esc(blocker.ownerName||blocker.ownerId)} (<code>${esc(blocker.ownerId)}</code>) → ${esc(blocker.referenceKind)} = <code>${esc(blocker.referenceValue)}</code></small>`).join('')}</div>`;
+    }).join('')}</div>`:'';
+    let pendingMarkup='';
+    if(pendingOperation){
+      const operation=pendingOperation;
+      const labels={'duplicate-furniture':'下一次點擊：放置新增同型家具','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident-exact':'下一次點擊：移動 exact Resident','convert-resident-exact':'下一次點擊：改為 exact（standing）','rebind-resident-slot':'重新綁定 furnitureSlot'};
+      pendingMarkup+=`<div class="pending-operation"><b>${esc(labels[operation.kind]||operation.kind)}</b>`;
+      if(operation.kind==='resolve-object-support'){
+        pendingMarkup+=`<small>target: <code>(${operation.target.x}, ${operation.target.y}, ${operation.target.z})</code></small><div class="action-row"><button type="button" data-editor-action="resolve-support" data-support-kind="floor">Floor</button>${(operation.candidates||[]).map(candidate=>`<button type="button" data-editor-action="resolve-support" data-support-kind="furniture" data-support-id="${esc(candidate.id)}">Support：${esc(candidate.name||candidate.id)}</button>`).join('')}</div>`;
+      }else if(operation.kind==='rebind-resident-slot'){
+        const slots=M.listResidentSlots(authored,operation.residentId).filter(slot=>slot.compatible);
+        pendingMarkup+=`<label class="operation-field">Furniture slot<select data-operation-field="slotId"><option value="">請選擇…</option>${slots.map(slot=>`<option value="${esc(slot.id)}" ${operation.slotId===slot.id?'selected':''}>${esc(slot.furnitureName)} · ${esc(slot.label)} (${slot.position.x},${slot.position.y},${slot.position.z??0})</option>`).join('')}</select></label>`;
+        pendingMarkup+=`<label class="operation-field">Posture<select data-operation-field="postureKind"><option value="">請選擇…</option>${['standing','sitting','lying','kneeling','prone'].map(kind=>`<option value="${kind}" ${operation.postureKind===kind?'selected':''}>${kind}</option>`).join('')}</select></label><button type="button" data-editor-action="confirm-resident-rebind" ${!operation.slotId||!operation.postureKind?'disabled':''}>套用 slot rebind</button>`;
+      }else{
+        pendingMarkup+='<small>點擊地圖 cell 執行；失敗時原 canonical document 不會改變。</small>';
+      }
+      pendingMarkup+='<button type="button" class="ghost-action" data-editor-action="cancel-operation">取消 pending operation</button></div>';
+    }
+    let entityMarkup='';
+    if(entry?.type==='furniture'){
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">啟用家具放置</button><button type="button" data-editor-action="duplicate-furniture">新增同型家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div>`;
+    }else if(entry?.type==='container'||entry?.type==='source'){
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
+    }else if(entry?.type==='resident'){
+      const binding=M.residentBinding(authored,entry.id);
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-resident-exact">移動居民（exact only）</button><button type="button" data-editor-action="convert-resident-exact">改為 exact（standing）</button><button type="button" data-editor-action="rebind-resident-slot">重新綁定 slot</button></div><small class="operation-note">binding: ${binding?.bound?'bound':'unbound'} · posture: ${esc(binding?.postureKind||'—')}</small>`;
+    }
+    const metaMarkup=lastOperationMeta?`<div class="operation-meta">last operation: <code>${esc(lastOperationMeta.operation||lastOperationMeta.phase||'result')}</code></div>`:'';
+    host.innerHTML=pendingMarkup+entityMarkup+issueMarkup+metaMarkup;
+  }
+
   function renderValidation(validation){
     const dirty=isDirty();
     $('dirtyStatus').textContent=dirty?'有未匯出修改':'未修改';
@@ -380,29 +502,61 @@
     renderSceneList();
     renderMap();
     renderSummary(validation,topology);
+    renderSelectionActions();
     renderValidation(validation);
   }
 
   $('editorMap').addEventListener('click',event=>{
+    const cell=event.target.closest('[data-cell]');
+    if(cell&&pendingOperation){
+      const [x,y]=cell.dataset.cell.split(',').map(Number);
+      if(handlePendingCellClick(x,y))return;
+    }
     const entity=event.target.closest('[data-entity-type][data-entity-id]');
     if(entity){
       selectSceneEntity(entity.dataset.entityType,entity.dataset.entityId);
       return;
     }
-    const cell=event.target.closest('[data-cell]');
     if(!cell)return;
     const [x,y]=cell.dataset.cell.split(',').map(Number);
     handleCellClick(x,y);
   });
   document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',()=>{
     selectedTool=button.dataset.tool;
+    clearOperationState();
+    lastOperationMeta=null;
     setMessage('');
-    renderTools();
+    render();
   }));
   $('sceneList').addEventListener('click',event=>{
     const item=event.target.closest('[data-scene-type][data-scene-id]');
     if(!item)return;
     selectSceneEntity(item.dataset.sceneType,item.dataset.sceneId);
+  });
+  $('selectionActions').addEventListener('click',event=>{
+    const button=event.target.closest('[data-editor-action]');
+    if(!button)return;
+    const action=button.dataset.editorAction;
+    const entry=selection?.kind==='entity'?sceneEntry(selection.type,selection.id):null;
+    if(action==='cancel-operation'){clearOperationState();lastOperationMeta=null;setMessage('');render();return;}
+    if(action==='resolve-support'){resolvePendingSupport(button.dataset.supportKind==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:button.dataset.supportId});return;}
+    if(action==='confirm-resident-rebind'){confirmResidentRebind();return;}
+    if(!entry)return;
+    if(action==='arm-furniture-placement'&&entry.type==='furniture'){selectedFurnitureId=entry.id;selectedTool='furniture';clearOperationState();setMessage('Furniture placement 已啟用；點擊地圖決定新 anchor。');render();return;}
+    if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'新增同型家具：下一次點擊決定 anchor。');return;}
+    if(action==='delete-furniture'&&entry.type==='furniture'){deleteSelectedFurniture(entry.id);return;}
+    if(action==='move-object'&&(entry.type==='container'||entry.type==='source')){beginOperation({kind:'move-object',entityType:entry.type,entityId:entry.id},'移動物件：下一次點擊決定 target。');return;}
+    if(action==='move-resident-exact'&&entry.type==='resident'){beginOperation({kind:'move-resident-exact',residentId:entry.id},'移動 Resident：只允許 unbound exact placement。');return;}
+    if(action==='convert-resident-exact'&&entry.type==='resident'){beginOperation({kind:'convert-resident-exact',residentId:entry.id},'改為 exact（standing）：下一次點擊決定 target。');return;}
+    if(action==='rebind-resident-slot'&&entry.type==='resident'){beginOperation({kind:'rebind-resident-slot',residentId:entry.id,slotId:'',postureKind:''},'請明確選擇 furnitureSlot 與 posture。');return;}
+  });
+  $('selectionActions').addEventListener('change',event=>{
+    const field=event.target.closest('[data-operation-field]');
+    if(!field||pendingOperation?.kind!=='rebind-resident-slot')return;
+    pendingOperation={...pendingOperation,[field.dataset.operationField]:field.value};
+    operationIssues=[];
+    setMessage('請確認 slot 與 posture 後套用。');
+    render();
   });
   $('layerPrev').addEventListener('click',()=>navigateLayer(-1));
   $('layerNext').addEventListener('click',()=>navigateLayer(1));
@@ -423,7 +577,7 @@
 
   window.SimWorldEditor={
     getDocument:()=>A.cloneAuthoring(authored),
-    getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selection:selection?{...selection}:null,selectedCell:selectionPosition()?{...selectionPosition()}:null,dirty:isDirty(),validation:report()}),
+    getSession:()=>({currentZ,selectedTool,selectedFurnitureId,selection:selection?{...selection}:null,selectedCell:selectionPosition()?{...selectionPosition()}:null,pendingOperation:cloneUi(pendingOperation),operationIssues:cloneUi(operationIssues),lastOperationMeta:cloneUi(lastOperationMeta),dirty:isDirty(),validation:report()}),
     loadDocument:next=>loadDocument(next,{clean:true,message:'Test/API document loaded.'}),
     semanticFingerprint:fingerprint,
     getDerivedTopology:(z=currentZ)=>derivedTopology(z),
