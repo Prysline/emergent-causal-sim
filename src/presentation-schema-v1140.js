@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('presentation-schema-v1140.js requires world.js initial-state pipeline.');
-  const VERSION='11.21.3-editor-furniture-drag';
+  const VERSION='11.21.4-editor-playtest-bridge';
   const INTERACTION_LABELS=Object.freeze({
     talk:'聊天',
     pet:'撫摸互動',
