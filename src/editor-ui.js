@@ -271,7 +271,8 @@
       const entityName=entities.map(entry=>entry.entity.name||entry.id).join('、');
       const furnitureMarkup=furniture.length?furniture.map(([id,item])=>{
         const isSelected=selection?.kind==='entity'&&selection.type==='furniture'&&selection.id===id;
-        return `<span class="furniture-mark ${isSelected?'selected':''} ${furniture.length>1?'multi':''}" data-entity-type="furniture" data-entity-id="${esc(id)}" title="Furniture：${esc(item.name||id)}">${esc(item.icon||'▰')}</span>`;
+        const isTarget=id===selectedFurnitureId;
+        return `<span class="furniture-mark ${isSelected?'selected':''} ${isTarget?'placement-target':''} ${furniture.length>1?'multi':''}" data-entity-type="furniture" data-entity-id="${esc(id)}" title="Furniture：${esc(item.name||id)}${isTarget?' · placement target':''}">${esc(item.icon||'▰')}</span>`;
       }).join(''):'';
       const entityMarkup=entities.length?`<span class="entity-markers">${entities.slice(0,3).map(entry=>{
         const isSelected=selection?.kind==='entity'&&selection.type===entry.type&&selection.id===entry.id;
@@ -308,8 +309,9 @@
     ];
     host.innerHTML=groups.map(([label,items])=>`<div class="scene-group"><div class="scene-group-head"><span>${esc(label)}</span><span>${items.length}</span></div><div class="scene-items">${items.length?items.map(entry=>{
       const selected=selection?.kind==='entity'&&selection.type===entry.type&&selection.id===entry.id;
+      const placementTarget=entry.type==='furniture'&&entry.id===selectedFurnitureId;
       const position=entry.position?`(${entry.position.x}, ${entry.position.y}, ${entry.position.z??0})`:'position unresolved';
-      return `<button class="scene-item ${selected?'selected':''}" type="button" data-scene-type="${esc(entry.type)}" data-scene-id="${esc(entry.id)}"><span class="scene-icon">${esc(entry.icon)}</span><span class="scene-copy"><b>${esc(entry.entity.name||entry.id)}</b><small>${esc(entry.label)} · ${esc(position)}</small></span></button>`;
+      return `<button class="scene-item ${selected?'selected':''} ${placementTarget?'placement-target':''}" type="button" data-scene-type="${esc(entry.type)}" data-scene-id="${esc(entry.id)}"><span class="scene-icon">${esc(entry.icon)}</span><span class="scene-copy"><b>${esc(entry.entity.name||entry.id)}</b><small>${esc(entry.label)} · ${esc(position)}${placementTarget?' · placement target':''}</small></span></button>`;
     }).join(''):'<div class="scene-empty">目前沒有項目</div>'}</div></div>`).join('');
   }
 
