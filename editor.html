@@ -42,8 +42,8 @@
           <input id="newLayerZ" type="number" step="1" value="1" aria-label="新 Z-level">
           <button id="addLayer" type="button">新增層</button>
         </div>
-        <button id="deleteLayer" class="danger-text" type="button">刪除目前空層</button>
-        <p class="hint">切換 Z 只改 Editor 畫面，不改 world truth。新層以 sparse cells 開始。</p>
+        <button id="deleteLayer" class="danger-text" type="button">刪除目前層（必須全空）</button>
+        <p class="hint">切換 Z 只改 Editor 畫面，不改 world truth。新層以 sparse cells 開始；刪除層前必須沒有 authored cells 或 position references。</p>
       </section>
 
       <section>
