@@ -71,8 +71,11 @@ assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:
 
 await page.click('[data-tool="opening"]');
 await page.click('[data-cell="2,2"]');
-snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),topology:window.SimWorldEditor.getDerivedTopology()}));
 assert.equal(snapshot.document.map.layers.find(layer=>layer.z===0).cells['2,2'].terrain,'doorway');
+assert.equal(snapshot.topology.cells['2,2'].structuralOpen,true,'Editor opening must derive structural openness without authored walkability flags');
+assert.equal(snapshot.topology.cells['2,2'].open,false,'existing fixed foodPantry must still block this opening by concrete geometry');
+assert.deepEqual(snapshot.topology.cells['2,2'].blockedBy,['container:foodPantry']);
 assert.equal(snapshot.session.validation.ok,true);
 
 await page.screenshot({path:`${outDir}/desktop-editor.png`,fullPage:true});

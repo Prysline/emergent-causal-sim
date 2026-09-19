@@ -10,7 +10,7 @@
 <div class="editor-shell">
   <header class="editor-appbar">
     <div>
-      <div class="eyebrow">WORLD AUTHORING · world-authoring-v1</div>
+      <div class="eyebrow">WORLD AUTHORING · world-authoring-v2</div>
       <h1>地圖編輯器 <span>Z-aware authoring shell</span></h1>
     </div>
     <div class="header-actions">
@@ -54,7 +54,7 @@
           <button class="tool" data-tool="erase" type="button"><span>⌫</span>Erase</button>
           <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>Furniture placement</button>
         </div>
-        <p class="hint">Opening 目前 author 為 <code>terrain: "doorway"</code>。本 slice 不推導 adjacency / PassageProfile。</p>
+        <p class="hint">Opening author 為 <code>terrain: "doorway"</code>；horizontal connectivity、blocker 與 clearance preview 由 shared geometry compiler 即時計算，不寫回 authoring JSON。</p>
       </section>
 
       <section>
@@ -97,8 +97,8 @@
         <div id="validationList" class="validation-list"></div>
       </section>
       <section class="boundary-note">
-        <h2>Slice C boundary</h2>
-        <p>此頁不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator。多層 JSON 可以 author / round-trip；current runtime adapter 仍會對 multi-layer / non-zero Z loud failure。</p>
+        <h2>Slice D boundary</h2>
+        <p>此頁不載入 <code>world-initializer.js</code>、<code>world.js</code>、Spatial、Engine 或 runtime Validator。Editor 與 initializer 共用 authoring-side horizontal topology derivation；runtime Spatial identity 仍維持 2D，multi-layer / non-zero Z runtime adapter仍 loud failure。</p>
       </section>
     </aside>
   </main>

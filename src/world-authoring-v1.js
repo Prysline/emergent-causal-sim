@@ -1,5 +1,6 @@
 (() => {
-  const VERSION='world-authoring-v1';
+  const VERSION='world-authoring-v2';
+  const LEGACY_VERSION='world-authoring-v1';
   const pos=(x,y,z=0)=>({x,y,z});
 
   function buildDefaultCells(){
@@ -30,7 +31,7 @@
     map:{width:12,height:8,layers:[{z:0,cells:buildDefaultCells()}]},
     furniture:{
       diningTable:{id:'diningTable',name:'餐桌',icon:'▰',kind:'table',blocksMovement:true,supportsObjects:true,value:30,
-        footprint:[pos(5,2),pos(6,2),pos(5,3),pos(6,3)],displayAt:pos(5,2),slots:[]},
+        footprint:[pos(5,2),pos(6,2),pos(5,3),pos(6,3)],displayAt:pos(5,2),slots:[],spatial:{under:{clearance:.72,cover:'overhead'}}},
       chairNW:{id:'chairNW',name:'餐椅 A',icon:'🪑',kind:'chair',blocksMovement:false,value:10,
         footprint:[pos(4,2)],displayAt:pos(4,2),slots:[{id:'chairNW:seat',label:'座位',position:pos(4,2),canRest:true,mealSeat:true,restQuality:.48,allowKinds:['human']}]},
       chairNE:{id:'chairNE',name:'餐椅 B',icon:'🪑',kind:'chair',blocksMovement:false,value:10,
@@ -78,7 +79,8 @@
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
   const derivedMapFields=new Set(['tiles','rooms','roomRevision']);
-  const derivedCellFields=new Set(['walkable','roomId','furnitureIds']);
+  const derivedCellFields=new Set(['walkable','crawlOnly','roomId','furnitureIds']);
+  const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor','doorway']);
   const derivedSlotFields=new Set(['furnitureId']);
 
   function authoringIssue(code,path,message,data={}){
@@ -180,6 +182,13 @@
       if(!Array.isArray(furniture.footprint))errors.push(authoringIssue('authoring_furniture_footprint_invalid',`${basePath}.footprint`,'Furniture footprint must be an array.'));
       else furniture.footprint.forEach((p,index)=>validatePosition(p,`${basePath}.footprint[${index}]`));
       if(furniture.displayAt!==undefined&&furniture.displayAt!==null)validatePosition(furniture.displayAt,`${basePath}.displayAt`);
+      const under=furniture.spatial?.under;
+      if(under!==undefined){
+        if(!isRecord(under))errors.push(authoringIssue('authoring_furniture_under_invalid',`${basePath}.spatial.under`,'Furniture spatial.under must be an object.'));
+        else{
+          for(const [field,label] of [['clearance','clearance height'],['clearanceWidth','clearance width']])if(under[field]!==undefined&&(!Number.isFinite(Number(under[field]))||Number(under[field])<=0))errors.push(authoringIssue('authoring_furniture_under_clearance_invalid',`${basePath}.spatial.under.${field}`,`${label} must be a positive finite number when authored.`));
+        }
+      }
       if(furniture.slots!==undefined&&!Array.isArray(furniture.slots))errors.push(authoringIssue('authoring_furniture_slots_invalid',`${basePath}.slots`,'Furniture slots must be an array.'));
       for(let i=0;i<(furniture.slots||[]).length;i++){
         const slot=furniture.slots[i],slotPath=`${basePath}.slots[${i}]`;
@@ -247,6 +256,101 @@
     return {ok:errors.length===0,errors};
   }
 
+
+  function migrateV1ToV2(authoring){
+    const copy=clone(authoring);
+    copy.authoringSchema=VERSION;
+    const legacyTable=copy.furniture?.diningTable;
+    if(legacyTable&&legacyTable.blocksMovement&&!legacyTable.spatial?.under){
+      legacyTable.spatial??={};
+      legacyTable.spatial.under={clearance:.72,cover:'overhead'};
+    }
+    return copy;
+  }
+
+  function migrateAuthoring(authoring){
+    if(!isRecord(authoring))return clone(authoring);
+    if(authoring.authoringSchema===VERSION)return clone(authoring);
+    if(authoring.authoringSchema===LEGACY_VERSION)return migrateV1ToV2(authoring);
+    const error=new Error('Unsupported authoringSchema: '+String(authoring.authoringSchema));
+    error.code='world_authoring_schema_unsupported';
+    throw error;
+  }
+
+  function deriveHorizontalTopology(authoring,{z=0}={}){
+    if(!isRecord(authoring)||authoring.authoringSchema!==VERSION)throw new Error('deriveHorizontalTopology requires '+VERSION+' authoring.');
+    const layer=(authoring.map?.layers||[]).find(item=>item.z===z);
+    if(!layer)throw new RangeError('Missing authored Z-level '+z+'.');
+    const width=authoring.map.width,height=authoring.map.height,cells={};
+    for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+      const id=x+','+y,cell=layer.cells?.[id]||null,terrain=cell?.terrain||'void';
+      cells[id]={
+        id,x,y,z,terrain,
+        structuralOpen:STRUCTURALLY_OPEN_TERRAINS.has(terrain),
+        staticBlocked:false,blockedBy:[],furnitureIds:[],under:[],adjacent:[],componentId:null
+      };
+    }
+    const at=p=>p&&(p.z??0)===z?cells[p.x+','+p.y]||null:null;
+    for(const [key,furniture] of Object.entries(authoring.furniture||{})){
+      const id=furniture.id||key;
+      for(const p of furniture.footprint||[]){
+        const cell=at(p);if(!cell)continue;
+        if(!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
+        if(!furniture.blocksMovement)continue;
+        const under=furniture.spatial?.under;
+        if(under){
+          cell.under.push({
+            furnitureId:id,
+            clearanceHeight:Number.isFinite(Number(under.clearance))?Number(under.clearance):null,
+            clearanceWidth:Number.isFinite(Number(under.clearanceWidth))?Number(under.clearanceWidth):null
+          });
+        }else{
+          cell.staticBlocked=true;
+          cell.blockedBy.push('furniture:'+id);
+        }
+      }
+    }
+    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
+      if(container.portable!==false||container.supportId)continue;
+      const cell=at(container.position);if(!cell)continue;
+      cell.staticBlocked=true;cell.blockedBy.push('container:'+(container.id||key));
+    }
+    for(const [key,source] of Object.entries(authoring.entities?.sources||{})){
+      if(source.blocksMovement===false)continue;
+      const cell=at(source.position);if(!cell)continue;
+      cell.staticBlocked=true;cell.blockedBy.push('source:'+(source.id||key));
+    }
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    for(const cell of Object.values(cells)){
+      cell.open=cell.structuralOpen&&!cell.staticBlocked;
+      cell.furnitureIds.sort();
+      cell.blockedBy.sort();
+      cell.under.sort((a,b)=>a.furnitureId.localeCompare(b.furnitureId));
+    }
+    for(const cell of Object.values(cells)){
+      if(!cell.open)continue;
+      for(const [dx,dy] of dirs){
+        const other=cells[(cell.x+dx)+','+(cell.y+dy)];
+        if(other?.open)cell.adjacent.push(other.id);
+      }
+      cell.adjacent.sort();
+    }
+    const components=[];let seq=0;
+    for(const cell of Object.values(cells)){
+      if(!cell.open||cell.componentId)continue;
+      const id='component'+(++seq),queue=[cell],members=[];cell.componentId=id;
+      while(queue.length){
+        const cur=queue.shift();members.push(cur.id);
+        for(const neighborId of cur.adjacent){
+          const neighbor=cells[neighborId];
+          if(neighbor&&!neighbor.componentId){neighbor.componentId=id;queue.push(neighbor);}
+        }
+      }
+      members.sort();components.push({id,cells:members});
+    }
+    return {z,width,height,cells,components};
+  }
+
   function assertValidAuthoring(authoring){
     const report=validateAuthoring(authoring);
     if(!report.ok){
@@ -289,14 +393,18 @@
       wrapped.code='world_authoring_json_invalid';
       throw wrapped;
     }
+    parsed=migrateAuthoring(parsed);
     assertValidAuthoring(parsed);
     return canonicalizeAuthoring(parsed);
   }
 
   window.SimWorldAuthoring={
     VERSION,
+    LEGACY_VERSION,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,
+    migrateAuthoring,
+    deriveHorizontalTopology,
     validateAuthoring,
     assertValidAuthoring,
     canonicalizeAuthoring,

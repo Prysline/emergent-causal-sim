@@ -8,7 +8,7 @@ for(const file of ['world-authoring-v1.js','world-initializer.js','world.js']){
 }
 
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
-assert.equal(A.VERSION,'world-authoring-v1');
+assert.equal(A.VERSION,'world-authoring-v2');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(W.WIDTH,12);
 assert.equal(W.HEIGHT,8);
@@ -36,7 +36,7 @@ assert.equal(Object.keys(st.map.tiles).length,96);
 assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='floor').length,60);
 assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='wall').length,35);
 assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='doorway').length,1);
-assert.equal(st.map.tiles['0,6'].walkable,false);
+assert.equal(st.map.tiles['0,6'].walkable,true,'doorway tile exposes base structural openness; frontDoor remains the concrete blocker');
 assert.equal(st.map.tiles['1,1'].walkable,true);
 assert.equal(Object.keys(st.furniture).length,8);
 assert.equal(Object.keys(st.containers).length,9);
@@ -47,6 +47,7 @@ assert.deepEqual(st.agents.zhou.position,{x:7,y:3});
 assert.deepEqual(st.agents.orange.position,{x:2,y:6});
 assert.equal(st.furniture.bed.slots[0].furnitureId,'bed');
 assert.ok(st.map.tiles['5,2'].furnitureIds.includes('diningTable'));
+assert.equal(st.furniture.diningTable.spatial.under.clearance,.72,'authored under-clearance must survive runtime compilation');
 assert.equal(st.map.rooms&&Object.keys(st.map.rooms).length,0);
 assert.equal(st.map.roomRevision,0);
 assert.equal(st.map.passageConstraints,undefined);

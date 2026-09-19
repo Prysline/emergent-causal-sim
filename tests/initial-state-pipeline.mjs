@@ -71,7 +71,7 @@ assert.throws(()=>W.registerInitialStateInitializer('',()=>{},1),/non-empty stri
 assert.throws(()=>W.registerInitialStateInitializer('bad.handler',null,1),/must be a function/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.20.0-dynamic-congestion','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.21.0-geometry-derived-topology','full production schema set must preserve current release marker');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
