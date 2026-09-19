@@ -361,6 +361,38 @@ assert.deepEqual(runtimePreview.zhen,{x:8,y:4,z:0});
 assert.deepEqual(runtimePreview.orange,{x:2,y:2,z:1});
 assert.deepEqual(runtimePreview.zLevels,[0,1]);
 
+const editorReturnHref=await page.locator('#worldEditorLink').getAttribute('href');
+assert.equal(editorReturnHref,'editor.html?restore=preview','Editor Preview must expose an explicit restore return path');
+await page.click('#worldEditorLink');
+await page.waitForFunction(()=>window.SimWorldEditor?.getSession);
+const restoredEditor=await page.evaluate(()=>({
+  search:location.search,
+  fingerprint:window.SimWorldEditor.semanticFingerprint(),
+  session:window.SimWorldEditor.getSession(),
+  chair:window.SimWorldEditor.getDocument().furniture.chairNW.footprint,
+  zLevels:window.SimWorldEditor.getDocument().map.layers.map(layer=>layer.z),
+  message:document.querySelector('#selectionSummary')?.textContent||''
+}));
+assert.equal(restoredEditor.search,'?restore=preview');
+assert.equal(restoredEditor.fingerprint,previewFingerprint,'Preview → Editor return must restore the exact canonical snapshot');
+assert.equal(restoredEditor.session.dirty,true,'restored sessionStorage snapshot must remain an unsaved working document');
+assert.deepEqual(restoredEditor.chair,[{x:3,y:4}]);
+assert.deepEqual(restoredEditor.zLevels,[0,1]);
+
+page.once('dialog',dialog=>dialog.accept());
+await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>window.SimWorldEditor?.getSession);
+const ordinaryEditor=await page.evaluate(()=>({
+  fingerprint:window.SimWorldEditor.semanticFingerprint(),
+  dirty:window.SimWorldEditor.getSession().dirty,
+  chair:window.SimWorldEditor.getDocument().furniture.chairNW.footprint,
+  zLevels:window.SimWorldEditor.getDocument().map.layers.map(layer=>layer.z)
+}));
+assert.notEqual(ordinaryEditor.fingerprint,previewFingerprint,'ordinary Editor load must not consume stale preview storage');
+assert.equal(ordinaryEditor.dirty,false);
+assert.notDeepEqual(ordinaryEditor.chair,[{x:3,y:4}]);
+assert.deepEqual(ordinaryEditor.zLevels,[0]);
+
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState);
 const normalLoad=await page.evaluate(()=>({
