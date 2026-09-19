@@ -1,5 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W?.MEMORY_RETENTION_SCHEMA_VERSION)return;
+  if(!W.registerInitialStateInitializer)throw new Error('memory-deliberation-schema-v1134.js requires world.js initial-state pipeline.');
   const VERSION='11.13.4-memory-deliberation-influence';
 
   W.VERSION=VERSION;
