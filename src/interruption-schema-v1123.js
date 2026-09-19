@@ -1,14 +1,13 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
+  if(!W.registerInitialStateInitializer)throw new Error('interruption-schema-v1123.js requires world.js initial-state pipeline.');
   const VERSION='11.12.3-replan-preemption';
-  const baseCreateInitialState=W.createInitialState;
 
   W.VERSION=VERSION;
-  W.createInitialState=(seed)=>{
-    const st=baseCreateInitialState(seed);
+  W.registerInitialStateInitializer('interruption.schema',(st)=>{
     st.version=VERSION;
     return st;
-  };
+  },400);
   W.INTERRUPTION_SCHEMA_VERSION=VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.intentId='Intent ID';
