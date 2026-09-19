@@ -127,7 +127,6 @@
       const distance=Math.hypot(event.clientX-dragState.startX,event.clientY-dragState.startY);
       if(distance<DRAG_THRESHOLD_PX)return;
       dragState.active=true;
-      selectedFurnitureId=dragState.furnitureId;
       operationIssues=[];
       lastOperationMeta=null;
     }
