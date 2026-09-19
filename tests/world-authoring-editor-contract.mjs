@@ -9,6 +9,7 @@ for(const file of ['world-authoring-v1.js','world-initializer.js']){
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
+assert.equal(A.VERSION,'world-authoring-v2');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -22,6 +23,11 @@ const imported=A.parseAuthoringJSON(exported);
 assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'export → import must preserve authoring semantics');
 assert.deepEqual(imported.compatibility,layered.compatibility,'low-level compatibility namespace must survive round-trip');
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1],'canonical serialization must preserve ordered Z identity');
+assert.equal(imported.authoringSchema,'world-authoring-v2');
+const topology=A.deriveHorizontalTopology(imported,{z:0});
+assert.equal(topology.cells['0,6'].structuralOpen,true,'opening must derive structural openness without persisted walkability');
+assert.equal(topology.cells['0,6'].open,false,'blocking front door must close the opening in derived topology');
+assert.ok(!exported.includes('"componentId"')&&!exported.includes('"adjacent"'),'derived topology must not serialize into world truth');
 
 assert.throws(
   ()=>I.createInitialState(imported,{seed:1,version:'test'}),
@@ -77,13 +83,16 @@ const editorHtml=fs.readFileSync(new URL('../editor.html',import.meta.url),'utf8
 for(const forbidden of ['src/world-initializer.js','src/world.js','src/spatial.js','src/engine.js','src/state-validator.js']){
   assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
 }
+assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
 assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
 assert.ok(editorHtml.includes('src/editor-ui.js'));
+assert.ok(editorHtml.includes('shared geometry compiler'));
 
 const editorUi=fs.readFileSync(new URL('../src/editor-ui.js',import.meta.url),'utf8');
 for(const forbidden of ['SimEngine','SimSpatial','createInitialState','PassageProfile','passageConstraints']){
   assert.ok(!editorUi.includes(forbidden),`Editor UI must not consume runtime traversal truth: ${forbidden}`);
 }
+assert.ok(editorUi.includes('deriveHorizontalTopology'),'Editor preview must use the shared authoring-side topology derivation');
 for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','baselineFingerprint']){
   assert.ok(editorUi.includes(ephemeral),`Expected Editor ephemeral state: ${ephemeral}`);
 }
