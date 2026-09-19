@@ -29,14 +29,11 @@ assert.equal(topology.cells['0,6'].structuralOpen,true,'opening must derive stru
 assert.equal(topology.cells['0,6'].open,false,'blocking front door must close the opening in derived topology');
 assert.ok(!exported.includes('"componentId"')&&!exported.includes('"adjacent"'),'derived topology must not serialize into world truth');
 
-assert.throws(
-  ()=>I.createInitialState(imported,{seed:1,version:'test'}),
-  /requires exactly one z=0 layer/,
-  'current runtime adapter must loud-fail multi-layer authoring'
-);
 const layeredCompatibility=I.analyzeRuntimeCompatibility(imported);
-assert.equal(layeredCompatibility.ok,false,'D.1C preflight must reject unsupported multi-layer authoring before simulator launch');
-assert.ok(layeredCompatibility.hardErrors.some(issue=>/requires exactly one z=0 layer/.test(issue.message)),'compatibility report must preserve the loud runtime Z boundary');
+assert.equal(layeredCompatibility.ok,true,layeredCompatibility.hardErrors.map(issue=>issue.code+': '+issue.message).join(' | '));
+const layeredRuntime=I.createInitialState(imported,{seed:1,version:'test'});
+assert.deepEqual(layeredRuntime.map.zLevels,[0,1],'Slice E runtime compiler must preserve authored layer identity');
+assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor','non-zero authored layer must compile into a distinct runtime tile key');
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
