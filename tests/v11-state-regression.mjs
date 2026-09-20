@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+for(const file of ['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 
 function noIssues(label){const v=V.validateState(E.getState());if(v.issueCount)console.error('STATE_DEBUG',label,JSON.stringify(v,null,2));assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
@@ -109,7 +109,7 @@ E.reset(20260911);
   assert.ok(!engine.includes('carriedResourceLoad'),'Engine 不得保留抽象 hauling weight helper');
   const validator=fs.readFileSync(new URL('../src/state-validator.js',import.meta.url),'utf8');
   assert.ok(!validator.includes('E.validateState='));assert.ok(!validator.includes('validationStatus='));assert.ok(!validator.includes('debug.validation'));
-  const authoring=fs.readFileSync(new URL('../src/world-authoring-v1.js',import.meta.url),'utf8');
+  const authoring=fs.readFileSync(new URL('../src/world-authoring.js',import.meta.url),'utf8');
   assert.ok(!authoring.includes('carrying:null'),'Authoring package 不得初始化 Agent.carrying');assert.ok(authoring.includes("'logisticsContainer'"),'Canonical authoring 應定義物流容器 capability');assert.ok(!authoring.includes("id==='mealTray'"),'World initialization 不得以 entity ID skip list 決定 blocker');
   const world=fs.readFileSync(new URL('../src/world.js',import.meta.url),'utf8');
   for(const legacyOwner of ['FURNITURE_DEFS','OBJECT_START','AGENT_START'])assert.ok(!world.includes(legacyOwner),'world.js 不應繼續持有 '+legacyOwner+' canonical authoring truth');
