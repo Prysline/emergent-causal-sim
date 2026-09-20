@@ -13,9 +13,11 @@ loadProductionBefore('src/ui.js');
 
 const W=globalThis.SimWorld,E=globalThis.SimEngine,V=globalThis.SimValidator;
 assert.equal(W.isInitialStateRegistryFinalized(),true);
-assert.equal(E.isRuntimeHookRegistryFinalized(),true);
+assert.equal(E.isRuntimeHookRegistryFinalized(),false);
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.equal(E.getState(),null,'engine module evaluation must not start the simulation');
+E.finalizeRuntimeHooks(E.currentRuntimeHookManifest());
+assert.equal(E.isRuntimeHookRegistryFinalized(),true);
 
 let uiStarts=0;
 globalThis.SimUI={start(){uiStarts++;return true;}};

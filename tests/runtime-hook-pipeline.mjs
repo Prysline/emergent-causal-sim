@@ -59,9 +59,9 @@ for(const [phase,expected] of Object.entries(EXPECTED_HOOKS)){
   assert.deepEqual(E.listRuntimeHooks(phase),expected,`${phase} hook ids/orders are architecture semantics and must remain explicit`);
 }
 
-assert.equal(E.isRuntimeHookRegistryFinalized(),true);
+assert.equal(E.isRuntimeHookRegistryFinalized(),false,'domain-runtime profile stops before production UI hook registrants and manifest finalization');
 assert.deepEqual(E.currentRuntimeHookManifest(),EXPECTED_HOOKS);
-assert.throws(()=>E.registerRuntimeHook('beforeTick','late',()=>{},999),/registry is finalized/,'late hook registration must fail after manifest finalization');
+assert.throws(()=>E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>{},999),/Duplicate runtime hook/,'duplicate hook ids must fail loudly');
 assert.throws(()=>E.registerRuntimeHook('unknownPhase','bad',()=>{}),/Unknown runtime hook phase/,'unknown phases must fail loudly');
 
 E.reset(20260911);

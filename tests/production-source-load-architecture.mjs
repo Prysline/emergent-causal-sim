@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import {
   loadProductionBefore,
   productionScriptPaths,
@@ -39,8 +40,8 @@ assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine'
 assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
-assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after runtime feature hooks register');
-assert.equal(validatorIndex,hookManifestIndex+1,'validator registry must load after runtime hook finalization');
+assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every production hook registrant');
+assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independently of the runtime-hook manifest');
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
 assert.ok(manifestIndex<uiIndex,'validator registry must finalize before the base UI');
 assert.equal(bootstrapIndex,scripts.length-1,'app bootstrap must be the final production script');
@@ -63,6 +64,7 @@ for(const path of hookExtensions){
   assert.ok(indexOf(path)>pipelineIndex,path+' must register after runtime-hook-pipeline.js');
   assert.ok(indexOf(path)<hookManifestIndex,path+' must register before runtime-hook manifest finalization');
 }
+assert.equal(hookManifestIndex,bootstrapIndex-1,'runtime-hook manifest must be the final registration gate immediately before app bootstrap');
 
 const srcDir=new URL('../src/',import.meta.url);
 const validatorExtensions=fs.readdirSync(srcDir)
@@ -103,9 +105,23 @@ assert.equal(L.VERSION,'11.19.0-locomotion-execution-posture');
 assert.equal(C.VERSION,'11.20.0-dynamic-congestion');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
-assert.equal(E.isRuntimeHookRegistryFinalized(),true);
+assert.equal(E.isRuntimeHookRegistryFinalized(),false,'runtime-hook registry must remain open until production UI hook extensions have loaded');
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.equal(E.getState(),null,'module loading before app bootstrap must not auto-reset the engine');
+
+let capturedHookManifest=null;
+vm.runInNewContext(readRepoFile('src/runtime/hook-manifest.js'),{window:{SimEngine:{finalizeRuntimeHooks(expected){capturedHookManifest=expected;}}}});
+const manifestHooks=[];
+for(const [phase,entries] of Object.entries(capturedHookManifest||{}))for(const entry of entries)manifestHooks.push({phase,...entry});
+const registeredHooks=[];
+for(const path of hookExtensions){
+  const source=readRepoFile(path);
+  for(const match of source.matchAll(/registerRuntimeHook\('([^']+)'\s*,\s*'([^']+)'\s*,[\s\S]*?,\s*(\d+)\s*\)/g)){
+    registeredHooks.push({phase:match[1],id:match[2],order:Number(match[3])});
+  }
+}
+const sortHooks=list=>list.sort((a,b)=>a.phase.localeCompare(b.phase)||a.order-b.order||a.id.localeCompare(b.id));
+assert.deepEqual(sortHooks(manifestHooks),sortHooks(registeredHooks),'runtime-hook manifest must exactly cover every production hook registration');
 
 const releaseVersionWriters=scripts.filter(path=>/W\.VERSION\s*=|st\.version\s*=/.test(readRepoFile(path)));
 assert.deepEqual(releaseVersionWriters,['src/release.js'],'current runtime release marker must have exactly one production writer');
