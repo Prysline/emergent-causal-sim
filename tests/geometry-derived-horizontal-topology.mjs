@@ -6,7 +6,7 @@ import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadInitialStateProfile([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js',
-  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage.js'
+  'systems/physical.js','spatial-passage.js'
 ]);
 
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld,SP=globalThis.SimSpatial;
