@@ -7,9 +7,9 @@ globalThis.window=globalThis;
 const files=[
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
-  'memory-schema-v1130.js','systems/appraisal/state.js','systems/affect/state.js','memory-retention-schema-v1133.js','memory-deliberation-schema-v1134.js',
+  'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
-  'memory-runtime-v1130.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/affect/runtime.js','systems/social/animal-response.js','memory-retention-runtime-v1133.js','systems/social/human-response.js','memory-deliberation-runtime-v1134.js',
+  'systems/memory/runtime.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/affect/runtime.js','systems/social/animal-response.js','systems/memory/retention.js','systems/social/human-response.js','systems/memory/deliberation.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js'
 ];
 loadRuntimeProfile(files);
@@ -24,7 +24,7 @@ assert.match(engineSource,/function startAction\(a,choice\)\{a\.action=buildActi
 assert.equal((engineSource.match(/switch\(choice\.id\)/g)||[]).length,1,'engine should contain one choice→Action construction switch');
 const replanSource=source('systems/intent/replanning.js');
 const softSource=source('systems/intent/deliberation.js');
-const memorySource=source('memory-deliberation-runtime-v1134.js');
+const memorySource=source('systems/memory/deliberation.js');
 assert.match(replanSource,/return E\.buildAction\(a,choice\)/,'hard replan must delegate construction to core');
 assert.doesNotMatch(replanSource,/switch\(actionKindValue\)/,'hard replan must not keep a parallel Action construction switch');
 assert.match(softSource,/return E\.buildAction\(a,choice\)/,'soft reconsideration must delegate construction to core');
