@@ -10,7 +10,15 @@ const RETIRED_SOURCES=Object.freeze({
   'physical-schema-v1160.js':'systems/physical.js',
   'physical-runtime-v1160.js':'systems/physical.js',
   'locomotion-schema-v1190.js':'systems/locomotion.js',
-  'locomotion-runtime-v1190.js':'systems/locomotion.js'
+  'locomotion-runtime-v1190.js':'systems/locomotion.js',
+  'action-schema-v1120.js':'systems/action/state.js',
+  'action-runtime-v1120.js':'systems/action/runtime.js',
+  'intent-schema-v1121.js':'systems/intent/state.js',
+  'intent-runtime-v1121.js':'systems/intent/runtime.js',
+  'interruption-schema-v1123.js':'systems/intent/state.js',
+  'intent-runtime-v1123.js':'systems/intent/replanning.js',
+  'deliberation-schema-v1124.js':'systems/intent/state.js',
+  'intent-runtime-v1124.js':'systems/intent/deliberation.js'
 });
 
 const AUTHORING_PROFILE=Object.freeze([
