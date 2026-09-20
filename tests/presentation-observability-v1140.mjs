@@ -15,7 +15,7 @@ const files=[
   'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js','presentation-schema-v1140.js','systems/relationship/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
   'systems/memory/runtime.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/relationship/runtime.js','systems/affect/runtime.js','systems/social/animal-response.js','systems/memory/retention.js','systems/social/human-response.js','systems/memory/deliberation.js','systems/memory/social-outcome.js',
-  'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js','state-validator-v1190.js'
+  'validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js','validation/rules/intent-active.js','validation/rules/social-bid.js','validation/rules/interruption.js','validation/rules/deliberation.js','validation/rules/memory-episodic.js','validation/rules/appraisal.js','validation/rules/affect.js','validation/rules/social-response.js','validation/rules/memory-retention.js','validation/rules/human-social-response.js','validation/rules/memory-deliberation.js','validation/rules/social-outcome-memory.js','validation/rules/relationship.js','validation/rules/physical-profile.js','validation/rules/locomotion-execution.js'
 ];
 loadRuntimeProfile(files);
 
@@ -99,7 +99,7 @@ assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must kee
 assert.match(routeSource,/function routeStateKey\(st,node,mode\)/,'current routing must include locomotion mode in route state');
 assert.match(routeSource,/function nodeLocomotionAccessible\(st,p,a=null\)/,'Spatial must separate structural locomotion occupancy from walk-only node entry');
 assert.match(routeSource,/step\.transitionTicks\+step\.moveTicks/,'travelTime must sum real transition and movement timing');
-const spatialValidatorSource=fs.readFileSync(new URL('../src/state-validator-v111.js',import.meta.url),'utf8');
+const spatialValidatorSource=fs.readFileSync(new URL('../src/validation/rules/spatial-node.js',import.meta.url),'utf8');
 assert.match(spatialValidatorSource,/SP\.nodeLocomotionAccessible\?\.\(st,node,a\)/,'Spatial validator must validate current occupancy without reusing walk-only node feasibility');
 const memoryDeliberationSource=fs.readFileSync(new URL('../src/systems/memory/deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');

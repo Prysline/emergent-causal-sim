@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','engine.js','state-validator.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','engine.js','validation/registry.js']);
 const E=globalThis.SimEngine,V=globalThis.SimValidator;
 const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
