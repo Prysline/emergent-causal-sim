@@ -3,7 +3,7 @@
   if(!W||!E||!V||!UI)throw new Error('App bootstrap requires World, Engine, Validator, and UI.');
   const PET_SCENARIOS=new Set(['pet-accept','pet-tolerate','pet-avoid']);
   const TALK_SCENARIOS=new Set(['talk-engage','talk-brief','talk-decline','talk-no-response']);
-  let started=false;
+  let started=false,startupSourceConfigured=false;
 
   function assertReady(){
     if(!W.isInitialStateRegistryFinalized?.())throw new Error('App bootstrap requires finalized initial-state registry.');
@@ -14,6 +14,23 @@
   function requestedScenario(){
     try{return new URLSearchParams(window.location?.search||'').get('scenario')||'';}
     catch{return '';}
+  }
+  function configureStartupSource(){
+    if(startupSourceConfigured)return;
+    const bridge=window.SimEditorPreviewBridge;
+    const preview=bridge?.getActivePreview?.()||{requested:false,ok:true,authoring:null,fingerprint:null,issues:[]};
+    if(preview.requested&&!preview.ok){
+      throw new Error('Editor Preview bootstrap failed: '+(preview.issues||[]).map(item=>item.code||item.message).join(', '));
+    }
+    if(preview.requested){
+      if(typeof E.configureResetStateSource!=='function')throw new Error('App bootstrap requires Engine reset-state source configuration.');
+      if(typeof W.createInitialStateFromAuthoring!=='function')throw new Error('App bootstrap requires World authoring state factory.');
+      const snapshot=preview.authoring==null?null:JSON.parse(JSON.stringify(preview.authoring));
+      E.configureResetStateSource('editor-preview',seed=>W.createInitialStateFromAuthoring(snapshot,seed));
+      E.PREVIEW_MODE=true;
+      E.PREVIEW_FINGERPRINT=preview.fingerprint||null;
+    }
+    startupSourceConfigured=true;
   }
   function startRuntime(){
     const scenario=requestedScenario();
@@ -30,6 +47,7 @@
   function start(){
     if(started)return E.getState();
     assertReady();
+    configureStartupSource();
     const state=startRuntime();
     UI.start();
     window.SimEditorPreviewBridge?.startUI?.();
