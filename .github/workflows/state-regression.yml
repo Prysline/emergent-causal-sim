@@ -20,8 +20,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: for f in src/*.js; do node --check "$f"; done
+      - run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
       - run: node tests/production-source-load-architecture.mjs
+      - run: node tests/application-bootstrap-lifecycle.mjs
       - run: node tests/v11-state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/initial-population-placement.mjs

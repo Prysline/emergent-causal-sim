@@ -42,11 +42,17 @@ const EXPECTED=[
   {id:'locomotion.schema',order:1700}
 ];
 
-assert.equal(W.INITIAL_STATE_PIPELINE_VERSION,'initial-state-pipeline-1');
-assert.deepEqual(W.listInitialStateInitializers(),EXPECTED,'initial-state order is architecture semantics and must remain explicit');
+assert.equal(W.INITIAL_STATE_PIPELINE_VERSION,'initial-state-pipeline-2');
+assert.deepEqual(W.INITIAL_STATE_PHASES,['schema','finalize']);
+assert.deepEqual(W.listInitialStateInitializers('schema'),EXPECTED,'schema-phase order is architecture semantics and must remain explicit');
+assert.deepEqual(W.listInitialStateInitializers('finalize'),[]);
 assert.throws(()=>W.registerInitialStateInitializer('intent.schema',()=>{},999),/Duplicate initial-state initializer/);
 assert.throws(()=>W.registerInitialStateInitializer('',()=>{},1),/non-empty string/);
 assert.throws(()=>W.registerInitialStateInitializer('bad.handler',null,1),/must be a function/);
+loadScriptsInThisContext(['src/world/initial-state-manifest.js']);
+assert.equal(W.isInitialStateRegistryFinalized(),true);
+assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED,finalize:[]});
+assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
 assert.equal(st.version,'11.22.0-spatial-z-identity','full production schema set must preserve current release marker');

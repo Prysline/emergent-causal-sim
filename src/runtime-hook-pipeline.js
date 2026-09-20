@@ -3,10 +3,11 @@
   const coreTick=E.tick,coreReset=E.reset;
   const PHASES=Object.freeze(['beforeTick','afterTick','afterReset','episodicMemoryCreated']);
   const hooks=new Map(PHASES.map(phase=>[phase,[]]));
-  let registrationSeq=0;
+  let registrationSeq=0,finalizedRuntimeHookManifest=null;
 
   function registerRuntimeHook(phase,id,handler,order=0){
     if(!hooks.has(phase))throw new Error(`Unknown runtime hook phase: ${phase}`);
+    if(finalizedRuntimeHookManifest)throw new Error(`Runtime hook registry is finalized; cannot register ${phase}:${id}.`);
     if(!id||typeof id!=='string')throw new Error('Runtime hook id must be a non-empty string');
     if(typeof handler!=='function')throw new Error(`Runtime hook ${id} must be a function`);
     const list=hooks.get(phase);
@@ -22,6 +23,25 @@
   function listRuntimeHooks(phase){
     const list=hooks.get(phase)||[];
     return list.map(({id,order})=>({id,order}));
+  }
+  function currentRuntimeHookManifest(){
+    return Object.fromEntries(PHASES.map(phase=>[phase,listRuntimeHooks(phase)]));
+  }
+  function assertRuntimeHookManifest(expected){
+    if(!expected||typeof expected!=='object')throw new Error('Expected runtime hook manifest must be an object.');
+    for(const phase of PHASES){
+      const wanted=expected[phase];
+      if(!Array.isArray(wanted))throw new Error(`Expected runtime hook manifest must define phase ${phase}.`);
+      const actual=listRuntimeHooks(phase);
+      if(JSON.stringify(actual)!==JSON.stringify(wanted))throw new Error(`Runtime hook manifest mismatch for ${phase}; expected=${JSON.stringify(wanted)}, actual=${JSON.stringify(actual)}.`);
+    }
+    return currentRuntimeHookManifest();
+  }
+  function finalizeRuntimeHooks(expected){
+    if(finalizedRuntimeHookManifest)throw new Error('Runtime hook registry is already finalized.');
+    assertRuntimeHookManifest(expected);
+    finalizedRuntimeHookManifest=Object.freeze(Object.fromEntries(PHASES.map(phase=>[phase,Object.freeze(expected[phase].map(entry=>Object.freeze({...entry}))) ])));
+    return currentRuntimeHookManifest();
   }
 
   const pipelineTick=(...args)=>{
@@ -49,12 +69,11 @@
   E.reset=pipelineReset;
   E.onEpisodicMemoryCreated=episodicMemoryCreated;
   Object.assign(E,{
-    RUNTIME_HOOK_PIPELINE_VERSION:'runtime-hook-pipeline-1',
+    RUNTIME_HOOK_PIPELINE_VERSION:'runtime-hook-pipeline-2',
     RUNTIME_HOOK_PHASES:PHASES,
     RUNTIME_PIPELINE_TICK:pipelineTick,
     RUNTIME_PIPELINE_RESET:pipelineReset,
-    registerRuntimeHook,
-    runRuntimeHooks,
-    listRuntimeHooks
+    registerRuntimeHook,runRuntimeHooks,listRuntimeHooks,currentRuntimeHookManifest,assertRuntimeHookManifest,finalizeRuntimeHooks,
+    isRuntimeHookRegistryFinalized:()=>!!finalizedRuntimeHookManifest
   });
 })();
