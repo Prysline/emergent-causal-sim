@@ -1,6 +1,16 @@
 (() => {
   const W=window.SimWorld,P=window.SimPhysical;if(!W||!P?.getMovementEnvelope)return;
-  const VERSION=W.LOCOMOTION_SCHEMA_VERSION||'11.19.0-locomotion-execution-posture';
+  if(!W.registerInitialStateInitializer)throw new Error('systems/locomotion.js requires world.js initial-state pipeline.');
+  const VERSION='11.19.0-locomotion-execution-posture';
+
+  W.registerInitialStateInitializer('locomotion.schema',(st)=>{
+    for(const a of Object.values(st.agents||{})){
+      if(!a.locomotion)a.locomotion={mode:null,phase:'idle'};
+    }
+    return st;
+  },1700);
+  W.LOCOMOTION_SCHEMA_VERSION=VERSION;
+
   const POSTURE_BY_MODE=Object.freeze({walk:'standing',kneelCrawl:'kneeling',proneCrawl:'prone'});
   const MODE_BY_POSTURE=Object.freeze({standing:'walk',kneeling:'kneelCrawl',prone:'proneCrawl'});
   const MODE_LABELS=Object.freeze({walk:'步行',kneelCrawl:'跪爬',proneCrawl:'匍匐'});

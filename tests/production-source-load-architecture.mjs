@@ -27,6 +27,10 @@ const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
 const engineIndex=indexOf('src/engine.js');
 const initialManifestIndex=indexOf('src/world/initial-state-manifest.js');
+const physicalIndex=indexOf('src/systems/physical.js');
+const passageIndex=indexOf('src/spatial-passage.js');
+const locomotionIndex=indexOf('src/systems/locomotion.js');
+const crowdingIndex=indexOf('src/crowding-runtime-v1200.js');
 const pipelineIndex=indexOf('src/runtime-hook-pipeline.js');
 const hookManifestIndex=indexOf('src/runtime/hook-manifest.js');
 const validatorIndex=indexOf('src/state-validator.js');
@@ -39,6 +43,8 @@ assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production mus
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
 assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
+assert.ok(physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Physical -> Passage -> Locomotion -> Crowding');
+assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every production hook registrant');
 assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independently of the runtime-hook manifest');
@@ -155,6 +161,16 @@ const retiredSpatialAssets=[
   'src/engine-spatial-v1114.js'
 ];
 assert.deepEqual(scripts.filter(path=>retiredSpatialAssets.includes(path)),[],'production must not reload retired version-named Spatial assets');
+const retiredEmbodimentAssets=[
+  'src/physical-schema-v1160.js',
+  'src/physical-runtime-v1160.js',
+  'src/locomotion-schema-v1190.js',
+  'src/locomotion-runtime-v1190.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredEmbodimentAssets.includes(path)),[],'production must not load retired Physical / Locomotion sources');
+for(const path of retiredEmbodimentAssets){
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
+}
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
 const spatialInitCallers=scripts.filter(path=>/\bSP\.init\s*\(/.test(readRepoFile(path)));
 assert.deepEqual(spatialInitWriters,[],'production must not expose a Spatial init writer after Cleanup-3B');
