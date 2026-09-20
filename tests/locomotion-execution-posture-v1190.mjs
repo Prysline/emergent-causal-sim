@@ -11,7 +11,8 @@ for(const file of [
 ])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const CURRENT_VERSION='11.19.0-locomotion-execution-posture';
+const APP_VERSION='11.22.0-spatial-z-identity';
+const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
@@ -51,9 +52,9 @@ function tickN(n){for(let i=0;i<n;i++)E.tick();}
 
 E.reset(11900);
 let st=E.getState(),human=st.agents.zhen;
-assert.equal(st.version,CURRENT_VERSION);
-assert.equal(W.LOCOMOTION_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(L.VERSION,CURRENT_VERSION);
+assert.equal(st.version,APP_VERSION);
+assert.equal(W.LOCOMOTION_SCHEMA_VERSION,LOCOMOTION_VERSION);
+assert.equal(L.VERSION,LOCOMOTION_VERSION);
 assert.deepEqual(human.locomotion,{mode:null,phase:'idle'});
 assert.equal(L.postureForMode('walk'),'standing');
 assert.equal(L.postureForMode('kneelCrawl'),'kneeling');
