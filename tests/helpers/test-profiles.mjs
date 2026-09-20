@@ -6,7 +6,11 @@ const RETIRED_SOURCES=Object.freeze({
   'spatial-v1113.js':'spatial-floor-effects.js',
   'spatial-v1114.js':'spatial-surface-environment.js',
   'spatial-passage-v1170.js':'spatial-passage.js',
-  'engine-spatial-v1114.js':'spatial-runtime-effects.js'
+  'engine-spatial-v1114.js':'spatial-runtime-effects.js',
+  'physical-schema-v1160.js':'systems/physical.js',
+  'physical-runtime-v1160.js':'systems/physical.js',
+  'locomotion-schema-v1190.js':'systems/locomotion.js',
+  'locomotion-runtime-v1190.js':'systems/locomotion.js'
 });
 
 const AUTHORING_PROFILE=Object.freeze([
