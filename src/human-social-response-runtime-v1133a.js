@@ -95,5 +95,4 @@
   E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 
   Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_RELATIONSHIP_RESPONSE_CAP,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
-  try{const scenario=typeof location!=='undefined'?new URLSearchParams(location.search||'').get('scenario'):null;if(['talk-engage','talk-brief','talk-decline','talk-no-response'].includes(scenario))prepareHumanTalkScenario(scenario);}catch{}
 })();
