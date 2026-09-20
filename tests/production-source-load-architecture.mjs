@@ -117,7 +117,6 @@ for(const path of engineDependentSubsystemRuntimes){
 const moduleEvaluationStateTouchPattern=/^\s{2}[A-Za-z_$][A-Za-z0-9_$]*\(E\.getState\(\)\);\s*$/m;
 const auditedModuleEvaluationStateTouches=engineDependentSubsystemRuntimes.filter(path=>moduleEvaluationStateTouchPattern.test(readRepoFile(path)));
 assert.deepEqual(auditedModuleEvaluationStateTouches,[
-  'src/social-bid-runtime-v1122.js',
   'src/memory-runtime-v1130.js',
   'src/affect-runtime-v1132.js',
   'src/memory-retention-runtime-v1133.js'
