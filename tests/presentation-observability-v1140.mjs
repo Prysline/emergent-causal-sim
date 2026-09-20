@@ -154,7 +154,7 @@ assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load R
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
 assert.match(indexSource,/physical-schema-v1160\.js/,'app shell must load Physical schema');
 assert.match(indexSource,/physical-runtime-v1160\.js/,'app shell must load Physical runtime');
-assert.match(indexSource,/spatial-passage-v1170\.js/,'app shell must load Passage Profile runtime');
+assert.match(indexSource,/spatial-passage\.js/,'app shell must load Passage Profile runtime');
 assert.match(indexSource,/state-validator-v1160\.js/,'app shell must load Physical validator');
 assert.match(indexSource,/ui-physical-v1160\.js/,'app shell must load Physical Debug projection');
 assert.match(indexSource,/locomotion-schema-v1190\.js/,'app shell must load Locomotion schema');
