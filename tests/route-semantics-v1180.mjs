@@ -3,13 +3,12 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js']){
+for(const file of ['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial/finalize.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
 const W=globalThis.SimWorld,SP=globalThis.SimSpatial;
 const st=W.createInitialState(11800);
-SP.init(st);
 const actor=st.agents.zhen;
 actor.position={...SP.normalizeNode(st,{x:1,y:3},'floor')};
 st.agents.zhou.offMap=true;
