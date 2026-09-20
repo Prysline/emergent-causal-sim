@@ -133,7 +133,7 @@ flowchart LR
 | 700 | `residentView.reset` | Presentation | 重設／排程 Resident View |
 | 750 | `relationshipView.reset` | Presentation | 重設／排程 Relationship projection |
 
-Relationship persistent state 由 `relationship-schema-v1150.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `physical-schema-v1160.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20 Crowding完全 derived / uncached，不建立 reset-normalized state，也不新增 afterReset hook。
+Relationship persistent state 由 `relationship-schema-v1150.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `src/systems/physical.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20 Crowding完全 derived / uncached，不建立 reset-normalized state，也不新增 afterReset hook。
 
 ## 7. Event-created / Memory observation lifecycle
 
