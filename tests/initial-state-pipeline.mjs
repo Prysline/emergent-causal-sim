@@ -21,9 +21,7 @@ assert.equal(W.createInitialStateFromAuthoring,canonicalCreateInitialStateFromAu
 const EXPECTED=[
   {id:'release.version',order:0},
   {id:'spatial.schema',order:10},
-  {id:'spatialObservability.schema',order:20},
   {id:'contact.schema',order:30},
-  {id:'spatialFloorEffects.schema',order:40},
   {id:'spatialSurfaceEnvironment.schema',order:50},
   {id:'action.schema',order:100},
   {id:'intent.schema',order:200},
