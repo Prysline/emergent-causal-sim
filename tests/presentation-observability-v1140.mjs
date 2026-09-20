@@ -153,11 +153,11 @@ assert.match(indexSource,/systems\/relationship\/runtime\.js/,'app shell must lo
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
 assert.match(indexSource,/systems\/physical\.js/,'app shell must load the Physical semantic owner');
 assert.match(indexSource,/spatial-passage\.js/,'app shell must load Passage Profile runtime');
-assert.match(indexSource,/state-validator-v1160\.js/,'app shell must load Physical validator');
+assert.match(indexSource,/validation\/rules\/physical-profile\.js/,'app shell must load Physical validator');
 assert.match(indexSource,/ui-physical-v1160\.js/,'app shell must load Physical Debug projection');
 assert.match(indexSource,/systems\/locomotion\.js/,'app shell must load the Locomotion semantic owner');
 assert.match(indexSource,/crowding-runtime-v1200\.js/,'app shell must load Dynamic Congestion runtime');
-assert.match(indexSource,/state-validator-v1190\.js/,'app shell must load Locomotion validator');
+assert.match(indexSource,/validation\/rules\/locomotion-execution\.js/,'app shell must load Locomotion validator');
 assert.match(indexSource,/ui-locomotion-v1190\.js/,'app shell must load Locomotion Debug projection');
 assert.match(indexSource,/ui-entity-readable-v1141\.js/,'app shell must keep the non-agent readable entity layer');
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
