@@ -88,10 +88,13 @@
   }
 
   function syncMapAndActions(){pending=false;syncMap();syncActions();}
-  function schedule(){if(pending)return;pending=true;queueMicrotask(syncMapAndActions);}
+  function schedule(){if(!UI?.isStarted?.()||pending)return;pending=true;queueMicrotask(syncMapAndActions);}
   const UI=window.SimUI;
   if(!UI?.registerInspectorDecorator)throw new Error('spatial.observability requires inspector decorator lifecycle');
+  if(!UI.registerStartupExtension)throw new Error('spatial.observability requires UI startup lifecycle');
   UI.registerInspectorDecorator('spatial.observability',decorateInspector,100);
-  for(const id of ['map','actions']){const el=document.getElementById(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,subtree:true,characterData:true});}
-  schedule();
+  UI.registerStartupExtension('spatial.observability',()=>{
+    for(const id of ['map','actions']){const el=document.getElementById(id);if(el)new MutationObserver(schedule).observe(el,{childList:true,subtree:true,characterData:true});}
+    schedule();
+  },150);
 })();

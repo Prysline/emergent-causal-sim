@@ -1,6 +1,7 @@
 (() => {
-  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld;
+  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld,UI=window.SimUI;
   if(!E||!SP||!W)return;
+  if(!UI?.registerStartupExtension)throw new Error('UI observability requires UI startup lifecycle.');
 
   const VERSION='11.13.3a-observability-controls';
   const RESPONSE_ACTIONS=new Set(['acceptTalk','briefTalkReply','declineTalk']);
@@ -73,14 +74,16 @@
       return `<button class="mobile-agent-row agent-${esc(a.id)}" data-entity="agent:${esc(a.id)}"><span class="mobile-agent-identity"><span>${a.kind==='cat'?'🐈':'👤'}</span><b>${esc(a.name)}</b><small>${esc(where)}</small></span><span class="mobile-agent-detail"><span class="mobile-agent-action">${esc(E.actionLabel(a))}</span><span class="mobile-agent-needs">${esc(needs)}</span></span></button>`;
     }).join('');
   }
-  function resetObservability(){renderMobileSummary();}
+  function resetObservability(){if(UI.isStarted?.())renderMobileSummary();}
 
   if(!E.registerRuntimeHook)throw new Error('ui-observability-controls-v1133a.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
   E.registerRuntimeHook('afterReset','uiObservability.reset',resetObservability,600);
 
-  installTurnControls();
-  renderMobileSummary();
-  window.addEventListener('resize',renderMobileSummary,{passive:true});
+  UI.registerStartupExtension('uiObservability.controls',()=>{
+    installTurnControls();
+    renderMobileSummary();
+    window.addEventListener('resize',renderMobileSummary,{passive:true});
+  },200);
   E.UI_OBSERVABILITY_CONTROLS_VERSION=VERSION;
 })();

@@ -109,6 +109,21 @@ assert.equal(E.isRuntimeHookRegistryFinalized(),false,'runtime-hook registry mus
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.equal(E.getState(),null,'module loading before app bootstrap must not auto-reset the engine');
 
+const uiStartupFiles=[
+  'src/ui-social-response-v1132a.js',
+  'src/ui-spatial-observability.js',
+  'src/ui-observability-controls-v1133a.js',
+  'src/ui-resident-view-v1140.js',
+  'src/ui-relationship-v1150.js',
+  'src/ui-entity-readable-v1141.js'
+];
+for(const path of uiStartupFiles){
+  assert.ok(readRepoFile(path).includes('registerStartupExtension('),path+' must defer UI side effects to SimUI.start()');
+}
+const previewBridgeSource=readRepoFile('src/editor-preview-bridge.js');
+assert.ok(previewBridgeSource.includes('startUI:updateIndicator'),'editor preview indicator must expose startup API to the composition root');
+assert.doesNotMatch(previewBridgeSource,/DOMContentLoaded[^\n]*updateIndicator|else updateIndicator\(\)/,'editor preview bridge must not render during module evaluation');
+
 let capturedHookManifest=null;
 vm.runInNewContext(readRepoFile('src/runtime/hook-manifest.js'),{window:{SimEngine:{finalizeRuntimeHooks(expected){capturedHookManifest=expected;}}}});
 const manifestHooks=[];

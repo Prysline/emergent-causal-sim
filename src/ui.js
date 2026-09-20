@@ -1,7 +1,7 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,V=window.SimValidator;if(!E||!SP||!V)return;
   const UI=window.SimUI=window.SimUI||{};
-  const inspectorDecorators=new Map();
+  const inspectorDecorators=new Map(),startupExtensions=new Map();
   let selected=null,timer=null,mobileView='map',logMode='summary',currentZ=0,started=false;
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const st=()=>E.getState(),zOf=p=>SP.zOf?.(p)??p?.z??0,posText=p=>p?`(${p.x}, ${p.y}, Z ${zOf(p)})`:'無',fmtLoad=v=>Math.round((v||0)*100)/100,isMobile=()=>matchMedia('(max-width:720px)').matches;
@@ -11,6 +11,21 @@
 
   function sortedInspectorDecorators(){
     return [...inspectorDecorators.values()].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  }
+  function sortedStartupExtensions(){
+    return [...startupExtensions.values()].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  }
+  function registerStartupExtension(id,handler,order=0){
+    if(typeof id!=='string'||!id||typeof handler!=='function')throw new Error('invalid UI startup extension');
+    if(startupExtensions.has(id))throw new Error(`duplicate UI startup extension: ${id}`);
+    if(started)throw new Error(`UI startup is already complete; cannot register ${id}`);
+    startupExtensions.set(id,{id,handler,order:Number(order)||0});
+    return handler;
+  }
+  function listStartupExtensions(){return sortedStartupExtensions().map(({id,order})=>({id,order}));}
+  function runStartupExtensions(){
+    const context={state:E.getState(),ui:UI};
+    for(const entry of sortedStartupExtensions())entry.handler(context);
   }
   function currentInspectorSelection(){return selected?{...selected}:null;}
   function runInspectorDecorators(){
@@ -27,6 +42,8 @@
   function listInspectorDecorators(){return sortedInspectorDecorators().map(({id,order})=>({id,order}));}
   UI.registerInspectorDecorator=registerInspectorDecorator;
   UI.listInspectorDecorators=listInspectorDecorators;
+  UI.registerStartupExtension=registerStartupExtension;
+  UI.listStartupExtensions=listStartupExtensions;
   UI.runInspectorDecorators=runInspectorDecorators;
   UI.getInspectorSelection=currentInspectorSelection;
   function runtimeZLevels(){const levels=st().map?.zLevels;return Array.isArray(levels)&&levels.length?[...levels].sort((a,b)=>a-b):[...new Set(Object.values(st().map?.tiles||{}).map(zOf))].sort((a,b)=>a-b);}
@@ -81,9 +98,15 @@
     if(started)return false;
     if(!E.getState())throw new Error('SimUI.start requires an initialized runtime state.');
     bindEvents();
-    render();
     started=true;
-    return true;
+    try{
+      runStartupExtensions();
+      render();
+      return true;
+    }catch(error){
+      started=false;
+      throw error;
+    }
   }
   Object.assign(UI,{start,isStarted:()=>started});
 })();

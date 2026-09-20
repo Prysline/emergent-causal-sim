@@ -108,11 +108,6 @@
     }
   }
 
-  if(typeof document!=='undefined'){
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',updateIndicator,{once:true});
-    else updateIndicator();
-  }
-
   window.SimEditorPreviewBridge={
     STORAGE_KEY,PREVIEW_PARAM,PREVIEW_VALUE,RESTORE_PARAM,RESTORE_VALUE,
     isPreviewRequested,isRestoreRequested,
@@ -121,6 +116,7 @@
     loadStoredPreview,
     getActivePreview,
     getRestorePreview,
+    startUI:updateIndicator,
     previewUrl:'index.html?preview=editor',
     restoreUrl:'editor.html?restore=preview'
   };

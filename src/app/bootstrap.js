@@ -14,6 +14,7 @@
     assertReady();
     const state=E.reset();
     UI.start();
+    window.SimEditorPreviewBridge?.startUI?.();
     started=true;
     return state;
   }

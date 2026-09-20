@@ -59,10 +59,14 @@
     if(debug)debug.append(debugSection(st,a));
   }
   function refresh(){scheduled=false;const selected=UI.getInspectorSelection?.();if(selected?.type!=='agent')return;decorateInspector({host,selected,state:E.getState()});}
-  function schedule(){if(scheduled)return;scheduled=true;queueMicrotask(()=>requestAnimationFrame(refresh));}
+  function schedule(){if(!UI.isStarted?.()||scheduled)return;scheduled=true;queueMicrotask(()=>requestAnimationFrame(refresh));}
 
   UI.registerInspectorDecorator('relationship.view',decorateInspector,1025);
-  document.addEventListener('click',event=>{if(event.target.closest?.('[data-v1140-tab]'))schedule();});
+  if(!UI.registerStartupExtension)throw new Error('Relationship View requires UI startup lifecycle');
+  UI.registerStartupExtension('relationshipView.controls',()=>{
+    document.addEventListener('click',event=>{if(event.target.closest?.('[data-v1140-tab]'))schedule();});
+    schedule();
+  },400);
   if(!E.registerRuntimeHook)throw new Error('ui-relationship-v1150.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','relationshipView.schedule',schedule,1150);
   E.registerRuntimeHook('afterReset','relationshipView.reset',schedule,750);
@@ -71,5 +75,4 @@
   E.relationshipFamiliarityLabel=familiarityLabel;
   E.relationshipAffinityLabel=affinityLabel;
   E.relationshipResponderEvaluationLine=responderEvaluationLine;
-  schedule();
 })();
