@@ -1,16 +1,15 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-for(const file of [
+loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js'
-]){
-  vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
-}
+]);
 
 const E=globalThis.SimEngine;
 const SP=globalThis.SimSpatial;
