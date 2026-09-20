@@ -121,8 +121,13 @@ for(const path of uiStartupFiles){
   assert.ok(readRepoFile(path).includes('registerStartupExtension('),path+' must defer UI side effects to SimUI.start()');
 }
 const previewBridgeSource=readRepoFile('src/editor-preview-bridge.js');
+const engineSource=readRepoFile('src/engine.js');
+const bootstrapSource=readRepoFile('src/app/bootstrap.js');
 assert.ok(previewBridgeSource.includes('startUI:updateIndicator'),'editor preview indicator must expose startup API to the composition root');
 assert.doesNotMatch(previewBridgeSource,/DOMContentLoaded[^\n]*updateIndicator|else updateIndicator\(\)/,'editor preview bridge must not render during module evaluation');
+assert.doesNotMatch(engineSource,/SimEditorPreviewBridge|getActivePreview/,'Runtime Kernel must not depend on the concrete Editor Preview adapter');
+assert.match(engineSource,/configureResetStateSource/,'Runtime Kernel must expose a generic reset-state source boundary');
+assert.match(bootstrapSource,/SimEditorPreviewBridge[\s\S]*getActivePreview/,'Composition Root must resolve the Editor Preview startup adapter');
 
 let capturedHookManifest=null;
 vm.runInNewContext(readRepoFile('src/runtime/hook-manifest.js'),{window:{SimEngine:{finalizeRuntimeHooks(expected){capturedHookManifest=expected;}}}});

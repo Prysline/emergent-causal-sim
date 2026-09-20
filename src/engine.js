@@ -1,15 +1,11 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
-  const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring}=W;
+  const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6;
   const CIRCADIAN_PATTERN_ZH={diurnal:'日行性',nocturnal:'夜行性',crepuscular:'晨昏性'};
   const SOCIAL_STIMULUS={petAnimal:{intensity:18,kind:'touch'},seekHuman:{intensity:34,kind:'touch+sound'}};
-  const previewBootstrap=window.SimEditorPreviewBridge?.getActivePreview?.()||{requested:false,ok:true,authoring:null,fingerprint:null,issues:[]};
-  if(previewBootstrap.requested&&!previewBootstrap.ok){
-    throw new Error('Editor Preview bootstrap failed: '+(previewBootstrap.issues||[]).map(item=>item.code||item.message).join(', '));
-  }
-  const previewAuthoring=previewBootstrap.requested?previewBootstrap.authoring:null;
   let state=null,eventSeq=0,coreTickDepth=0;
+  let resetStateSource={id:'default',createState:createInitialState},resetStateSourceConfigured=false;
   const eventCreatedListeners=[];
   const decisionOptionProviders=[];
   const actionLabelResolvers=[];
@@ -23,6 +19,15 @@
   function resolveActionLabel(a){for(const entry of actionLabelResolvers){const label=entry.resolver(state,a);if(typeof label==='string'&&label)return label;}return null;}
   function providerDecisionOptions(a){const out=[];for(const entry of decisionOptionProviders){const value=entry.provider(state,a);if(value==null)continue;for(const option of Array.isArray(value)?value:[value])if(option?.id&&Number.isFinite(option.score))out.push({...option});}return out;}
 
+  function configureResetStateSource(id,createState){
+    if(state)throw new Error('Reset state source must be configured before runtime state exists.');
+    if(resetStateSourceConfigured)throw new Error('Reset state source is already configured.');
+    if(!id||typeof id!=='string'||typeof createState!=='function')throw new Error('Reset state source requires id + createState(seed).');
+    resetStateSource={id,createState};
+    resetStateSourceConfigured=true;
+    return {id};
+  }
+  function currentResetStateSource(){return {id:resetStateSource.id};}
   function normalizeSeed(seed){const n=Number(seed);return Number.isFinite(n)&&n!==0?(n>>>0):DEFAULT_SEED;}
   function random(){state.rngState=(state.rngState+0x6D2B79F5)>>>0;let t=state.rngState;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296;}
   function rand(min=0,max=1){return min+random()*(max-min);}
@@ -225,7 +230,7 @@
   function getEntity(type,id){if(type==='agent')return state.agents[id];if(type==='container')return state.containers[id];if(type==='source')return state.sources[id];if(type==='furniture')return state.furniture[id];if(type==='room')return state.map.rooms[id];return null;}
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`,kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}
   function supplyStatus(){const worker=activeSupplyActor();return {stock:foodStock(),trigger:state.supply.trigger,workerId:worker?.id||null,workerName:worker?.name||null,trips:state.supply.trips,totalProduced:state.supply.totalProduced};}
-  function reset(seed=DEFAULT_SEED){eventSeq=0;const normalizedSeed=normalizeSeed(seed);state=previewAuthoring?createInitialStateFromAuthoring(previewAuthoring,normalizedSeed):createInitialState(normalizedSeed);addEvent(`${VERSION} 初始化：活動疲勞、睡眠需求、物種節律、睡眠中互動刺激、物流容器與 Interaction Geometry 使用單一 core state。`,'system',[],{seed:state.seed});return state;}
+  function reset(seed=DEFAULT_SEED){eventSeq=0;const normalizedSeed=normalizeSeed(seed);state=resetStateSource.createState(normalizedSeed);addEvent(`${VERSION} 初始化：活動疲勞、睡眠需求、物種節律、睡眠中互動刺激、物流容器與 Interaction Geometry 使用單一 core state。`,'system',[],{seed:state.seed});return state;}
 
-  window.SimEngine={VERSION,RESOURCE_TYPES,ZH,DATA_ZH,PREVIEW_MODE:!!previewAuthoring,PREVIEW_FINGERPRINT:previewBootstrap.fingerprint||null,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,registerEventCreatedListener,listEventCreatedListeners,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,sleepProfile,circadianPatternName,circadianSleepBias,sleepPropensity,naturalWakeDrive,isSleeping,interactionWakeChance,tryWakeFromInteraction,foodStock,supplyStatus,actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,positionRef,reservationOwner,holderOf,buildAction,baseUtilityForAction,speciesProfile,isAnimalAgent,canPetAnimal,nearestPettableAnimal,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};
+  window.SimEngine={VERSION,RESOURCE_TYPES,ZH,DATA_ZH,PREVIEW_MODE:false,PREVIEW_FINGERPRINT:null,configureResetStateSource,currentResetStateSource,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,registerEventCreatedListener,listEventCreatedListeners,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,sleepProfile,circadianPatternName,circadianSleepBias,sleepPropensity,naturalWakeDrive,isSleeping,interactionWakeChance,tryWakeFromInteraction,foodStock,supplyStatus,actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,positionRef,reservationOwner,holderOf,buildAction,baseUtilityForAction,speciesProfile,isAnimalAgent,canPetAnimal,nearestPettableAnimal,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};
 })();

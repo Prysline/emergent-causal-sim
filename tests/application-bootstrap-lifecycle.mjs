@@ -30,31 +30,45 @@ assert.ok(first&&first.tick===0,'bootstrap must create the first runtime state')
 const second=structuredClone(E.reset());
 assert.deepEqual(second,first,'first startup and subsequent reset must use the same reset lifecycle');
 
-function gateContext({initial=true,runtime=true,validation=true,scenario=''}={}){
-  let resets=0,starts=0,previewStarts=0;
+function gateContext({initial=true,runtime=true,validation=true,scenario='',preview=null}={}){
+  let resets=0,starts=0,previewStarts=0,resetStateSource=null;
   const humanScenarios=[],petScenarios=[];
+  const state={seed:1};
+  const engine={
+    PREVIEW_MODE:false,
+    PREVIEW_FINGERPRINT:null,
+    isRuntimeHookRegistryFinalized:()=>runtime,
+    configureResetStateSource(id,createState){resetStateSource={id,createState};return {id};},
+    currentResetStateSource(){return {id:resetStateSource?.id||'default'};},
+    reset(){resets++;return resetStateSource?resetStateSource.createState(1):state;},
+    getState(){return state;},
+    prepareHumanTalkScenario(mode){humanScenarios.push(mode);return {scenario:mode};},
+    preparePetResponseScenario(mode){petScenarios.push(mode);return {scenario:mode};}
+  };
+  const previewResult=preview||{requested:false,ok:true,authoring:null,fingerprint:null,issues:[]};
   const context={
     URLSearchParams,
+    JSON,
     window:{
       location:{search:scenario?'?scenario='+scenario:''},
-      SimWorld:{isInitialStateRegistryFinalized:()=>initial},
-      SimEngine:{
-        isRuntimeHookRegistryFinalized:()=>runtime,
-        reset(){resets++;return {seed:1};},
-        getState(){return null;},
-        prepareHumanTalkScenario(mode){humanScenarios.push(mode);return {scenario:mode};},
-        preparePetResponseScenario(mode){petScenarios.push(mode);return {scenario:mode};}
+      SimWorld:{
+        isInitialStateRegistryFinalized:()=>initial,
+        createInitialStateFromAuthoring(authoring,seed){return {seed,authoring:structuredClone(authoring)};}
       },
+      SimEngine:engine,
       SimValidator:{isValidationRegistryFinalized:()=>validation},
       SimUI:{start(){starts++;}},
-      SimEditorPreviewBridge:{startUI(){previewStarts++;}}
+      SimEditorPreviewBridge:{getActivePreview(){return previewResult;},startUI(){previewStarts++;}}
     }
   };
   return {
     context,
+    engine,
+    previewResult,
     resets:()=>resets,
     starts:()=>starts,
     previewStarts:()=>previewStarts,
+    resetStateSource:()=>resetStateSource,
     humanScenarios:()=>[...humanScenarios],
     petScenarios:()=>[...petScenarios]
   };
@@ -83,8 +97,26 @@ for(const [scenario,kind] of [
   assert.deepEqual(gate.petScenarios(),kind==='pet'?[scenario]:[],scenario+' must dispatch only the matching pet scenario helper');
 }
 
+const previewAuthoring={schemaVersion:'world-authoring-v2',map:{width:1,height:1,layers:[{z:0,cells:{}}]}};
+const previewGate=gateContext({preview:{requested:true,ok:true,authoring:previewAuthoring,fingerprint:'preview-fp',issues:[]}});
+vm.runInNewContext(bootstrapSource,previewGate.context,{filename:'src/app/bootstrap.js'});
+assert.equal(previewGate.resetStateSource()?.id,'editor-preview','Composition Root must translate Preview into the generic Engine reset-state source');
+assert.equal(previewGate.engine.PREVIEW_MODE,true);
+assert.equal(previewGate.engine.PREVIEW_FINGERPRINT,'preview-fp');
+assert.equal(previewGate.resets(),1,'ordinary Preview startup must perform one reset through the configured source');
+previewAuthoring.map.width=99;
+assert.equal(previewGate.resetStateSource().createState(2).authoring.map.width,1,'Preview reset source must retain the canonical snapshot captured at startup');
+
+const invalidPreview=gateContext({preview:{requested:true,ok:false,authoring:null,fingerprint:null,issues:[{code:'preview_invalid'}]}});
+assert.throws(()=>vm.runInNewContext(bootstrapSource,invalidPreview.context,{filename:'src/app/bootstrap.js'}),/Editor Preview bootstrap failed/);
+assert.equal(invalidPreview.resets(),0,'invalid Preview must fail before runtime reset');
+assert.equal(invalidPreview.starts(),0,'invalid Preview must fail before UI startup');
+
 const engineSource=readRepoFile('src/engine.js');
 assert.doesNotMatch(engineSource,/\n\s*reset\(DEFAULT_SEED\);/,'engine.js must not self-start during module evaluation');
+assert.doesNotMatch(engineSource,/SimEditorPreviewBridge|getActivePreview/,'Engine must not depend directly on the Editor Preview adapter');
+assert.match(engineSource,/configureResetStateSource/,'Engine must expose a generic reset-state source boundary');
+assert.match(bootstrapSource,/SimEditorPreviewBridge[\s\S]*getActivePreview/,'Composition Root must own Editor Preview startup input');
 for(const [path,pattern] of [
   ['src/human-social-response-runtime-v1133a.js',/prepareHumanTalkScenario\(scenario\)/],
   ['src/social-response-runtime-v1132a.js',/preparePetResponseScenario\(scenario\)/]
