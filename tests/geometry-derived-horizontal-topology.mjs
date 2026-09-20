@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 for(const file of [
-  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-v111.js',
-  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js'
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js',
+  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage.js'
 ])vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld,SP=globalThis.SimSpatial;
