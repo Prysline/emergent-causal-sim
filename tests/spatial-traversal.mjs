@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','engine.js','state-validator.js','state-validator-v111.js']){
+for(const file of ['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','engine.js','state-validator.js','state-validator-v111.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
