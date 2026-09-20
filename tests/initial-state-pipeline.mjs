@@ -10,7 +10,7 @@ const initializerPaths=productionScripts.filter(path=>
 );
 const initializerFiles=initializerPaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/world-authoring-v1.js','src/world-initializer.js','src/world.js','src/release.js','src/spatial.js']);
+loadScriptsInThisContext(['src/world-authoring-v1.js','src/world-initializer.js','src/world.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(initializerPaths);
