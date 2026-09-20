@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadScriptsInThisContext,productionScriptPaths} from './helpers/production-loader.mjs';
 
 globalThis.window=globalThis;
 const EXPECTED=[
@@ -9,14 +10,11 @@ const EXPECTED=[
   ['social-response',1100],['memory-retention',1200],['human-social-response',1300],['memory-deliberation',1400],['social-outcome-memory',1500],
   ['relationship',1600]
 ];
-const html=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
-const scripts=[...html.matchAll(/<script src="(src\/[^"]+\.js)" defer><\/script>/g)].map(m=>m[1]);
+const scripts=productionScriptPaths();
 const manifestIndex=scripts.indexOf('src/state-validator-manifest.js');
 assert.ok(manifestIndex>0,'production index must load a validator manifest');
 assert.ok(manifestIndex<scripts.findIndex(p=>p==='src/ui.js'),'validator registry must finalize before UI starts');
-for(const rel of scripts.slice(0,manifestIndex)){
-  vm.runInThisContext(fs.readFileSync(new URL(`../${rel}`,import.meta.url),'utf8'),{filename:rel});
-}
+loadScriptsInThisContext(scripts.slice(0,manifestIndex));
 const V=globalThis.SimValidator,E=globalThis.SimEngine;
 assert.deepEqual(V.listValidationLayers(),EXPECTED.map(([id,order])=>({id,order})),'production validator layers must have explicit stable ownership/order');
 assert.equal(V.isValidationRegistryFinalized(),false);
@@ -25,7 +23,7 @@ assert.equal(V.isValidationRegistryFinalized(),false);
 assert.throws(()=>V.registerValidationLayer('spatial.node',()=>({issues:[]}),1700),/Duplicate validator layer id/);
 assert.throws(()=>V.registerValidationLayer('test.duplicate-order',()=>({issues:[]}),100),/Duplicate validator layer order/);
 
-vm.runInThisContext(fs.readFileSync(new URL('../src/state-validator-manifest.js',import.meta.url),'utf8'),{filename:'src/state-validator-manifest.js'});
+loadScriptsInThisContext(['src/state-validator-manifest.js']);
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.throws(()=>V.registerValidationLayer('late.layer',()=>({issues:[]}),1700),/finalized/,'late validator registration must fail loudly');
 E.reset(20260911);
