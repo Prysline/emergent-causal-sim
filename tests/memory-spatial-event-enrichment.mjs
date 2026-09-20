@@ -6,8 +6,8 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
-  'memory-schema-v1130.js','systems/appraisal/state.js',
-  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','memory-runtime-v1130.js','systems/appraisal/runtime.js'
+  'systems/memory/state.js','systems/appraisal/state.js',
+  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/memory/runtime.js','systems/appraisal/runtime.js'
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
