@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 for(const file of [
-  'world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js',
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-v111.js',
   'spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'presentation-schema-v1140.js','physical-schema-v1160.js','physical-runtime-v1160.js',
   'spatial-passage-v1170.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js',

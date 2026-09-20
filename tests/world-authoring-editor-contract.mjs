@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js']){
+for(const file of ['world-authoring.js','world-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
@@ -83,14 +83,14 @@ const editorHtml=fs.readFileSync(new URL('../editor.html',import.meta.url),'utf8
 for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/state-validator.js']){
   assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
 }
-const authoringScript=editorHtml.indexOf('src/world-authoring-v1.js');
+const authoringScript=editorHtml.indexOf('src/world-authoring.js');
 const initializerScript=editorHtml.indexOf('src/world-initializer.js');
 const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
 assert.ok(authoringScript>=0&&initializerScript>authoringScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'D.1C Editor load order must be authoring → compatibility initializer → preview bridge → pure mutation owner → UI');
 assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
-assert.ok(editorHtml.includes('src/world-authoring-v1.js'));
+assert.ok(editorHtml.includes('src/world-authoring.js'));
 assert.ok(editorHtml.includes('src/world-initializer.js'));
 assert.ok(editorHtml.includes('src/editor-preview-bridge.js'));
 assert.ok(editorHtml.includes('id="testWorld"'));

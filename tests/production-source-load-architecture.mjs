@@ -21,6 +21,7 @@ for(const relativePath of scripts){
   assert.doesNotThrow(()=>readRepoFile(relativePath),'production source must exist: '+relativePath);
 }
 
+const authoringIndex=indexOf('src/world-authoring.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
 const engineIndex=indexOf('src/engine.js');
@@ -29,6 +30,8 @@ const validatorIndex=indexOf('src/state-validator.js');
 const manifestIndex=indexOf('src/state-validator-manifest.js');
 const uiIndex=indexOf('src/ui.js');
 
+assert.ok(authoringIndex<worldIndex,'current authoring owner must load before world.js');
+assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production must not load the retired legacy-named authoring asset');
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
 assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
@@ -77,6 +80,8 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
+assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);

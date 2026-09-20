@@ -1,6 +1,5 @@
 (() => {
   const VERSION='world-authoring-v2';
-  const LEGACY_VERSION='world-authoring-v1';
   const pos=(x,y,z=0)=>({x,y,z});
 
   function buildDefaultCells(){
@@ -257,22 +256,9 @@
   }
 
 
-  function migrateV1ToV2(authoring){
-    const copy=clone(authoring);
-    copy.authoringSchema=VERSION;
-    const legacyTable=copy.furniture?.diningTable;
-    if(legacyTable&&legacyTable.blocksMovement&&!legacyTable.spatial?.under){
-      legacyTable.spatial??={};
-      legacyTable.spatial.under={clearance:.72,cover:'overhead'};
-    }
-    return copy;
-  }
-
-  function migrateAuthoring(authoring){
-    if(!isRecord(authoring))return clone(authoring);
-    if(authoring.authoringSchema===VERSION)return clone(authoring);
-    if(authoring.authoringSchema===LEGACY_VERSION)return migrateV1ToV2(authoring);
-    const error=new Error('Unsupported authoringSchema: '+String(authoring.authoringSchema));
+  function assertCurrentSchema(authoring){
+    if(isRecord(authoring)&&authoring.authoringSchema===VERSION)return;
+    const error=new Error('Unsupported authoringSchema: '+String(authoring?.authoringSchema));
     error.code='world_authoring_schema_unsupported';
     throw error;
   }
@@ -393,17 +379,15 @@
       wrapped.code='world_authoring_json_invalid';
       throw wrapped;
     }
-    parsed=migrateAuthoring(parsed);
+    assertCurrentSchema(parsed);
     assertValidAuthoring(parsed);
     return canonicalizeAuthoring(parsed);
   }
 
   window.SimWorldAuthoring={
     VERSION,
-    LEGACY_VERSION,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,
-    migrateAuthoring,
     deriveHorizontalTopology,
     validateAuthoring,
     assertValidAuthoring,
