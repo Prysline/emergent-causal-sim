@@ -60,5 +60,4 @@
   E.registerRuntimeHook('afterTick','socialResponse.resolve-pet-offers',(ctx)=>settlePendingOffers(E.getState(),ctx.locals.socialResponseV1132a),600);
 
   Object.assign(E,{SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,PET_RESPONSE_THRESHOLDS,PET_RELATIONSHIP_RESPONSE_CAP,petBaseResponseScore,petRelationshipResponseDelta,petResponseEvaluation,petResponseScore,petResponseFor,preparePetResponseScenario});
-  try{const scenario=typeof location!=='undefined'?new URLSearchParams(location.search||'').get('scenario'):null;if(['pet-accept','pet-tolerate','pet-avoid'].includes(scenario))preparePetResponseScenario(scenario);}catch{}
 })();
