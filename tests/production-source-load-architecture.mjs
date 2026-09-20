@@ -115,13 +115,13 @@ const moduleEvaluationStateTouchPattern=/^\s{2}[A-Za-z_$][A-Za-z0-9_$]*\(E\.getS
 const auditedModuleEvaluationStateTouches=engineDependentSubsystemRuntimes.filter(path=>moduleEvaluationStateTouchPattern.test(readRepoFile(path)));
 assert.deepEqual(auditedModuleEvaluationStateTouches,[],'Cleanup-4C-4 must leave no Engine-dependent module-evaluation state normalization touch');
 
-const srcDir=new URL('../src/',import.meta.url);
-const validatorExtensions=fs.readdirSync(srcDir)
-  .filter(name=>/^state-validator-v.*\.js$/.test(name))
-  .map(name=>'src/'+name)
+const validationRulesDir=new URL('../src/validation/rules/',import.meta.url);
+const validatorRules=fs.readdirSync(validationRulesDir)
+  .filter(name=>name.endsWith('.js'))
+  .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.ok(validatorExtensions.length>0,'architecture guard must discover validator extensions');
-for(const path of validatorExtensions){
+assert.equal(validatorRules.length,18,'architecture guard must discover every semantic validator rule');
+for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
 }
