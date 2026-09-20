@@ -258,7 +258,7 @@ Initial core chooser 建立的 `system + phase:'plan'` event 是**同 tick provi
 
 ### Private Social Outcome
 
-`socialWaitEnded` 是 requester-private lifecycle event，generic observable Memory 刻意排除它。`social-outcome-memory-runtime-v1135.js` 將合法 no-response experience 建成 `privateSocialOutcome`，再做 requester-private appraisal / relationship consolidation / affect / retention。
+`socialWaitEnded` 是 requester-private lifecycle event，generic observable Memory 刻意排除它。`src/systems/memory/social-outcome.js` 將合法 no-response experience 建成 `privateSocialOutcome`，再做 requester-private appraisal / relationship consolidation / affect / retention。
 
 這條路徑不是 generic World Event observation，不得和 generic event-created observation 混成同一 truth boundary。合法 private no-response Relationship evidence 只可更新 requester → counterpart；counterpart 不會因 requester 的 private timeout 被遠端改寫。
 
