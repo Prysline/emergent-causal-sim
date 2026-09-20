@@ -5,6 +5,27 @@ import { chromium } from 'playwright';
 const outDir='artifacts/browser-human-social-response-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
+
+async function assertNoScenarioStartupBeforeBootstrap(scenario){
+  const probe=await browser.newPage({viewport:{width:800,height:600}});
+  const probeErrors=[];
+  probe.on('pageerror',error=>probeErrors.push(String(error)));
+  await probe.route('**/src/app/bootstrap.js',route=>route.fulfill({
+    status:200,
+    contentType:'application/javascript',
+    body:''
+  }));
+  await probe.goto('http://127.0.0.1:4173/?scenario='+scenario,{waitUntil:'networkidle'});
+  await probe.waitForFunction(()=>window.SimEngine?.prepareHumanTalkScenario&&window.SimEngine?.preparePetResponseScenario);
+  const state=await probe.evaluate(()=>window.SimEngine.getState());
+  assert.equal(state,null,scenario+': production modules must not create runtime state before app/bootstrap.js');
+  assert.deepEqual(probeErrors,[],scenario+': pre-bootstrap probe page errors: '+probeErrors.join(' | '));
+  await probe.close();
+}
+
+await assertNoScenarioStartupBeforeBootstrap('talk-brief');
+await assertNoScenarioStartupBeforeBootstrap('pet-accept');
+
 const page=await browser.newPage({viewport:{width:1440,height:1000}});
 const consoleErrors=[],pageErrors=[];
 page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
