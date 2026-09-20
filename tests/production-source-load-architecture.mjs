@@ -99,6 +99,18 @@ assert.equal(V.isValidationRegistryFinalized(),true);
 const releaseVersionWriters=scripts.filter(path=>/W\.VERSION\s*=|st\.version\s*=/.test(readRepoFile(path)));
 assert.deepEqual(releaseVersionWriters,['src/release.js'],'current runtime release marker must have exactly one production writer');
 
+const retiredSpatialAssets=[
+  'src/spatial-v111.js',
+  'src/contact-v1112.js',
+  'src/spatial-v1113.js',
+  'src/spatial-v1114.js',
+  'src/spatial-passage-v1170.js',
+  'src/engine-spatial-v1114.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredSpatialAssets.includes(path)),[],'production must not reload retired version-named Spatial assets');
+const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
+assert.deepEqual(spatialInitWriters,['src/spatial-traversal.js'],'Spatial runtime bootstrap must have exactly one production init owner');
+
 const state=E.reset(20260911);
 assert.equal(state.version,CURRENT_VERSION,'full production runtime reset must preserve the current release marker');
 const validation=V.validateState(state);
