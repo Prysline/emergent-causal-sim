@@ -21,9 +21,7 @@
     const wet=n.surfaceId===FLOOR?SP.tileLiquidAmount(t):0,crowd=localNodeCrowd(st,n);
     return Math.max(0,Math.min(100,48+SP.nearbyRestQuality(st,n)*28-wet*1.2-crowd*5-noiseAt(st,n)*.35));
   }
-
-  W.VERSION=VERSION;
-  W.registerInitialStateInitializer('spatialFloorEffects.schema',(st)=>{st.version=VERSION;},40);
+  W.registerInitialStateInitializer('spatialFloorEffects.schema',(st)=>{},40);
   SP.init=(st)=>baseInit(st);
   SP.floorSlipRiskAt=floorSlipRiskAt;
   SP.noiseAt=noiseAt;

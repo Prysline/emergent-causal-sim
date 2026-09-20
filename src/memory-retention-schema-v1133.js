@@ -2,10 +2,8 @@
   const W=window.SimWorld;if(!W?.MEMORY_SCHEMA_VERSION)return;
   if(!W.registerInitialStateInitializer)throw new Error('memory-retention-schema-v1133.js requires world.js initial-state pipeline.');
   const VERSION='11.13.3-memory-salience-pruning';
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('memoryRetention.schema',(st)=>{
-    st.version=VERSION;
+    
     return st;
   },1000);
   W.MEMORY_RETENTION_SCHEMA_VERSION=VERSION;

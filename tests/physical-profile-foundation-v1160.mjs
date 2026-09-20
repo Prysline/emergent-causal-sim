@@ -4,20 +4,21 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 for(const file of [
-  'world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','spatial-observability.js',
+  'world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js',
   'physical-schema-v1160.js','physical-runtime-v1160.js','engine.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1160.js'
 ])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 
-const CURRENT_VERSION='11.17.0-passage-profile-multimode';
+const APP_VERSION='11.22.0-spatial-z-identity';
+const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 E.reset(11700);
 const st=E.getState(),zhen=st.agents.zhen,zhou=st.agents.zhou,orange=st.agents.orange;
-assert.equal(st.version,CURRENT_VERSION);
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(P.VERSION,CURRENT_VERSION);
+assert.equal(st.version,APP_VERSION);
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
+assert.equal(P.VERSION,PHYSICAL_VERSION);
 assert.equal(W.defaultPhysicalProfile('unknown-kind'),null,'unknown kinds must not silently inherit Human physical geometry');
 
 for(const a of [zhen,zhou,orange]){

@@ -28,11 +28,8 @@
     const template=DEFAULT_PHYSICAL_PROFILES[kind];
     return template?clone(template):null;
   }
-
-  const currentReleaseVersion=()=>W.PRESENTATION_SCHEMA_VERSION||VERSION;
-  W.VERSION=currentReleaseVersion();
   W.registerInitialStateInitializer('physical.schema',(st)=>{
-    st.version=currentReleaseVersion();
+    
     for(const a of Object.values(st.agents||{})){
       if(a.physical)continue;
       const profile=defaultPhysicalProfile(a.kind);

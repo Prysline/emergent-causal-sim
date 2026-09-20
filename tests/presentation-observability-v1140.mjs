@@ -9,7 +9,7 @@ const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
-  'world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
+  'world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
   'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js','crowding-runtime-v1200.js',
   'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
@@ -86,7 +86,7 @@ assert.match(physicalSource,/function getMovementEnvelope\(agent,mode='walk'\)/,
 assert.match(physicalSource,/function requiredClearance\(agent,mode='walk'\)/,'Physical runtime must expose canonical walk clearance to Spatial');
 assert.match(physicalSource,/function supportedLocomotionModes\(agent\)/,'Physical runtime must expose supported locomotion modes without choosing one');
 const physicalSchemaSource=fs.readFileSync(new URL('../src/physical-schema-v1160.js',import.meta.url),'utf8');
-assert.match(physicalSchemaSource,/W\.PRESENTATION_SCHEMA_VERSION\|\|VERSION/,'Physical schema must preserve the canonical Presentation current-release marker when the full app is loaded');
+assert.doesNotMatch(physicalSchemaSource,/PRESENTATION_SCHEMA_VERSION|currentReleaseVersion|W\.VERSION\s*=|st\.version\s*=/,'Physical schema must keep its generation marker independent from current release ownership');
 const passageSource=fs.readFileSync(new URL('../src/spatial-passage-v1170.js',import.meta.url),'utf8');
 assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial must own the canonical derived PassageProfile query');
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');

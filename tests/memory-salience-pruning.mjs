@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 const files=[
-  'world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
+  'world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
   'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js',
   'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
@@ -27,7 +27,7 @@ function memory(agent,eventId,{tick=0,last=tick,relevance=.1,congruence=0,action
 }
 
 E.reset(1133);let st=E.getState(),a=st.agents.zhou;
-assert.equal(st.version,'11.13.3-memory-salience-pruning');
+assert.equal(st.version,'11.22.0-spatial-z-identity');
 assert.equal(E.MEMORY_RETENTION_SCHEMA_VERSION,'11.13.3-memory-salience-pruning');
 assert.equal(E.MAX_EPISODIC_MEMORIES,64);
 noIssues('reset');

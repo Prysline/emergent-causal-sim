@@ -274,9 +274,7 @@
   function init(st){installSpatialDefs(st);const result=baseInit(st);normalizePersistentPositions(st);return result;}
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos,n=normalizeNode(st,p);if(n.surfaceId!==FLOOR){const entry=surfaceEntry(st,n.surfaceId);if(entry)return entry.surface.label||`${entry.furniture.name}表面`;}
     const overhead=overheadAt(st,n);if(overhead.length)return `${overhead[0].name}下`;return baseDescribePlace(st,aOrPos);}
-
-  W.VERSION=VERSION;
-  W.registerInitialStateInitializer('spatial.schema',(st)=>{st.version=VERSION;installSpatialDefs(st);},10);
+  W.registerInitialStateInitializer('spatial.schema',(st)=>{installSpatialDefs(st);},10);
   SP.init=init;
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;

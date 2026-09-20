@@ -1,7 +1,7 @@
 (() => {
   const A=window.SimWorldAuthoring,I=window.SimWorldInitializer;
   if(!A?.DEFAULT_WORLD_AUTHORING||!I?.createInitialState)throw new Error('World authoring and initializer must load before world.js.');
-  const VERSION='11.10-sleep-social-stimulus';
+  const WORLD_SCHEMA_VERSION='11.10-sleep-social-stimulus';
   const WIDTH=A.DEFAULT_WORLD_AUTHORING.map.width,HEIGHT=A.DEFAULT_WORLD_AUTHORING.map.height;
   const SUPPLY_TRIGGER=70;
   const RESOURCE_TYPES={
@@ -46,7 +46,7 @@
     const canonical=A.canonicalizeAuthoring(A.cloneAuthoring(authoring));
     A.assertValidAuthoring(canonical);
     I.assertRuntimeCompatibleAuthoring(canonical);
-    const st=I.createInitialState(canonical,{seed:n,version:VERSION,supplyTrigger:SUPPLY_TRIGGER});
+    const st=I.createInitialState(canonical,{seed:n,version:WORLD_SCHEMA_VERSION,supplyTrigger:SUPPLY_TRIGGER});
     return runInitialStateInitializers(st,{seed:n});
   }
 
@@ -55,7 +55,7 @@
   }
 
   window.SimWorld={
-    VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring,
+    WORLD_SCHEMA_VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring,
     INITIAL_STATE_PIPELINE_VERSION:'initial-state-pipeline-1',
     registerInitialStateInitializer,runInitialStateInitializers,listInitialStateInitializers
   };

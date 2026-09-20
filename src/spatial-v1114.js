@@ -72,9 +72,7 @@
     const t=targetNode(st,target);if(t&&environmentAt(st,t,{create:false}))return t;
     return actorNode;
   }
-
-  W.VERSION=VERSION;
-  W.registerInitialStateInitializer('spatialSurfaceEnvironment.schema',(st)=>{st.version=VERSION;installSurfaceEnvironment(st);},50);
+  W.registerInitialStateInitializer('spatialSurfaceEnvironment.schema',(st)=>{installSurfaceEnvironment(st);},50);
   SP.init=(st)=>{const result=baseInit(st);installSurfaceEnvironment(st);return result;};
   Object.assign(SP,{SPATIAL_ENVIRONMENT_VERSION:VERSION,installSurfaceEnvironment,surfaceCellAt,environmentAt,environmentContentsAt,environmentResourceAmount,environmentLiquidAmount,putEnvironmentResource,takeEnvironmentResource,nodeFromKey,environmentEndpointId,environmentFromEndpointId,resolveEffectNode});
 })();

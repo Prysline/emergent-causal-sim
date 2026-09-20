@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','engine.js','state-validator.js','state-validator-v111.js']){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','engine.js','state-validator.js','state-validator-v111.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -16,8 +16,8 @@ const noIssues=(label)=>{const v=V.validateState(E.getState());assert.equal(v.is
 E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
-  assert.equal(st.version,'11.11.2-supported-contact-audit');
-  assert.equal(E.VERSION,'11.11.2-supported-contact-audit');
+  assert.equal(st.version,'11.22.0-spatial-z-identity');
+  assert.equal(E.VERSION,'11.22.0-spatial-z-identity');
   assert.equal(SP.CONTACT_VERSION,'11.11.2-supported-contact-audit');
 
   const tray=st.containers.mealTray,plateA=st.containers.plateA,plateB=st.containers.plateB,cupA=st.containers.cupA,cupB=st.containers.cupB,bottle=st.containers.alcoholBottle;

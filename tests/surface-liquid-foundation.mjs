@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js','engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','state-validator.js','state-validator-v111.js','state-validator-v1114.js']){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js','engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','state-validator.js','state-validator-v111.js','state-validator-v1114.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -13,8 +13,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.11.4-surface-liquid-foundation');
-assert.equal(E.VERSION,'11.11.4-surface-liquid-foundation');
+assert.equal(st.version,'11.22.0-spatial-z-identity');
+assert.equal(E.VERSION,'11.22.0-spatial-z-identity');
 assert.equal(SP.SPATIAL_ENVIRONMENT_VERSION,'11.11.4-surface-liquid-foundation');
 
 // B architecture: one API, existing floor storage remains the actual source of truth.

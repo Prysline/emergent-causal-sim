@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','engine.js','state-validator.js','state-validator-v111.js']){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','engine.js','state-validator.js','state-validator-v111.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -13,7 +13,7 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.11-spatial-traversal');
+assert.equal(st.version,'11.22.0-spatial-z-identity');
 assert.equal(SP.VERSION,'11.11-spatial-traversal');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 

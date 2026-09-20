@@ -2,13 +2,13 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.10-sleep-social-stimulus');
+assert.equal(st.version,'11.22.0-spatial-z-identity');
 assert.equal(st.interactionModel,undefined);
 
 const pickup=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'pickup');

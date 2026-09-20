@@ -2,10 +2,8 @@
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('human-social-response-schema-v1133a.js requires world.js initial-state pipeline.');
   const VERSION='11.13.3a-human-social-response';
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('humanSocialResponse.schema',(st)=>{
-    st.version=VERSION;
+    
     return st;
   },1100);
   W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION=VERSION;

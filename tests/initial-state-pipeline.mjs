@@ -19,6 +19,7 @@ const W=globalThis.SimWorld;
 assert.equal(W.createInitialState,canonicalCreateInitialState,'subsystem extensions must not replace the canonical createInitialState owner');
 assert.equal(W.createInitialStateFromAuthoring,canonicalCreateInitialStateFromAuthoring,'subsystem extensions must not replace the explicit authoring initial-state factory');
 const EXPECTED=[
+  {id:'release.version',order:0},
   {id:'spatial.schema',order:10},
   {id:'spatialObservability.schema',order:20},
   {id:'contact.schema',order:30},
