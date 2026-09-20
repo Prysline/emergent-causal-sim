@@ -8,7 +8,7 @@ const source=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8')
 for(const path of [
   'src/world.js',
   'src/systems/social/state.js',
-  'src/memory-deliberation-runtime-v1134.js',
+  'src/systems/memory/deliberation.js',
   'src/ui.js'
 ]){
   assert.equal(source(path).includes('pendingInteraction'),false,`${path} must not retain legacy pendingInteraction ownership or consumer reads`);

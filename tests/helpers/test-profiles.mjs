@@ -32,7 +32,15 @@ const RETIRED_SOURCES=Object.freeze({
   'affect-schema-v1132.js':'systems/affect/state.js',
   'affect-runtime-v1132.js':'systems/affect/runtime.js',
   'relationship-schema-v1150.js':'systems/relationship/state.js',
-  'relationship-runtime-v1150.js':'systems/relationship/runtime.js'
+  'relationship-runtime-v1150.js':'systems/relationship/runtime.js',
+  'memory-schema-v1130.js':'systems/memory/state.js',
+  'memory-retention-schema-v1133.js':'systems/memory/state.js',
+  'memory-deliberation-schema-v1134.js':'systems/memory/state.js',
+  'social-outcome-memory-schema-v1135.js':'systems/memory/state.js',
+  'memory-runtime-v1130.js':'systems/memory/runtime.js',
+  'memory-retention-runtime-v1133.js':'systems/memory/retention.js',
+  'memory-deliberation-runtime-v1134.js':'systems/memory/deliberation.js',
+  'social-outcome-memory-runtime-v1135.js':'systems/memory/social-outcome.js'
 });
 
 const AUTHORING_PROFILE=Object.freeze([

@@ -12,9 +12,9 @@ const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
-  'memory-schema-v1130.js','systems/appraisal/state.js','systems/affect/state.js','memory-retention-schema-v1133.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','systems/relationship/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
+  'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js','presentation-schema-v1140.js','systems/relationship/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
-  'memory-runtime-v1130.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/relationship/runtime.js','systems/affect/runtime.js','systems/social/animal-response.js','memory-retention-runtime-v1133.js','systems/social/human-response.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
+  'systems/memory/runtime.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/relationship/runtime.js','systems/affect/runtime.js','systems/social/animal-response.js','systems/memory/retention.js','systems/social/human-response.js','systems/memory/deliberation.js','systems/memory/social-outcome.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js','state-validator-v1190.js'
 ];
 loadRuntimeProfile(files);
@@ -101,7 +101,7 @@ assert.match(routeSource,/function nodeLocomotionAccessible\(st,p,a=null\)/,'Spa
 assert.match(routeSource,/step\.transitionTicks\+step\.moveTicks/,'travelTime must sum real transition and movement timing');
 const spatialValidatorSource=fs.readFileSync(new URL('../src/state-validator-v111.js',import.meta.url),'utf8');
 assert.match(spatialValidatorSource,/SP\.nodeLocomotionAccessible\?\.\(st,node,a\)/,'Spatial validator must validate current occupancy without reusing walk-only node feasibility');
-const memoryDeliberationSource=fs.readFileSync(new URL('../src/memory-deliberation-runtime-v1134.js',import.meta.url),'utf8');
+const memoryDeliberationSource=fs.readFileSync(new URL('../src/systems/memory/deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');
 assert.match(memoryDeliberationSource,/SP\.planRoute\(st,a,target\.position,\{mode:'auto',objective:'traversalCost'\}\)/,'target ranking must read canonical traversal-cost route facts');
 assert.doesNotMatch(memoryDeliberationSource,/distancePenalty/,'current target-ranking decomposition must not retain the stale distancePenalty field');

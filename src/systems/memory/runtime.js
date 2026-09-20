@@ -74,10 +74,9 @@
   if(!E.registerEventCreatedListener)throw new Error('Memory runtime requires core event-created listener support');
   E.registerEventCreatedListener('memory.episodic-observation',onEventCreated,100);
 
-  if(!E.registerRuntimeHook)throw new Error('memory-runtime-v1130.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('systems/memory/runtime.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','memory.process-events',()=>flushDeferredCoreEvents(E.getState()),500);
   E.registerRuntimeHook('afterReset','memory.normalize-reset',()=>resetMemoryRuntime(E.getState()),300);
 
-  normalizeMemoryState(E.getState());
   Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isSuccessfulResourceTransferConsequence,episodicPolicyForEvent,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories,flushDeferredMemoryEvents:flushDeferredCoreEvents});
 })();
