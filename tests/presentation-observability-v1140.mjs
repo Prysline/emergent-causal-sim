@@ -148,8 +148,8 @@ assert.match(indexSource,/v11\.22\.0・Spatial Z Identity/,'app shell must expos
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
-assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
-assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load Relationship runtime');
+assert.match(indexSource,/systems\/relationship\/state\.js/,'app shell must load Relationship state owner');
+assert.match(indexSource,/systems\/relationship\/runtime\.js/,'app shell must load Relationship runtime owner');
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
 assert.match(indexSource,/systems\/physical\.js/,'app shell must load the Physical semantic owner');
 assert.match(indexSource,/spatial-passage\.js/,'app shell must load Passage Profile runtime');
