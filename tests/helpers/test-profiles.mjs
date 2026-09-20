@@ -40,7 +40,27 @@ const RETIRED_SOURCES=Object.freeze({
   'memory-runtime-v1130.js':'systems/memory/runtime.js',
   'memory-retention-runtime-v1133.js':'systems/memory/retention.js',
   'memory-deliberation-runtime-v1134.js':'systems/memory/deliberation.js',
-  'social-outcome-memory-runtime-v1135.js':'systems/memory/social-outcome.js'
+  'social-outcome-memory-runtime-v1135.js':'systems/memory/social-outcome.js',
+  'state-validator.js':'validation/registry.js',
+  'state-validator-manifest.js':'validation/manifest.js',
+  'state-validator-v1160.js':'validation/rules/physical-profile.js',
+  'state-validator-v1190.js':'validation/rules/locomotion-execution.js',
+  'state-validator-v111.js':'validation/rules/spatial-node.js',
+  'state-validator-v1114.js':'validation/rules/spatial-environment.js',
+  'state-validator-v1120.js':'validation/rules/action-canonical-type.js',
+  'state-validator-v1121.js':'validation/rules/intent-active.js',
+  'state-validator-v1122.js':'validation/rules/social-bid.js',
+  'state-validator-v1123.js':'validation/rules/interruption.js',
+  'state-validator-v1124.js':'validation/rules/deliberation.js',
+  'state-validator-v1130.js':'validation/rules/memory-episodic.js',
+  'state-validator-v1131.js':'validation/rules/appraisal.js',
+  'state-validator-v1132.js':'validation/rules/affect.js',
+  'state-validator-v1132a.js':'validation/rules/social-response.js',
+  'state-validator-v1133.js':'validation/rules/memory-retention.js',
+  'state-validator-v1133a.js':'validation/rules/human-social-response.js',
+  'state-validator-v1134.js':'validation/rules/memory-deliberation.js',
+  'state-validator-v1135.js':'validation/rules/social-outcome-memory.js',
+  'state-validator-v1150.js':'validation/rules/relationship.js',
 });
 
 const AUTHORING_PROFILE=Object.freeze([
@@ -59,7 +79,7 @@ const ENGINE_CORE_PROFILE=Object.freeze([
   ...SPATIAL_CORE_PROFILE,
   'spatial/finalize.js',
   'engine.js',
-  'state-validator.js'
+  'validation/registry.js'
 ]);
 
 function normalizePath(path){

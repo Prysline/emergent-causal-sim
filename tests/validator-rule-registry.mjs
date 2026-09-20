@@ -11,7 +11,7 @@ const EXPECTED=[
   ['relationship',1600]
 ];
 const scripts=productionScriptPaths();
-const manifestIndex=scripts.indexOf('src/state-validator-manifest.js');
+const manifestIndex=scripts.indexOf('src/validation/manifest.js');
 assert.ok(manifestIndex>0,'production index must load a validator manifest');
 assert.ok(manifestIndex<scripts.findIndex(p=>p==='src/ui.js'),'validator registry must finalize before UI starts');
 loadScriptsInThisContext(scripts.slice(0,manifestIndex));
@@ -23,7 +23,7 @@ assert.equal(V.isValidationRegistryFinalized(),false);
 assert.throws(()=>V.registerValidationLayer('spatial.node',()=>({issues:[]}),1700),/Duplicate validator layer id/);
 assert.throws(()=>V.registerValidationLayer('test.duplicate-order',()=>({issues:[]}),100),/Duplicate validator layer order/);
 
-loadScriptsInThisContext(['src/state-validator-manifest.js']);
+loadScriptsInThisContext(['src/validation/manifest.js']);
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.throws(()=>V.registerValidationLayer('late.layer',()=>({issues:[]}),1700),/finalized/,'late validator registration must fail loudly');
 E.reset(20260911);
@@ -33,21 +33,22 @@ assert.equal(validation.issueCount,0,validation.issues.map(x=>`${x.code}: ${x.me
 // Missing base aggregator and missing extension layers must both fail loudly.
 const emptyCtx=vm.createContext({console});emptyCtx.window=emptyCtx;
 assert.throws(
-  ()=>vm.runInContext(fs.readFileSync(new URL('../src/state-validator-manifest.js',import.meta.url),'utf8'),emptyCtx,{filename:'state-validator-manifest.js'}),
+  ()=>vm.runInContext(fs.readFileSync(new URL('../src/validation/manifest.js',import.meta.url),'utf8'),emptyCtx,{filename:'validation/manifest.js'}),
   /Validator registry is unavailable/,
   'production manifest must not silently skip a missing validator owner'
 );
 const ctx=vm.createContext({console});ctx.window=ctx;ctx.SimSpatial={};
-vm.runInContext(fs.readFileSync(new URL('../src/state-validator.js',import.meta.url),'utf8'),ctx,{filename:'state-validator.js'});
+vm.runInContext(fs.readFileSync(new URL('../src/validation/registry.js',import.meta.url),'utf8'),ctx,{filename:'validation/registry.js'});
 ctx.SimValidator.registerValidationLayer('one',(_st,base)=>base,100);
 assert.throws(()=>ctx.SimValidator.finalizeValidationLayers(['one','two']),/missing=\[two\]/,'manifest must fail loudly when a validator file did not register');
 ctx.SimValidator.registerValidationLayer('two',(_st,base)=>base,200);
 assert.doesNotThrow(()=>ctx.SimValidator.finalizeValidationLayers(['one','two']));
 
-const extensionFiles=fs.readdirSync(new URL('../src/',import.meta.url)).filter(name=>/^state-validator-v.*\.js$/.test(name));
-assert.equal(extensionFiles.length,EXPECTED.length,'every versioned validator extension must be represented by the production manifest');
-for(const name of extensionFiles){
-  const source=fs.readFileSync(new URL(`../src/${name}`,import.meta.url),'utf8');
+const rulesDir=new URL('../src/validation/rules/',import.meta.url);
+const ruleFiles=fs.readdirSync(rulesDir).filter(name=>name.endsWith('.js')).sort();
+assert.equal(ruleFiles.length,EXPECTED.length,'every semantic validator rule must be represented by the production manifest');
+for(const name of ruleFiles){
+  const source=fs.readFileSync(new URL(name,rulesDir),'utf8');
   assert.ok(source.includes('V.registerValidationLayer('),`${name} must use named validator registration`);
   assert.ok(!source.includes('baseValidate=V.validateState'),`${name} must not capture validator load order`);
   assert.ok(!source.includes('V.validateState='),`${name} must not replace the validator aggregator`);

@@ -724,8 +724,8 @@ Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration deb
 
 ## 12. Validator rule ownership
 
-`src/state-validator.js` 是唯一 `validateState` aggregator owner。Versioned validator extension 不得捕捉或覆寫 `V.validateState`；每一層 invariant 使用 `V.registerValidationLayer(id, handler, order)` 以唯一 ID 與 explicit order 註冊。
+`src/validation/registry.js` 是唯一 `validateState` aggregator owner。Semantic validator rule 不得捕捉或覆寫 `V.validateState`；每一層 invariant 使用 `V.registerValidationLayer(id, handler, order)` 以唯一 ID 與 explicit order 註冊。
 
-正式 app 在所有 versioned validator 載入後由 `state-validator-manifest.js` finalize expected layer set。duplicate ID、duplicate order、missing expected layer、unexpected layer、finalize 後 late registration 都必須 loud failure；不得靠 `index.html` script load order 靜默決定 validation semantics。
+正式 app 在所有 `validation/rules/` semantic validator rules 載入後由 `validation/manifest.js` finalize expected layer set。duplicate ID、duplicate order、missing expected layer、unexpected layer、finalize 後 late registration 都必須 loud failure；不得靠 `index.html` script load order 靜默決定 validation semantics。
 
 每個 layer 接收 `(state, previousResult)` 並回傳下一個 validation result；既有 invariant logic 保持在原本 owner 檔案。Registry 只負責 ownership / ordering / completeness，不把 subsystem invariant 集中回單一巨型 validator。

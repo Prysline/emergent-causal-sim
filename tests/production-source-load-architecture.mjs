@@ -33,8 +33,8 @@ const locomotionIndex=indexOf('src/systems/locomotion.js');
 const crowdingIndex=indexOf('src/crowding-runtime-v1200.js');
 const pipelineIndex=indexOf('src/runtime-hook-pipeline.js');
 const hookManifestIndex=indexOf('src/runtime/hook-manifest.js');
-const validatorIndex=indexOf('src/state-validator.js');
-const manifestIndex=indexOf('src/state-validator-manifest.js');
+const validatorIndex=indexOf('src/validation/registry.js');
+const manifestIndex=indexOf('src/validation/manifest.js');
 const uiIndex=indexOf('src/ui.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
@@ -122,8 +122,8 @@ const validatorExtensions=fs.readdirSync(srcDir)
   .sort();
 assert.ok(validatorExtensions.length>0,'architecture guard must discover validator extensions');
 for(const path of validatorExtensions){
-  assert.ok(indexOf(path)>validatorIndex,path+' must load after state-validator.js');
-  assert.ok(indexOf(path)<manifestIndex,path+' must load before state-validator-manifest.js');
+  assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
+  assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
 }
 
 loadProductionBefore('src/ui.js');
@@ -266,6 +266,32 @@ const retiredMemoryAssets=[
 ];
 assert.deepEqual(scripts.filter(path=>retiredMemoryAssets.includes(path)),[],'production must not load retired Memory sources');
 for(const path of retiredMemoryAssets){
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
+}
+const retiredValidationAssets=[
+  'src/state-validator.js',
+  'src/state-validator-manifest.js',
+  'src/state-validator-v1160.js',
+  'src/state-validator-v1190.js',
+  'src/state-validator-v111.js',
+  'src/state-validator-v1114.js',
+  'src/state-validator-v1120.js',
+  'src/state-validator-v1121.js',
+  'src/state-validator-v1122.js',
+  'src/state-validator-v1123.js',
+  'src/state-validator-v1124.js',
+  'src/state-validator-v1130.js',
+  'src/state-validator-v1131.js',
+  'src/state-validator-v1132.js',
+  'src/state-validator-v1132a.js',
+  'src/state-validator-v1133.js',
+  'src/state-validator-v1133a.js',
+  'src/state-validator-v1134.js',
+  'src/state-validator-v1135.js',
+  'src/state-validator-v1150.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredValidationAssets.includes(path)),[],'production must not load retired Validation source paths');
+for(const path of retiredValidationAssets){
   assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
 }
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
