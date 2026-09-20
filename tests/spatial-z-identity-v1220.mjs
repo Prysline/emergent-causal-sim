@@ -1,17 +1,16 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-for(const file of [
+loadInitialStateProfile([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js',
   'spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'presentation-schema-v1140.js','physical-schema-v1160.js','physical-runtime-v1160.js',
   'spatial-passage.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js',
-  'crowding-runtime-v1200.js','spatial/finalize.js'
-]){
-  vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
-}
+  'crowding-runtime-v1200.js'
+]);
 
 const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
