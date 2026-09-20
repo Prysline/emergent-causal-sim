@@ -8,7 +8,7 @@ for(const file of [
   'spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'presentation-schema-v1140.js','physical-schema-v1160.js','physical-runtime-v1160.js',
   'spatial-passage.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js',
-  'crowding-runtime-v1200.js'
+  'crowding-runtime-v1200.js','spatial/finalize.js'
 ]){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
@@ -29,7 +29,6 @@ const compatibility=globalThis.SimWorldInitializer.analyzeRuntimeCompatibility(l
 assert.equal(compatibility.ok,true,compatibility.hardErrors.map(x=>x.code+': '+x.message).join(' | '));
 
 const st=W.createInitialStateFromAuthoring(layered,20260911);
-SP.init(st);
 
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,'11.22.0-spatial-z-identity');
 assert.deepEqual(st.map.zLevels,[0,1]);
