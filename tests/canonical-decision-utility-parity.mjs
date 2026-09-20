@@ -66,7 +66,7 @@ assert.equal(cat.activeIntent.kind,'explore');
 
 // Keep the ownership boundary explicit: soft runtime may gate candidate availability,
 // but it must not carry a duplicate Cat need formula of its own.
-const softSource=fs.readFileSync(new URL('../src/intent-runtime-v1124.js',import.meta.url),'utf8');
+const softSource=fs.readFileSync(new URL('../src/systems/intent/deliberation.js',import.meta.url),'utf8');
 assert.ok(softSource.includes("canonicalBaseUtility(a,'drinkWater')"));
 assert.ok(softSource.includes("canonicalBaseUtility(a,'rest')"));
 assert.ok(!softSource.includes("n.thirst*1.18+10"),'soft runtime must not retain the old shared Human/Cat drink formula');
