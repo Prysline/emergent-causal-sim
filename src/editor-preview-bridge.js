@@ -88,6 +88,7 @@
   }
 
   function updateIndicator(){
+    if(typeof document==='undefined')return;
     const banner=document.getElementById('editorPreviewBanner');
     if(!banner)return;
     if(!requested){banner.hidden=true;return;}
