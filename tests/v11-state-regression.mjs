@@ -71,7 +71,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={kind:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual(bucket.position,{x:5,y:5});noIssues('portable restock');
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={kind:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual({x:bucket.position.x,y:bucket.position.y},{x:5,y:5});assert.equal(bucket.position.surfaceId,'floor');noIssues('portable restock');
 }
 
 E.reset(20260911);

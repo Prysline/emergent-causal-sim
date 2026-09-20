@@ -18,12 +18,13 @@ for(let i=0;i<20&&!restockEvent;i++){
   if(a.held==='waterBucket'){pickupPos??={...a.position};heldPositions.push({...a.position});}
   restockEvent=st.events.find(e=>e.data?.action==='restockContainer'&&e.data?.to==='waterBucket')||null;
 }
-assert.deepEqual(pickupPos,{x:5,y:5});
+assert.ok(same(pickupPos,{x:5,y:5}));
 assert.ok(heldPositions.length>0);
 assert.ok(heldPositions.every(p=>same(p,{x:5,y:5})),'拿起容器後不應為相鄰 port 多走一格');
 assert.ok(restockEvent,'資料驅動 restock 流程應完成');
 assert.equal(restockEvent.data.position,'5,5');
 assert.equal(a.held,null);
-assert.deepEqual(bucket.position,{x:5,y:5});
+assert.ok(same(bucket.position,{x:5,y:5}));
+assert.equal(bucket.position.surfaceId,'floor');
 assert.ok((bucket.contents.water||0)>0);
 console.log('portable container restock geometry passed');
