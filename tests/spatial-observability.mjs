@@ -8,7 +8,7 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
 assert.equal(st.version,'11.22.0-spatial-z-identity');
-assert.equal(E.VERSION,'11.11.1-spatial-observability');
+assert.equal(E.VERSION,'11.22.0-spatial-z-identity');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
