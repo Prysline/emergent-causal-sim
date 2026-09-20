@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+for(const file of ['world-authoring.js','world-initializer.js','world.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 const E=globalThis.SimEngine,V=globalThis.SimValidator;
 const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
