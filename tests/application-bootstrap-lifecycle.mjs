@@ -118,8 +118,8 @@ assert.doesNotMatch(engineSource,/SimEditorPreviewBridge|getActivePreview/,'Engi
 assert.match(engineSource,/configureResetStateSource/,'Engine must expose a generic reset-state source boundary');
 assert.match(bootstrapSource,/SimEditorPreviewBridge[\s\S]*getActivePreview/,'Composition Root must own Editor Preview startup input');
 for(const [path,pattern] of [
-  ['src/human-social-response-runtime-v1133a.js',/prepareHumanTalkScenario\(scenario\)/],
-  ['src/social-response-runtime-v1132a.js',/preparePetResponseScenario\(scenario\)/]
+  ['src/systems/social/human-response.js',/prepareHumanTalkScenario\(scenario\)/],
+  ['src/systems/social/animal-response.js',/preparePetResponseScenario\(scenario\)/]
 ]){
   assert.doesNotMatch(readRepoFile(path),pattern,path+' must not auto-run URL scenarios during module evaluation');
 }

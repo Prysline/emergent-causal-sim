@@ -7,7 +7,7 @@ const source=path=>fs.readFileSync(new URL(`../${path}`,import.meta.url),'utf8')
 
 for(const path of [
   'src/world.js',
-  'src/social-bid-schema-v1122.js',
+  'src/systems/social/state.js',
   'src/memory-deliberation-runtime-v1134.js',
   'src/ui.js'
 ]){
@@ -17,8 +17,8 @@ for(const path of [
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
-  'systems/action/state.js','systems/intent/state.js','social-bid-schema-v1122.js',
-  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','social-bid-runtime-v1122.js',
+  'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
+  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js'
 ]);
 

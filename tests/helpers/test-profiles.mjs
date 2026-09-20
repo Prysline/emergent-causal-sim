@@ -18,7 +18,13 @@ const RETIRED_SOURCES=Object.freeze({
   'interruption-schema-v1123.js':'systems/intent/state.js',
   'intent-runtime-v1123.js':'systems/intent/replanning.js',
   'deliberation-schema-v1124.js':'systems/intent/state.js',
-  'intent-runtime-v1124.js':'systems/intent/deliberation.js'
+  'intent-runtime-v1124.js':'systems/intent/deliberation.js',
+  'social-bid-schema-v1122.js':'systems/social/state.js',
+  'social-bid-runtime-v1122.js':'systems/social/bid.js',
+  'social-response-schema-v1132a.js':'systems/social/state.js',
+  'social-response-runtime-v1132a.js':'systems/social/animal-response.js',
+  'human-social-response-schema-v1133a.js':'systems/social/state.js',
+  'human-social-response-runtime-v1133a.js':'systems/social/human-response.js'
 });
 
 const AUTHORING_PROFILE=Object.freeze([

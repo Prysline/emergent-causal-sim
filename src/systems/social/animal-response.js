@@ -55,7 +55,7 @@
   }
   function settlePendingOffers(st,pending){for(const record of pending||[])resolvePendingPetOffer(st,record);}
 
-  if(!E.registerRuntimeHook)throw new Error('social-response-runtime-v1132a.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('systems/social/animal-response.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','socialResponse.capture-pet-offers',(ctx)=>{ctx.locals.socialResponseV1132a=capturePendingPetOffers(E.getState());},400);
   E.registerRuntimeHook('afterTick','socialResponse.resolve-pet-offers',(ctx)=>settlePendingOffers(E.getState(),ctx.locals.socialResponseV1132a),600);
 
