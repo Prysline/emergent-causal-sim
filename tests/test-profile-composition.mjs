@@ -47,6 +47,7 @@ assert.ok(stateTests.length>0,'State regression workflow must enumerate Node reg
 
 const retiredNames=Object.keys(TEST_PROFILE_CONTRACT.retiredSources);
 for(const relativePath of stateTests){
+  if(relativePath==='tests/test-profile-composition.mjs')continue;
   const source=fs.readFileSync(new URL('../'+relativePath,import.meta.url),'utf8');
   for(const retired of retiredNames){
     assert.equal(source.includes("'"+retired+"'")||source.includes('"'+retired+'"'),false,relativePath+' must not load retired source '+retired);
