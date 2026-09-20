@@ -24,7 +24,7 @@ try{
     };
   });
 
-  assert.equal(snapshot.pipelineVersion,'runtime-hook-pipeline-1');
+  assert.equal(snapshot.pipelineVersion,'runtime-hook-pipeline-2');
   assert.equal(snapshot.tickOwned,true,'all browser/UI scripts must leave E.tick owned by the runtime pipeline');
   assert.equal(snapshot.resetOwned,true,'all browser/UI scripts must leave E.reset owned by the runtime pipeline');
   assert.deepEqual(snapshot.after.slice(-3).map(x=>x.id),['uiObservability.render-mobile-summary','residentView.schedule','relationshipView.schedule'],'presentation hooks must run after simulation hooks in explicit order');
