@@ -72,6 +72,62 @@ for(const path of hookExtensions){
 }
 assert.equal(hookManifestIndex,bootstrapIndex-1,'runtime-hook manifest must be the final registration gate immediately before app bootstrap');
 
+const engineDependentSubsystemSchemas=[
+  'src/action-schema-v1120.js',
+  'src/intent-schema-v1121.js',
+  'src/social-bid-schema-v1122.js',
+  'src/interruption-schema-v1123.js',
+  'src/deliberation-schema-v1124.js',
+  'src/memory-schema-v1130.js',
+  'src/appraisal-schema-v1131.js',
+  'src/affect-schema-v1132.js',
+  'src/social-response-schema-v1132a.js',
+  'src/memory-retention-schema-v1133.js',
+  'src/human-social-response-schema-v1133a.js',
+  'src/memory-deliberation-schema-v1134.js',
+  'src/social-outcome-memory-schema-v1135.js',
+  'src/relationship-schema-v1150.js'
+];
+const engineDependentSubsystemRuntimes=[
+  'src/action-runtime-v1120.js',
+  'src/intent-runtime-v1121.js',
+  'src/social-bid-runtime-v1122.js',
+  'src/intent-runtime-v1123.js',
+  'src/intent-runtime-v1124.js',
+  'src/memory-runtime-v1130.js',
+  'src/appraisal-runtime-v1131.js',
+  'src/appraisal-social-response-v1132a.js',
+  'src/appraisal-human-social-response-v1133a.js',
+  'src/relationship-runtime-v1150.js',
+  'src/affect-runtime-v1132.js',
+  'src/social-response-runtime-v1132a.js',
+  'src/memory-retention-runtime-v1133.js',
+  'src/human-social-response-runtime-v1133a.js',
+  'src/memory-deliberation-runtime-v1134.js',
+  'src/social-outcome-memory-runtime-v1135.js'
+];
+
+for(const path of engineDependentSubsystemSchemas){
+  const source=readRepoFile(path);
+  assert.ok(indexOf(path)>worldIndex&&indexOf(path)<initialManifestIndex,path+' must remain in the initial-state registration boundary');
+  assert.doesNotMatch(source,/SimEngine|registerRuntimeHook\(|\bE\.getState\(/,path+' schema ownership must stay Engine-independent');
+}
+for(const path of engineDependentSubsystemRuntimes){
+  const source=readRepoFile(path);
+  assert.ok(indexOf(path)>engineIndex,path+' runtime ownership must load after Engine exists');
+  assert.doesNotMatch(source,/registerInitialState(?:Initializer|Finalizer)\(/,path+' runtime ownership must not register structural initial state after manifest finalization');
+}
+
+const moduleEvaluationStateTouchPattern=/^\s{2}[A-Za-z_$][A-Za-z0-9_$]*\(E\.getState\(\)\);\s*$/m;
+const auditedModuleEvaluationStateTouches=engineDependentSubsystemRuntimes.filter(path=>moduleEvaluationStateTouchPattern.test(readRepoFile(path)));
+assert.deepEqual(auditedModuleEvaluationStateTouches,[
+  'src/intent-runtime-v1121.js',
+  'src/social-bid-runtime-v1122.js',
+  'src/memory-runtime-v1130.js',
+  'src/affect-runtime-v1132.js',
+  'src/memory-retention-runtime-v1133.js'
+],'Cleanup-4B must keep the known module-evaluation state-touch inventory explicit until Cleanup-4C reviews each case');
+
 const srcDir=new URL('../src/',import.meta.url);
 const validatorExtensions=fs.readdirSync(srcDir)
   .filter(name=>/^state-validator-v.*\.js$/.test(name))
