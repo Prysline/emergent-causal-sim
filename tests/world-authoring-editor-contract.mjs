@@ -80,7 +80,7 @@ assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor','non-zero authore
 }
 
 const editorHtml=fs.readFileSync(new URL('../editor.html',import.meta.url),'utf8');
-for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/state-validator.js']){
+for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/validation/registry.js']){
   assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
 }
 const authoringScript=editorHtml.indexOf('src/world-authoring.js');

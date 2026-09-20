@@ -22,7 +22,7 @@ assert.deepEqual(spatialCoreProfilePaths(),[
 
 const engineCore=runtimeProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
-  'engine.js','state-validator.js'
+  'engine.js','validation/registry.js'
 ]);
 assert.equal(engineCore.includes('src/spatial-traversal.js'),false,'engine-core profile must not implicitly load traversal');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/engine.js'),'runtime profile must finalize initial state before Engine captures factories');
@@ -38,7 +38,7 @@ assert.throws(
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
-  'spatial/finalize.js','engine.js','state-validator.js'
+  'spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
 const workflow=fs.readFileSync(new URL('../.github/workflows/state-regression.yml',import.meta.url),'utf8');
