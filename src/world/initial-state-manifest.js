@@ -25,6 +25,8 @@
       {id:'physical.schema',order:1600},
       {id:'locomotion.schema',order:1700}
     ],
-    finalize:[]
+    finalize:[
+      {id:'spatial.finalize',order:100}
+    ]
   });
 })();
