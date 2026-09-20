@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
   'systems/physical.js','spatial-passage.js',
   'systems/locomotion.js','engine.js',
-  'state-validator.js','state-validator-v111.js','state-validator-v1160.js','state-validator-v1190.js'
+  'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js','validation/rules/locomotion-execution.js'
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;

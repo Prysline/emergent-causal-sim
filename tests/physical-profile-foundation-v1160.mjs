@@ -7,7 +7,7 @@ globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js',
   'systems/physical.js','engine.js',
-  'state-validator.js','state-validator-v111.js','state-validator-v1160.js'
+  'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
 const APP_VERSION='11.22.0-spatial-z-identity';
