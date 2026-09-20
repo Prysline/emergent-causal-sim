@@ -1,0 +1,73 @@
+name: State regression
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: state-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  state-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: for f in src/*.js; do node --check "$f"; done
+      - run: node tests/production-source-load-architecture.mjs
+      - run: node tests/v11-state-regression.mjs
+      - run: node tests/world-authoring-foundation.mjs
+      - run: node tests/initial-population-placement.mjs
+      - run: node tests/world-authoring-editor-contract.mjs
+      - run: node tests/editor-authoring-mutations.mjs
+      - run: node tests/geometry-derived-horizontal-topology.mjs
+      - run: node tests/initial-state-pipeline.mjs
+      - run: node tests/sleep-pressure.mjs
+      - run: node tests/social-sleep-interaction.mjs
+      - run: node tests/logistics-invariants.mjs
+      - run: node tests/interaction-geometry.mjs
+      - run: node tests/refill-water-geometry.mjs
+      - run: node tests/spatial-z-identity-v1220.mjs
+      - run: node tests/spatial-traversal.mjs
+      - run: node tests/spatial-observability.mjs
+      - run: node tests/supported-contact-audit.mjs
+      - run: node tests/spatial-floor-boundaries.mjs
+      - run: node tests/surface-liquid-foundation.mjs
+      - run: node tests/physical-profile-foundation-v1160.mjs
+      - run: node tests/passage-profile-multimode-v1170.mjs
+      - run: node tests/route-semantics-v1180.mjs
+      - run: node tests/locomotion-execution-posture-v1190.mjs
+      - run: node tests/dynamic-congestion-v1200.mjs
+      - run: node tests/action-terminology.mjs
+      - run: node tests/action-construction.mjs
+      - run: node tests/active-intent-foundation.mjs
+      - run: node tests/social-bid-lifecycle.mjs
+      - run: node tests/legacy-pending-interaction-cleanup.mjs
+      - run: node tests/intent-replan-preemption.mjs
+      - run: node tests/soft-reconsideration-hysteresis.mjs
+      - run: node tests/canonical-decision-utility-parity.mjs
+      - run: node tests/episodic-memory-foundation.mjs
+      - run: node tests/event-appraisal.mjs
+      - run: node tests/short-lived-affect.mjs
+      - run: node tests/memory-event-observation-timing.mjs
+      - run: node tests/memory-spatial-event-enrichment.mjs
+      - run: node tests/memory-resource-transfer-consequence-policy.mjs
+      - run: node tests/pet-response-observation-timing.mjs
+      - run: node tests/social-response-agency.mjs
+      - run: node tests/memory-salience-pruning.mjs
+      - run: node tests/human-social-response-agency.mjs
+      - run: node tests/memory-deliberation-influence.mjs
+      - run: node tests/requester-social-outcome-memory.mjs
+      - run: node tests/animal-social-outcome-memory.mjs
+      - run: node tests/relationship-foundation-v1150.mjs
+      - run: node tests/relationship-target-preference-v1151.mjs
+      - run: node tests/relationship-responder-bias-v1152.mjs
+      - run: node tests/runtime-hook-pipeline.mjs
+      - run: node tests/presentation-observability-v1140.mjs

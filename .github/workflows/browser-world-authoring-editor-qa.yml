@@ -1,0 +1,33 @@
+name: Browser world authoring editor QA
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: browser-world-authoring-editor-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          python3 -m http.server 4173 >/tmp/emergent-causal-sim-http.log 2>&1 &
+          echo $! > /tmp/emergent-causal-sim-http.pid
+          sleep 2
+      - run: node tests/browser-world-authoring-editor-qa.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-world-authoring-editor-qa
+          path: artifacts/browser-world-authoring-editor-qa
+          if-no-files-found: ignore
