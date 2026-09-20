@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
-  if(!W.registerInitialStateInitializer)throw new Error('relationship-schema-v1150.js requires world.js initial-state pipeline.');
+  if(!W.registerInitialStateInitializer)throw new Error('systems/relationship/state.js requires world.js initial-state pipeline.');
   const VERSION='11.15.2-relationship-responder-bias';
   const ENCOUNTER_WEIGHTS=Object.freeze({
     acceptTalk:1,

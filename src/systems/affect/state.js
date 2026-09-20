@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
-  if(!W.registerInitialStateInitializer)throw new Error('affect-schema-v1132.js requires world.js initial-state pipeline.');
+  if(!W.registerInitialStateInitializer)throw new Error('systems/affect/state.js requires world.js initial-state pipeline.');
   const VERSION='11.13.2-short-lived-affect';
   const DECAY=Object.freeze({valence:.90,activation:.82,frustration:.86});
   const EPSILON=.005;

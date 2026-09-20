@@ -77,12 +77,12 @@ const engineDependentSubsystemSchemas=[
   'src/systems/intent/state.js',
   'src/systems/social/state.js',
   'src/memory-schema-v1130.js',
-  'src/appraisal-schema-v1131.js',
-  'src/affect-schema-v1132.js',
+  'src/systems/appraisal/state.js',
+  'src/systems/affect/state.js',
   'src/memory-retention-schema-v1133.js',
   'src/memory-deliberation-schema-v1134.js',
   'src/social-outcome-memory-schema-v1135.js',
-  'src/relationship-schema-v1150.js'
+  'src/systems/relationship/state.js'
 ];
 const engineDependentSubsystemRuntimes=[
   'src/systems/action/runtime.js',
@@ -91,11 +91,11 @@ const engineDependentSubsystemRuntimes=[
   'src/systems/intent/replanning.js',
   'src/systems/intent/deliberation.js',
   'src/memory-runtime-v1130.js',
-  'src/appraisal-runtime-v1131.js',
-  'src/appraisal-social-response-v1132a.js',
-  'src/appraisal-human-social-response-v1133a.js',
-  'src/relationship-runtime-v1150.js',
-  'src/affect-runtime-v1132.js',
+  'src/systems/appraisal/runtime.js',
+  'src/systems/appraisal/animal-social-response.js',
+  'src/systems/appraisal/human-social-response.js',
+  'src/systems/relationship/runtime.js',
+  'src/systems/affect/runtime.js',
   'src/systems/social/animal-response.js',
   'src/memory-retention-runtime-v1133.js',
   'src/systems/social/human-response.js',
@@ -118,7 +118,6 @@ const moduleEvaluationStateTouchPattern=/^\s{2}[A-Za-z_$][A-Za-z0-9_$]*\(E\.getS
 const auditedModuleEvaluationStateTouches=engineDependentSubsystemRuntimes.filter(path=>moduleEvaluationStateTouchPattern.test(readRepoFile(path)));
 assert.deepEqual(auditedModuleEvaluationStateTouches,[
   'src/memory-runtime-v1130.js',
-  'src/affect-runtime-v1132.js',
   'src/memory-retention-runtime-v1133.js'
 ],'Cleanup-4C must keep the remaining module-evaluation state-touch inventory explicit until each owning slice reviews it');
 
@@ -245,6 +244,20 @@ const retiredSocialAssets=[
 ];
 assert.deepEqual(scripts.filter(path=>retiredSocialAssets.includes(path)),[],'production must not load retired Social sources');
 for(const path of retiredSocialAssets){
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
+}
+const retiredAppraisalAffectRelationshipAssets=[
+  'src/appraisal-schema-v1131.js',
+  'src/appraisal-runtime-v1131.js',
+  'src/appraisal-social-response-v1132a.js',
+  'src/appraisal-human-social-response-v1133a.js',
+  'src/affect-schema-v1132.js',
+  'src/affect-runtime-v1132.js',
+  'src/relationship-schema-v1150.js',
+  'src/relationship-runtime-v1150.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredAppraisalAffectRelationshipAssets.includes(path)),[],'production must not load retired Appraisal / Affect / Relationship sources');
+for(const path of retiredAppraisalAffectRelationshipAssets){
   assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
 }
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));

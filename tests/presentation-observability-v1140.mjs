@@ -12,9 +12,9 @@ const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
-  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','memory-retention-schema-v1133.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
+  'memory-schema-v1130.js','systems/appraisal/state.js','systems/affect/state.js','memory-retention-schema-v1133.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','systems/relationship/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
-  'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','relationship-runtime-v1150.js','affect-runtime-v1132.js','systems/social/animal-response.js','memory-retention-runtime-v1133.js','systems/social/human-response.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
+  'memory-runtime-v1130.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/relationship/runtime.js','systems/affect/runtime.js','systems/social/animal-response.js','memory-retention-runtime-v1133.js','systems/social/human-response.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js','state-validator-v1190.js'
 ];
 loadRuntimeProfile(files);
@@ -67,7 +67,7 @@ assert.doesNotMatch(residentUiSource,/飢餓感已經變得明顯|活動疲勞�
 assert.match(residentUiSource,/data-v1140-player-explanation/,'trusted explanation must render only as a Resident presentation element');
 assert.doesNotMatch(residentUiSource,/\.(?:currentReason|actionExplanation|playerStory|causalTrace)\s*=/,'Resident View must not persist explanation or causal-trace mirror state');
 
-const relationshipSource=fs.readFileSync(new URL('../src/relationship-runtime-v1150.js',import.meta.url),'utf8');
+const relationshipSource=fs.readFileSync(new URL('../src/systems/relationship/runtime.js',import.meta.url),'utf8');
 assert.match(relationshipSource,/relationship\.consolidate/,'Relationship must consolidate from the episodic-memory lifecycle');
 assert.match(relationshipSource,/order:350|,350\)/,'Relationship consolidation must happen after specialized appraisal and before Affect');
 assert.match(relationshipSource,/acceptTalk:\{roles:new Set\(\['target'\]\)\}/,'full Human conversation requester evidence must come from acceptTalk rather than double-counting talk');
@@ -148,8 +148,8 @@ assert.match(indexSource,/v11\.22\.0・Spatial Z Identity/,'app shell must expos
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
-assert.match(indexSource,/relationship-schema-v1150\.js/,'app shell must load Relationship schema');
-assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load Relationship runtime');
+assert.match(indexSource,/systems\/relationship\/state\.js/,'app shell must load Relationship state owner');
+assert.match(indexSource,/systems\/relationship\/runtime\.js/,'app shell must load Relationship runtime owner');
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
 assert.match(indexSource,/systems\/physical\.js/,'app shell must load the Physical semantic owner');
 assert.match(indexSource,/spatial-passage\.js/,'app shell must load Passage Profile runtime');

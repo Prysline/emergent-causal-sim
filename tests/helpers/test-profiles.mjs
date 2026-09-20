@@ -24,7 +24,15 @@ const RETIRED_SOURCES=Object.freeze({
   'social-response-schema-v1132a.js':'systems/social/state.js',
   'social-response-runtime-v1132a.js':'systems/social/animal-response.js',
   'human-social-response-schema-v1133a.js':'systems/social/state.js',
-  'human-social-response-runtime-v1133a.js':'systems/social/human-response.js'
+  'human-social-response-runtime-v1133a.js':'systems/social/human-response.js',
+  'appraisal-schema-v1131.js':'systems/appraisal/state.js',
+  'appraisal-runtime-v1131.js':'systems/appraisal/runtime.js',
+  'appraisal-social-response-v1132a.js':'systems/appraisal/animal-social-response.js',
+  'appraisal-human-social-response-v1133a.js':'systems/appraisal/human-social-response.js',
+  'affect-schema-v1132.js':'systems/affect/state.js',
+  'affect-runtime-v1132.js':'systems/affect/runtime.js',
+  'relationship-schema-v1150.js':'systems/relationship/state.js',
+  'relationship-runtime-v1150.js':'systems/relationship/runtime.js'
 });
 
 const AUTHORING_PROFILE=Object.freeze([

@@ -69,7 +69,7 @@
     return {counterpartId:evidence.counterpartId,evidenceKind:evidence.kind,role:evidence.role,weight:evidence.weight,relevance:evidence.relevance,goalCongruence:evidence.goalCongruence,before:{familiarity,affinity},after:{familiarity:nextFamiliarity,affinity:nextAffinity},delta:{familiarity:round(nextFamiliarity-familiarity),affinity:round(nextAffinity-affinity)}};
   }
 
-  if(!E.registerRuntimeHook)throw new Error('relationship-runtime-v1150.js requires runtime-hook-pipeline.js');
+  if(!E.registerRuntimeHook)throw new Error('systems/relationship/runtime.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','relationship.consolidate',(ctx)=>{const result=consolidateRelationshipFromMemory(ctx.state,ctx.agent,ctx.memory);if(result)ctx.locals.relationship=result;},350);
 
   Object.assign(E,{RELATIONSHIP_SCHEMA_VERSION:VERSION,RELATIONSHIP_MIN_RELEVANCE:MIN_RELEVANCE,RELATIONSHIP_FAMILIARITY_RATE:FAMILIARITY_RATE,RELATIONSHIP_AFFINITY_RATE:AFFINITY_RATE,RELATIONSHIP_TARGET_CAP:TARGET_CAP,RELATIONSHIP_OBSERVED_RULES:OBSERVED_RULES,relationshipRole,relationshipEvidenceForMemory,relationshipEntry,relationshipSignal,relationshipTargetDelta,consolidateRelationshipFromMemory});
