@@ -3,8 +3,9 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','state-validator.js'])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','state-validator.js']);
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 
 function noIssues(label){const v=V.validateState(E.getState());if(v.issueCount)console.error('STATE_DEBUG',label,JSON.stringify(v,null,2));assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}

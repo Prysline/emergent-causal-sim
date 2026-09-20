@@ -1,0 +1,49 @@
+(() => {
+  const E=window.SimEngine;
+  if(!E?.finalizeRuntimeHooks)throw new Error('Runtime hook registry is unavailable.');
+  E.finalizeRuntimeHooks({
+    beforeTick:[
+      {id:'socialOutcome.capture-events',order:100},
+      {id:'memoryDeliberation.capture-idle',order:200},
+      {id:'humanSocial.prepare',order:300},
+      {id:'socialResponse.capture-pet-offers',order:400},
+      {id:'affect.decay',order:500},
+      {id:'intent.soft-reconsideration',order:700},
+      {id:'intent.replan-preemption',order:800},
+      {id:'socialBid.prepare',order:900},
+      {id:'intent.reconcile-before',order:1000},
+      {id:'spatial.capture',order:1100}
+    ],
+    afterTick:[
+      {id:'spatial.effects',order:100},
+      {id:'intent.reconcile-after',order:200},
+      {id:'socialBid.settle',order:300},
+      {id:'intent.recover-aborts',order:400},
+      {id:'memory.process-events',order:500},
+      {id:'socialResponse.resolve-pet-offers',order:600},
+      {id:'humanSocial.resolve',order:700},
+      {id:'memoryDeliberation.correct-initial',order:800},
+      {id:'socialOutcome.process',order:900},
+      {id:'uiObservability.render-mobile-summary',order:1000},
+      {id:'residentView.schedule',order:1100},
+      {id:'relationshipView.schedule',order:1150}
+    ],
+    afterReset:[
+      {id:'intent.normalize-reset',order:100},
+      {id:'socialBid.normalize-reset',order:200},
+      {id:'memory.normalize-reset',order:300},
+      {id:'affect.normalize-reset',order:400},
+      {id:'memoryRetention.normalize-reset',order:500},
+      {id:'uiObservability.reset',order:600},
+      {id:'residentView.reset',order:700},
+      {id:'relationshipView.reset',order:750}
+    ],
+    episodicMemoryCreated:[
+      {id:'appraisal.base',order:100},
+      {id:'appraisal.social-response',order:200},
+      {id:'appraisal.human-social',order:300},
+      {id:'relationship.consolidate',order:350},
+      {id:'affect.from-appraisal',order:400}
+    ]
+  });
+})();

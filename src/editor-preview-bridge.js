@@ -88,6 +88,7 @@
   }
 
   function updateIndicator(){
+    if(typeof document==='undefined')return;
     const banner=document.getElementById('editorPreviewBanner');
     if(!banner)return;
     if(!requested){banner.hidden=true;return;}
@@ -108,11 +109,6 @@
     }
   }
 
-  if(typeof document!=='undefined'){
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',updateIndicator,{once:true});
-    else updateIndicator();
-  }
-
   window.SimEditorPreviewBridge={
     STORAGE_KEY,PREVIEW_PARAM,PREVIEW_VALUE,RESTORE_PARAM,RESTORE_VALUE,
     isPreviewRequested,isRestoreRequested,
@@ -121,6 +117,7 @@
     loadStoredPreview,
     getActivePreview,
     getRestorePreview,
+    startUI:updateIndicator,
     previewUrl:'index.html?preview=editor',
     restoreUrl:'editor.html?restore=preview'
   };

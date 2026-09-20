@@ -1,14 +1,15 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-for(const file of [
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js',
-  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js',
+loadRuntimeProfile([
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
+  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage.js',
   'locomotion-schema-v1190.js','locomotion-runtime-v1190.js','engine.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1160.js','state-validator-v1190.js'
-])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION='11.22.0-spatial-z-identity';

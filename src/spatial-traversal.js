@@ -1,9 +1,8 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
-  if(!W.registerInitialStateInitializer)throw new Error('spatial-v111.js requires world.js initial-state pipeline.');
+  if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
   const VERSION='11.11-spatial-traversal';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
-  const baseInit=SP.init;
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -19,8 +18,8 @@
   function cloneNode(p){if(!p)return null;const out={x:p.x,y:p.y,spaceId:p.spaceId||null,surfaceId:p.surfaceId||FLOOR};if(zOf(p)!==0)out.z=zOf(p);return out;}
   function localSame(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y&&zOf(a)===zOf(b);}
   function sameLayer(a,b){return !!a&&!!b&&zOf(a)===zOf(b);}
-  function roomSpaceId(st,p){return p?.spaceId||SP.roomAt(st,p)||'world';}
-  function normalizeNode(st,p,surfaceId=null){if(!p)return null;const out={x:p.x,y:p.y,spaceId:roomSpaceId(st,p),surfaceId:surfaceId||p.surfaceId||FLOOR};if(zOf(p)!==0)out.z=zOf(p);return out;}
+  const normalizeNode=SP.normalizeNode;
+  if(typeof normalizeNode!=='function')throw new Error('spatial-traversal.js requires Spatial core normalizeNode().');
   function nodeKey(st,p){const n=normalizeNode(st,p);return n?`${n.spaceId}|${n.surfaceId}|${SP.key(n)}`:'?';}
   function nodeSame(st,a,b){if(!a||!b)return false;const x=normalizeNode(st,a),y=normalizeNode(st,b);return localSame(x,y)&&x.spaceId===y.spaceId&&x.surfaceId===y.surfaceId;}
   function profile(agent){return TRAVERSAL_PROFILES[agent?.kind]||TRAVERSAL_PROFILES.human;}
@@ -266,16 +265,10 @@
   function isAtInteraction(st,a,target,affordance='default'){const here=nodeForAgent(st,a);return interactionPositions(st,target,a,affordance).some(p=>nodeSame(st,here,p));}
   function canInteract(st,a,target,affordance='default'){return isAtInteraction(st,a,target,affordance);}
 
-  function normalizePersistentPositions(st){
-    for(const a of Object.values(st.agents||{})){if(!a.position)continue;const n=normalizeNode(st,a.position,a.position.surfaceId||FLOOR);a.position={...a.position,spaceId:n.spaceId,surfaceId:n.surfaceId};}
-    for(const c of Object.values(st.containers||{})){if(!c.position)continue;const sid=c.supportId&&st.furniture?.[c.supportId]?.spatial?.surface?.id||c.position.surfaceId||FLOOR,n=normalizeNode(st,c.position,sid);c.position={...c.position,spaceId:n.spaceId,surfaceId:n.surfaceId};}
-    for(const s of Object.values(st.sources||{})){if(!s.position)continue;const n=normalizeNode(st,s.position,s.position.surfaceId||FLOOR);s.position={...s.position,spaceId:n.spaceId,surfaceId:n.surfaceId};}
-  }
-  function init(st){installSpatialDefs(st);const result=baseInit(st);normalizePersistentPositions(st);return result;}
+
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos,n=normalizeNode(st,p);if(n.surfaceId!==FLOOR){const entry=surfaceEntry(st,n.surfaceId);if(entry)return entry.surface.label||`${entry.furniture.name}表面`;}
     const overhead=overheadAt(st,n);if(overhead.length)return `${overhead[0].name}下`;return baseDescribePlace(st,aOrPos);}
   W.registerInitialStateInitializer('spatial.schema',(st)=>{installSpatialDefs(st);},10);
-  SP.init=init;
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
   SP.pathDistance=pathDistance;
@@ -287,5 +280,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.18.0-route-semantics-split',TRAVERSAL_PROFILES,normalizeNode,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.18.0-route-semantics-split',TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
 })();

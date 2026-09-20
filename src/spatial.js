@@ -1,6 +1,7 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
   const {WIDTH,HEIGHT,RESOURCE_TYPES}=W;
+  const FLOOR='floor';
   const zOf=p=>p?.z??0;
   const position=(x,y,z=0)=>z===0?{x,y}:{x,y,z};
   const key=p=>p?(zOf(p)===0?`${p.x},${p.y}`:`${p.x},${p.y},${zOf(p)}`):'?';
@@ -54,6 +55,8 @@
     st.map.rooms=rooms;st.map.roomRevision=(st.map.roomRevision||0)+1;return rooms;
   }
   function roomAt(st,p){return tileByPos(st,p)?.roomId||null;}
+  function roomSpaceId(st,p){return p?.spaceId||roomAt(st,p)||'world';}
+  function normalizeNode(st,p,surfaceId=null){if(!p)return null;const out={x:p.x,y:p.y,spaceId:roomSpaceId(st,p),surfaceId:surfaceId||p.surfaceId||FLOOR};if(zOf(p)!==0)out.z=zOf(p);return out;}
   function roomMetrics(st,id){const r=st.map.rooms?.[id];if(!r)return null;const sample=r.floorTiles.map(tid=>st.map.tiles[tid]);const avgNoise=sample.length?sample.reduce((s,t)=>s+noiseAt(st,t),0)/sample.length:0,avgComfort=sample.length?sample.reduce((s,t)=>s+comfortAt(st,t),0)/sample.length:0;return {...r,avgNoise,avgComfort};}
 
   function tileLiquidAmount(t){return Object.entries(t?.surface?.contents||{}).reduce((sum,[r,v])=>sum+(RESOURCE_TYPES[r]?.phase==='liquid'?v:0),0);}
@@ -115,7 +118,6 @@
   function nearestLabel(st,p){if(!p)return '未知位置';const candidates=[];for(const f of Object.values(st.furniture||{}))for(const fp of f.footprint||[]){const d=manhattan(p,fp);if(d<=1)candidates.push({d,name:d===0?f.name:`${f.name}旁`});}for(const o of [...Object.values(st.containers||{}),...Object.values(st.sources||{})]){const op=objectPosition(st,o.id);if(!op)continue;const d=manhattan(p,op);if(d<=1)candidates.push({d,name:d===0?o.name:`${o.name}旁`});}candidates.sort((a,b)=>a.d-b.d);if(candidates.length)return candidates[0].name;const rid=roomAt(st,p);return st.map.rooms?.[rid]?.name||`(${p.x}, ${p.y})`;}
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos;return nearestLabel(st,p);}
   function entitiesWithRole(st,role,collections=['containers','sources']){return collections.flatMap(k=>Object.values(st[k]||{})).filter(x=>hasRole(x,role));}
-  function init(st){recomputeRooms(st);return st.map;}
 
-  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole,init};
+  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole};
 })();

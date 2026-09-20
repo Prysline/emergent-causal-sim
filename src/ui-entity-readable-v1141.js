@@ -171,11 +171,14 @@
   }
 
   UI.registerInspectorDecorator('entityReadable.layer',decorateInspector,1050);
-  document.addEventListener('click',event=>{
-    const button=event.target.closest?.('[data-v1141-entity-mode]');if(!button)return;
-    mode=button.dataset.v1141EntityMode==='debug'?'debug':'readable';
-    const shell=host.querySelector(':scope > [data-v1141-entity-root]');if(shell)applyMode(shell);
-  });
+  if(!UI.registerStartupExtension)throw new Error('Entity Readable View requires UI startup lifecycle');
+  UI.registerStartupExtension('entityReadable.controls',()=>{
+    document.addEventListener('click',event=>{
+      const button=event.target.closest?.('[data-v1141-entity-mode]');if(!button)return;
+      mode=button.dataset.v1141EntityMode==='debug'?'debug':'readable';
+      const shell=host.querySelector(':scope > [data-v1141-entity-root]');if(shell)applyMode(shell);
+    });
+  },500);
 
   E.UI_ENTITY_READABLE_VERSION=VERSION;
 })();

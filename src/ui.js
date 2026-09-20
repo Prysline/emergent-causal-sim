@@ -1,8 +1,8 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,V=window.SimValidator;if(!E||!SP||!V)return;
   const UI=window.SimUI=window.SimUI||{};
-  const inspectorDecorators=new Map();
-  let selected=null,timer=null,mobileView='map',logMode='summary',currentZ=0;
+  const inspectorDecorators=new Map(),startupExtensions=new Map();
+  let selected=null,timer=null,mobileView='map',logMode='summary',currentZ=0,started=false;
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const st=()=>E.getState(),zOf=p=>SP.zOf?.(p)??p?.z??0,posText=p=>p?`(${p.x}, ${p.y}, Z ${zOf(p)})`:'無',fmtLoad=v=>Math.round((v||0)*100)/100,isMobile=()=>matchMedia('(max-width:720px)').matches;
   const sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0),NEED_SHORT_ZH={hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',sleepNeed:'睡意',social:'社交'};
@@ -11,6 +11,21 @@
 
   function sortedInspectorDecorators(){
     return [...inspectorDecorators.values()].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  }
+  function sortedStartupExtensions(){
+    return [...startupExtensions.values()].sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
+  }
+  function registerStartupExtension(id,handler,order=0){
+    if(typeof id!=='string'||!id||typeof handler!=='function')throw new Error('invalid UI startup extension');
+    if(startupExtensions.has(id))throw new Error(`duplicate UI startup extension: ${id}`);
+    if(started)throw new Error(`UI startup is already complete; cannot register ${id}`);
+    startupExtensions.set(id,{id,handler,order:Number(order)||0});
+    return handler;
+  }
+  function listStartupExtensions(){return sortedStartupExtensions().map(({id,order})=>({id,order}));}
+  function runStartupExtensions(){
+    const context={state:E.getState(),ui:UI};
+    for(const entry of sortedStartupExtensions())entry.handler(context);
   }
   function currentInspectorSelection(){return selected?{...selected}:null;}
   function runInspectorDecorators(){
@@ -27,6 +42,8 @@
   function listInspectorDecorators(){return sortedInspectorDecorators().map(({id,order})=>({id,order}));}
   UI.registerInspectorDecorator=registerInspectorDecorator;
   UI.listInspectorDecorators=listInspectorDecorators;
+  UI.registerStartupExtension=registerStartupExtension;
+  UI.listStartupExtensions=listStartupExtensions;
   UI.runInspectorDecorators=runInspectorDecorators;
   UI.getInspectorSelection=currentInspectorSelection;
   function runtimeZLevels(){const levels=st().map?.zLevels;return Array.isArray(levels)&&levels.length?[...levels].sort((a,b)=>a-b):[...new Set(Object.values(st().map?.tiles||{}).map(zOf))].sort((a,b)=>a-b);}
@@ -72,8 +89,24 @@
   function step(n=1){for(let i=0;i<n;i++)E.tick();render();}
   function togglePlay(){if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';return;}$('play').textContent='⏸ 暫停';timer=setInterval(()=>step(1),700);}
   function reset(){if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';}selected=null;E.reset(Number($('seedInput').value)||20260911);normalizeCurrentZ();render();}
-  document.addEventListener('click',e=>{const ent=e.target.closest('[data-entity]');if(ent){e.stopPropagation();const raw=ent.dataset.entity,i=raw.indexOf(':');select(raw.slice(0,i),raw.slice(i+1));return;}const tile=e.target.closest('.sim-tile[data-tile]');if(tile){select('tile',tile.dataset.tile);return;}const log=e.target.closest('[data-logmode]');if(log){logMode=log.dataset.logmode;document.querySelectorAll('[data-logmode]').forEach(b=>b.classList.toggle('active',b===log));renderTimeline();}});
-  $('runtimeLayerSelect')?.addEventListener('change',event=>{currentZ=Number(event.target.value);render();});
-  $('play').addEventListener('click',togglePlay);$('step').addEventListener('click',()=>step(1));$('step10').addEventListener('click',()=>step(10));$('reset').addEventListener('click',reset);$('showThoughts').addEventListener('change',renderInspector);document.querySelectorAll('.mobile-nav [data-tab]').forEach(b=>b.addEventListener('click',()=>setMobileView(b.dataset.tab)));
-  render();
+  function bindEvents(){
+    document.addEventListener('click',e=>{const ent=e.target.closest('[data-entity]');if(ent){e.stopPropagation();const raw=ent.dataset.entity,i=raw.indexOf(':');select(raw.slice(0,i),raw.slice(i+1));return;}const tile=e.target.closest('.sim-tile[data-tile]');if(tile){select('tile',tile.dataset.tile);return;}const log=e.target.closest('[data-logmode]');if(log){logMode=log.dataset.logmode;document.querySelectorAll('[data-logmode]').forEach(b=>b.classList.toggle('active',b===log));renderTimeline();}});
+    $('runtimeLayerSelect')?.addEventListener('change',event=>{currentZ=Number(event.target.value);render();});
+    $('play').addEventListener('click',togglePlay);$('step').addEventListener('click',()=>step(1));$('step10').addEventListener('click',()=>step(10));$('reset').addEventListener('click',reset);$('showThoughts').addEventListener('change',renderInspector);document.querySelectorAll('.mobile-nav [data-tab]').forEach(b=>b.addEventListener('click',()=>setMobileView(b.dataset.tab)));
+  }
+  function start(){
+    if(started)return false;
+    if(!E.getState())throw new Error('SimUI.start requires an initialized runtime state.');
+    bindEvents();
+    started=true;
+    try{
+      runStartupExtensions();
+      render();
+      return true;
+    }catch(error){
+      started=false;
+      throw error;
+    }
+  }
+  Object.assign(UI,{start,isStarted:()=>started});
 })();

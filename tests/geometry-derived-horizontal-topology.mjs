@@ -1,12 +1,13 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-for(const file of [
-  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-v111.js',
-  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js'
-])vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
+loadInitialStateProfile([
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js',
+  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage.js'
+]);
 
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld,SP=globalThis.SimSpatial;
 const clone=value=>JSON.parse(JSON.stringify(value));

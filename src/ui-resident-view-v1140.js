@@ -227,18 +227,22 @@
     renderResident(shell,selected.id);applyMode(shell);
   }
   function schedule(){
-    if(scheduled)return;scheduled=true;
+    if(!UI.isStarted?.()||scheduled)return;scheduled=true;
     queueMicrotask(()=>requestAnimationFrame(refreshResidentView));
   }
   function resetResidentView(){currentAgentId=null;mode='resident';residentTab='overview';schedule();}
 
   UI.registerInspectorDecorator('residentView.layer',layerInspector,1000);
-  document.addEventListener('click',event=>{
-    const modeButton=event.target.closest?.('[data-v1140-mode]');
-    if(modeButton){mode=modeButton.dataset.v1140Mode==='debug'?'debug':'resident';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell)applyMode(shell);return;}
-    const tabButton=event.target.closest?.('[data-v1140-tab]');
-    if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
-  });
+  if(!UI.registerStartupExtension)throw new Error('Resident View requires UI startup lifecycle');
+  UI.registerStartupExtension('residentView.controls',()=>{
+    document.addEventListener('click',event=>{
+      const modeButton=event.target.closest?.('[data-v1140-mode]');
+      if(modeButton){mode=modeButton.dataset.v1140Mode==='debug'?'debug':'resident';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell)applyMode(shell);return;}
+      const tabButton=event.target.closest?.('[data-v1140-tab]');
+      if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
+    });
+    schedule();
+  },300);
 
   if(!E.registerRuntimeHook)throw new Error('ui-resident-view-v1140.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','residentView.schedule',schedule,1100);
@@ -250,5 +254,4 @@
   E.residentIntentLabel=intentText;
   E.residentActionText=residentActionText;
   E.residentActionExplanation=playerActionExplanation;
-  schedule();
 })();

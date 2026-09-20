@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
 const CURRENT_VERSION='11.22.0-spatial-z-identity';
@@ -9,14 +10,14 @@ const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js',
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
-  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js','crowding-runtime-v1200.js',
-  'engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
+  'memory-schema-v1130.js','appraisal-schema-v1131.js','affect-schema-v1132.js','social-response-schema-v1132a.js','memory-retention-schema-v1133.js','human-social-response-schema-v1133a.js','memory-deliberation-schema-v1134.js','social-outcome-memory-schema-v1135.js','presentation-schema-v1140.js','relationship-schema-v1150.js','physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage.js','locomotion-schema-v1190.js','locomotion-runtime-v1190.js','crowding-runtime-v1200.js',
+  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js',
   'memory-runtime-v1130.js','appraisal-runtime-v1131.js','appraisal-social-response-v1132a.js','appraisal-human-social-response-v1133a.js','relationship-runtime-v1150.js','affect-runtime-v1132.js','social-response-runtime-v1132a.js','memory-retention-runtime-v1133.js','human-social-response-runtime-v1133a.js','memory-deliberation-runtime-v1134.js','social-outcome-memory-runtime-v1135.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js','state-validator-v1121.js','state-validator-v1122.js','state-validator-v1123.js','state-validator-v1124.js','state-validator-v1130.js','state-validator-v1131.js','state-validator-v1132.js','state-validator-v1132a.js','state-validator-v1133.js','state-validator-v1133a.js','state-validator-v1134.js','state-validator-v1135.js','state-validator-v1150.js','state-validator-v1160.js','state-validator-v1190.js'
 ];
-for(const file of files)vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+loadRuntimeProfile(files);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
 E.reset(11700);
@@ -87,11 +88,11 @@ assert.match(physicalSource,/function requiredClearance\(agent,mode='walk'\)/,'P
 assert.match(physicalSource,/function supportedLocomotionModes\(agent\)/,'Physical runtime must expose supported locomotion modes without choosing one');
 const physicalSchemaSource=fs.readFileSync(new URL('../src/physical-schema-v1160.js',import.meta.url),'utf8');
 assert.doesNotMatch(physicalSchemaSource,/PRESENTATION_SCHEMA_VERSION|currentReleaseVersion|W\.VERSION\s*=|st\.version\s*=/,'Physical schema must keep its generation marker independent from current release ownership');
-const passageSource=fs.readFileSync(new URL('../src/spatial-passage-v1170.js',import.meta.url),'utf8');
+const passageSource=fs.readFileSync(new URL('../src/spatial-passage.js',import.meta.url),'utf8');
 assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial must own the canonical derived PassageProfile query');
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
 assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
-const routeSource=fs.readFileSync(new URL('../src/spatial-v111.js',import.meta.url),'utf8');
+const routeSource=fs.readFileSync(new URL('../src/spatial-traversal.js',import.meta.url),'utf8');
 assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.18\.0-route-semantics-split'/,'Spatial must expose the Route Semantics contract marker');
 assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expose canonical planRoute');
 assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
@@ -153,7 +154,7 @@ assert.match(indexSource,/relationship-runtime-v1150\.js/,'app shell must load R
 assert.match(indexSource,/ui-relationship-v1150\.js/,'app shell must load player/debug Relationship projection');
 assert.match(indexSource,/physical-schema-v1160\.js/,'app shell must load Physical schema');
 assert.match(indexSource,/physical-runtime-v1160\.js/,'app shell must load Physical runtime');
-assert.match(indexSource,/spatial-passage-v1170\.js/,'app shell must load Passage Profile runtime');
+assert.match(indexSource,/spatial-passage\.js/,'app shell must load Passage Profile runtime');
 assert.match(indexSource,/state-validator-v1160\.js/,'app shell must load Physical validator');
 assert.match(indexSource,/ui-physical-v1160\.js/,'app shell must load Physical Debug projection');
 assert.match(indexSource,/locomotion-schema-v1190\.js/,'app shell must load Locomotion schema');

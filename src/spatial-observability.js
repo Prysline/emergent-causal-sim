@@ -1,6 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP?.normalizeNode)return;
-  if(!W.registerInitialStateInitializer)throw new Error('spatial-observability.js requires world.js initial-state pipeline.');
+  const SP=window.SimSpatial;if(!SP?.normalizeNode)return;
   const VERSION='11.11.1-spatial-observability';
   const FLOOR='floor';
 
@@ -61,6 +60,5 @@
     };
   }
   function formatNode(st,p){const o=nodeObservation(st,p);if(!o)return'無';const z=SP.zOf?.(o.position)??o.position.z??0;return `${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y}${z!==0?`, z=${z}`:''})`;}
-  W.registerInitialStateInitializer('spatialObservability.schema',(st)=>{},20);
   Object.assign(SP,{OBSERVABILITY_VERSION:VERSION,roomLabel,surfaceLabel,nodeObservation,agentObservation,objectObservation,furnitureObservation,formatNode});
 })();

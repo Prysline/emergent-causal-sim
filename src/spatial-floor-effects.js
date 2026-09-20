@@ -1,8 +1,6 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP?.normalizeNode)return;
-  if(!W.registerInitialStateInitializer)throw new Error('spatial-v1113.js requires world.js initial-state pipeline.');
+  const SP=window.SimSpatial;if(!SP?.normalizeNode)return;
   const VERSION='11.11.3-node-aware-floor-effects',FLOOR='floor';
-  const baseInit=SP.init;
 
   function node(st,p){return p?SP.normalizeNode(st,p,p.surfaceId||FLOOR):null;}
   function isFloorNode(st,p){return node(st,p)?.surfaceId===FLOOR;}
@@ -21,8 +19,6 @@
     const wet=n.surfaceId===FLOOR?SP.tileLiquidAmount(t):0,crowd=localNodeCrowd(st,n);
     return Math.max(0,Math.min(100,48+SP.nearbyRestQuality(st,n)*28-wet*1.2-crowd*5-noiseAt(st,n)*.35));
   }
-  W.registerInitialStateInitializer('spatialFloorEffects.schema',(st)=>{},40);
-  SP.init=(st)=>baseInit(st);
   SP.floorSlipRiskAt=floorSlipRiskAt;
   SP.noiseAt=noiseAt;
   SP.comfortAt=comfortAt;

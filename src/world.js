@@ -20,25 +20,55 @@
   };
   const DATA_ZH={seed:'隨機種子',exertion:'活動量',fatigueCost:'疲勞成本',recovery:'疲勞恢復',recoveryRate:'恢復倍率',restEfficiency:'休息效率',sleepEfficiency:'睡眠效率',sleepNeed:'睡眠需求',sleepNeedRecovery:'睡眠需求恢復',circadianPattern:'日夜節律',circadianBias:'時段睡眠偏向',sleepPropensity:'睡眠傾向',wakeReason:'醒來原因',wakeChance:'互動喚醒機率',wakeRoll:'互動喚醒擲骰',stimulusIntensity:'刺激強度',stimulusKind:'刺激類型',action:'行動',amount:'數量',status:'狀態',value:'數值',successChance:'成功率',roll:'擲骰結果',reason:'原因',intoxication:'醉酒程度',coordination:'動作協調',transfer:'資源轉移',difficulty:'動作基準',environmentRisk:'環境風險',failRisk:'失敗風險',resource:'資源',from:'來源',to:'去向',container:'容器',carrier:'物流容器',source:'補給來源',position:'位置',target:'目標',noise:'噪音',phase:'階段',room:'房間',load:'負重',entities:'關聯實體'};
 
-  const initialStateInitializers=[];
-  let initialStateRegistrationSeq=0;
+  const INITIAL_STATE_PHASES=Object.freeze(['schema','finalize']);
+  const initialStateInitializers=new Map(INITIAL_STATE_PHASES.map(phase=>[phase,[]]));
+  let initialStateRegistrationSeq=0,finalizedInitialStateManifest=null;
 
-  function registerInitialStateInitializer(id,handler,order=0){
+  function phaseEntries(phase){
+    const entries=initialStateInitializers.get(phase);
+    if(!entries)throw new Error(`Unknown initial-state phase: ${phase}`);
+    return entries;
+  }
+  function registerInitialStateInitializer(id,handler,order=0,phase='schema'){
+    if(finalizedInitialStateManifest)throw new Error(`Initial-state registry is finalized; cannot register ${id}.`);
     if(!id||typeof id!=='string')throw new Error('Initial-state initializer id must be a non-empty string');
     if(typeof handler!=='function')throw new Error(`Initial-state initializer ${id} must be a function`);
-    if(initialStateInitializers.some(entry=>entry.id===id))throw new Error(`Duplicate initial-state initializer: ${id}`);
-    initialStateInitializers.push({id,handler,order:Number.isFinite(order)?order:0,seq:initialStateRegistrationSeq++});
-    initialStateInitializers.sort((a,b)=>a.order-b.order||a.seq-b.seq||a.id.localeCompare(b.id));
+    if(INITIAL_STATE_PHASES.some(name=>phaseEntries(name).some(entry=>entry.id===id)))throw new Error(`Duplicate initial-state initializer: ${id}`);
+    const entries=phaseEntries(phase);
+    entries.push({id,handler,order:Number.isFinite(order)?order:0,seq:initialStateRegistrationSeq++});
+    entries.sort((a,b)=>a.order-b.order||a.seq-b.seq||a.id.localeCompare(b.id));
     return handler;
   }
-
-  function runInitialStateInitializers(st,ctx={}){
-    for(const entry of initialStateInitializers)entry.handler(st,ctx);
-    return st;
+  function registerInitialStateFinalizer(id,handler,order=0){
+    return registerInitialStateInitializer(id,handler,order,'finalize');
   }
-
-  function listInitialStateInitializers(){
-    return initialStateInitializers.map(({id,order})=>({id,order}));
+  function listInitialStateInitializers(phase='schema'){
+    return phaseEntries(phase).map(({id,order})=>({id,order}));
+  }
+  function currentInitialStateManifest(){
+    return Object.fromEntries(INITIAL_STATE_PHASES.map(phase=>[phase,listInitialStateInitializers(phase)]));
+  }
+  function assertInitialStateManifest(expected){
+    if(!expected||typeof expected!=='object')throw new Error('Expected initial-state manifest must be an object.');
+    for(const phase of INITIAL_STATE_PHASES){
+      const wanted=expected[phase];
+      if(!Array.isArray(wanted))throw new Error(`Expected initial-state manifest must define phase ${phase}.`);
+      const actual=listInitialStateInitializers(phase);
+      if(JSON.stringify(actual)!==JSON.stringify(wanted))throw new Error(`Initial-state manifest mismatch for ${phase}; expected=${JSON.stringify(wanted)}, actual=${JSON.stringify(actual)}.`);
+    }
+    return currentInitialStateManifest();
+  }
+  function finalizeInitialStateRegistry(expected){
+    if(finalizedInitialStateManifest)throw new Error('Initial-state registry is already finalized.');
+    assertInitialStateManifest(expected);
+    finalizedInitialStateManifest=Object.freeze(Object.fromEntries(INITIAL_STATE_PHASES.map(phase=>[phase,Object.freeze(expected[phase].map(entry=>Object.freeze({...entry}))) ])));
+    return currentInitialStateManifest();
+  }
+  function runInitialStateInitializers(st,ctx={}){
+    for(const phase of INITIAL_STATE_PHASES){
+      for(const entry of phaseEntries(phase))entry.handler(st,{...ctx,phase});
+    }
+    return st;
   }
 
   function createInitialStateFromAuthoring(authoring,seed=20260911){
@@ -56,7 +86,9 @@
 
   window.SimWorld={
     WORLD_SCHEMA_VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring,
-    INITIAL_STATE_PIPELINE_VERSION:'initial-state-pipeline-1',
-    registerInitialStateInitializer,runInitialStateInitializers,listInitialStateInitializers
+    INITIAL_STATE_PIPELINE_VERSION:'initial-state-pipeline-2',INITIAL_STATE_PHASES,
+    registerInitialStateInitializer,registerInitialStateFinalizer,runInitialStateInitializers,listInitialStateInitializers,
+    currentInitialStateManifest,assertInitialStateManifest,finalizeInitialStateRegistry,
+    isInitialStateRegistryFinalized:()=>!!finalizedInitialStateManifest
   };
 })();

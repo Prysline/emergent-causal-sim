@@ -1,13 +1,14 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-for(const file of [
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js',
-  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js','engine.js',
+loadRuntimeProfile([
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js',
+  'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage.js','engine.js',
   'state-validator.js','state-validator-v111.js','state-validator-v1160.js'
-])vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
+]);
 
 const APP_VERSION='11.22.0-spatial-z-identity';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
