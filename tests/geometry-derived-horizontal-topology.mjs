@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
 for(const file of [
-  'world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js',
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-v111.js',
   'physical-schema-v1160.js','physical-runtime-v1160.js','spatial-passage-v1170.js'
 ])vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 
@@ -17,7 +17,6 @@ const compile=authoring=>{
 };
 
 assert.equal(A.VERSION,'world-authoring-v2');
-assert.equal(A.LEGACY_VERSION,'world-authoring-v1');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v2');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable.spatial.under.clearance,.72);
 
@@ -25,13 +24,15 @@ assert.equal(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable.spatial.under.clear
   const legacy=clone(A.DEFAULT_WORLD_AUTHORING);
   legacy.authoringSchema='world-authoring-v1';
   delete legacy.furniture.diningTable.spatial;
-  const migrated=A.migrateAuthoring(legacy);
-  assert.equal(migrated.authoringSchema,'world-authoring-v2');
-  assert.deepEqual(migrated.furniture.diningTable.spatial.under,{clearance:.72,cover:'overhead'});
-  assert.equal(A.validateAuthoring(migrated).ok,true);
-  assert.equal(legacy.furniture.diningTable.spatial,undefined,'migration must not mutate imported v1 documents');
-  const parsed=A.parseAuthoringJSON(JSON.stringify(legacy));
-  assert.equal(parsed.authoringSchema,'world-authoring-v2','JSON import must explicitly migrate v1 to v2');
+  assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose legacy migration machinery');
+  const report=A.validateAuthoring(legacy);
+  assert.equal(report.ok,false);
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_schema_unsupported'));
+  assert.throws(
+    ()=>A.parseAuthoringJSON(JSON.stringify(legacy)),
+    error=>error?.code==='world_authoring_schema_unsupported'&&/world-authoring-v1/.test(error.message),
+    'JSON import must reject legacy authoringSchema instead of migrating it'
+  );
 }
 
 {
@@ -79,15 +80,6 @@ assert.equal(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable.spatial.under.clear
   const from=SP.normalizeNode(st,{x:4,y:2},'floor'),under=SP.normalizeNode(st,{x:5,y:2},'floor');
   const profile=SP.getPassageProfile(st,from,under);
   assert.equal(profile.clearanceHeight,.70,'PassageProfile must consume authored under-clearance geometry');
-}
-
-{
-  const legacy=clone(A.DEFAULT_WORLD_AUTHORING);
-  legacy.authoringSchema='world-authoring-v1';
-  delete legacy.furniture.diningTable.spatial;
-  const migrated=A.migrateAuthoring(legacy),st=compile(migrated);
-  const from=SP.normalizeNode(st,{x:4,y:2},'floor'),under=SP.normalizeNode(st,{x:5,y:2},'floor');
-  assert.equal(SP.getPassageProfile(st,from,under).clearanceHeight,.72,'v1 default migration must preserve dining-table passage parity');
 }
 
 console.log('geometry-derived horizontal topology contract: ok');
