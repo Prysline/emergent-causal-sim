@@ -6,8 +6,8 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
-  'action-schema-v1120.js','intent-schema-v1121.js','social-bid-schema-v1122.js','interruption-schema-v1123.js','deliberation-schema-v1124.js',
-  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','action-runtime-v1120.js','intent-runtime-v1121.js','social-bid-runtime-v1122.js','intent-runtime-v1123.js','intent-runtime-v1124.js'
+  'systems/action/state.js','systems/intent/state.js','social-bid-schema-v1122.js',
+  'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','social-bid-runtime-v1122.js','systems/intent/replanning.js','systems/intent/deliberation.js'
 ]);
 
 const E=globalThis.SimEngine;
@@ -66,7 +66,7 @@ assert.equal(cat.activeIntent.kind,'explore');
 
 // Keep the ownership boundary explicit: soft runtime may gate candidate availability,
 // but it must not carry a duplicate Cat need formula of its own.
-const softSource=fs.readFileSync(new URL('../src/intent-runtime-v1124.js',import.meta.url),'utf8');
+const softSource=fs.readFileSync(new URL('../src/systems/intent/deliberation.js',import.meta.url),'utf8');
 assert.ok(softSource.includes("canonicalBaseUtility(a,'drinkWater')"));
 assert.ok(softSource.includes("canonicalBaseUtility(a,'rest')"));
 assert.ok(!softSource.includes("n.thirst*1.18+10"),'soft runtime must not retain the old shared Human/Cat drink formula');

@@ -73,11 +73,9 @@ for(const path of hookExtensions){
 assert.equal(hookManifestIndex,bootstrapIndex-1,'runtime-hook manifest must be the final registration gate immediately before app bootstrap');
 
 const engineDependentSubsystemSchemas=[
-  'src/action-schema-v1120.js',
-  'src/intent-schema-v1121.js',
+  'src/systems/action/state.js',
+  'src/systems/intent/state.js',
   'src/social-bid-schema-v1122.js',
-  'src/interruption-schema-v1123.js',
-  'src/deliberation-schema-v1124.js',
   'src/memory-schema-v1130.js',
   'src/appraisal-schema-v1131.js',
   'src/affect-schema-v1132.js',
@@ -89,11 +87,11 @@ const engineDependentSubsystemSchemas=[
   'src/relationship-schema-v1150.js'
 ];
 const engineDependentSubsystemRuntimes=[
-  'src/action-runtime-v1120.js',
-  'src/intent-runtime-v1121.js',
+  'src/systems/action/runtime.js',
+  'src/systems/intent/runtime.js',
   'src/social-bid-runtime-v1122.js',
-  'src/intent-runtime-v1123.js',
-  'src/intent-runtime-v1124.js',
+  'src/systems/intent/replanning.js',
+  'src/systems/intent/deliberation.js',
   'src/memory-runtime-v1130.js',
   'src/appraisal-runtime-v1131.js',
   'src/appraisal-social-response-v1132a.js',
@@ -121,12 +119,11 @@ for(const path of engineDependentSubsystemRuntimes){
 const moduleEvaluationStateTouchPattern=/^\s{2}[A-Za-z_$][A-Za-z0-9_$]*\(E\.getState\(\)\);\s*$/m;
 const auditedModuleEvaluationStateTouches=engineDependentSubsystemRuntimes.filter(path=>moduleEvaluationStateTouchPattern.test(readRepoFile(path)));
 assert.deepEqual(auditedModuleEvaluationStateTouches,[
-  'src/intent-runtime-v1121.js',
   'src/social-bid-runtime-v1122.js',
   'src/memory-runtime-v1130.js',
   'src/affect-runtime-v1132.js',
   'src/memory-retention-runtime-v1133.js'
-],'Cleanup-4B must keep the known module-evaluation state-touch inventory explicit until Cleanup-4C reviews each case');
+],'Cleanup-4C must keep the remaining module-evaluation state-touch inventory explicit until each owning slice reviews it');
 
 const srcDir=new URL('../src/',import.meta.url);
 const validatorExtensions=fs.readdirSync(srcDir)
@@ -225,6 +222,20 @@ const retiredEmbodimentAssets=[
 ];
 assert.deepEqual(scripts.filter(path=>retiredEmbodimentAssets.includes(path)),[],'production must not load retired Physical / Locomotion sources');
 for(const path of retiredEmbodimentAssets){
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
+}
+const retiredActionIntentAssets=[
+  'src/action-schema-v1120.js',
+  'src/action-runtime-v1120.js',
+  'src/intent-schema-v1121.js',
+  'src/intent-runtime-v1121.js',
+  'src/interruption-schema-v1123.js',
+  'src/intent-runtime-v1123.js',
+  'src/deliberation-schema-v1124.js',
+  'src/intent-runtime-v1124.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredActionIntentAssets.includes(path)),[],'production must not load retired Action / Intent sources');
+for(const path of retiredActionIntentAssets){
   assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
 }
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
