@@ -47,11 +47,11 @@ assert.ok(manifestIndex<uiIndex,'validator registry must finalize before the bas
 assert.equal(bootstrapIndex,scripts.length-1,'app bootstrap must be the final production script');
 assert.ok(bootstrapIndex>uiIndex,'app bootstrap must start only after UI definitions/extensions load');
 
-const initializerExtensions=scripts.filter(path=>
-  path!=='src/world.js'&&readRepoFile(path).includes('registerInitialStateInitializer(')
+const lifecycleExtensions=scripts.filter(path=>
+  path!=='src/world.js'&&/registerInitialState(?:Initializer|Finalizer)\(/.test(readRepoFile(path))
 );
-assert.ok(initializerExtensions.length>0,'architecture guard must discover initial-state extensions');
-for(const path of initializerExtensions){
+assert.ok(lifecycleExtensions.length>0,'architecture guard must discover initial-state lifecycle extensions');
+for(const path of lifecycleExtensions){
   assert.ok(indexOf(path)>worldIndex,path+' must register after world.js creates the initial-state pipeline');
   assert.ok(indexOf(path)<initialManifestIndex,path+' must register before initial-state manifest finalization');
 }
@@ -151,7 +151,11 @@ const retiredSpatialAssets=[
 ];
 assert.deepEqual(scripts.filter(path=>retiredSpatialAssets.includes(path)),[],'production must not reload retired version-named Spatial assets');
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
-assert.deepEqual(spatialInitWriters,['src/spatial-traversal.js'],'Spatial runtime bootstrap must have exactly one production init owner during Cleanup-3A');
+const spatialInitCallers=scripts.filter(path=>/\bSP\.init\s*\(/.test(readRepoFile(path)));
+assert.deepEqual(spatialInitWriters,[],'production must not expose a Spatial init writer after Cleanup-3B');
+assert.deepEqual(spatialInitCallers,[],'production must not invoke a second Spatial init lifecycle after Cleanup-3B');
+assert.ok(readRepoFile('src/spatial.js').includes('function normalizeNode'),'Spatial core must own persistent node identity normalization');
+assert.doesNotMatch(readRepoFile('src/spatial-traversal.js'),/function normalizeNode|\bSP\.init\b/,'Spatial traversal must not own node normalization or runtime bootstrap');
 
 const state=E.reset(20260911);
 assert.equal(state.version,CURRENT_VERSION,'full production runtime reset must preserve the current release marker');
