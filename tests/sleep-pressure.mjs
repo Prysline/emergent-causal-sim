@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','engine.js','state-validator.js']){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','state-validator.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -37,7 +37,7 @@ function putToSleep(st,a,{slotId='bed:left',sleepTicks=0}={}){
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.10-sleep-social-stimulus');
+  assert.equal(st.version,'11.22.0-spatial-z-identity');
   for(const a of Object.values(st.agents))assert.ok(Number.isFinite(a.needs.sleepNeed),'每個 Agent 都必須有正式 sleepNeed state');
   assert.equal(E.sleepProfile(st.agents.zhen).circadianPattern,'diurnal','人類預設應為日行性');
   assert.equal(E.sleepProfile(st.agents.orange).circadianPattern,'crepuscular','貓預設應為晨昏性');

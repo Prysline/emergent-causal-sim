@@ -34,10 +34,8 @@
 
     return st;
   }
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('contact.schema',(st)=>{
-    st.version=VERSION;
+    
     installSupportedContactDefs(st);
   },30);
   SP.init=(st)=>{const result=baseInit(st);installSupportedContactDefs(st);return result;};

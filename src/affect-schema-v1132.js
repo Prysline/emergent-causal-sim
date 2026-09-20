@@ -5,10 +5,8 @@
   const DECAY=Object.freeze({valence:.90,activation:.82,frustration:.86});
   const EPSILON=.005;
   const createNeutralAffect=(tick=0)=>({valence:0,activation:0,frustration:0,lastUpdatedTick:tick,lastDecayTick:tick,source:null});
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('affect.schema',(st)=>{
-    st.version=VERSION;
+    
     for(const a of Object.values(st.agents||{}))a.affect=createNeutralAffect(st.tick||0);
     return st;
   },800);

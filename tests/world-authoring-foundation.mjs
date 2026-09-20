@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js']){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -29,7 +29,7 @@ for(const f of Object.values(authored.furniture))for(const slot of f.slots||[])a
 
 const st=W.createInitialState(20260911);
 assert.equal(JSON.stringify(authored),authoredBefore,'initializer must not mutate canonical authoring package');
-assert.equal(st.version,'11.10-sleep-social-stimulus');
+assert.equal(st.version,'11.22.0-spatial-z-identity');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);

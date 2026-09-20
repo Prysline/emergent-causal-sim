@@ -7,10 +7,8 @@
     pet:'撫摸互動',
     socialAffection:'親近互動'
   });
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('presentation.schema',(st)=>{
-    st.version=VERSION;
+    
     return st;
   },1400);
   W.PRESENTATION_SCHEMA_VERSION=VERSION;

@@ -11,10 +11,8 @@
     avoidPet:.6,
     socialNoResponse:.25
   });
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('relationship.schema',(st)=>{
-    st.version=VERSION;
+    
     for(const a of Object.values(st.agents||{}))a.relationships={};
     return st;
   },1500);

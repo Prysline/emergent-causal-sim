@@ -2,10 +2,8 @@
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('intent-schema-v1121.js requires world.js initial-state pipeline.');
   const VERSION='11.12.1-active-intent-foundation';
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('intent.schema',(st)=>{
-    st.version=VERSION;
+    
     for(const a of Object.values(st.agents||{}))a.activeIntent=null;
     return st;
   },200);

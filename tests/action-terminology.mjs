@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js','action-schema-v1120.js','engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js']){
+for(const file of ['world-authoring-v1.js','world-initializer.js','world.js','release.js','spatial.js','spatial-v111.js','spatial-observability.js','contact-v1112.js','spatial-v1113.js','spatial-v1114.js','action-schema-v1120.js','engine.js','runtime-hook-pipeline.js','engine-spatial-v1114.js','action-runtime-v1120.js','state-validator.js','state-validator-v111.js','state-validator-v1114.js','state-validator-v1120.js']){
   vm.runInThisContext(fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -12,7 +12,7 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.12.0-action-terminology');
+assert.equal(st.version,'11.22.0-spatial-z-identity');
 assert.equal(E.VERSION,'11.12.0-action-terminology');
 assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
 noIssues('reset');

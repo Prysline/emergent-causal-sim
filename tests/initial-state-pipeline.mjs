@@ -10,7 +10,7 @@ const initializerPaths=productionScripts.filter(path=>
 );
 const initializerFiles=initializerPaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/world-authoring-v1.js','src/world-initializer.js','src/world.js','src/spatial.js']);
+loadScriptsInThisContext(['src/world-authoring-v1.js','src/world-initializer.js','src/world.js','src/release.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(initializerPaths);
@@ -19,6 +19,7 @@ const W=globalThis.SimWorld;
 assert.equal(W.createInitialState,canonicalCreateInitialState,'subsystem extensions must not replace the canonical createInitialState owner');
 assert.equal(W.createInitialStateFromAuthoring,canonicalCreateInitialStateFromAuthoring,'subsystem extensions must not replace the explicit authoring initial-state factory');
 const EXPECTED=[
+  {id:'release.version',order:0},
   {id:'spatial.schema',order:10},
   {id:'spatialObservability.schema',order:20},
   {id:'contact.schema',order:30},

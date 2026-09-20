@@ -22,6 +22,7 @@ for(const relativePath of scripts){
 }
 
 const worldIndex=indexOf('src/world.js');
+const releaseIndex=indexOf('src/release.js');
 const engineIndex=indexOf('src/engine.js');
 const pipelineIndex=indexOf('src/runtime-hook-pipeline.js');
 const validatorIndex=indexOf('src/state-validator.js');
@@ -29,6 +30,7 @@ const manifestIndex=indexOf('src/state-validator-manifest.js');
 const uiIndex=indexOf('src/ui.js');
 
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
+assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(validatorIndex>pipelineIndex,'validator registry must load after runtime feature ownership is available');
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
@@ -65,6 +67,7 @@ for(const path of validatorExtensions){
 loadProductionBefore('src/ui.js');
 
 const A=globalThis.SimWorldAuthoring;
+const R=globalThis.SimRelease;
 const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
 const P=globalThis.SimPhysical;
@@ -74,6 +77,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,CURRENT_VERSION);
@@ -86,6 +90,9 @@ assert.equal(L.VERSION,'11.19.0-locomotion-execution-posture');
 assert.equal(C.VERSION,'11.20.0-dynamic-congestion');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(V.isValidationRegistryFinalized(),true);
+
+const releaseVersionWriters=scripts.filter(path=>/W\.VERSION\s*=|st\.version\s*=/.test(readRepoFile(path)));
+assert.deepEqual(releaseVersionWriters,['src/release.js'],'current runtime release marker must have exactly one production writer');
 
 const state=E.reset(20260911);
 assert.equal(state.version,CURRENT_VERSION,'full production runtime reset must preserve the current release marker');

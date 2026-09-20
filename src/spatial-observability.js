@@ -61,8 +61,6 @@
     };
   }
   function formatNode(st,p){const o=nodeObservation(st,p);if(!o)return'無';const z=SP.zOf?.(o.position)??o.position.z??0;return `${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y}${z!==0?`, z=${z}`:''})`;}
-
-  W.VERSION=VERSION;
-  W.registerInitialStateInitializer('spatialObservability.schema',(st)=>{st.version=VERSION;},20);
+  W.registerInitialStateInitializer('spatialObservability.schema',(st)=>{},20);
   Object.assign(SP,{OBSERVABILITY_VERSION:VERSION,roomLabel,surfaceLabel,nodeObservation,agentObservation,objectObservation,furnitureObservation,formatNode});
 })();

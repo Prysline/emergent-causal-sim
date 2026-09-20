@@ -2,10 +2,8 @@
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('deliberation-schema-v1124.js requires world.js initial-state pipeline.');
   const VERSION='11.12.4-soft-reconsideration';
-
-  W.VERSION=VERSION;
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
-    st.version=VERSION;
+    
     return st;
   },500);
   W.DELIBERATION_SCHEMA_VERSION=VERSION;
