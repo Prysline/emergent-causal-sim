@@ -75,13 +75,11 @@ assert.equal(hookManifestIndex,bootstrapIndex-1,'runtime-hook manifest must be t
 const engineDependentSubsystemSchemas=[
   'src/systems/action/state.js',
   'src/systems/intent/state.js',
-  'src/social-bid-schema-v1122.js',
+  'src/systems/social/state.js',
   'src/memory-schema-v1130.js',
   'src/appraisal-schema-v1131.js',
   'src/affect-schema-v1132.js',
-  'src/social-response-schema-v1132a.js',
   'src/memory-retention-schema-v1133.js',
-  'src/human-social-response-schema-v1133a.js',
   'src/memory-deliberation-schema-v1134.js',
   'src/social-outcome-memory-schema-v1135.js',
   'src/relationship-schema-v1150.js'
@@ -89,7 +87,7 @@ const engineDependentSubsystemSchemas=[
 const engineDependentSubsystemRuntimes=[
   'src/systems/action/runtime.js',
   'src/systems/intent/runtime.js',
-  'src/social-bid-runtime-v1122.js',
+  'src/systems/social/bid.js',
   'src/systems/intent/replanning.js',
   'src/systems/intent/deliberation.js',
   'src/memory-runtime-v1130.js',
@@ -98,9 +96,9 @@ const engineDependentSubsystemRuntimes=[
   'src/appraisal-human-social-response-v1133a.js',
   'src/relationship-runtime-v1150.js',
   'src/affect-runtime-v1132.js',
-  'src/social-response-runtime-v1132a.js',
+  'src/systems/social/animal-response.js',
   'src/memory-retention-runtime-v1133.js',
-  'src/human-social-response-runtime-v1133a.js',
+  'src/systems/social/human-response.js',
   'src/memory-deliberation-runtime-v1134.js',
   'src/social-outcome-memory-runtime-v1135.js'
 ];
@@ -236,6 +234,18 @@ const retiredActionIntentAssets=[
 ];
 assert.deepEqual(scripts.filter(path=>retiredActionIntentAssets.includes(path)),[],'production must not load retired Action / Intent sources');
 for(const path of retiredActionIntentAssets){
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
+}
+const retiredSocialAssets=[
+  'src/social-bid-schema-v1122.js',
+  'src/social-bid-runtime-v1122.js',
+  'src/social-response-schema-v1132a.js',
+  'src/social-response-runtime-v1132a.js',
+  'src/human-social-response-schema-v1133a.js',
+  'src/human-social-response-runtime-v1133a.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredSocialAssets.includes(path)),[],'production must not load retired Social sources');
+for(const path of retiredSocialAssets){
   assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
 }
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
