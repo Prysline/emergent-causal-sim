@@ -12,6 +12,44 @@
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const terrainLabel=value=>({floor:'地板',wall:'牆壁',doorway:'開口／門洞',void:'空白'}[value]||value||'空白');
   const materialDisplay=value=>{const labels={wood:'木材',stone:'石材'};return value?(labels[value]?`${labels[value]}（${value}）`:String(value)):'未設定';};
+  const mutationIssueText=issue=>({
+    cell_material_target_invalid:'材質編輯需要有效的格子座標。',
+    cell_material_cell_missing:'只能編輯已建立格子的材質。',
+    cell_material_value_invalid:'材質識別字必須是文字或空值。',
+    furniture_missing:'找不到指定的家具。',
+    furniture_move_target_invalid:'家具的新位置無效。',
+    object_missing:'找不到指定的物件。',
+    object_move_target_invalid:'物件的新位置無效。',
+    support_choice_invalid:'承載關係選擇無效。',
+    support_choice_required:'此位置有多種承載方式，請明確選擇地面或家具。',
+    furniture_create_target_invalid:'新家具的位置無效。',
+    furniture_duplicate_target_invalid:'家具副本的位置無效。',
+    resident_missing:'找不到指定的居民。',
+    resident_move_target_invalid:'居民的新位置無效。',
+    resident_free_posture_unsupported:'此居民無法以所選姿勢自由放置。',
+    resident_posture_invalid:'居民姿勢無效。',
+    resident_slot_missing_or_ambiguous:'找不到唯一的目標家具位置。',
+    resident_slot_kind_mismatch:'此家具位置不適用於這類居民。',
+    resident_slot_posture_unsupported:'此居民無法在該家具位置使用所選姿勢。'
+  }[issue?.code]||issue?.message||'操作被拒絕。');
+  const authoringIssueText=issue=>{
+    const code=issue?.code||'';
+    if(code==='authoring_schema_unsupported')return '建構資料版本不受目前編輯器支援。';
+    if(code==='authoring_furniture_catalog_unsupported')return '家具目錄版本不受目前編輯器支援。';
+    if(code.includes('width')||code.includes('height'))return '地圖尺寸必須是正整數。';
+    if(code.includes('layer'))return 'Z 層資料無效、重複或缺失。';
+    if(code.includes('cell'))return '格子資料無效、超出地圖範圍或包含不應保存的推導欄位。';
+    if(code.includes('position'))return '位置資料無效、超出地圖範圍或指向不存在的 Z 層。';
+    if(code.includes('furniture'))return '家具資料、定義參照或實例欄位不符合目前建構資料契約。';
+    if(code.includes('slot'))return '家具位置識別或參照不唯一／不存在。';
+    if(code.includes('container'))return '容器資料或識別不符合目前建構資料契約。';
+    if(code.includes('source'))return '資源源頭資料或識別不符合目前建構資料契約。';
+    if(code.includes('support'))return '物件承載參照不存在或位置不一致。';
+    if(code.includes('resident'))return '居民資料或識別不符合目前建構資料契約。';
+    if(code.includes('anchor')||code.includes('posture'))return '居民的家具位置綁定或姿勢參照無效。';
+    return '建構資料驗證失敗；請依錯誤代碼與路徑檢查。';
+  };
+  const previewIssueText=issue=>`目前模擬器無法接受這份建構資料（${issue?.code||'runtime_authoring_incompatible'}）。`;
   let authored=A.canonicalizeAuthoring(A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING));
   let baselineFingerprint=A.semanticFingerprint(authored);
   let currentZ=authored.map.layers.some(layer=>layer.z===0)?0:authored.map.layers[0].z;
@@ -191,7 +229,7 @@
     if(!result?.ok){
       operationIssues=cloneUi(result?.issues||[]);
       if(!keepPendingOnFailure)pendingOperation=null;
-      setMessage(result?.issues?.[0]?.message||'操作被拒絕。');
+      setMessage(mutationIssueText(result?.issues?.[0]));
       render();
       return false;
     }
@@ -427,7 +465,7 @@
     if(!layer)return;
     if(layers().length<=1){setMessage('至少必須保留一個 Z-level。');render();return;}
     const cellCount=Object.keys(layer.cells||{}).length,refs=layerReferenceCount(currentZ);
-    if(cellCount||refs){setMessage(`Z ${currentZ} 仍有 ${cellCount} 個 cells、${refs} 個 position references；不自動刪除或搬移。`);render();return;}
+    if(cellCount||refs){setMessage(`Z ${currentZ} 仍有 ${cellCount} 個已建構格、${refs} 個位置參照；不會自動刪除或搬移。`);render();return;}
     const oldZ=currentZ;
     authored.map.layers=authored.map.layers.filter(item=>item!==layer);
     const list=layers();
@@ -643,7 +681,7 @@
     const selectedCell=selection?.kind==='cell'?cellAt(layerAt(selection.z),selection.x,selection.y):null;
     const issueMarkup=operationIssues.length?`<div class="operation-issues">${operationIssues.map(item=>{
       const blockers=Array.isArray(item.blockers)?item.blockers:[];
-      return `<div class="operation-issue"><b>${esc(item.code||'mutation_rejected')}</b><span>${esc(item.message||'操作被拒絕。')}</span>${blockers.map(blocker=>`<small>${esc(blocker.ownerType)} · ${esc(blocker.ownerName||blocker.ownerId)} (<code>${esc(blocker.ownerId)}</code>) → ${esc(blocker.referenceKind)} = <code>${esc(blocker.referenceValue)}</code></small>`).join('')}</div>`;
+      return `<div class="operation-issue"><b>${esc(item.code||'mutation_rejected')}</b><span>${esc(mutationIssueText(item))}</span>${blockers.map(blocker=>`<small>${esc(blocker.ownerType)} · ${esc(blocker.ownerName||blocker.ownerId)} (<code>${esc(blocker.ownerId)}</code>) → ${esc(blocker.referenceKind)} = <code>${esc(blocker.referenceValue)}</code></small>`).join('')}</div>`;
     }).join('')}</div>`:'';
     let pendingMarkup='';
     if(pendingOperation){
@@ -672,7 +710,7 @@
     if(selection?.kind==='cell'){
       if(selectedCell){
         const currentMaterial=selectedCell.material||'';
-        cellMarkup=`<div class="cell-editor"><div class="cell-editor-head"><b>格子材質</b><small>正式欄位 <code>material</code></small></div><label class="operation-field">材質識別字<input data-cell-material-input list="cellMaterialSuggestions" value="${esc(currentMaterial)}" placeholder="例如 wood"></label><datalist id="cellMaterialSuggestions"><option value="wood" label="木材"></option><option value="stone" label="石材"></option></datalist><div class="action-row"><button type="button" data-editor-action="apply-cell-material">套用材質</button><button type="button" class="ghost-action" data-editor-action="clear-cell-material" ${currentMaterial?'':'disabled'}>清除材質</button></div><small>常用值只是輸入提示，不是封閉 enum。清除只移除 <code>material</code>，不會刪除格子或改變 <code>terrain</code>。</small></div>`;
+        cellMarkup=`<div class="cell-editor"><div class="cell-editor-head"><b>格子材質</b><small>正式欄位 <code>material</code></small></div><label class="operation-field">材質識別字<input data-cell-material-input list="cellMaterialSuggestions" value="${esc(currentMaterial)}" placeholder="例如 wood"></label><datalist id="cellMaterialSuggestions"><option value="wood" label="木材"></option><option value="stone" label="石材"></option></datalist><div class="action-row"><button type="button" data-editor-action="apply-cell-material">套用材質</button><button type="button" class="ghost-action" data-editor-action="clear-cell-material" ${currentMaterial?'':'disabled'}>清除材質</button></div><small>常用值只是輸入提示，不是封閉選項清單。清除只移除 <code>material</code>，不會刪除格子或改變 <code>terrain</code>。</small></div>`;
       }else{
         cellMarkup='<div class="cell-editor disabled"><b>格子材質</b><small>此座標目前是空白，尚未建立正式 Cell。請先使用地板、牆壁或開口／門洞工具建立格子。</small></div>';
       }
@@ -701,8 +739,8 @@
     $('validationStatus').className=`status-pill ${validation.ok&&!currentPreviewIssues.length?'clean':'invalid'}`;
     $('exportWorld').disabled=!validation.ok;
     $('testWorld').disabled=!validation.ok;
-    const schemaMarkup=validation.ok?'<div class="validation-ok">✓ 正式建構資料驗證通過</div>':validation.errors.slice(0,12).map(issue=>`<div class="validation-item"><b>${esc(issue.code)}</b><br><code>${esc(issue.path)}</code><br>${esc(issue.message)}</div>`).join('');
-    const previewMarkup=currentPreviewIssues.length?`<div class="validation-item"><b>編輯器預覽相容性</b><br>${currentPreviewIssues.slice(0,12).map(issue=>`<code>${esc(issue.code||'runtime_authoring_incompatible')}</code> ${esc(issue.message||'執行期相容性檢查失敗。')}`).join('<br>')}</div>`:'';
+    const schemaMarkup=validation.ok?'<div class="validation-ok">✓ 正式建構資料驗證通過</div>':validation.errors.slice(0,12).map(issue=>`<div class="validation-item"><b>${esc(issue.code)}</b><br><code>${esc(issue.path)}</code><br>${esc(authoringIssueText(issue))}</div>`).join('');
+    const previewMarkup=currentPreviewIssues.length?`<div class="validation-item"><b>編輯器預覽相容性</b><br>${currentPreviewIssues.slice(0,12).map(issue=>`<code>${esc(issue.code||'runtime_authoring_incompatible')}</code> ${esc(previewIssueText(issue))}`).join('<br>')}</div>`:'';
     $('validationList').innerHTML=schemaMarkup+previewMarkup;
   }
 
