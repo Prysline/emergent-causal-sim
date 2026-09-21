@@ -18,8 +18,13 @@ E.reset(20260911);
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
-  assert.ok(Object.values(st.map.tiles).some(t=>t.terrain==='wall'));
-  assert.equal(st.map.tiles['0,6'].terrain,'doorway');
+  assert.equal(st.map.cellSizeMeters,1);
+  assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='floor').length,60);
+  assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='void').length,36);
+  assert.equal(st.map.boundaries['0|v:1,6'].kind,'opening');
+  assert.equal(st.doors.frontDoor.state,'open');
+  assert.equal(st.exits.frontExit.kind,'offMap');
+  assert.deepEqual(st.exits.frontExit.access,{x:1,y:6});
   assert.equal(st.containers.waterBucket.portable,true);assert.equal(st.containers.waterBucket.interactions.pickup.mode,'occupy');assert.equal(st.containers.waterBucket.interactions.drinkFrom.mode,'reach');
   assert.ok(st.containers.mealTray.restock&&st.containers.waterBucket.restock,'補充需求應存在 World policy，而不是寫死在 Engine');
   assert.equal(st.containers.mealTray.restock.strategy,'logisticsContainer','固體資源搬運應走真正物流容器');
@@ -85,8 +90,9 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,door=SP.allSlots(st).find(s=>s.canExit),dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination')),basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;basket.contents={};basket.position={x:3,y:2};const before=dest.contents.food;let heldBeforeExit=false,returnedLoaded=false;
-  a.action={kind:'externalSupply',phase:'toCarrier',exitSlot:door.id,destinationId:dest.id,resource:'food',carrierId:basket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
+  const st=E.getState(),a=st.agents.zhen,exit=SP.allExits(st).find(x=>SP.exitStructurallyAvailable(st,x)),dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination')),basket=st.containers.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;basket.contents={};basket.position={x:3,y:2};const before=dest.contents.food;let heldBeforeExit=false,returnedLoaded=false;
+  assert.ok(exit&&exit.id==='frontExit','default world must expose the formal off-map Exit');
+  a.action={kind:'externalSupply',phase:'toCarrier',exitId:exit.id,destinationId:dest.id,resource:'food',carrierId:basket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
   for(let i=0;i<55&&a.action;i++){E.tick();if(a.offMap)heldBeforeExit ||= a.held===basket.id;if(st.events.some(e=>e.data?.action==='supplyReturn'&&e.data?.carrier===basket.id&&(basket.contents.food||0)>0))returnedLoaded=true;noIssues(`external supply ${i}`);}
   assert.equal(a.action,null);assert.equal(heldBeforeExit,true,'角色必須帶著籃子才可離家補給');assert.equal(returnedLoaded,true,'外出取得的資源必須先存在籃子裡再入庫');assert.equal(E.supplyStatus().workerId,null);assert.ok(dest.contents.food>before);assert.equal(basket.contents.food||0,0);assert.equal(a.held,null);assert.ok(SP.same(basket.position,a.position),'入庫後空籃應留在食物櫃互動位置');assert.equal(st.supply.workerId,undefined);assert.ok(st.events.some(e=>e.data?.action==='supplyExit'&&e.data?.carrier===basket.id));assert.ok(st.events.some(e=>e.data?.action==='supplyDeposit'&&e.data?.carrier===basket.id));noIssues('physical external supply');
 }
@@ -103,7 +109,9 @@ E.reset(20260911);
 
 {
   const engine=fs.readFileSync(new URL('../src/engine.js',import.meta.url),'utf8');
-  for(const id of ['waterBucket','mealTray','foodPantry','alcoholBottle','frontDoor:inside',"targetAgent:'orange'"])assert.ok(!engine.includes(id),`Engine 不得綁定具體世界 entity ID：${id}`);
+  for(const id of ['waterBucket','mealTray','foodPantry','alcoholBottle','frontDoor','frontExit',"targetAgent:'orange'"])assert.ok(!engine.includes(id),`Engine 不得綁定具體世界 entity ID：${id}`);
+  assert.ok(!engine.includes('exitSlot'),'Engine external supply 不得保留 Furniture slot 出口欄位');
+  assert.ok(!engine.includes('.canExit'),'Engine external supply 不得回頭讀 Furniture canExit compatibility');
   assert.ok(!engine.includes('supply.workerId'),'Engine 不得維護第二份 supply owner truth');
   assert.ok(!engine.includes('planLabel:'),'不得保留舊 planLabel compatibility alias');
   assert.ok(!engine.includes('.carrying'),'Engine 不得重新引入 Agent.carrying 物流模型');
