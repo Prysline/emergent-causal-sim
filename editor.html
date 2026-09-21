@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>World Authoring Editor｜Emergent Causal Sim</title>
+  <title>世界建構編輯器｜Emergent Causal Sim</title>
   <link rel="stylesheet" href="styles/editor.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <header class="editor-appbar">
     <div>
       <div class="eyebrow">WORLD AUTHORING · world-authoring-v3</div>
-      <h1>地圖編輯器 <span>Editor → Simulator Playtest Bridge</span></h1>
+      <h1>地圖編輯器 <span>編輯器 → 模擬器試玩橋接</span></h1>
     </div>
     <div class="header-actions">
       <a class="button ghost" href="index.html">返回模擬器</a>
@@ -25,49 +25,49 @@
 
   <div class="editor-statusbar">
     <span id="dirtyStatus" class="status-pill clean">未修改</span>
-    <span id="validationStatus" class="status-pill">Schema 檢查中</span>
-    <span class="status-note">Editor 只修改 canonical authoring data；不啟動 runtime simulation。</span>
+    <span id="validationStatus" class="status-pill">建構資料檢查中</span>
+    <span class="status-note">編輯器只修改正式建構資料；不會啟動模擬執行期。</span>
   </div>
 
   <main class="editor-workspace">
     <aside class="editor-panel tools-panel">
       <section>
-        <h2>Z-level</h2>
+        <h2>Z 層</h2>
         <div class="layer-nav">
-          <button id="layerPrev" type="button" title="上一個 Z-level">←</button>
-          <select id="layerSelect" aria-label="目前 Z-level"></select>
-          <button id="layerNext" type="button" title="下一個 Z-level">→</button>
+          <button id="layerPrev" type="button" title="上一個 Z 層">←</button>
+          <select id="layerSelect" aria-label="目前 Z 層"></select>
+          <button id="layerNext" type="button" title="下一個 Z 層">→</button>
         </div>
         <div class="layer-create">
-          <input id="newLayerZ" type="number" step="1" value="1" aria-label="新 Z-level">
+          <input id="newLayerZ" type="number" step="1" value="1" aria-label="新 Z 層">
           <button id="addLayer" type="button">新增層</button>
         </div>
         <button id="deleteLayer" class="danger-text" type="button">刪除目前層（必須全空）</button>
-        <p class="hint">切換 Z 只改 Editor 畫面，不改 world truth。新層以 sparse cells 開始；刪除層前必須沒有 authored cells 或 position references。</p>
+        <p class="hint">切換 Z 只改變編輯器畫面，不改變世界資料。新層從空白格開始；刪除前必須沒有已建構格或正式位置參照。</p>
       </section>
 
       <section>
-        <h2>Cell 工具</h2>
+        <h2>格子工具</h2>
         <div class="tool-grid" role="group" aria-label="地圖工具">
           <button class="tool active" data-tool="select" type="button"><span>↖</span>選取／瀏覽</button>
-          <button class="tool" data-tool="floor" type="button"><span>▫️</span>Floor</button>
-          <button class="tool" data-tool="wall" type="button"><span>🧱</span>Wall</button>
+          <button class="tool" data-tool="floor" type="button"><span>▫️</span>地板</button>
+          <button class="tool" data-tool="wall" type="button"><span>🧱</span>牆壁</button>
           <button class="tool" data-tool="opening" type="button"><span>🚪</span>開口／門洞</button>
-          <button class="tool" data-tool="erase" type="button"><span>⌫</span>Erase</button>
+          <button class="tool" data-tool="erase" type="button"><span>⌫</span>清除</button>
           <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>家具放置</button>
         </div>
-        <p class="hint"><strong>開口／門洞</strong> author 為 <code>terrain: "doorway"</code>，表示牆體中的可通行 opening，本身不是「世界出口」也不是 Door 實體。是否可離開世界由 entity slot 的 <code>canExit</code> 決定；實際 Door 是否阻擋則由 Door entity/runtime state 決定。</p>
+        <p class="hint"><strong>開口／門洞</strong>會寫入 <code>terrain: "doorway"</code>，表示牆體中的可通行結構開口；它不是「世界出口」，也不是可開關的門實體。現行 <code>canExit</code> 仍只是既有相容性橋接，正式門／出口模型留待後續獨立處理。</p>
       </section>
 
       <section>
-        <h2>Furniture Catalog</h2>
-        <p class="hint scene-hint">從 Definition 建立新的場景家具；選擇後點擊地圖位置，會產生新的 Furniture Instance。</p>
+        <h2>家具目錄</h2>
+        <p class="hint scene-hint">從家具定義建立新的場景家具；選擇後點擊地圖位置，會產生新的家具實例。</p>
         <div id="furnitureCatalog" class="scene-list" aria-label="家具定義目錄"></div>
       </section>
 
       <section>
-        <h2>Scene</h2>
-        <p class="hint scene-hint">選取實體會定位到其 authored position。選到 Furniture 時也會更新 Furniture placement target，但不會自動切換目前工具。</p>
+        <h2>場景</h2>
+        <p class="hint scene-hint">選取實體會定位到其正式位置。選取家具時也會更新家具放置目標，但不會自動切換目前工具。</p>
         <div id="sceneList" class="scene-list" aria-label="場景實體列表"></div>
       </section>
     </aside>
@@ -79,38 +79,38 @@
           <small id="layerSummary">—</small>
         </div>
         <div class="legend">
-          <span><i class="swatch floor"></i>floor</span>
-          <span><i class="swatch wall"></i>wall</span>
+          <span><i class="swatch floor"></i>地板</span>
+          <span><i class="swatch wall"></i>牆壁</span>
           <span><i class="swatch opening"></i>開口／門洞</span>
-          <span><i class="swatch void"></i>void</span>
-          <span><i class="marker-key resident">👤</i>resident</span>
-          <span><i class="marker-key object">◈</i>object</span>
-          <span><i class="marker-key furniture">▰</i>furniture</span>
+          <span><i class="swatch void"></i>空白</span>
+          <span><i class="marker-key resident">👤</i>居民</span>
+          <span><i class="marker-key object">◈</i>物件</span>
+          <span><i class="marker-key furniture">▰</i>家具</span>
         </div>
       </div>
       <div class="map-scroll">
-        <div id="editorMap" class="editor-map" aria-label="Authoring map grid"></div>
+        <div id="editorMap" class="editor-map" aria-label="建構資料地圖格線"></div>
       </div>
     </section>
 
     <aside class="editor-panel inspector-panel">
       <section>
-        <h2>Authoring document</h2>
-        <div id="documentSummary" class="summary-grid"></div>
-      </section>
-      <section>
-        <h2>Selection</h2>
+        <h2>選取內容</h2>
         <div id="selectionSummary" class="selection-card">尚未選取。</div>
         <div id="selectionActions" class="selection-actions"></div>
       </section>
       <section>
-        <h2>Validation</h2>
+        <h2>建構資料摘要</h2>
+        <div id="documentSummary" class="summary-grid"></div>
+      </section>
+      <section>
+        <h2>驗證</h2>
         <div id="validationList" class="validation-list"></div>
       </section>
-      <section class="boundary-note">
-        <h2>Slice E runtime boundary</h2>
-        <p>「在模擬器中測試」仍先用 current authoring validation 與 <code>SimWorldInitializer</code> runtime compatibility preflight 檢查同一份 canonical document，再以同 origin <code>sessionStorage</code> + explicit <code>?preview=editor</code> 啟動模擬器。Slice E 起 multi-layer / non-zero Z authoring可進入 runtime；Simulator以 z-aware Spatial identity與 layer selector 分層呈現，同 XY 不同 Z 不共用 occupancy / contact / crowding identity。此 slice仍<strong>不</strong>新增 stair / ramp / 任意 vertical edge；沒有 concrete vertical structure時跨 Z route必須 unreachable。一般直接開 <code>index.html</code> 不讀 preview snapshot，Preview Reset仍重建同一份 canonical authoring。</p>
-      </section>
+      <details class="boundary-note">
+        <summary>進階：模擬器預覽與執行期邊界</summary>
+        <p>「在模擬器中測試」會先以目前建構資料驗證與 <code>SimWorldInitializer</code> 相容性預檢查同一份正式文件，再透過同來源的 <code>sessionStorage</code> 與明確的 <code>?preview=editor</code> 啟動模擬器。多 Z 層資料可進入執行期，但目前仍沒有樓梯、斜坡或其他跨層結構，因此沒有具體垂直結構時跨 Z 路徑必須不可達。一般直接開啟 <code>index.html</code> 不會讀取編輯器預覽快照。</p>
+      </details>
     </aside>
   </main>
 </div>
