@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.23.0-world-boundary-door-exit';
+const APP_VERSION='11.23.1-editor-source-port-observability';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
