@@ -2,8 +2,10 @@
   const E=window.SimEngine;if(!E)return;
   const coreTick=E.tick,coreReset=E.reset;
   const PHASES=Object.freeze(['beforeTick','afterTick','afterReset','episodicMemoryCreated']);
+  const OBSERVER_PHASES=Object.freeze(['afterTick','afterReset']);
   const hooks=new Map(PHASES.map(phase=>[phase,[]]));
-  let registrationSeq=0,finalizedRuntimeHookManifest=null;
+  const observers=new Map(OBSERVER_PHASES.map(phase=>[phase,[]]));
+  let registrationSeq=0,observerRegistrationSeq=0,finalizedRuntimeHookManifest=null;
 
   function registerRuntimeHook(phase,id,handler,order=0){
     if(!hooks.has(phase))throw new Error(`Unknown runtime hook phase: ${phase}`);
@@ -43,6 +45,27 @@
     finalizedRuntimeHookManifest=Object.freeze(Object.fromEntries(PHASES.map(phase=>[phase,Object.freeze(expected[phase].map(entry=>Object.freeze({...entry}))) ])));
     return currentRuntimeHookManifest();
   }
+  function registerRuntimeObserver(phase,id,handler,order=0){
+    if(!observers.has(phase))throw new Error(`Unknown runtime observer phase: ${phase}`);
+    if(!id||typeof id!=='string')throw new Error('Runtime observer id must be a non-empty string');
+    if(typeof handler!=='function')throw new Error(`Runtime observer ${id} must be a function`);
+    const list=observers.get(phase);
+    if(list.some(entry=>entry.id===id))throw new Error(`Duplicate runtime observer: ${phase}:${id}`);
+    list.push({id,handler,order:Number.isFinite(order)?order:0,seq:observerRegistrationSeq++});
+    list.sort((a,b)=>a.order-b.order||a.seq-b.seq||a.id.localeCompare(b.id));
+    return handler;
+  }
+  function runRuntimeObservers(phase,ctx){
+    for(const entry of observers.get(phase)||[])entry.handler(ctx);
+    return ctx;
+  }
+  function listRuntimeObservers(phase){
+    const list=observers.get(phase)||[];
+    return list.map(({id,order})=>({id,order}));
+  }
+  function currentRuntimeObserverManifest(){
+    return Object.fromEntries(OBSERVER_PHASES.map(phase=>[phase,listRuntimeObservers(phase)]));
+  }
 
   const pipelineTick=(...args)=>{
     const ctx={args,locals:Object.create(null),state:E.getState(),beforeCore:null,afterCore:null,result:null};
@@ -52,11 +75,13 @@
     ctx.afterCore=E.getState();
     ctx.state=ctx.afterCore;
     runRuntimeHooks('afterTick',ctx);
+    runRuntimeObservers('afterTick',ctx);
     return ctx.result;
   };
   const pipelineReset=(...args)=>{
     const result=coreReset(...args),ctx={args,result,state:E.getState(),locals:Object.create(null)};
     runRuntimeHooks('afterReset',ctx);
+    runRuntimeObservers('afterReset',ctx);
     return result;
   };
   const episodicMemoryCreated=(st,a,memory)=>{
@@ -71,9 +96,11 @@
   Object.assign(E,{
     RUNTIME_HOOK_PIPELINE_VERSION:'runtime-hook-pipeline-2',
     RUNTIME_HOOK_PHASES:PHASES,
+    RUNTIME_OBSERVER_PHASES:OBSERVER_PHASES,
     RUNTIME_PIPELINE_TICK:pipelineTick,
     RUNTIME_PIPELINE_RESET:pipelineReset,
     registerRuntimeHook,runRuntimeHooks,listRuntimeHooks,currentRuntimeHookManifest,assertRuntimeHookManifest,finalizeRuntimeHooks,
+    registerRuntimeObserver,runRuntimeObservers,listRuntimeObservers,currentRuntimeObserverManifest,
     isRuntimeHookRegistryFinalized:()=>!!finalizedRuntimeHookManifest
   });
 })();

@@ -2,7 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld,P=window.SimPhysical,UI=window.SimUI;
   if(!E||!W?.PHYSICAL_SCHEMA_VERSION||!P?.getMovementEnvelope||typeof document==='undefined')return;
   if(!UI?.registerInspectorDecorator)throw new Error('Physical View requires inspector decorator lifecycle');
-  const VERSION=W.PRESENTATION_SCHEMA_VERSION||W.PHYSICAL_SCHEMA_VERSION;
+  const VERSION=UI.PRESENTATION_VERSION||W.PHYSICAL_SCHEMA_VERSION;
   const host=document.getElementById('inspector');if(!host)return;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const meters=v=>Number.isFinite(Number(v))?`${Number(v).toFixed(2)} m`:'—';

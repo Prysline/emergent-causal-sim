@@ -20,7 +20,6 @@
       {id:'humanSocialResponse.schema',order:1100},
       {id:'memoryDeliberation.schema',order:1200},
       {id:'socialOutcomeMemory.schema',order:1300},
-      {id:'presentation.schema',order:1400},
       {id:'relationship.schema',order:1500},
       {id:'physical.schema',order:1600},
       {id:'locomotion.schema',order:1700}

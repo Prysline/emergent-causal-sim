@@ -14,7 +14,7 @@
   }
   function interactionName(bid){
     const kind=E.socialBidInteractionKind?.(bid)||bid?.data?.interactionKind||null;
-    return W.interactionLabel?.(kind)||kind||'互動';
+    return UI.interactionLabel?.(kind)||kind||'互動';
   }
   function recentSocialRecord(st,agentId){
     const tick=st?.tick??0;
@@ -76,9 +76,9 @@
   }
   function resetObservability(){if(UI.isStarted?.())renderMobileSummary();}
 
-  if(!E.registerRuntimeHook)throw new Error('ui-observability-controls-v1133a.js requires runtime-hook-pipeline.js');
-  E.registerRuntimeHook('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
-  E.registerRuntimeHook('afterReset','uiObservability.reset',resetObservability,600);
+  if(!E.registerRuntimeObserver)throw new Error('ui-observability-controls-v1133a.js requires runtime observer lifecycle');
+  E.registerRuntimeObserver('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
+  E.registerRuntimeObserver('afterReset','uiObservability.reset',resetObservability,600);
 
   UI.registerStartupExtension('uiObservability.controls',()=>{
     installTurnControls();

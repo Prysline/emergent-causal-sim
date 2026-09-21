@@ -3,8 +3,8 @@
   if(!E||!SP||!W||typeof document==='undefined')return;
   if(!UI?.registerInspectorDecorator)throw new Error('Entity Readable View requires inspector decorator lifecycle');
 
-  const VERSION=W.PRESENTATION_SCHEMA_VERSION;
-  if(!VERSION)throw new Error('Entity Readable View requires presentation schema version');
+  const VERSION=UI.PRESENTATION_VERSION;
+  if(!VERSION)throw new Error('Entity Readable View requires presentation version');
   const host=document.getElementById('inspector');if(!host)return;
   const SUPPORTED=new Set(['container','source','furniture','tile','room','event']);
   let currentKey=null,mode='readable';

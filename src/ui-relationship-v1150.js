@@ -2,7 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld,UI=window.SimUI;
   if(!E?.RELATIONSHIP_SCHEMA_VERSION||!W||typeof document==='undefined')return;
   if(!UI?.registerInspectorDecorator)throw new Error('Relationship View requires inspector decorator lifecycle');
-  const VERSION=W.PRESENTATION_SCHEMA_VERSION||W.RELATIONSHIP_SCHEMA_VERSION;
+  const VERSION=UI.PRESENTATION_VERSION||W.RELATIONSHIP_SCHEMA_VERSION;
   const host=document.getElementById('inspector');if(!host)return;
   let scheduled=false;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -67,9 +67,9 @@
     document.addEventListener('click',event=>{if(event.target.closest?.('[data-v1140-tab]'))schedule();});
     schedule();
   },400);
-  if(!E.registerRuntimeHook)throw new Error('ui-relationship-v1150.js requires runtime-hook-pipeline.js');
-  E.registerRuntimeHook('afterTick','relationshipView.schedule',schedule,1150);
-  E.registerRuntimeHook('afterReset','relationshipView.reset',schedule,750);
+  if(!E.registerRuntimeObserver)throw new Error('ui-relationship-v1150.js requires runtime observer lifecycle');
+  E.registerRuntimeObserver('afterTick','relationshipView.schedule',schedule,1150);
+  E.registerRuntimeObserver('afterReset','relationshipView.reset',schedule,750);
 
   E.UI_RELATIONSHIP_VERSION=VERSION;
   E.relationshipFamiliarityLabel=familiarityLabel;

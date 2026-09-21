@@ -3,8 +3,8 @@
   if(!E||!SP||!W||typeof document==='undefined')return;
   if(!UI?.registerInspectorDecorator)throw new Error('Resident View requires inspector decorator lifecycle');
 
-  const VERSION=W.PRESENTATION_SCHEMA_VERSION;
-  if(!VERSION)throw new Error('Resident View requires presentation schema version');
+  const VERSION=UI.PRESENTATION_VERSION;
+  if(!VERSION)throw new Error('Resident View requires presentation version');
   const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
   const INTENT_LABELS={
     satisfyHunger:'填飽肚子',drinkWater:'補充水分',drinkAlcohol:'解渴／喝點酒',recoverFatigue:'緩解活動疲勞',sleep:'補足睡眠',
@@ -28,7 +28,7 @@
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const agentName=(st,id,fallback='對方')=>st?.agents?.[id]?.name||fallback;
   const actionName=action=>ACTION_LABELS[action]||E.ZH?.[action]||action||'一件事';
-  const interactionName=kind=>W.interactionLabel?.(kind)||kind||'互動';
+  const interactionName=kind=>UI.interactionLabel?.(kind)||kind||'互動';
   const resourceName=id=>W.RESOURCE_TYPES?.[id]?.name||id||'資源';
   const containerName=(st,id,fallback='容器')=>st?.containers?.[id]?.name||E.endpointName?.(id)||fallback;
 
@@ -244,9 +244,9 @@
     schedule();
   },300);
 
-  if(!E.registerRuntimeHook)throw new Error('ui-resident-view-v1140.js requires runtime-hook-pipeline.js');
-  E.registerRuntimeHook('afterTick','residentView.schedule',schedule,1100);
-  E.registerRuntimeHook('afterReset','residentView.reset',resetResidentView,700);
+  if(!E.registerRuntimeObserver)throw new Error('ui-resident-view-v1140.js requires runtime observer lifecycle');
+  E.registerRuntimeObserver('afterTick','residentView.schedule',schedule,1100);
+  E.registerRuntimeObserver('afterReset','residentView.reset',resetResidentView,700);
 
   E.UI_RESIDENT_VIEW_VERSION=VERSION;
   E.residentAffectLabel=affectLabel;

@@ -2,7 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld,L=window.SimLocomotion,P=window.SimPhysical,UI=window.SimUI;
   if(!E||!W?.LOCOMOTION_SCHEMA_VERSION||!L||typeof document==='undefined')return;
   if(!UI?.registerInspectorDecorator)throw new Error('Locomotion View requires inspector decorator lifecycle');
-  const VERSION=W.PRESENTATION_SCHEMA_VERSION||W.LOCOMOTION_SCHEMA_VERSION;
+  const VERSION=UI.PRESENTATION_VERSION||W.LOCOMOTION_SCHEMA_VERSION;
   const host=document.getElementById('inspector');if(!host)return;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const postureLabel=k=>({standing:'站立',sitting:'坐姿',lying:'躺姿',kneeling:'跪姿',prone:'俯臥／匍匐姿勢'})[k]||k||'未知';
