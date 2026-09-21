@@ -149,6 +149,51 @@
     return blockers;
   }
 
+  function setCellTerrain(authoring,{x,y,z,terrain}={}){
+    return mutationResult(authoring,candidate=>{
+      if(!Number.isInteger(x)||!Number.isInteger(y)||!Number.isInteger(z))return reject('cell_terrain_target_invalid','格子編輯需要有效的 x / y / z。',{x,y,z});
+      const layer=(candidate.map?.layers||[]).find(item=>item.z===z);
+      if(!layer)return reject('cell_terrain_layer_missing','找不到目標 Z 層。',{x,y,z});
+      const id=x+','+y;
+      if(terrain===null||terrain===undefined||terrain===''){
+        delete layer.cells[id];
+        return {meta:{operation:'setCellTerrain',target:{x,y,z},terrain:null}};
+      }
+      if(terrain!=='floor')return reject('cell_terrain_value_invalid','目前 v4 Editor 的 Cell terrain 只支援 floor；牆與開口請編輯 boundary。',{x,y,z,terrain});
+      const previous=layer.cells[id]||{};
+      layer.cells[id]={...previous,terrain:'floor'};
+      for(const derived of ['walkable','crawlOnly','roomId','furnitureIds'])delete layer.cells[id][derived];
+      return {meta:{operation:'setCellTerrain',target:{x,y,z},terrain:'floor'}};
+    });
+  }
+
+  function setBoundary(authoring,{z,boundaryId,kind}={}){
+    return mutationResult(authoring,candidate=>{
+      if(!Number.isInteger(z)||typeof boundaryId!=='string'||!boundaryId)return reject('boundary_target_invalid','Boundary 編輯需要有效的 z 與 boundaryId。',{z,boundaryId});
+      const layer=(candidate.map?.layers||[]).find(item=>item.z===z);
+      if(!layer)return reject('boundary_layer_missing','找不到目標 Z 層。',{z,boundaryId});
+      layer.boundaries??={};
+      if(kind===null||kind===undefined||kind===''){
+        delete layer.boundaries[boundaryId];
+        return {meta:{operation:'setBoundary',z,boundaryId,kind:null}};
+      }
+      if(kind!=='wall'&&kind!=='opening')return reject('boundary_kind_invalid','Boundary kind 只支援 wall / opening。',{z,boundaryId,kind});
+      const previous=layer.boundaries[boundaryId]||{};
+      layer.boundaries[boundaryId]={...previous,kind};
+      return {meta:{operation:'setBoundary',z,boundaryId,kind}};
+    });
+  }
+
+  function setDoorState(authoring,{doorId,state}={}){
+    return mutationResult(authoring,candidate=>{
+      const door=candidate.doors?.[doorId];
+      if(!door)return reject('door_missing','找不到 Door '+String(doorId)+'.',{doorId});
+      if(state!=='open'&&state!=='closed')return reject('door_state_invalid','Door state 必須是 open 或 closed。',{doorId,state});
+      door.state=state;
+      return {meta:{operation:'setDoorState',doorId,state,boundary:clone(door.boundary)}};
+    });
+  }
+
   function setCellMaterial(authoring,{x,y,z,material}={}){
     return mutationResult(authoring,candidate=>{
       if(!Number.isInteger(x)||!Number.isInteger(y)||!Number.isInteger(z)){
@@ -332,6 +377,9 @@
   }
 
   window.SimEditorAuthoringMutations={
+    setCellTerrain,
+    setBoundary,
+    setDoorState,
     setCellMaterial,
     moveFurniture,
     moveObject,

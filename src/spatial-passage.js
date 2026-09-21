@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical;if(!W||!SP?.normalizeNode||!P?.getMovementEnvelope)return;
-  const VERSION='11.17.0-passage-profile-multimode';
+  const VERSION='11.23.0-boundary-passage-profile';
   const FLOOR='floor';
   const finitePositive=v=>Number.isFinite(Number(v))&&Number(v)>0;
   const constrained=v=>finitePositive(v)?Number(v):null;
@@ -23,11 +23,22 @@
     return [SP.nodeKey(st,a),SP.nodeKey(st,b)].sort().join('<->');
   }
   function explicitEdgeConstraint(st,from,to){const key=passageConstraintKey(st,from,to);return key?st.map?.passageConstraints?.[key]||null:null;}
+  function authoredBoundaryConstraint(st,from,to){
+    const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);
+    if(!a||!b||a.surfaceId!==FLOOR||b.surfaceId!==FLOOR)return null;
+    const boundary=SP.boundaryBetween?.(st,a,b);if(!boundary)return null;
+    return {
+      id:boundary.id,
+      kind:boundary.kind,
+      clearanceHeight:boundary.kind==='opening'?constrained(boundary.clearanceHeight):null,
+      clearanceWidth:boundary.kind==='opening'?constrained(boundary.clearanceWidth):null
+    };
+  }
   function getPassageProfile(st,from,to){
     const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b||!edgeAdjacent(st,a,b))return null;
-    const local=[...underConstraints(st,a),...underConstraints(st,b)],edge=explicitEdgeConstraint(st,a,b);
-    const clearanceHeight=nullableMin([...local.map(x=>x.clearanceHeight),edge?.clearanceHeight]);
-    const clearanceWidth=nullableMin([...local.map(x=>x.clearanceWidth),edge?.clearanceWidth]);
+    const local=[...underConstraints(st,a),...underConstraints(st,b)],edge=explicitEdgeConstraint(st,a,b),boundary=authoredBoundaryConstraint(st,a,b);
+    const clearanceHeight=nullableMin([...local.map(x=>x.clearanceHeight),boundary?.clearanceHeight,edge?.clearanceHeight]);
+    const clearanceWidth=nullableMin([...local.map(x=>x.clearanceWidth),boundary?.clearanceWidth,edge?.clearanceWidth]);
     return {
       from:a,
       to:b,
@@ -35,13 +46,16 @@
       clearanceWidth,
       constrainedBy:{
         overhead:local.filter(x=>x.clearanceHeight!==null||x.clearanceWidth!==null).map(x=>x.id),
+        boundary:boundary?.id||null,
         explicitEdge:!!edge
       }
     };
   }
   function physicallyOpen(st,from,to){
     const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b)return false;
-    return !!SP.nodeWalkable(st,a,null)&&!!SP.nodeWalkable(st,b,null);
+    if(!SP.nodeWalkable(st,a,null)||!SP.nodeWalkable(st,b,null))return false;
+    if(a.surfaceId===FLOOR&&b.surfaceId===FLOOR&&SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,a,b))return false;
+    return true;
   }
   function modeFeasibility(agent,mode,passage,edgeOpen){
     const envelope=P.getMovementEnvelope(agent,mode),failedAxes=[];

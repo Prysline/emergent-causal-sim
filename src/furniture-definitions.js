@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v1';
+  const VERSION='furniture-definitions-v2';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -65,19 +65,6 @@
         {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}}
       ],
       compatibility:{roomValueContribution:55}
-    },
-    'front-door':{
-      id:'front-door',
-      name:'大門',
-      icon:'🚪',
-      kind:'door',
-      blocksMovement:true,
-      footprint:[local(0,0)],
-      displayOffset:local(0,0),
-      slots:[
-        {key:'inside',label:'門內',offset:local(1,0),allowKinds:['human','cat']}
-      ],
-      compatibility:{roomValueContribution:18,runtimeExitSlotKeys:['inside']}
     }
   };
 
@@ -106,9 +93,6 @@
         const value=slot.activitySuitability?.[activity];
         if(value!==undefined&&(!Number.isFinite(value)||value<0))throw new Error('Furniture Definition '+key+' has invalid '+activity+' suitability.');
       }
-    }
-    for(const slotKey of definition.compatibility?.runtimeExitSlotKeys||[]){
-      if(!keys.has(slotKey))throw new Error('Furniture Definition '+key+' compatibility exit slot '+slotKey+' does not exist.');
     }
     const roomValue=definition.compatibility?.roomValueContribution;
     if(roomValue!==undefined&&!Number.isFinite(roomValue))throw new Error('Furniture Definition '+key+' has invalid compatibility room value.');
@@ -141,7 +125,6 @@
       error.code='furniture_instance_origin_invalid';
       throw error;
     }
-    const exitSlots=new Set(definition.compatibility?.runtimeExitSlotKeys||[]);
     const resolved={
       id:instance.id,
       name:instance.name||definition.name,
@@ -162,7 +145,6 @@
         if(Array.isArray(slot.allowKinds))out.allowKinds=clone(slot.allowKinds);
         if(Number.isFinite(slot.activitySuitability?.rest))out.restQuality=slot.activitySuitability.rest;
         if(Number.isFinite(slot.activitySuitability?.sleep))out.sleepQuality=slot.activitySuitability.sleep;
-        if(exitSlots.has(slot.key))out.canExit=true;
         return out;
       })
     };

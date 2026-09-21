@@ -41,7 +41,7 @@ assert.equal(E.talkEngagementScore(responder),scoreBefore);assert.equal(E.talkRe
 responder.affect=neutral;noIssues('response bands');
 
 armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
-assert.equal(st.version,'11.22.3-editor-authoring-presentation');
+assert.equal(st.version,'11.23.0-world-boundary-door-exit');
 const engageOffer=eventBy(e=>e.data?.action==='talkOffer'),accept=eventBy(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer?.id),talk=eventBy(e=>e.data?.action==='talk'&&e.data?.talkOfferId===engageOffer?.id);
 assert.ok(engageOffer?.data?.socialBid);assert.ok(accept);assert.ok(talk);
 assert.equal(talk.data.talkResponseEventId,accept.id);assert.equal(talk.data.talkResponse,'engage');assert.equal(Object.hasOwn(talk.data,'responseToBid'),false,'full talk is an outcome, not a second responder event');

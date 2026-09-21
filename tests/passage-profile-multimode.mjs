@@ -10,8 +10,9 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.22.3-editor-authoring-presentation';
+const APP_VERSION='11.23.0-world-boundary-door-exit';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
+const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
@@ -43,7 +44,7 @@ E.reset(11700);
 let st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
 assert.equal(st.version,APP_VERSION);
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
-assert.equal(SP.PASSAGE_PROFILE_VERSION,PHYSICAL_VERSION);
+assert.equal(SP.PASSAGE_PROFILE_VERSION,PASSAGE_VERSION);
 assert.deepEqual(P.supportedLocomotionModes(human),['walk','kneelCrawl','proneCrawl']);
 assert.deepEqual(P.supportedLocomotionModes(cat),['walk']);
 

@@ -111,14 +111,14 @@ E.reset(20260911);
 {
   const st=E.getState();
   const a=isolateHuman(st);
-  const door=SP.allSlots(st).find(s=>s.canExit);
+  const exit=SP.allExits(st).find(x=>SP.exitStructurallyAvailable(st,x));
   const dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination'));
   const basket=st.containers.basket;
   basket.contents={};
   basket.position={x:3,y:2};
   const destinationBefore=foodOf(dest);
   a.action={
-    kind:'externalSupply',phase:'toCarrier',exitSlot:door.id,
+    kind:'externalSupply',phase:'toCarrier',exitId:exit.id,
     destinationId:dest.id,resource:'food',carrierId:basket.id,
     workLeft:1,produced:0,started:st.tick,wait:0
   };

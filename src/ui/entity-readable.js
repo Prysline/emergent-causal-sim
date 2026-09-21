@@ -61,7 +61,6 @@
       if(slot.canRest)labels.push('可以休息');
       if(slot.mealSeat)labels.push('可以坐著用餐');
       if(slot.canSleep)labels.push('可以睡覺');
-      if(slot.canExit)labels.push('可以通往門外');
     }
     return [...new Set(labels)];
   }

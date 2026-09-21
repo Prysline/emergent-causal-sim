@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.22.3-editor-authoring-presentation';
+const CURRENT_VERSION='11.23.0-world-boundary-door-exit';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -184,8 +184,8 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v1');
-assert.equal(A.VERSION,'world-authoring-v3');
+assert.equal(FD.VERSION,'furniture-definitions-v2');
+assert.equal(A.VERSION,'world-authoring-v4');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v1');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
@@ -197,7 +197,7 @@ assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must n
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.17.0-passage-profile-multimode');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.23.0-boundary-passage-profile');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.18.0-route-semantics-split');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.19.0-locomotion-execution-posture');
 assert.equal(L.VERSION,'11.19.0-locomotion-execution-posture');

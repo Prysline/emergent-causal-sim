@@ -3,21 +3,29 @@
   if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
-  const VERSION='world-authoring-v3';
+  const VERSION='world-authoring-v4';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
+  const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
+  const boundaryRef=(z,id)=>({z,id});
 
   function buildDefaultCells(){
-    const width=12,height=8,cells={};
-    for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-      const boundary=x===0||y===0||x===width-1||y===height-1;
-      const door=x===0&&y===6;
-      cells[x+','+y]={
-        terrain:door?'doorway':boundary?'wall':'floor',
-        material:boundary&&!door?'stone':'wood'
-      };
-    }
+    const cells={};
+    for(let y=1;y<=6;y++)for(let x=1;x<=10;x++)cells[x+','+y]={terrain:'floor',material:'wood'};
     return cells;
+  }
+
+  function buildDefaultBoundaries(){
+    const boundaries={};
+    for(let x=1;x<=10;x++){
+      boundaries['h:'+x+',1']={kind:'wall',material:'stone'};
+      boundaries['h:'+x+',7']={kind:'wall',material:'stone'};
+    }
+    for(let y=1;y<=6;y++){
+      boundaries['v:1,'+y]={kind:y===6?'opening':'wall',material:y===6?'wood':'stone'};
+      boundaries['v:11,'+y]={kind:'wall',material:'stone'};
+    }
+    return boundaries;
   }
 
   function deepFreeze(value){
@@ -33,7 +41,7 @@
     id:'mvp-default-house',
     label:'Current MVP Default World',
     scenario:{startDay:1,startMinute:12*60},
-    map:{width:12,height:8,layers:[{z:0,cells:buildDefaultCells()}]},
+    map:{width:12,height:8,cellSizeMeters:CELL_SIZE_METERS,layers:[{z:0,cells:buildDefaultCells(),boundaries:buildDefaultBoundaries()}]},
     furniture:{
       diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2)},
       chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),name:'餐椅 A'},
@@ -41,8 +49,13 @@
       chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),name:'餐椅 C'},
       chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),name:'餐椅 D'},
       sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2)},
-      bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5)},
-      frontDoor:{id:'frontDoor',definitionId:'front-door',origin:pos(0,6)}
+      bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5)}
+    },
+    doors:{
+      frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open',compatibility:{roomValueContribution:18}}
+    },
+    exits:{
+      frontExit:{id:'frontExit',name:'大門外',kind:'offMap',boundary:boundaryRef(0,'v:1,6'),access:pos(1,6)}
     },
     entities:{
       containers:{
@@ -71,8 +84,32 @@
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
   const derivedMapFields=new Set(['tiles','rooms','roomRevision']);
   const derivedCellFields=new Set(['walkable','crawlOnly','roomId','furnitureIds']);
-  const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor','doorway']);
+  const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor']);
   const furnitureInstanceFields=new Set(['id','definitionId','origin','name']);
+  const BOUNDARY_ID_PATTERN=/^([vh]):(-?\d+),(-?\d+)$/;
+  const BOUNDARY_KINDS=new Set(['wall','opening']);
+  const DOOR_STATES=new Set(['open','closed']);
+
+  function boundaryIdBetween(a,b){
+    if(!a||!b||(a.z??0)!==(b.z??0)||Math.abs(a.x-b.x)+Math.abs(a.y-b.y)!==1)return null;
+    if(a.y===b.y)return 'v:'+Math.max(a.x,b.x)+','+a.y;
+    return 'h:'+a.x+','+Math.max(a.y,b.y);
+  }
+  function layerAt(authoring,z){return (authoring?.map?.layers||[]).find(layer=>layer.z===z)||null;}
+  function boundaryAt(authoring,z,boundaryId){return layerAt(authoring,z)?.boundaries?.[boundaryId]||null;}
+  function doorsForBoundary(authoring,z,boundaryId){return Object.values(authoring?.doors||{}).filter(door=>door?.boundary?.z===z&&door?.boundary?.id===boundaryId);}
+  function boundaryPassable(authoring,z,boundaryId){
+    const boundary=boundaryAt(authoring,z,boundaryId);
+    if(!boundary)return true;
+    if(boundary.kind==='wall')return false;
+    if(boundary.kind!=='opening')return false;
+    return doorsForBoundary(authoring,z,boundaryId).every(door=>door.state==='open');
+  }
+  function boundaryTouchesCell(boundaryId,position){
+    const match=BOUNDARY_ID_PATTERN.exec(String(boundaryId||''));if(!match||!position)return false;
+    const orientation=match[1],x=Number(match[2]),y=Number(match[3]);
+    return orientation==='v'?position.y===y&&(position.x===x-1||position.x===x):position.x===x&&(position.y===y-1||position.y===y);
+  }
 
   function resolveFurnitureInstance(instance){
     return D.resolveInstance(instance);
@@ -110,6 +147,7 @@
     const width=map?.width,height=map?.height;
     if(!Number.isInteger(width)||width<=0)errors.push(authoringIssue('authoring_width_invalid','map.width','map.width must be a positive integer.'));
     if(!Number.isInteger(height)||height<=0)errors.push(authoringIssue('authoring_height_invalid','map.height','map.height must be a positive integer.'));
+    if(Number(map?.cellSizeMeters)!==CELL_SIZE_METERS)errors.push(authoringIssue('authoring_cell_size_invalid','map.cellSizeMeters','map.cellSizeMeters must equal '+CELL_SIZE_METERS+' for '+VERSION+'.'));
     if(isRecord(map)){
       for(const field of derivedMapFields)if(Object.prototype.hasOwnProperty.call(map,field)){
         errors.push(authoringIssue('authoring_derived_map_field',`map.${field}`,`Derived runtime field map.${field} must not be persisted in canonical authoring.`));
@@ -155,8 +193,27 @@
           if(typeof cell.terrain!=='string'||!cell.terrain){
             errors.push(authoringIssue('authoring_cell_terrain_missing',`${cellPath}.terrain`,'Authored cell terrain must be a non-empty string.'));
           }
+          if(cell.terrain==='wall'||cell.terrain==='doorway')errors.push(authoringIssue('authoring_boundary_terrain_legacy',`${cellPath}.terrain`,'Walls and openings belong to layer boundaries in '+VERSION+'.'));
           for(const field of derivedCellFields)if(Object.prototype.hasOwnProperty.call(cell,field)){
             errors.push(authoringIssue('authoring_derived_cell_field',`${cellPath}.${field}`,`Derived runtime field ${field} must not be persisted in canonical authoring.`));
+          }
+        }
+
+        if(!isRecord(layer.boundaries)){
+          errors.push(authoringIssue('authoring_layer_boundaries_invalid',`${path}.boundaries`,'Each map layer must contain a boundaries object.'));
+        }else{
+          for(const [boundaryId,boundary] of Object.entries(layer.boundaries)){
+            const boundaryPath=`${path}.boundaries[${JSON.stringify(boundaryId)}]`,match=BOUNDARY_ID_PATTERN.exec(boundaryId);
+            if(!match){errors.push(authoringIssue('authoring_boundary_id_invalid',boundaryPath,'Invalid boundary id: '+boundaryId));continue;}
+            const orientation=match[1],bx=Number(match[2]),by=Number(match[3]);
+            const inRange=Number.isInteger(width)&&Number.isInteger(height)&&(orientation==='v'?(bx>=0&&bx<=width&&by>=0&&by<height):(bx>=0&&bx<width&&by>=0&&by<=height));
+            if(!inRange)errors.push(authoringIssue('authoring_boundary_out_of_bounds',boundaryPath,'Boundary '+boundaryId+' is outside the authored grid.',{boundaryId,z:layer.z}));
+            if(!isRecord(boundary)||!BOUNDARY_KINDS.has(boundary.kind)){errors.push(authoringIssue('authoring_boundary_kind_invalid',boundaryPath+'.kind','Boundary kind must be wall or opening.'));continue;}
+            if(boundary.material!==undefined&&(typeof boundary.material!=='string'||!boundary.material.trim()))errors.push(authoringIssue('authoring_boundary_material_invalid',boundaryPath+'.material','Boundary material must be a non-empty string when provided.'));
+            for(const field of ['thickness','height','clearanceWidth','clearanceHeight']){
+              const value=boundary[field];
+              if(value!==undefined&&(!Number.isFinite(Number(value))||Number(value)<=0))errors.push(authoringIssue('authoring_boundary_metric_invalid',boundaryPath+'.'+field,'Boundary '+field+' must be a positive SI-meter value.',{boundaryId,field}));
+            }
           }
         }
       }
@@ -243,6 +300,45 @@
       if(source.id!==undefined&&source.id!==key)errors.push(authoringIssue('authoring_source_id_mismatch',`${basePath}.id`,`Source key ${key} does not match id ${String(source.id)}.`));
       if(source.position)validatePosition(source.position,`${basePath}.position`);
       for(let i=0;i<(source.interactionPorts||[]).length;i++)if(source.interactionPorts[i]?.position)validatePosition(source.interactionPorts[i].position,`${basePath}.interactionPorts[${i}].position`);
+    }
+
+    if(!isRecord(authoring.doors))errors.push(authoringIssue('authoring_doors_invalid','doors','doors must be an object.'));
+    if(!isRecord(authoring.exits))errors.push(authoringIssue('authoring_exits_invalid','exits','exits must be an object.'));
+    const doorBoundaries=new Set();
+    for(const [key,door] of Object.entries(authoring.doors||{})){
+      const basePath='doors.'+key;
+      if(!isRecord(door)){errors.push(authoringIssue('authoring_door_invalid',basePath,'Door entry must be an object.'));continue;}
+      if(door.id!==key)errors.push(authoringIssue('authoring_door_id_mismatch',basePath+'.id','Door key '+key+' does not match id '+String(door.id)+'.'));
+      if(door.name!==undefined&&(typeof door.name!=='string'||!door.name.trim()))errors.push(authoringIssue('authoring_door_name_invalid',basePath+'.name','Door name must be a non-empty string when provided.'));
+      if(!DOOR_STATES.has(door.state))errors.push(authoringIssue('authoring_door_state_invalid',basePath+'.state','Door state must be open or closed.'));
+      const ref=door.boundary;
+      if(!isRecord(ref)||!Number.isInteger(ref.z)||typeof ref.id!=='string'){errors.push(authoringIssue('authoring_door_boundary_invalid',basePath+'.boundary','Door boundary must contain integer z and boundary id.'));continue;}
+      const boundary=boundaryAt(authoring,ref.z,ref.id);
+      if(!boundary)errors.push(authoringIssue('authoring_door_boundary_missing',basePath+'.boundary','Door '+key+' references a missing boundary.',{boundaryId:ref.id,z:ref.z}));
+      else if(boundary.kind!=='opening')errors.push(authoringIssue('authoring_door_boundary_not_opening',basePath+'.boundary','Door '+key+' must reference an opening boundary.'));
+      const boundaryKey=ref.z+':'+ref.id;
+      if(doorBoundaries.has(boundaryKey))errors.push(authoringIssue('authoring_door_boundary_duplicate',basePath+'.boundary','Only one Door may own an opening boundary.',{boundaryId:ref.id,z:ref.z}));
+      doorBoundaries.add(boundaryKey);
+    }
+
+    for(const [key,exit] of Object.entries(authoring.exits||{})){
+      const basePath='exits.'+key;
+      if(!isRecord(exit)){errors.push(authoringIssue('authoring_exit_invalid',basePath,'Exit entry must be an object.'));continue;}
+      if(exit.id!==key)errors.push(authoringIssue('authoring_exit_id_mismatch',basePath+'.id','Exit key '+key+' does not match id '+String(exit.id)+'.'));
+      if(exit.kind!=='offMap')errors.push(authoringIssue('authoring_exit_kind_invalid',basePath+'.kind','Current world exits must use kind offMap.'));
+      if(exit.name!==undefined&&(typeof exit.name!=='string'||!exit.name.trim()))errors.push(authoringIssue('authoring_exit_name_invalid',basePath+'.name','Exit name must be a non-empty string when provided.'));
+      const ref=exit.boundary;
+      if(!isRecord(ref)||!Number.isInteger(ref.z)||typeof ref.id!=='string'){
+        errors.push(authoringIssue('authoring_exit_boundary_invalid',basePath+'.boundary','Exit boundary must contain integer z and boundary id.'));
+      }else{
+        const boundary=boundaryAt(authoring,ref.z,ref.id);
+        if(!boundary)errors.push(authoringIssue('authoring_exit_boundary_missing',basePath+'.boundary','Exit '+key+' references a missing boundary.',{boundaryId:ref.id,z:ref.z}));
+        else if(boundary.kind!=='opening')errors.push(authoringIssue('authoring_exit_boundary_not_opening',basePath+'.boundary','Exit '+key+' must reference an opening boundary.'));
+        if(exit.access&&!boundaryTouchesCell(ref.id,exit.access))errors.push(authoringIssue('authoring_exit_access_boundary_mismatch',basePath+'.access','Exit access position must touch its boundary.',{boundaryId:ref.id}));
+      }
+      validatePosition(exit.access,basePath+'.access');
+      const accessCell=exit.access&&layerAt(authoring,exit.access.z)?.cells?.[exit.access.x+','+exit.access.y];
+      if(exit.access&&(!accessCell||accessCell.terrain!=='floor'))errors.push(authoringIssue('authoring_exit_access_not_floor',basePath+'.access','Exit access position must be an authored floor cell.'));
     }
 
     for(const [key,resident] of Object.entries(authoring.residents||{})){
@@ -335,7 +431,9 @@
       if(!cell.open)continue;
       for(const [dx,dy] of dirs){
         const other=cells[(cell.x+dx)+','+(cell.y+dy)];
-        if(other?.open)cell.adjacent.push(other.id);
+        if(!other?.open)continue;
+        const boundaryId=boundaryIdBetween(cell,other);
+        if(boundaryId&&boundaryPassable(authoring,z,boundaryId))cell.adjacent.push(other.id);
       }
       cell.adjacent.sort();
     }
@@ -405,11 +503,17 @@
   window.SimWorldAuthoring={
     VERSION,
     FURNITURE_CATALOG_VERSION,
+    CELL_SIZE_METERS,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,
     listFurnitureDefinitions,
     resolveFurnitureInstance,
     resolvedFurnitureMap,
+    boundaryIdBetween,
+    boundaryAt,
+    doorsForBoundary,
+    boundaryPassable,
+    boundaryTouchesCell,
     deriveHorizontalTopology,
     validateAuthoring,
     assertValidAuthoring,
