@@ -303,6 +303,8 @@
       const furniture=resolvedFurniture(id);
       if(furniture)push('furniture',id,furniture,furniturePosition(furniture),furniture.icon||'▰','家具');
     }
+    for(const [id,door] of Object.entries(authored.doors||{}))push('door',id,door,doorScenePosition(door),'🚪','結構 · 門');
+    for(const [id,exit] of Object.entries(authored.exits||{}))push('exit',id,exit,exit.access,'↗','世界出口');
     for(const [id,container] of Object.entries(authored.entities?.containers||{}))push('container',id,container,container.position,container.icon||'◈','物件 · 容器');
     for(const [id,source] of Object.entries(authored.entities?.sources||{}))push('source',id,source,source.position,source.icon||'◆','物件 · 資源源頭');
     for(const [id,resident] of Object.entries(authored.residents||{}))push('resident',id,resident,residentPosition(resident),resident.icon||(resident.kind==='cat'?'🐈':'👤'),'居民');
@@ -351,6 +353,7 @@
       const position=residentPosition(resident);
       if(position)push(position,`resident:${id}`);
     }
+    for(const [id,exit] of Object.entries(authored.exits||{}))push(exit.access,`exit:${id}`);
     return out;
   }
 
@@ -359,7 +362,7 @@
   }
 
   function furnitureKindLabel(furniture){
-    const labels={chair:'餐椅',table:'餐桌',sofa:'沙發',bed:'床',door:'門'};
+    const labels={chair:'餐椅',table:'餐桌',sofa:'沙發',bed:'床'};
     return labels[furniture?.kind]||furniture?.kind||'Furniture';
   }
 
