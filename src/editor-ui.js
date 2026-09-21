@@ -3,16 +3,24 @@
   const C=window.SimEmbodimentCapabilities;
   const M=window.SimEditorAuthoringMutations;
   const P=window.SimEditorPreviewBridge;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!M?.setCellMaterial||!M?.moveFurniture||!M?.moveObject||!P?.storePreview){
+  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!M?.setCellTerrain||!M?.setBoundary||!M?.setDoorState||!M?.setCellMaterial||!M?.moveFurniture||!M?.moveObject||!P?.storePreview){
     throw new Error('World authoring helpers, embodiment capabilities, preview bridge, and editor mutation owner must load before editor-ui.js.');
   }
 
   const $=id=>document.getElementById(id);
   const cloneUi=value=>value==null?value:JSON.parse(JSON.stringify(value));
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const terrainLabel=value=>({floor:'地板',wall:'牆壁',doorway:'開口／門洞',void:'空白'}[value]||value||'空白');
+  const terrainLabel=value=>({floor:'地板',void:'空白'}[value]||value||'空白');
   const materialDisplay=value=>{const labels={wood:'木材',stone:'石材'};return value?(labels[value]?`${labels[value]}（${value}）`:String(value)):'未設定';};
   const mutationIssueText=issue=>({
+    cell_terrain_target_invalid:'格子編輯需要有效的座標。',
+    cell_terrain_layer_missing:'找不到目標 Z 層。',
+    cell_terrain_value_invalid:'目前格子 terrain 只支援 floor；牆與開口請編輯邊界。',
+    boundary_target_invalid:'邊界編輯需要有效的 Z 層與 boundary ID。',
+    boundary_layer_missing:'找不到邊界所在的 Z 層。',
+    boundary_kind_invalid:'邊界類型必須是牆、開口或清除。',
+    door_missing:'找不到指定的門。',
+    door_state_invalid:'門狀態必須是 open 或 closed。',
     cell_material_target_invalid:'材質編輯需要有效的格子座標。',
     cell_material_cell_missing:'只能編輯已建立格子的材質。',
     cell_material_value_invalid:'材質識別字必須是文字或空值。',
@@ -38,7 +46,10 @@
     if(code==='authoring_furniture_catalog_unsupported')return '家具目錄版本不受目前編輯器支援。';
     if(code.includes('width')||code.includes('height'))return '地圖尺寸必須是正整數。';
     if(code.includes('layer'))return 'Z 層資料無效、重複或缺失。';
-    if(code.includes('cell'))return '格子資料無效、超出地圖範圍或包含不應保存的推導欄位。';
+    if(code.includes('cell'))return '格子資料無效、超出地圖範圍或包含舊版牆／開口 terrain。';
+    if(code.includes('boundary'))return '牆／開口邊界資料無效、超出格線範圍或引用不一致。';
+    if(code.includes('door'))return '門資料或其開口邊界參照無效。';
+    if(code.includes('exit'))return '世界出口資料、邊界參照或內側接入位置無效。';
     if(code.includes('position'))return '位置資料無效、超出地圖範圍或指向不存在的 Z 層。';
     if(code.includes('furniture'))return '家具資料、定義參照或實例欄位不符合目前建構資料契約。';
     if(code.includes('slot'))return '家具位置識別或參照不唯一／不存在。';
@@ -76,6 +87,23 @@
   function zLabel(z){return z===0?'Z 0・地面':z>0?`Z +${z}`:`Z ${z}`;}
   function cellId(x,y){return `${x},${y}`;}
   function cellAt(layer,x,y){return layer?.cells?.[cellId(x,y)]||null;}
+  function boundaryIdForCellEdge(x,y,edge){
+    if(edge==='north')return 'h:'+x+','+y;
+    if(edge==='south')return 'h:'+x+','+(y+1);
+    if(edge==='west')return 'v:'+x+','+y;
+    if(edge==='east')return 'v:'+(x+1)+','+y;
+    return null;
+  }
+  function boundaryInfo(z,boundaryId){
+    const layer=layerAt(z),boundary=layer?.boundaries?.[boundaryId]||null;
+    const door=Object.values(authored.doors||{}).find(item=>item?.boundary?.z===z&&item?.boundary?.id===boundaryId)||null;
+    const exits=Object.values(authored.exits||{}).filter(item=>item?.boundary?.z===z&&item?.boundary?.id===boundaryId);
+    return {boundary,door,exits};
+  }
+  function doorScenePosition(door){
+    const ref=door?.boundary;if(!ref)return null;
+    return Object.values(authored.exits||{}).find(exit=>exit?.boundary?.z===ref.z&&exit?.boundary?.id===ref.id)?.access||null;
+  }
   function setMessage(message=''){transientMessage=message;}
 
   function clearDragPreviewDom(){
