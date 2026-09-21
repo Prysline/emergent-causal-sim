@@ -12,7 +12,7 @@
 
 ### Current Editor Source Port Observability release
 
-`11.23.1-editor-source-port-observability` 修正 Editor 對 Source interaction geometry 的可觀測性缺口。Source Inspector 現直接讀 canonical `interactionPorts`；對具有 `fill` affordance 的水源顯示「取水位置」，並保留 port 自己的 label / position。Default `tap` 因此會顯示「水龍頭左側 · (5, 5, 0)」，而不是要求作者從 runtime 行為猜測可互動面。這次不改 `world-authoring-v4` shape、不改 Source interaction geometry / refill 行為，也不改 Furniture Catalog、Spatial Traversal / Passage、Physical / Route / Locomotion / Crowding 等 subsystem generation；因正式玩家可見 Editor observability surface 改變，overall current marker 升一個 patch。
+`11.23.1-editor-source-port-observability` 修正 Editor 對 Source interaction geometry 的可觀測性缺口。Editor map 現直接投影 canonical `interactionPorts`：互動格以小型方向標記指出角色應站的位置與面向來源的方向；點擊標記可直接選取所屬 Source。Source Inspector 同時對具有 `fill` affordance 的水源顯示「取水位置」，並保留 port 自己的 label / position。Default `tap` 因此會在左側互動格 `(5, 5, 0)` 顯示指向本體的 `→`，Inspector 顯示「水龍頭左側 · (5, 5, 0)」，不再要求作者從 runtime 行為猜測可互動面。這次不改 `world-authoring-v4` shape、不改 Source interaction geometry / refill 行為，也不改 Furniture Catalog、Spatial Traversal / Passage、Physical / Route / Locomotion / Crowding 等 subsystem generation；因正式玩家可見 Editor observability surface 改變，overall current marker 升一個 patch。
 
 ### Previous World Boundary / Door / Exit release
 
