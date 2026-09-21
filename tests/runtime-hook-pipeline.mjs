@@ -59,8 +59,12 @@ for(const [phase,expected] of Object.entries(EXPECTED_HOOKS)){
   assert.deepEqual(E.listRuntimeHooks(phase),expected,`${phase} hook ids/orders are architecture semantics and must remain explicit`);
 }
 
-assert.equal(E.isRuntimeHookRegistryFinalized(),false,'domain-runtime profile stops before production UI hook registrants and manifest finalization');
+assert.equal(E.isRuntimeHookRegistryFinalized(),true,'domain-runtime profile must finalize a complete simulation schedule before UI loads');
 assert.deepEqual(E.currentRuntimeHookManifest(),EXPECTED_HOOKS);
+assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless runtime must not require Presentation observers');
+E.registerRuntimeObserver('afterTick','qa.presentation-observer',()=>{},10);
+assert.deepEqual(E.listRuntimeObservers('afterTick'),[{id:'qa.presentation-observer',order:10}],'Presentation observers may register after simulation hook finalization');
+assert.throws(()=>E.registerRuntimeObserver('afterTick','qa.presentation-observer',()=>{},20),/Duplicate runtime observer/);
 assert.throws(()=>E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>{},999),/Duplicate runtime hook/,'duplicate hook ids must fail loudly');
 assert.throws(()=>E.registerRuntimeHook('unknownPhase','bad',()=>{}),/Unknown runtime hook phase/,'unknown phases must fail loudly');
 

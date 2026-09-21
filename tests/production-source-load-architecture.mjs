@@ -36,6 +36,7 @@ const hookManifestIndex=indexOf('src/runtime/hook-manifest.js');
 const validatorIndex=indexOf('src/validation/registry.js');
 const manifestIndex=indexOf('src/validation/manifest.js');
 const uiIndex=indexOf('src/ui.js');
+const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
 assert.ok(authoringIndex<worldIndex,'current authoring owner must load before world.js');
@@ -46,10 +47,12 @@ assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must fin
 assert.ok(physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Physical -> Passage -> Locomotion -> Crowding');
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
-assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every production hook registrant');
+assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every simulation hook registrant');
+assert.ok(hookManifestIndex<validatorIndex,'simulation hook manifest must finalize before validation/UI composition');
 assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independently of the runtime-hook manifest');
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
 assert.ok(manifestIndex<uiIndex,'validator registry must finalize before the base UI');
+assert.equal(labelsIndex,uiIndex+1,'Presentation labels owner must load immediately after the base UI');
 assert.equal(bootstrapIndex,scripts.length-1,'app bootstrap must be the final production script');
 assert.ok(bootstrapIndex>uiIndex,'app bootstrap must start only after UI definitions/extensions load');
 
@@ -70,7 +73,19 @@ for(const path of hookExtensions){
   assert.ok(indexOf(path)>pipelineIndex,path+' must register after runtime-hook-pipeline.js');
   assert.ok(indexOf(path)<hookManifestIndex,path+' must register before runtime-hook manifest finalization');
 }
-assert.equal(hookManifestIndex,bootstrapIndex-1,'runtime-hook manifest must be the final registration gate immediately before app bootstrap');
+assert.ok(hookManifestIndex<uiIndex,'simulation runtime-hook manifest must finalize before any UI definitions load');
+const observerExtensions=scripts.filter(path=>
+  path!=='src/runtime-hook-pipeline.js'&&readRepoFile(path).includes('registerRuntimeObserver(')
+);
+assert.deepEqual(observerExtensions,[
+  'src/ui-observability-controls-v1133a.js',
+  'src/ui-resident-view-v1140.js',
+  'src/ui-relationship-v1150.js'
+],'only the three current Presentation refresh/reset owners may register runtime observers in Cleanup-5B-1');
+for(const path of observerExtensions){
+  assert.ok(indexOf(path)>hookManifestIndex,path+' must not participate in simulation hook completeness');
+  assert.ok(indexOf(path)>uiIndex&&indexOf(path)<bootstrapIndex,path+' must register in the Presentation composition boundary');
+}
 
 const engineDependentSubsystemSchemas=[
   'src/systems/action/state.js',
@@ -143,7 +158,7 @@ assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose 
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
-assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,CURRENT_VERSION);
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
@@ -154,9 +169,17 @@ assert.equal(L.VERSION,'11.19.0-locomotion-execution-posture');
 assert.equal(C.VERSION,'11.20.0-dynamic-congestion');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
-assert.equal(E.isRuntimeHookRegistryFinalized(),false,'runtime-hook registry must remain open until production UI hook extensions have loaded');
+assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
+assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless production prefix must be complete without Presentation observers');
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.equal(E.getState(),null,'module loading before app bootstrap must not auto-reset the engine');
+
+const labelsSource=readRepoFile('src/ui/labels.js');
+assert.match(labelsSource,/const VERSION=R\.VERSION;/,'Presentation marker must derive from the canonical release owner');
+assert.match(labelsSource,/PRESENTATION_VERSION:VERSION/,'Presentation marker must be owned by SimUI');
+assert.match(labelsSource,/interactionLabel/,'interaction labels must be owned by the semantic UI labels module');
+assert.equal(scripts.includes('src/presentation-schema-v1140.js'),false,'production must not load the retired no-op Presentation schema');
+assert.equal(fs.existsSync(new URL('../src/presentation-schema-v1140.js',import.meta.url)),false,'retired Presentation schema source must not remain in the current tree');
 
 const uiStartupFiles=[
   'src/ui-social-response-v1132a.js',

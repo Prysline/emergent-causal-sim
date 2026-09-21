@@ -12,7 +12,7 @@ const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
-  'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js','presentation-schema-v1140.js','systems/relationship/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
+  'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js','systems/relationship/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','crowding-runtime-v1200.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
   'systems/memory/runtime.js','systems/appraisal/runtime.js','systems/appraisal/animal-social-response.js','systems/appraisal/human-social-response.js','systems/relationship/runtime.js','systems/affect/runtime.js','systems/social/animal-response.js','systems/memory/retention.js','systems/social/human-response.js','systems/memory/deliberation.js','systems/memory/social-outcome.js',
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js','validation/rules/intent-active.js','validation/rules/social-bid.js','validation/rules/interruption.js','validation/rules/deliberation.js','validation/rules/memory-episodic.js','validation/rules/appraisal.js','validation/rules/affect.js','validation/rules/social-response.js','validation/rules/memory-retention.js','validation/rules/human-social-response.js','validation/rules/memory-deliberation.js','validation/rules/social-outcome-memory.js','validation/rules/relationship.js','validation/rules/physical-profile.js','validation/rules/locomotion-execution.js'
@@ -22,7 +22,7 @@ loadRuntimeProfile(files);
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator;
 E.reset(11700);
 let st=E.getState();
-assert.equal(W.PRESENTATION_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'headless runtime must not expose a World-owned Presentation schema marker');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
 assert.equal(W.PHYSICAL_RUNTIME_VERSION,PHYSICAL_VERSION);
@@ -40,12 +40,16 @@ assert.doesNotMatch(uiObservabilitySource,/recentSocialByAgent/,'UI observabilit
 assert.equal(E.actionLabel,E.CORE_ACTION_LABEL,'core actionLabel ownership must remain stable before UI resolver registration');
 assert.deepEqual(E.listActionLabelResolvers(),[],'headless simulation should start without presentation label resolvers');
 
+const labelsSource=fs.readFileSync(new URL('../src/ui/labels.js',import.meta.url),'utf8');
+assert.match(labelsSource,/const VERSION=R\.VERSION;/,'Presentation version must derive from the canonical release owner');
+assert.match(labelsSource,/PRESENTATION_VERSION:VERSION/,'Presentation version must be owned by SimUI');
+assert.match(labelsSource,/INTERACTION_LABELS/,'interaction labels must move to the semantic UI owner');
 const baseUiSource=fs.readFileSync(new URL('../src/ui.js',import.meta.url),'utf8');
 assert.match(baseUiSource,/registerInspectorDecorator/,'base UI must own explicit Inspector decorator lifecycle');
 assert.match(baseUiSource,/kneeling:'跪姿'/,'base UI must render kneeling posture explicitly instead of falling back to standing');
 assert.match(baseUiSource,/prone:'俯臥'/,'base UI must render prone posture explicitly instead of falling back to standing');
 const residentUiSource=fs.readFileSync(new URL('../src/ui-resident-view-v1140.js',import.meta.url),'utf8');
-assert.match(residentUiSource,/const VERSION=W\.PRESENTATION_SCHEMA_VERSION;/,'Resident View must inherit the canonical current runtime marker instead of hardcoding a second version');
+assert.match(residentUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Resident View must inherit the canonical Presentation marker from SimUI');
 assert.match(residentUiSource,/REQUIRED_INTENT_LABELS/,'Resident View must verify canonical Intent label coverage');
 assert.match(residentUiSource,/drinkWater:'補充水分'/,'drinkWater Intent must describe the goal instead of echoing the Action label');
 assert.match(residentUiSource,/drinkAlcohol:'解渴／喝點酒'/,'drinkAlcohol Intent must describe the goal instead of echoing the Action label');
@@ -128,7 +132,7 @@ assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain 
 assert.match(crowdingSource,/directionWeight:Object\.freeze\(\{same:\.65,stationary:1,unknown:1,opposite:1\.7\}\)/,'Crowding direction severity must remain deterministic');
 assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
 const entityUiSource=fs.readFileSync(new URL('../src/ui-entity-readable-v1141.js',import.meta.url),'utf8');
-assert.match(entityUiSource,/const VERSION=W\.PRESENTATION_SCHEMA_VERSION;/,'Entity Readable View must inherit the canonical current runtime marker');
+assert.match(entityUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Entity Readable View must inherit the canonical Presentation marker from SimUI');
 assert.match(entityUiSource,/new Set\(\['container','source','furniture','tile','room','event'\]\)/,'Entity Readable View must explicitly cover all current non-agent Inspector entity types');
 assert.match(entityUiSource,/registerInspectorDecorator\('entityReadable\.layer',decorateInspector,1050\)/,'Entity Readable View must use the explicit Inspector decorator lifecycle after the Resident layer');
 assert.match(entityUiSource,/selected\?\.type==='agent'/,'Entity Readable View must leave Agent rendering owned by the existing Resident layer');
