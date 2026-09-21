@@ -424,7 +424,7 @@ assert.equal(runtimePreview.previewMode,true);
 assert.equal(runtimePreview.previewFingerprint,previewFingerprint);
 assert.equal(runtimePreview.activeFingerprint,previewFingerprint);
 assert.equal(runtimePreview.bannerHidden,false);
-assert.match(runtimePreview.bannerText,/Editor Preview/);
+assert.match(runtimePreview.bannerText,/編輯器預覽/);
 assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'Simulator preview must use the Editor furniture position');
 assert.deepEqual(runtimePreview.basket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
 assert.equal(runtimePreview.basket.supportId,'diningTable');
