@@ -1,5 +1,10 @@
 (() => {
-  const VERSION='world-authoring-v2';
+  const D=window.SimFurnitureDefinitions;
+  if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
+    throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
+  }
+  const VERSION='world-authoring-v3';
+  const FURNITURE_CATALOG_VERSION=D.VERSION;
   const pos=(x,y,z=0)=>({x,y,z});
 
   function buildDefaultCells(){
@@ -24,33 +29,20 @@
 
   const DEFAULT_WORLD_AUTHORING={
     authoringSchema:VERSION,
+    furnitureCatalogVersion:FURNITURE_CATALOG_VERSION,
     id:'mvp-default-house',
     label:'Current MVP Default World',
     scenario:{startDay:1,startMinute:12*60},
     map:{width:12,height:8,layers:[{z:0,cells:buildDefaultCells()}]},
     furniture:{
-      diningTable:{id:'diningTable',name:'餐桌',icon:'▰',kind:'table',blocksMovement:true,supportsObjects:true,value:30,
-        footprint:[pos(5,2),pos(6,2),pos(5,3),pos(6,3)],displayAt:pos(5,2),slots:[],spatial:{under:{clearance:.72,cover:'overhead'}}},
-      chairNW:{id:'chairNW',name:'餐椅 A',icon:'🪑',kind:'chair',blocksMovement:false,value:10,
-        footprint:[pos(4,2)],displayAt:pos(4,2),slots:[{id:'chairNW:seat',label:'座位',position:pos(4,2),canRest:true,mealSeat:true,restQuality:.48,allowKinds:['human']}]},
-      chairNE:{id:'chairNE',name:'餐椅 B',icon:'🪑',kind:'chair',blocksMovement:false,value:10,
-        footprint:[pos(7,2)],displayAt:pos(7,2),slots:[{id:'chairNE:seat',label:'座位',position:pos(7,2),canRest:true,mealSeat:true,restQuality:.48,allowKinds:['human']}]},
-      chairSW:{id:'chairSW',name:'餐椅 C',icon:'🪑',kind:'chair',blocksMovement:false,value:10,
-        footprint:[pos(4,3)],displayAt:pos(4,3),slots:[{id:'chairSW:seat',label:'座位',position:pos(4,3),canRest:true,mealSeat:true,restQuality:.48,allowKinds:['human']}]},
-      chairSE:{id:'chairSE',name:'餐椅 D',icon:'🪑',kind:'chair',blocksMovement:false,value:10,
-        footprint:[pos(7,3)],displayAt:pos(7,3),slots:[{id:'chairSE:seat',label:'座位',position:pos(7,3),canRest:true,mealSeat:true,restQuality:.48,allowKinds:['human']}]},
-      sofa:{id:'sofa',name:'沙發',icon:'🛋️',kind:'sofa',blocksMovement:false,value:35,
-        footprint:[pos(9,2),pos(10,2)],displayAt:pos(9,2),slots:[
-          {id:'sofa:left',label:'左側',position:pos(9,2),canRest:true,canSleep:true,restQuality:.82,sleepQuality:.62,allowKinds:['human','cat']},
-          {id:'sofa:right',label:'右側',position:pos(10,2),canRest:true,canSleep:true,restQuality:.82,sleepQuality:.62,allowKinds:['human','cat']}
-        ]},
-      bed:{id:'bed',name:'雙人床',icon:'🛏️',kind:'bed',blocksMovement:false,value:55,
-        footprint:[pos(9,5),pos(10,5)],displayAt:pos(9,5),slots:[
-          {id:'bed:left',label:'左側',position:pos(9,5),canRest:true,canSleep:true,restQuality:.98,sleepQuality:1,restPosture:'lying',allowKinds:['human']},
-          {id:'bed:right',label:'右側',position:pos(10,5),canRest:true,canSleep:true,restQuality:.98,sleepQuality:1,restPosture:'lying',allowKinds:['human']}
-        ]},
-      frontDoor:{id:'frontDoor',name:'大門',icon:'🚪',kind:'door',blocksMovement:true,value:18,
-        footprint:[pos(0,6)],displayAt:pos(0,6),slots:[{id:'frontDoor:inside',label:'門內',position:pos(1,6),canExit:true,allowKinds:['human','cat']}]}
+      diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2)},
+      chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),name:'餐椅 A'},
+      chairNE:{id:'chairNE',definitionId:'chair-basic',origin:pos(7,2),name:'餐椅 B'},
+      chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),name:'餐椅 C'},
+      chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),name:'餐椅 D'},
+      sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2)},
+      bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5)},
+      frontDoor:{id:'frontDoor',definitionId:'front-door',origin:pos(0,6)}
     },
     entities:{
       containers:{
@@ -80,7 +72,22 @@
   const derivedMapFields=new Set(['tiles','rooms','roomRevision']);
   const derivedCellFields=new Set(['walkable','crawlOnly','roomId','furnitureIds']);
   const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor','doorway']);
-  const derivedSlotFields=new Set(['furnitureId']);
+  const furnitureInstanceFields=new Set(['id','definitionId','origin','name']);
+
+  function resolveFurnitureInstance(instance){
+    return D.resolveInstance(instance);
+  }
+  function listFurnitureDefinitions(){
+    return D.listDefinitions();
+  }
+  function resolvedFurnitureMap(authoring){
+    const out={};
+    for(const [key,instance] of Object.entries(authoring?.furniture||{})){
+      if(!isRecord(instance)||!D.getDefinition(instance.definitionId))continue;
+      try{out[key]=resolveFurnitureInstance(instance);}catch{}
+    }
+    return out;
+  }
 
   function authoringIssue(code,path,message,data={}){
     return {code,path,message,...data};
@@ -94,6 +101,9 @@
     }
     if(authoring.authoringSchema!==VERSION){
       errors.push(authoringIssue('authoring_schema_unsupported','authoringSchema',`Expected ${VERSION}; received ${String(authoring.authoringSchema)}.`));
+    }
+    if(authoring.furnitureCatalogVersion!==FURNITURE_CATALOG_VERSION){
+      errors.push(authoringIssue('authoring_furniture_catalog_unsupported','furnitureCatalogVersion',`Expected ${FURNITURE_CATALOG_VERSION}; received ${String(authoring.furnitureCatalogVersion)}.`));
     }
 
     const map=authoring.map;
@@ -171,44 +181,46 @@
     }
 
     const slotIds=new Map();
-    for(const [key,furniture] of Object.entries(authoring.furniture||{})){
+    const resolvedFurniture={};
+    for(const [key,instance] of Object.entries(authoring.furniture||{})){
       const basePath=`furniture.${key}`;
-      if(!isRecord(furniture)){
-        errors.push(authoringIssue('authoring_furniture_invalid',basePath,'Furniture entry must be an object.'));
+      if(!isRecord(instance)){
+        errors.push(authoringIssue('authoring_furniture_invalid',basePath,'Furniture Instance must be an object.'));
         continue;
       }
-      if(furniture.id!==undefined&&furniture.id!==key)errors.push(authoringIssue('authoring_furniture_id_mismatch',`${basePath}.id`,`Furniture key ${key} does not match id ${String(furniture.id)}.`));
-      if(!Array.isArray(furniture.footprint))errors.push(authoringIssue('authoring_furniture_footprint_invalid',`${basePath}.footprint`,'Furniture footprint must be an array.'));
-      else furniture.footprint.forEach((p,index)=>validatePosition(p,`${basePath}.footprint[${index}]`));
-      if(furniture.displayAt!==undefined&&furniture.displayAt!==null)validatePosition(furniture.displayAt,`${basePath}.displayAt`);
-      const under=furniture.spatial?.under;
-      if(under!==undefined){
-        if(!isRecord(under))errors.push(authoringIssue('authoring_furniture_under_invalid',`${basePath}.spatial.under`,'Furniture spatial.under must be an object.'));
-        else{
-          for(const [field,label] of [['clearance','clearance height'],['clearanceWidth','clearance width']])if(under[field]!==undefined&&(!Number.isFinite(Number(under[field]))||Number(under[field])<=0))errors.push(authoringIssue('authoring_furniture_under_clearance_invalid',`${basePath}.spatial.under.${field}`,`${label} must be a positive finite number when authored.`));
-        }
+      if(instance.id!==key)errors.push(authoringIssue('authoring_furniture_id_mismatch',`${basePath}.id`,`Furniture key ${key} does not match id ${String(instance.id)}.`));
+      if(typeof instance.definitionId!=='string'||!instance.definitionId){
+        errors.push(authoringIssue('authoring_furniture_definition_id_invalid',`${basePath}.definitionId`,'Furniture Instance definitionId must be a non-empty string.'));
+      }else if(!D.getDefinition(instance.definitionId)){
+        errors.push(authoringIssue('authoring_furniture_definition_missing',`${basePath}.definitionId`,`Furniture Definition ${instance.definitionId} does not exist.`,{definitionId:instance.definitionId}));
       }
-      if(furniture.slots!==undefined&&!Array.isArray(furniture.slots))errors.push(authoringIssue('authoring_furniture_slots_invalid',`${basePath}.slots`,'Furniture slots must be an array.'));
+      validatePosition(instance.origin,`${basePath}.origin`);
+      if(instance.name!==undefined&&(typeof instance.name!=='string'||!instance.name.trim())){
+        errors.push(authoringIssue('authoring_furniture_name_invalid',`${basePath}.name`,'Optional Furniture Instance name must be a non-empty string.'));
+      }
+      for(const field of Object.keys(instance))if(!furnitureInstanceFields.has(field)){
+        errors.push(authoringIssue('authoring_furniture_instance_field_unsupported',`${basePath}.${field}`,`Furniture Instance field ${field} is not part of compact ${VERSION} ownership.`,{field}));
+      }
+      if(!D.getDefinition(instance.definitionId)||!isRecord(instance.origin)||!Number.isInteger(instance.origin.x)||!Number.isInteger(instance.origin.y)||!Number.isInteger(instance.origin.z))continue;
+      let furniture;
+      try{furniture=resolveFurnitureInstance(instance);}
+      catch(error){
+        errors.push(authoringIssue(error.code||'authoring_furniture_resolution_failed',basePath,error.message||String(error)));
+        continue;
+      }
+      resolvedFurniture[key]=furniture;
+      for(let i=0;i<(furniture.footprint||[]).length;i++)validatePosition(furniture.footprint[i],`${basePath}.resolvedFootprint[${i}]`);
+      if(furniture.displayAt)validatePosition(furniture.displayAt,`${basePath}.resolvedDisplayAt`);
       for(let i=0;i<(furniture.slots||[]).length;i++){
-        const slot=furniture.slots[i],slotPath=`${basePath}.slots[${i}]`;
-        if(!isRecord(slot)){
-          errors.push(authoringIssue('authoring_slot_invalid',slotPath,'Furniture slot must be an object.'));
-          continue;
-        }
-        for(const field of derivedSlotFields)if(Object.prototype.hasOwnProperty.call(slot,field)){
-          errors.push(authoringIssue('authoring_derived_slot_field',`${slotPath}.${field}`,`Derived runtime field ${field} must not be persisted in canonical authoring.`));
-        }
-        if(typeof slot.id!=='string'||!slot.id)errors.push(authoringIssue('authoring_slot_id_invalid',`${slotPath}.id`,'Furniture slot id must be a non-empty string.'));
-        else{
-          const paths=slotIds.get(slot.id)||[];
-          paths.push(slotPath);
-          slotIds.set(slot.id,paths);
-        }
+        const slot=furniture.slots[i],slotPath=`${basePath}.resolvedSlots[${i}]`;
         validatePosition(slot.position,`${slotPath}.position`);
+        const paths=slotIds.get(slot.id)||[];
+        paths.push(slotPath);
+        slotIds.set(slot.id,paths);
       }
     }
     for(const [slotId,paths] of slotIds)if(paths.length>1){
-      errors.push(authoringIssue('authoring_slot_id_duplicate',paths[1]+`.id`,`Furniture slot id ${slotId} is duplicated.`,{slotId,count:paths.length}));
+      errors.push(authoringIssue('authoring_slot_id_duplicate',paths[1],`Derived Furniture slot id ${slotId} is duplicated.`,{slotId,count:paths.length}));
     }
 
     for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
@@ -218,7 +230,7 @@
       if(container.position)validatePosition(container.position,`${basePath}.position`);
       for(let i=0;i<(container.interactionPorts||[]).length;i++)if(container.interactionPorts[i]?.position)validatePosition(container.interactionPorts[i].position,`${basePath}.interactionPorts[${i}].position`);
       if(container.supportId){
-        const support=authoring.furniture?.[container.supportId];
+        const support=resolvedFurniture[container.supportId];
         if(!support)errors.push(authoringIssue('authoring_support_missing',`${basePath}.supportId`,`Container supportId ${container.supportId} does not exist.`,{supportId:container.supportId}));
         else if(container.position&&!((support.footprint||[]).some(p=>samePosition(p,container.position)))){
           errors.push(authoringIssue('authoring_support_position_mismatch',`${basePath}.position`,`Container ${key} is positioned outside support ${container.supportId} footprint.`,{containerId:key,supportId:container.supportId}));
@@ -257,14 +269,20 @@
 
 
   function assertCurrentSchema(authoring){
-    if(isRecord(authoring)&&authoring.authoringSchema===VERSION)return;
-    const error=new Error('Unsupported authoringSchema: '+String(authoring?.authoringSchema));
-    error.code='world_authoring_schema_unsupported';
-    throw error;
+    if(!isRecord(authoring)||authoring.authoringSchema!==VERSION){
+      const error=new Error('Unsupported authoringSchema: '+String(authoring?.authoringSchema));
+      error.code='world_authoring_schema_unsupported';
+      throw error;
+    }
+    if(authoring.furnitureCatalogVersion!==FURNITURE_CATALOG_VERSION){
+      const error=new Error('Unsupported furnitureCatalogVersion: '+String(authoring?.furnitureCatalogVersion));
+      error.code='furniture_catalog_unsupported';
+      throw error;
+    }
   }
 
   function deriveHorizontalTopology(authoring,{z=0}={}){
-    if(!isRecord(authoring)||authoring.authoringSchema!==VERSION)throw new Error('deriveHorizontalTopology requires '+VERSION+' authoring.');
+    assertCurrentSchema(authoring);
     const layer=(authoring.map?.layers||[]).find(item=>item.z===z);
     if(!layer)throw new RangeError('Missing authored Z-level '+z+'.');
     const width=authoring.map.width,height=authoring.map.height,cells={};
@@ -277,8 +295,8 @@
       };
     }
     const at=p=>p&&(p.z??0)===z?cells[p.x+','+p.y]||null:null;
-    for(const [key,furniture] of Object.entries(authoring.furniture||{})){
-      const id=furniture.id||key;
+    for(const [key,instance] of Object.entries(authoring.furniture||{})){
+      const furniture=resolveFurnitureInstance(instance),id=furniture.id||key;
       for(const p of furniture.footprint||[]){
         const cell=at(p);if(!cell)continue;
         if(!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
@@ -386,8 +404,12 @@
 
   window.SimWorldAuthoring={
     VERSION,
+    FURNITURE_CATALOG_VERSION,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,
+    listFurnitureDefinitions,
+    resolveFurnitureInstance,
+    resolvedFurnitureMap,
     deriveHorizontalTopology,
     validateAuthoring,
     assertValidAuthoring,
