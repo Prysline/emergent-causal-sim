@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
 
@@ -65,8 +66,14 @@ assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]}
 E.registerRuntimeObserver('afterTick','qa.presentation-observer',()=>{},10);
 assert.deepEqual(E.listRuntimeObservers('afterTick'),[{id:'qa.presentation-observer',order:10}],'Presentation observers may register after simulation hook finalization');
 assert.throws(()=>E.registerRuntimeObserver('afterTick','qa.presentation-observer',()=>{},20),/Duplicate runtime observer/);
-assert.throws(()=>E.registerRuntimeHook('beforeTick','intent.reconcile-before',()=>{},999),/Duplicate runtime hook/,'duplicate hook ids must fail loudly');
+assert.throws(()=>E.registerRuntimeHook('beforeTick','qa.late-simulation-hook',()=>{},999),/Runtime hook registry is finalized/,'late simulation hooks must fail after manifest finalization');
 assert.throws(()=>E.registerRuntimeHook('unknownPhase','bad',()=>{}),/Unknown runtime hook phase/,'unknown phases must fail loudly');
+
+const isolatedContext={window:{SimEngine:{tick(){},reset(){}}}};
+vm.runInNewContext(fs.readFileSync(new URL('../src/runtime-hook-pipeline.js',import.meta.url),'utf8'),isolatedContext,{filename:'src/runtime-hook-pipeline.js'});
+const isolatedEngine=isolatedContext.window.SimEngine;
+isolatedEngine.registerRuntimeHook('beforeTick','qa.duplicate-hook',()=>{},10);
+assert.throws(()=>isolatedEngine.registerRuntimeHook('beforeTick','qa.duplicate-hook',()=>{},20),/Duplicate runtime hook/,'duplicate hook ids must fail loudly before finalization');
 
 E.reset(20260911);
 noIssues('reset');
