@@ -9,7 +9,7 @@ import {
 globalThis.window=globalThis;
 const scripts=productionScriptPaths();
 assert.equal(scripts.at(-1),'src/app/bootstrap.js','production composition root must be the final script');
-loadProductionBefore('src/ui.js');
+loadProductionBefore('src/ui/core.js');
 
 const W=globalThis.SimWorld,E=globalThis.SimEngine,V=globalThis.SimValidator;
 assert.equal(W.isInitialStateRegistryFinalized(),true);

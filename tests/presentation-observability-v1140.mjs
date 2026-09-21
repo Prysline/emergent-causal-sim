@@ -33,7 +33,7 @@ assert.equal(W.LOCOMOTION_SCHEMA_VERSION,LOCOMOTION_VERSION);
 assert.equal(globalThis.SimLocomotion.VERSION,LOCOMOTION_VERSION);
 assert.equal(globalThis.SimCrowding.VERSION,CROWDING_VERSION);
 assert.equal(globalThis.SimSpatial.CROWDING_VERSION,CROWDING_VERSION);
-const uiObservabilitySource=fs.readFileSync(new URL('../src/ui-observability-controls-v1133a.js',import.meta.url),'utf8');
+const uiObservabilitySource=fs.readFileSync(new URL('../src/ui/observability-controls.js',import.meta.url),'utf8');
 assert.doesNotMatch(uiObservabilitySource,/E\.addEvent\s*=/,'UI observability must not replace addEvent');
 assert.doesNotMatch(uiObservabilitySource,/E\.actionLabel\s*=/,'UI observability must not replace actionLabel');
 assert.doesNotMatch(uiObservabilitySource,/recentSocialByAgent/,'UI observability must not maintain a recent-social lifecycle cache');
@@ -44,11 +44,11 @@ const labelsSource=fs.readFileSync(new URL('../src/ui/labels.js',import.meta.url
 assert.match(labelsSource,/const VERSION=R\.VERSION;/,'Presentation version must derive from the canonical release owner');
 assert.match(labelsSource,/PRESENTATION_VERSION:VERSION/,'Presentation version must be owned by SimUI');
 assert.match(labelsSource,/INTERACTION_LABELS/,'interaction labels must move to the semantic UI owner');
-const baseUiSource=fs.readFileSync(new URL('../src/ui.js',import.meta.url),'utf8');
+const baseUiSource=fs.readFileSync(new URL('../src/ui/core.js',import.meta.url),'utf8');
 assert.match(baseUiSource,/registerInspectorDecorator/,'base UI must own explicit Inspector decorator lifecycle');
 assert.match(baseUiSource,/kneeling:'跪姿'/,'base UI must render kneeling posture explicitly instead of falling back to standing');
 assert.match(baseUiSource,/prone:'俯臥'/,'base UI must render prone posture explicitly instead of falling back to standing');
-const residentUiSource=fs.readFileSync(new URL('../src/ui-resident-view-v1140.js',import.meta.url),'utf8');
+const residentUiSource=fs.readFileSync(new URL('../src/ui/resident-view.js',import.meta.url),'utf8');
 assert.match(residentUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Resident View must inherit the canonical Presentation marker from SimUI');
 assert.match(residentUiSource,/REQUIRED_INTENT_LABELS/,'Resident View must verify canonical Intent label coverage');
 assert.match(residentUiSource,/drinkWater:'補充水分'/,'drinkWater Intent must describe the goal instead of echoing the Action label');
@@ -78,7 +78,7 @@ assert.match(relationshipSource,/acceptTalk:\{roles:new Set\(\['target'\]\)\}/,'
 assert.match(relationshipSource,/talk:\{roles:new Set\(\['target'\]\)\}/,'full Human conversation responder evidence must come from the completed talk outcome');
 assert.match(relationshipSource,/function relationshipSignal\(a,counterpartId\)/,'Relationship must expose one directional unitless downstream signal');
 assert.doesNotMatch(relationshipSource,/trust|friendshipScore|love|hate/,'Relationship Foundation must not smuggle unsupported semantic dimensions into runtime policy');
-const relationshipUiSource=fs.readFileSync(new URL('../src/ui-relationship-v1150.js',import.meta.url),'utf8');
+const relationshipUiSource=fs.readFileSync(new URL('../src/ui/inspectors/relationship.js',import.meta.url),'utf8');
 assert.match(relationshipUiSource,/registerInspectorDecorator\('relationship\.view',decorateInspector,1025\)/,'Relationship UI must use explicit Inspector lifecycle after Resident and before Entity readable layers');
 assert.match(relationshipUiSource,/熟悉不等於喜歡/,'player-readable relationship copy must preserve familiarity/affinity semantic separation');
 assert.match(relationshipUiSource,/Talk responder：base/,'Relationship Debug must expose Human responder score decomposition');
@@ -109,12 +109,12 @@ const memoryDeliberationSource=fs.readFileSync(new URL('../src/systems/memory/de
 assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');
 assert.match(memoryDeliberationSource,/SP\.planRoute\(st,a,target\.position,\{mode:'auto',objective:'traversalCost'\}\)/,'target ranking must read canonical traversal-cost route facts');
 assert.doesNotMatch(memoryDeliberationSource,/distancePenalty/,'current target-ranking decomposition must not retain the stale distancePenalty field');
-const memoryDeliberationUiSource=fs.readFileSync(new URL('../src/ui-memory-deliberation-v1134.js',import.meta.url),'utf8');
+const memoryDeliberationUiSource=fs.readFileSync(new URL('../src/ui/inspectors/memory-deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationUiSource,/path distance/,'Debug target ranking must show real path distance');
 assert.match(memoryDeliberationUiSource,/traversal cost/,'Debug target ranking must show traversal cost');
 assert.match(memoryDeliberationUiSource,/travel time/,'Debug target ranking must show travel time');
 assert.match(memoryDeliberationUiSource,/access penalty/,'Debug target ranking must show access penalty');
-const physicalUiSource=fs.readFileSync(new URL('../src/ui-physical-v1160.js',import.meta.url),'utf8');
+const physicalUiSource=fs.readFileSync(new URL('../src/ui/inspectors/physical.js',import.meta.url),'utf8');
 assert.match(physicalUiSource,/registerInspectorDecorator\('physical\.view',decorateInspector,1026\)/,'Physical Debug must use the explicit Inspector lifecycle');
 assert.match(physicalUiSource,/MovementEnvelope 由 locomotion mode 即時計算/,'Physical Debug must identify MovementEnvelope as derived truth');
 assert.match(physicalUiSource,/posture 與 locomotion mode 是不同語意/,'Physical Debug must preserve posture/locomotion terminology separation');
@@ -123,7 +123,7 @@ assert.doesNotMatch(physicalUiSource,/\.physical\s*=/,'Physical UI must remain a
 const locomotionSource=fs.readFileSync(new URL('../src/systems/locomotion.js',import.meta.url),'utf8');
 assert.match(locomotionSource,/function transitionTicks\(fromMode,toMode\)/,'Locomotion runtime must own posture-transition timing');
 assert.match(locomotionSource,/Math\.ceil\(1\/speed\)/,'Locomotion runtime must derive real edge timing from speedFactor');
-const locomotionUiSource=fs.readFileSync(new URL('../src/ui-locomotion-v1190.js',import.meta.url),'utf8');
+const locomotionUiSource=fs.readFileSync(new URL('../src/ui/inspectors/locomotion.js',import.meta.url),'utf8');
 assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use explicit Inspector lifecycle');
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
 const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
@@ -131,7 +131,7 @@ assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode=
 assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 5');
 assert.match(crowdingSource,/directionWeight:Object\.freeze\(\{same:\.65,stationary:1,unknown:1,opposite:1\.7\}\)/,'Crowding direction severity must remain deterministic');
 assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
-const entityUiSource=fs.readFileSync(new URL('../src/ui-entity-readable-v1141.js',import.meta.url),'utf8');
+const entityUiSource=fs.readFileSync(new URL('../src/ui/entity-readable.js',import.meta.url),'utf8');
 assert.match(entityUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Entity Readable View must inherit the canonical Presentation marker from SimUI');
 assert.match(entityUiSource,/new Set\(\['container','source','furniture','tile','room','event'\]\)/,'Entity Readable View must explicitly cover all current non-agent Inspector entity types');
 assert.match(entityUiSource,/registerInspectorDecorator\('entityReadable\.layer',decorateInspector,1050\)/,'Entity Readable View must use the explicit Inspector decorator lifecycle after the Resident layer');
@@ -142,7 +142,7 @@ assert.doesNotMatch(entityUiSource,/slotReservedBy/,'Furniture readable projecti
 assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|entityReadableState)\s*=/,'Entity Readable View must not persist player-facing mirror state');
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 
-const environmentUiSource=fs.readFileSync(new URL('../src/ui-spatial-environment.js',import.meta.url),'utf8');
+const environmentUiSource=fs.readFileSync(new URL('../src/ui/spatial/environment.js',import.meta.url),'utf8');
 assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI must preserve non-zero z when projecting surface cells');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
@@ -200,16 +200,16 @@ const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.me
 assert.ok(versioningSource.includes(CURRENT_VERSION),'versioning contract must identify the current runtime marker');
 assert.match(versioningSource,/何時必須升版/,'versioning contract must define a mandatory bump boundary');
 const explicitInspectorDecoratorFiles=[
-  'ui-intent-v1121.js','ui-memory-v1130.js','ui-appraisal-v1131.js','ui-affect-v1132.js',
-  'ui-memory-retention-v1133.js','ui-memory-deliberation-v1134.js','ui-social-outcome-memory-v1135.js',
-  'ui-spatial-environment.js','ui-resident-view-v1140.js','ui-relationship-v1150.js','ui-physical-v1160.js','ui-locomotion-v1190.js','ui-entity-readable-v1141.js'
+  'ui/inspectors/intent.js','ui/inspectors/memory.js','ui/inspectors/appraisal.js','ui/inspectors/affect.js',
+  'ui/inspectors/memory-retention.js','ui/inspectors/memory-deliberation.js','ui/inspectors/social-outcomes.js',
+  'ui/spatial/environment.js','ui/resident-view.js','ui/inspectors/relationship.js','ui/inspectors/physical.js','ui/inspectors/locomotion.js','ui/entity-readable.js'
 ];
 for(const file of explicitInspectorDecoratorFiles){
   const source=fs.readFileSync(new URL(`../src/${file}`,import.meta.url),'utf8');
   assert.match(source,/registerInspectorDecorator/,`${file} must use explicit Inspector lifecycle`);
   assert.doesNotMatch(source,/new MutationObserver/,`${file} must not infer Inspector render completion from MutationObserver`);
 }
-const spatialUiSource=fs.readFileSync(new URL('../src/ui-spatial-observability.js',import.meta.url),'utf8');
+const spatialUiSource=fs.readFileSync(new URL('../src/ui/spatial/observability.js',import.meta.url),'utf8');
 assert.match(spatialUiSource,/registerInspectorDecorator\('spatial\.observability'/,'spatial Inspector must use explicit decorator lifecycle');
 assert.match(spatialUiSource,/Dynamic Congestion/,'Spatial Debug must expose current next-edge congestion');
 assert.doesNotMatch(spatialUiSource,/\['inspector','map','actions'\]/,'spatial DOM observer must no longer own Inspector rendering');

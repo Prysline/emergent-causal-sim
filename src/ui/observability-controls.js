@@ -76,7 +76,7 @@
   }
   function resetObservability(){if(UI.isStarted?.())renderMobileSummary();}
 
-  if(!E.registerRuntimeObserver)throw new Error('ui-observability-controls-v1133a.js requires runtime observer lifecycle');
+  if(!E.registerRuntimeObserver)throw new Error('ui/observability-controls.js requires runtime observer lifecycle');
   E.registerRuntimeObserver('afterTick','uiObservability.render-mobile-summary',renderMobileSummary,1000);
   E.registerRuntimeObserver('afterReset','uiObservability.reset',resetObservability,600);
 

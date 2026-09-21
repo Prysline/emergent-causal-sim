@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
 
 globalThis.window=globalThis;
-loadProductionBefore('src/ui.js');
+loadProductionBefore('src/ui/core.js');
 
 
 const E=globalThis.SimEngine,V=globalThis.SimValidator;

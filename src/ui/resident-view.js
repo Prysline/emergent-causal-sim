@@ -244,7 +244,7 @@
     schedule();
   },300);
 
-  if(!E.registerRuntimeObserver)throw new Error('ui-resident-view-v1140.js requires runtime observer lifecycle');
+  if(!E.registerRuntimeObserver)throw new Error('ui/resident-view.js requires runtime observer lifecycle');
   E.registerRuntimeObserver('afterTick','residentView.schedule',schedule,1100);
   E.registerRuntimeObserver('afterReset','residentView.reset',resetResidentView,700);
 

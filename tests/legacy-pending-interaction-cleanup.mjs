@@ -9,7 +9,7 @@ for(const path of [
   'src/world.js',
   'src/systems/social/state.js',
   'src/systems/memory/deliberation.js',
-  'src/ui.js'
+  'src/ui/core.js'
 ]){
   assert.equal(source(path).includes('pendingInteraction'),false,`${path} must not retain legacy pendingInteraction ownership or consumer reads`);
 }

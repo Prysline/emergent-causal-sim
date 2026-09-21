@@ -537,7 +537,7 @@ Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Acti
 
 Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。Physical / Passage Slice 2 是靜態 profile + 同步 derived projection / query，沒有取得 simulation runtime hook ownership。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
 
-`ui-spatial-observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
+`ui/spatial/observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
 
 ## 9. Spatial / Physical / resources / sleep invariants
 

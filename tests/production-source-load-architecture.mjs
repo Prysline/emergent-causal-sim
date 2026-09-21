@@ -35,7 +35,7 @@ const pipelineIndex=indexOf('src/runtime-hook-pipeline.js');
 const hookManifestIndex=indexOf('src/runtime/hook-manifest.js');
 const validatorIndex=indexOf('src/validation/registry.js');
 const manifestIndex=indexOf('src/validation/manifest.js');
-const uiIndex=indexOf('src/ui.js');
+const uiIndex=indexOf('src/ui/core.js');
 const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
@@ -78,9 +78,9 @@ const observerExtensions=scripts.filter(path=>
   path!=='src/runtime-hook-pipeline.js'&&readRepoFile(path).includes('registerRuntimeObserver(')
 );
 assert.deepEqual(observerExtensions,[
-  'src/ui-observability-controls-v1133a.js',
-  'src/ui-resident-view-v1140.js',
-  'src/ui-relationship-v1150.js'
+  'src/ui/observability-controls.js',
+  'src/ui/resident-view.js',
+  'src/ui/inspectors/relationship.js'
 ],'only the three current Presentation refresh/reset owners may register runtime observers in Cleanup-5B-1');
 for(const path of observerExtensions){
   assert.ok(indexOf(path)>hookManifestIndex,path+' must not participate in simulation hook completeness');
@@ -141,7 +141,7 @@ for(const path of validatorRules){
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
 }
 
-loadProductionBefore('src/ui.js');
+loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring;
 const R=globalThis.SimRelease;
@@ -182,12 +182,12 @@ assert.equal(scripts.includes('src/presentation-schema-v1140.js'),false,'product
 assert.equal(fs.existsSync(new URL('../src/presentation-schema-v1140.js',import.meta.url)),false,'retired Presentation schema source must not remain in the current tree');
 
 const uiStartupFiles=[
-  'src/ui-social-response-v1132a.js',
-  'src/ui-spatial-observability.js',
-  'src/ui-observability-controls-v1133a.js',
-  'src/ui-resident-view-v1140.js',
-  'src/ui-relationship-v1150.js',
-  'src/ui-entity-readable-v1141.js'
+  'src/ui/inspectors/social-response.js',
+  'src/ui/spatial/observability.js',
+  'src/ui/observability-controls.js',
+  'src/ui/resident-view.js',
+  'src/ui/inspectors/relationship.js',
+  'src/ui/entity-readable.js'
 ];
 for(const path of uiStartupFiles){
   assert.ok(readRepoFile(path).includes('registerStartupExtension('),path+' must defer UI side effects to SimUI.start()');
