@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.22.0・Spatial Z Identity**（`11.22.0-spatial-z-identity`）。
+目前 runtime marker：**v11.22.1・Editor Resident Capabilities**（`11.22.1-editor-resident-capabilities`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
