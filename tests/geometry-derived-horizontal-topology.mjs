@@ -15,10 +15,10 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v3');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v1');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v3');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v1');
+assert.equal(A.VERSION,'world-authoring-v4');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v2');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v4');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v2');
 assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable).spatial.under.clearance,.72);
 
 {
@@ -37,26 +37,23 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
 
 {
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
-  authored.map.layers[0].cells['3,4']={terrain:'wall',material:'stone'};
+  authored.map.layers[0].boundaries['v:4,4']={kind:'wall',material:'stone'};
   let topology=A.deriveHorizontalTopology(authored,{z:0});
-  assert.equal(topology.cells['3,4'].structuralOpen,false);
-  assert.equal(topology.cells['3,4'].open,false);
-
-  authored.map.layers[0].cells['3,4']={terrain:'doorway',material:'wood'};
-  topology=A.deriveHorizontalTopology(authored,{z:0});
-  assert.equal(topology.cells['3,4'].structuralOpen,true,'opening must create structural floor-level openness without walkability flags');
-  assert.equal(topology.cells['3,4'].open,true);
-  assert.ok(topology.cells['3,4'].adjacent.includes('3,5'));
-
-  authored.furniture.testSolid={id:'testSolid',definitionId:'front-door',origin:{x:3,y:4,z:0}};
-  topology=A.deriveHorizontalTopology(authored,{z:0});
   assert.equal(topology.cells['3,4'].structuralOpen,true);
-  assert.equal(topology.cells['3,4'].open,false,'solid Furniture Definition geometry must close authored opening');
-  assert.deepEqual(topology.cells['3,4'].blockedBy,['furniture:testSolid']);
+  assert.equal(topology.cells['4,4'].structuralOpen,true);
+  assert.equal(topology.cells['3,4'].adjacent.includes('4,4'),false,'wall boundary must block the edge without consuming either Cell');
 
-  delete authored.furniture.testSolid;
+  authored.map.layers[0].boundaries['v:4,4']={kind:'opening',material:'wood',clearanceWidth:.8,clearanceHeight:2};
   topology=A.deriveHorizontalTopology(authored,{z:0});
-  assert.equal(topology.cells['3,4'].open,true,'removing blocker must restore connectivity');
+  assert.equal(topology.cells['3,4'].adjacent.includes('4,4'),true,'opening boundary must restore the edge');
+
+  authored.doors.testDoor={id:'testDoor',name:'測試門',boundary:{z:0,id:'v:4,4'},state:'closed'};
+  topology=A.deriveHorizontalTopology(authored,{z:0});
+  assert.equal(topology.cells['3,4'].adjacent.includes('4,4'),false,'closed Door must block its opening edge');
+
+  authored.doors.testDoor.state='open';
+  topology=A.deriveHorizontalTopology(authored,{z:0});
+  assert.equal(topology.cells['3,4'].adjacent.includes('4,4'),true,'open Door must restore its opening edge');
 }
 
 {
@@ -69,12 +66,21 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
 
 {
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
+  authored.map.layers[0].boundaries['v:4,4']={kind:'opening',clearanceWidth:.8,clearanceHeight:2};
   const st=compile(authored);
-  assert.equal(st.map.tiles['0,6'].walkable,true,'doorway compatibility tile must expose base structural openness');
+  assert.equal(st.map.cellSizeMeters,1);
+  assert.equal(st.map.boundaries['0|v:1,6'].kind,'opening');
+  assert.equal(st.doors.frontDoor.state,'open');
+  assert.equal(st.exits.frontExit.kind,'offMap');
   assert.ok(st.map.tiles['5,2'].furnitureIds.includes('diningTable'),'furniture membership must come from shared derivation');
-  const from=SP.normalizeNode(st,{x:4,y:2},'floor'),under=SP.normalizeNode(st,{x:5,y:2},'floor');
-  const profile=SP.getPassageProfile(st,from,under);
-  assert.equal(profile.clearanceHeight,.72,'PassageProfile must consume Definition-owned under-clearance geometry');
+  const from=SP.normalizeNode(st,{x:3,y:4},'floor'),to=SP.normalizeNode(st,{x:4,y:4},'floor');
+  const boundaryProfile=SP.getPassageProfile(st,from,to);
+  assert.equal(boundaryProfile.clearanceWidth,.8,'PassageProfile must consume opening boundary metric clearance');
+  assert.equal(boundaryProfile.clearanceHeight,2);
+  assert.equal(boundaryProfile.constrainedBy.boundary,'v:4,4');
+  const underFrom=SP.normalizeNode(st,{x:4,y:2},'floor'),under=SP.normalizeNode(st,{x:5,y:2},'floor');
+  const underProfile=SP.getPassageProfile(st,underFrom,under);
+  assert.equal(underProfile.clearanceHeight,.72,'PassageProfile must still consume Definition-owned under-clearance geometry');
 }
 
 console.log('geometry-derived horizontal topology contract: ok');
