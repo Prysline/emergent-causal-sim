@@ -32,7 +32,7 @@ const goal=SP.normalizeNode(st,{x:5,y:3},'floor');
 const shortest=SP.planRoute(st,actor,goal,{mode:'walk',objective:'pathDistance'});
 const easiest=SP.planRoute(st,actor,goal,{mode:'walk',objective:'traversalCost'});
 
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.18.0-route-semantics-split');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.24.0-route-locomotion-cost');
 assert.equal(shortest.pathDistance,4,'shortest feasible topology route should be four edges');
 assert.equal(shortest.travelTime,4,'current executable travel time is one tick per selected walk edge');
 assert.ok(Math.abs(shortest.traversalCost-14.5)<1e-9,`short route cost expected 14.5, got ${shortest.traversalCost}`);
@@ -50,4 +50,4 @@ assert.equal(SP.travelTime(st,actor,goal),6,'standalone travelTime follows the d
 assert.deepEqual(SP.astar(st,actor.position,goal,actor.id),easiest.path,'existing A* compatibility surface must retain traversal-cost route choice');
 assert.throws(()=>SP.planRoute(st,actor,goal,{mode:'proneCrawl'}),/supports walk only/,'Slice 3 must not silently turn crawl feasibility into execution');
 
-console.log('v11.18.0 route semantics split regression: ok');
+console.log('v11.24.0 route locomotion cost regression: ok');
