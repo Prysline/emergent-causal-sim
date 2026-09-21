@@ -86,7 +86,7 @@
   const derivedCellFields=new Set(['walkable','crawlOnly','roomId','furnitureIds']);
   const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor']);
   const furnitureInstanceFields=new Set(['id','definitionId','origin','name']);
-  const BOUNDARY_ID_PATTERN=/^([vh]):(-?\\d+),(-?\\d+)$/;
+  const BOUNDARY_ID_PATTERN=/^([vh]):(-?\d+),(-?\d+)$/;
   const BOUNDARY_KINDS=new Set(['wall','opening']);
   const DOOR_STATES=new Set(['open','closed']);
 
