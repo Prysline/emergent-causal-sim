@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.23.1-editor-source-port-observability';
+const APP_VERSION='11.24.0-locomotion-traversal-cost';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const clone=x=>structuredClone(x);
