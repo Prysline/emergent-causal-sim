@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 
@@ -17,21 +15,22 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v2');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v2');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable.spatial.under.clearance,.72);
+assert.equal(A.VERSION,'world-authoring-v3');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v1');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v3');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v1');
+assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable).spatial.under.clearance,.72);
 
 {
   const legacy=clone(A.DEFAULT_WORLD_AUTHORING);
-  legacy.authoringSchema='world-authoring-v1';
-  delete legacy.furniture.diningTable.spatial;
+  legacy.authoringSchema='world-authoring-v2';
   assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose legacy migration machinery');
   const report=A.validateAuthoring(legacy);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_schema_unsupported'));
   assert.throws(
     ()=>A.parseAuthoringJSON(JSON.stringify(legacy)),
-    error=>error?.code==='world_authoring_schema_unsupported'&&/world-authoring-v1/.test(error.message),
+    error=>error?.code==='world_authoring_schema_unsupported'&&/world-authoring-v2/.test(error.message),
     'JSON import must reject legacy authoringSchema instead of migrating it'
   );
 }
@@ -49,10 +48,10 @@ assert.equal(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable.spatial.under.clear
   assert.equal(topology.cells['3,4'].open,true);
   assert.ok(topology.cells['3,4'].adjacent.includes('3,5'));
 
-  authored.furniture.testSolid={id:'testSolid',name:'solid blocker',blocksMovement:true,footprint:[{x:3,y:4,z:0}],displayAt:{x:3,y:4,z:0},slots:[]};
+  authored.furniture.testSolid={id:'testSolid',definitionId:'front-door',origin:{x:3,y:4,z:0}};
   topology=A.deriveHorizontalTopology(authored,{z:0});
   assert.equal(topology.cells['3,4'].structuralOpen,true);
-  assert.equal(topology.cells['3,4'].open,false,'solid blocker must close authored opening');
+  assert.equal(topology.cells['3,4'].open,false,'solid Furniture Definition geometry must close authored opening');
   assert.deepEqual(topology.cells['3,4'].blockedBy,['furniture:testSolid']);
 
   delete authored.furniture.testSolid;
@@ -62,25 +61,20 @@ assert.equal(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable.spatial.under.clear
 
 {
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
-  authored.furniture.testCover={
-    id:'testCover',name:'low cover',blocksMovement:true,
-    footprint:[{x:3,y:4,z:0}],displayAt:{x:3,y:4,z:0},slots:[],
-    spatial:{under:{clearance:.70,clearanceWidth:.80,cover:'overhead'}}
-  };
+  authored.furniture.testCover={id:'testCover',definitionId:'dining-table',origin:{x:3,y:4,z:0}};
   const topology=A.deriveHorizontalTopology(authored,{z:0});
-  assert.equal(topology.cells['3,4'].open,true,'under-clearance geometry must remain generically connected');
-  assert.deepEqual(topology.cells['3,4'].under,[{furnitureId:'testCover',clearanceHeight:.70,clearanceWidth:.80}]);
+  assert.equal(topology.cells['3,4'].open,true,'Definition-owned under-clearance geometry must remain generically connected');
+  assert.deepEqual(topology.cells['3,4'].under,[{furnitureId:'testCover',clearanceHeight:.72,clearanceWidth:null}]);
 }
 
 {
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
-  authored.furniture.diningTable.spatial.under.clearance=.70;
   const st=compile(authored);
   assert.equal(st.map.tiles['0,6'].walkable,true,'doorway compatibility tile must expose base structural openness');
   assert.ok(st.map.tiles['5,2'].furnitureIds.includes('diningTable'),'furniture membership must come from shared derivation');
   const from=SP.normalizeNode(st,{x:4,y:2},'floor'),under=SP.normalizeNode(st,{x:5,y:2},'floor');
   const profile=SP.getPassageProfile(st,from,under);
-  assert.equal(profile.clearanceHeight,.70,'PassageProfile must consume authored under-clearance geometry');
+  assert.equal(profile.clearanceHeight,.72,'PassageProfile must consume Definition-owned under-clearance geometry');
 }
 
 console.log('geometry-derived horizontal topology contract: ok');
