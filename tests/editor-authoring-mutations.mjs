@@ -3,16 +3,18 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','editor-authoring-mutations.js','world-initializer.js']){
+for(const file of ['world-authoring.js','embodiment-capabilities.js','editor-authoring-mutations.js','world-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const A=globalThis.SimWorldAuthoring;
+const C=globalThis.SimEmbodimentCapabilities;
 const M=globalThis.SimEditorAuthoringMutations;
 const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
 assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(C.VERSION,'embodiment-capabilities-v1');
 
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -130,45 +132,49 @@ assert.equal(A.VERSION,'world-authoring-v2');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  let result=M.moveResidentExact(doc,{residentId:'zhen',target:{x:8,y:4,z:0}});
+  assert.deepEqual(M.listResidentFreePostures(doc,'zhen').map(item=>item.kind),['standing','lying','kneeling','prone']);
+  assert.deepEqual(M.listResidentFreePostures(doc,'orange').map(item=>item.kind),['standing','lying']);
+  let result=M.moveResidentToExact(doc,{residentId:'zhen',target:{x:8,y:4,z:0},postureKind:'kneeling'});
   assert.equal(result.ok,true);
-  assert.deepEqual(result.candidate.residents.zhen.initial.placement.node,{x:8,y:4,z:0});
-  assert.equal(result.candidate.residents.zhen.initial.posture.kind,'standing');
-  const analysis=I.analyzeInitialPlacements(result.candidate);
-  assert.deepEqual(analysis.hardErrors,[]);
+  assert.deepEqual(result.candidate.residents.zhen.initial.placement,{mode:'exact',node:{x:8,y:4,z:0}});
+  assert.deepEqual(result.candidate.residents.zhen.initial.posture,{kind:'kneeling'});
+  assert.equal(result.meta.detachedBinding,false);
+  assert.deepEqual(I.analyzeInitialPlacements(result.candidate).hardErrors,[]);
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.residents.zhen.initial.placement={mode:'anchor',anchor:{kind:'furnitureSlot',id:'chairNW:seat'}};
   doc.residents.zhen.initial.posture={kind:'sitting',slotId:'chairNW:seat',furnitureId:'chairNW'};
-  const before=fp(doc);
-  let result=M.moveResidentExact(doc,{residentId:'zhen',target:{x:8,y:4,z:0}});
-  assert.equal(result.ok,false);
-  assert.equal(result.issues[0].code,'resident_move_requires_exact');
-  assert.equal(fp(doc),before);
-  result=M.convertResidentToExactStanding(doc,{residentId:'zhen',target:{x:8,y:4,z:0}});
+  const result=M.moveResidentToExact(doc,{residentId:'zhen',target:{x:8,y:4,z:0},postureKind:'prone'});
   assert.equal(result.ok,true);
+  assert.equal(result.meta.detachedBinding,true);
+  assert.equal(result.meta.previousBinding.slotId,'chairNW:seat');
   assert.deepEqual(result.candidate.residents.zhen.initial.placement,{mode:'exact',node:{x:8,y:4,z:0}});
-  assert.deepEqual(result.candidate.residents.zhen.initial.posture,{kind:'standing'});
+  assert.deepEqual(result.candidate.residents.zhen.initial.posture,{kind:'prone'});
   assert.deepEqual(I.analyzeInitialPlacements(result.candidate).hardErrors,[]);
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  doc.residents.zhen.initial.placement={mode:'exact',node:{x:4,y:2,z:0}};
-  doc.residents.zhen.initial.posture={kind:'sitting',slotId:'chairNW:seat',furnitureId:'chairNW'};
   const before=fp(doc);
-  const result=M.moveResidentExact(doc,{residentId:'zhen',target:{x:8,y:4,z:0}});
+  const result=M.moveResidentToExact(doc,{residentId:'orange',target:{x:3,y:6,z:0},postureKind:'prone'});
   assert.equal(result.ok,false);
-  assert.equal(result.issues[0].code,'resident_move_bound');
-  assert.equal(fp(doc),before,'bound exact Resident generic move must be atomic rejection');
+  assert.equal(result.issues[0].code,'resident_free_posture_unsupported');
+  assert.deepEqual(result.issues[0].allowed,['standing','lying']);
+  assert.equal(fp(doc),before,'unsupported species posture must reject atomically');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  const result=M.rebindResidentToSlot(doc,{residentId:'zhen',slotId:'sofa:left',postureKind:'sitting'});
+  assert.deepEqual(M.listResidentSlotPostures(doc,'zhen','sofa:left').map(item=>item.kind),['standing','sitting','lying','kneeling','prone']);
+  assert.deepEqual(M.listResidentSlotPostures(doc,'orange','sofa:left').map(item=>item.kind),['standing','sitting','lying']);
+  assert.deepEqual(M.listResidentSlotPostures(doc,'orange','chairNW:seat'),[],'slot kind incompatibility must produce no posture choices');
+  let result=M.rebindResidentToSlot(doc,{residentId:'zhen',slotId:'sofa:left',postureKind:'sitting'});
   assert.equal(result.ok,true);
   assert.deepEqual(result.candidate.residents.zhen.initial.placement,{mode:'anchor',anchor:{kind:'furnitureSlot',id:'sofa:left'}});
   assert.deepEqual(result.candidate.residents.zhen.initial.posture,{kind:'sitting',slotId:'sofa:left',furnitureId:'sofa'});
   assert.deepEqual(I.analyzeInitialPlacements(result.candidate).hardErrors,[]);
+  result=M.rebindResidentToSlot(doc,{residentId:'orange',slotId:'sofa:left',postureKind:'prone'});
+  assert.equal(result.ok,false);
+  assert.equal(result.issues[0].code,'resident_slot_posture_unsupported');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
