@@ -86,7 +86,7 @@ assert.equal(Object.hasOwn(snapshot.document.map.layers[0].cells['1,1'],'materia
 assert.equal(snapshot.document.map.layers[0].cells['1,1'].terrain,'floor');
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
-assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id]').count(),await page.evaluate(()=>window.SimFurnitureDefinitions.list().length),'Furniture Catalog must expose every system-owned Definition exactly once');
+assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id]').count(),await page.evaluate(()=>window.SimFurnitureDefinitions.listDefinitions().length),'Furniture Catalog must expose every system-owned Definition exactly once');
 await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
