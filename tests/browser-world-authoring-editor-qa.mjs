@@ -224,10 +224,13 @@ await page.click('[data-editor-action="duplicate-furniture"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation.kind,'duplicate-furniture');
 await page.click('[data-cell="3,5"]');
-snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.ok(snapshot.document.furniture['chairNW-copy'],'duplicate must create a canonical Furniture only after placement click');
-assert.equal(snapshot.document.furniture['chairNW-copy'].id,'chairNW-copy');
-assert.equal(snapshot.document.furniture['chairNW-copy'].slots[0].id,'chairNW-copy:seat');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
+}));
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:5,z:0},name:'餐椅 A'},'duplicate must copy only instance-owned facts and placement under Definition-based ID generation');
+assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
 
 await page.click('[data-scene-type="container"][data-scene-id="basket"]');
