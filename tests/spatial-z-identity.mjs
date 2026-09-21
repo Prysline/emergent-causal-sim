@@ -19,7 +19,8 @@ layered.map.layers.push({
   cells:{
     '8,4':{terrain:'floor',material:'wood'},
     '9,4':{terrain:'floor',material:'wood'}
-  }
+  },
+  boundaries:{}
 });
 layered.residents.orange.initial.placement={mode:'exact',node:{x:8,y:4,z:1}};
 layered.residents.orange.initial.posture={kind:'standing'};
