@@ -9,6 +9,7 @@ const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
+const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
@@ -26,7 +27,7 @@ assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'headless runtime must not 
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
 assert.equal(W.PHYSICAL_RUNTIME_VERSION,PHYSICAL_VERSION);
-assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,PHYSICAL_VERSION);
+assert.equal(globalThis.SimSpatial.PASSAGE_PROFILE_VERSION,PASSAGE_VERSION);
 assert.equal(st.version,CURRENT_VERSION);
 assert.equal(globalThis.SimSpatial.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,LOCOMOTION_VERSION);
