@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','world-initializer.js']){
+for(const file of ['world-authoring.js','embodiment-capabilities.js','world-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
