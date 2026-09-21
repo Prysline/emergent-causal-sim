@@ -1,8 +1,9 @@
 (() => {
-  const A=window.SimWorldAuthoring;
+  const A=window.SimWorldAuthoring,C=window.SimEmbodimentCapabilities;
   if(!A?.DEFAULT_WORLD_AUTHORING)throw new Error('SimWorldAuthoring must load before world-initializer.js.');
+  if(!C?.ALL_POSTURES)throw new Error('SimEmbodimentCapabilities must load before world-initializer.js.');
   const clone=value=>JSON.parse(JSON.stringify(value));
-  const POSTURES=new Set(['standing','sitting','lying','kneeling','prone']);
+  const POSTURES=new Set(C.ALL_POSTURES);
   const zOf=p=>p?.z??0;
   const cellKey=p=>p?`${p.x},${p.y}`:'?';
   const posKey=p=>p?(zOf(p)===0?cellKey(p):`${p.x},${p.y},${zOf(p)}`):'?';
