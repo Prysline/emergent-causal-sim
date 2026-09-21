@@ -53,6 +53,27 @@ assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independ
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
 assert.ok(manifestIndex<uiIndex,'validator registry must finalize before the base UI');
 assert.equal(labelsIndex,uiIndex+1,'Presentation labels owner must load immediately after the base UI');
+const expectedUiSources=[
+  'src/ui/core.js',
+  'src/ui/labels.js',
+  'src/ui/spatial/observability.js',
+  'src/ui/spatial/environment.js',
+  'src/ui/inspectors/intent.js',
+  'src/ui/inspectors/memory.js',
+  'src/ui/inspectors/appraisal.js',
+  'src/ui/inspectors/affect.js',
+  'src/ui/inspectors/social-response.js',
+  'src/ui/inspectors/memory-retention.js',
+  'src/ui/inspectors/memory-deliberation.js',
+  'src/ui/inspectors/social-outcomes.js',
+  'src/ui/observability-controls.js',
+  'src/ui/resident-view.js',
+  'src/ui/inspectors/relationship.js',
+  'src/ui/inspectors/physical.js',
+  'src/ui/inspectors/locomotion.js',
+  'src/ui/entity-readable.js'
+];
+assert.deepEqual(scripts.filter(path=>path.startsWith('src/ui/')),expectedUiSources,'production UI must use only semantic current source paths in stable order');
 assert.equal(bootstrapIndex,scripts.length-1,'app bootstrap must be the final production script');
 assert.ok(bootstrapIndex>uiIndex,'app bootstrap must start only after UI definitions/extensions load');
 
@@ -317,6 +338,38 @@ assert.deepEqual(scripts.filter(path=>retiredValidationAssets.includes(path)),[]
 for(const path of retiredValidationAssets){
   assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current implementation');
 }
+const retiredUiAssets=[
+  'src/ui.js',
+  'src/ui-spatial-observability.js',
+  'src/ui-spatial-environment.js',
+  'src/ui-intent-v1121.js',
+  'src/ui-memory-v1130.js',
+  'src/ui-appraisal-v1131.js',
+  'src/ui-affect-v1132.js',
+  'src/ui-social-response-v1132a.js',
+  'src/ui-memory-retention-v1133.js',
+  'src/ui-memory-deliberation-v1134.js',
+  'src/ui-social-outcome-memory-v1135.js',
+  'src/ui-observability-controls-v1133a.js',
+  'src/ui-resident-view-v1140.js',
+  'src/ui-relationship-v1150.js',
+  'src/ui-physical-v1160.js',
+  'src/ui-locomotion-v1190.js',
+  'src/ui-entity-readable-v1141.js'
+];
+assert.deepEqual(scripts.filter(path=>retiredUiAssets.includes(path)),[],'production must not load retired UI source paths');
+for(const path of retiredUiAssets){
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current UI implementation');
+}
+const indexHtml=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
+for(const path of ['styles/observability-v1133a.css','styles/resident-view-v1140.css']){
+  assert.equal(indexHtml.includes(path),false,'production must not load retired CSS path '+path);
+  assert.equal(fs.existsSync(new URL('../'+path,import.meta.url)),false,path+' must not remain as a second current stylesheet');
+}
+for(const path of ['styles/observability.css','styles/resident-view.css']){
+  assert.equal(indexHtml.includes(path),true,'production must load semantic current stylesheet '+path);
+}
+
 const spatialInitWriters=scripts.filter(path=>/\bSP\.init\s*=/.test(readRepoFile(path)));
 const spatialInitCallers=scripts.filter(path=>/\bSP\.init\s*\(/.test(readRepoFile(path)));
 assert.deepEqual(spatialInitWriters,[],'production must not expose a Spatial init writer after Cleanup-3B');
