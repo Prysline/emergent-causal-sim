@@ -347,7 +347,9 @@ assert.deepEqual(snapshot.postureOptions,['standing','lying'],'Cat free move mus
 await page.click('[data-editor-action="cancel-operation"]');
 
 await page.click('[data-tool="select"]');
-await page.click('[data-cell="3,4"]');
+await page.locator('[data-cell="3,4"]').click({position:{x:2,y:2}});
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.deepEqual(snapshot.selection,{kind:'cell',x:3,y:4,z:0},'an occupied Cell must remain selectable from its exposed Cell surface for boundary editing');
 await page.click('[data-editor-action="set-boundary"][data-boundary-id="v:4,4"][data-boundary-kind="opening"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),topology:window.SimWorldEditor.getDerivedTopology()}));
 assert.equal(snapshot.document.map.layers.find(layer=>layer.z===0).boundaries['v:4,4'].kind,'opening','Editor must author an opening on the selected Cell edge');
