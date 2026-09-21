@@ -10,10 +10,12 @@ import {
 
 assert.deepEqual(authoringProfilePaths(),[
   'src/world-authoring.js',
+  'src/embodiment-capabilities.js',
   'src/world-initializer.js'
 ]);
 assert.deepEqual(spatialCoreProfilePaths(),[
   'src/world-authoring.js',
+  'src/embodiment-capabilities.js',
   'src/world-initializer.js',
   'src/world.js',
   'src/release.js',
@@ -37,7 +39,7 @@ assert.throws(
   'runtime profiles must reject retired source names rather than silently alias them'
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
+  'world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
   'spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
