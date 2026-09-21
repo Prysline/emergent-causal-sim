@@ -154,7 +154,7 @@
       render();
       return;
     }
-    const furniture=authored.furniture?.[completed.furnitureId];
+    const furniture=resolvedFurniture(completed.furnitureId);
     const result=M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target});
     commitMutation(result,{
       message:result.ok?`已拖曳 ${furniture?.name||completed.furnitureId}；drop 與 click placement 共用同一 mutation owner。`:'',
@@ -205,13 +205,19 @@
     return true;
   }
 
+  function resolvedFurniture(id){
+    const instance=authored.furniture?.[id];
+    return instance?A.resolveFurnitureInstance(instance):null;
+  }
+
   function residentPosition(resident){
     const placement=resident?.initial?.placement;
     if(placement?.mode==='exact')return placement.node||null;
     if(placement?.mode==='anchor'&&placement.anchor?.kind==='furnitureSlot'){
       const matches=[];
-      for(const furniture of Object.values(authored.furniture||{})){
-        for(const slot of furniture.slots||[])if(slot.id===placement.anchor.id)matches.push(slot.position);
+      for(const id of Object.keys(authored.furniture||{})){
+        const furniture=resolvedFurniture(id);
+        for(const slot of furniture?.slots||[])if(slot.id===placement.anchor.id)matches.push(slot.position);
       }
       return matches.length===1?matches[0]:null;
     }
@@ -225,7 +231,10 @@
   function sceneEntries(){
     const out=[];
     const push=(type,id,entity,position,icon,label)=>out.push({type,id,entity,position:position||null,icon:icon||'•',label});
-    for(const [id,furniture] of Object.entries(authored.furniture||{}))push('furniture',id,furniture,furniturePosition(furniture),furniture.icon||'▰','Furniture');
+    for(const id of Object.keys(authored.furniture||{})){
+      const furniture=resolvedFurniture(id);
+      if(furniture)push('furniture',id,furniture,furniturePosition(furniture),furniture.icon||'▰','Furniture');
+    }
     for(const [id,container] of Object.entries(authored.entities?.containers||{}))push('container',id,container,container.position,container.icon||'◈','Object · Container');
     for(const [id,source] of Object.entries(authored.entities?.sources||{}))push('source',id,source,source.position,source.icon||'◆','Object · Source');
     for(const [id,resident] of Object.entries(authored.residents||{}))push('resident',id,resident,residentPosition(resident),resident.icon||(resident.kind==='cat'?'🐈':'👤'),'Resident');
@@ -256,10 +265,11 @@
   function allAuthoredPositions(){
     const out=[];
     const push=(position,label)=>{if(position&&Number.isInteger(position.z))out.push({position,label});};
-    for(const [id,furniture] of Object.entries(authored.furniture||{})){
-      for(const p of furniture.footprint||[])push(p,`furniture:${id}`);
-      if(furniture.displayAt)push(furniture.displayAt,`furniture-display:${id}`);
-      for(const slot of furniture.slots||[])push(slot.position,`slot:${slot.id}`);
+    for(const id of Object.keys(authored.furniture||{})){
+      const furniture=resolvedFurniture(id);
+      for(const p of furniture?.footprint||[])push(p,`furniture:${id}`);
+      if(furniture?.displayAt)push(furniture.displayAt,`furniture-display:${id}`);
+      for(const slot of furniture?.slots||[])push(slot.position,`slot:${slot.id}`);
     }
     for(const [id,container] of Object.entries(authored.entities?.containers||{})){
       push(container.position,`container:${id}`);
@@ -308,7 +318,7 @@
 
   function handleFurniturePlacement(target){
     if(!selectedFurnitureId){setMessage('請先選擇 furniture instance。');render();return;}
-    const furniture=authored.furniture?.[selectedFurnitureId];
+    const furniture=resolvedFurniture(selectedFurnitureId);
     const result=M.moveFurniture(authored,{furnitureId:selectedFurnitureId,target});
     commitMutation(result,{message:result.ok?`已移動 ${furniture?.name||selectedFurnitureId}；explicit supported Containers 已同步平移。`:'',select:result.ok?{type:'furniture',id:selectedFurnitureId}:null});
   }
@@ -317,6 +327,12 @@
     if(!pendingOperation)return false;
     const target={x,y,z:currentZ};
     const operation=cloneUi(pendingOperation);
+    if(operation.kind==='create-furniture'){
+      const result=M.createFurnitureFromDefinition(authored,{definitionId:operation.definitionId,target});
+      const newId=result?.meta?.newId;
+      commitMutation(result,{message:result.ok?`已建立 Furniture Instance ${newId}。`:'',select:result.ok?{type:'furniture',id:newId}:null});
+      return true;
+    }
     if(operation.kind==='duplicate-furniture'){
       const result=M.duplicateFurniture(authored,{sourceId:operation.furnitureId,target});
       const newId=result?.meta?.newId;
@@ -489,7 +505,12 @@
   }
 
   function furnitureAtCell(x,y,z){
-    return Object.entries(authored.furniture||{}).filter(([,furniture])=>(furniture.footprint||[]).some(p=>p.x===x&&p.y===y&&(p.z??0)===z));
+    const out=[];
+    for(const id of Object.keys(authored.furniture||{})){
+      const furniture=resolvedFurniture(id);
+      if((furniture?.footprint||[]).some(p=>p.x===x&&p.y===y&&(p.z??0)===z))out.push([id,furniture]);
+    }
+    return out;
   }
 
   function nonFurnitureEntitiesAtCell(x,y,z){
@@ -537,6 +558,13 @@
 
   function renderTools(){
     document.querySelectorAll('[data-tool]').forEach(button=>button.classList.toggle('active',button.dataset.tool===selectedTool));
+  }
+
+  function renderFurnitureCatalog(){
+    const host=$('furnitureCatalog');
+    if(!host)return;
+    const definitions=A.listFurnitureDefinitions();
+    host.innerHTML=`<div class="scene-group"><div class="scene-group-head"><span>Definitions</span><span>${definitions.length}</span></div><div class="scene-items">${definitions.map(definition=>`<button class="scene-item" type="button" data-furniture-definition-id="${esc(definition.id)}"><span class="scene-icon">${esc(definition.icon||'▰')}</span><span class="scene-copy"><b>${esc(definition.name||definition.id)}</b><small>${esc(furnitureKindLabel(definition))} · <code>${esc(definition.id)}</code></small></span></button>`).join('')}</div></div>`;
   }
 
   function renderSceneList(){
@@ -615,7 +643,7 @@
     let pendingMarkup='';
     if(pendingOperation){
       const operation=pendingOperation;
-      const labels={'duplicate-furniture':'下一次點擊：放置家具副本','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident':'移動居民到自由位置','rebind-resident-slot':'重新綁定家具位置'};
+      const labels={'create-furniture':'下一次點擊：建立家具','duplicate-furniture':'下一次點擊：放置家具副本','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident':'移動居民到自由位置','rebind-resident-slot':'重新綁定家具位置'};
       pendingMarkup+=`<div class="pending-operation"><b>${esc(labels[operation.kind]||operation.kind)}</b>`;
       if(operation.kind==='resolve-object-support'){
         pendingMarkup+=`<small>target: <code>(${operation.target.x}, ${operation.target.y}, ${operation.target.z})</code></small><div class="action-row"><button type="button" data-editor-action="resolve-support" data-support-kind="floor">Floor</button>${(operation.candidates||[]).map(candidate=>`<button type="button" data-editor-action="resolve-support" data-support-kind="furniture" data-support-id="${esc(candidate.id)}">Support：${esc(candidate.name||candidate.id)}</button>`).join('')}</div>`;
@@ -683,6 +711,7 @@
     const validation=report(),topology=validation.ok?derivedTopology():null;
     renderLayers();
     renderTools();
+    renderFurnitureCatalog();
     renderSceneList();
     renderMap();
     renderSummary(validation,topology);
@@ -718,6 +747,12 @@
     setMessage('');
     render();
   }));
+  $('furnitureCatalog').addEventListener('click',event=>{
+    const item=event.target.closest('[data-furniture-definition-id]');
+    if(!item)return;
+    selectedTool='select';
+    beginOperation({kind:'create-furniture',definitionId:item.dataset.furnitureDefinitionId},'新增家具：下一次點擊決定新 Furniture Instance 的 origin。');
+  });
   $('sceneList').addEventListener('click',event=>{
     const item=event.target.closest('[data-scene-type][data-scene-id]');
     if(!item)return;
