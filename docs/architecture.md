@@ -694,6 +694,11 @@ Regression 優先鎖：
 - state-inert presentation；
 - deterministic long-run Validator 0。
 
+Current CI ownership：
+- `.github/workflows/node-regression.yml`：architecture + deterministic/state/domain regressions，並由 `tests/workflow-architecture.mjs` 鎖 workflow/test ownership。
+- `.github/workflows/browser-regression.yml`：以 matrix 執行 current browser suites；Resident View case另加跑 browser runtime-hook pipeline QA。
+- current workflow不得再用歷史 feature branch trigger；Appraisal / Affect 的舊 v11.13 browser scripts已退休，其 current coverage由 focused Node regressions與 current Resident View browser projection承接。
+
 對 emergent behavior，不用「最後必須固定做某個 Action」代替 causal invariant。Focused causal story / counterfactual A/B 應只改目標變數，鎖住真正的因果差異。
 
 ## 11. Current integration priority

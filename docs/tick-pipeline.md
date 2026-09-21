@@ -208,10 +208,10 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 - hook registry：`E.listRuntimeHooks(phase)`。
 - event-created consumer registry：`E.listEventCreatedListeners()`。
 - architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 exact simulation hook ID / order，並拒絕 extension-owned lifecycle wrapper。
-- Relationship Foundation causal guard：`tests/relationship-foundation-v1150.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
-- Relationship Target Preference causal guard：`tests/relationship-target-preference-v1151.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility isolation、負向不 hard-ban，以及 generic animal affordance eligibility。
-- Relationship Responder Bias causal guard：`tests/relationship-responder-bias-v1152.mjs` 鎖 responder → requester directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy 與 no persistent score cache。
-- Physical / Passage causal guard：`tests/physical-profile-foundation-v1160.mjs` 與 `tests/passage-profile-multimode-v1170.mjs` 鎖 multi-mode envelope、passage height/width、walk-only A* 與 no-auto-crawl boundary；不引入新的 hook-order assertion，因本 slice 沒有新增 lifecycle stage。
+- Relationship Foundation causal guard：`tests/relationship-foundation.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
+- Relationship Target Preference causal guard：`tests/relationship-target-preference.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility isolation、負向不 hard-ban，以及 generic animal affordance eligibility。
+- Relationship Responder Bias causal guard：`tests/relationship-responder-bias.mjs` 鎖 responder → requester directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy 與 no persistent score cache。
+- Physical / Passage causal guard：`tests/physical-profile-foundation.mjs` 與 `tests/passage-profile-multimode.mjs` 鎖 multi-mode envelope、passage height/width、walk-only A* 與 no-auto-crawl boundary；不引入新的 hook-order assertion，因本 slice 沒有新增 lifecycle stage。
 - presentation hook / decorator 的 exact ordering 另由 presentation / browser regression 鎖定；它們不能被誤讀成 simulation pipeline stage。
 
 若 source registry、focused regression 與本文不一致，以 current executable source + regression 為準，並在同一修正中同步本文；不得讓舊文件 ordering 反過來覆蓋現行已驗證 runtime。

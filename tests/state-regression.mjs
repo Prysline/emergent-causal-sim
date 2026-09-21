@@ -117,5 +117,5 @@ E.reset(20260911);
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
   for(const legacy of ['recovery.js','supply.js','action-guard.js','seating.js','rest-surface.js','spatial-ui.js','furniture-ui.js','recovery-ui.js','supply-ui.js'])assert.ok(!index.includes(legacy));
 }
-console.log('v11.10 core regression: ok');
+console.log('Current state regression: ok');
 execFileSync(process.execPath,[fileURLToPath(new URL('./validator-rule-registry.mjs',import.meta.url))],{stdio:'inherit'});

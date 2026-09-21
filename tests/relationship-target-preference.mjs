@@ -111,7 +111,7 @@ assert.ok(!animalTargets.includes('turtle'));
 delete st.agents.dog;delete st.agents.turtle;delete W.SPECIES_PROFILES.dog;delete W.SPECIES_PROFILES.turtle;
 
 // v11.15.1 target-preference boundary remains intact in v11.15.2: base/no-counterpart responder helpers do not feed back into target ranking.
-// Explicit responder→requester Relationship influence is tested separately in relationship-responder-bias-v1152.mjs.
+// Explicit responder→requester Relationship influence is tested separately in relationship-responder-bias.mjs.
 E.reset(11513);st=E.getState();const requester=st.agents.zhen,responder=st.agents.zhou,animal=st.agents.orange;calm(requester);calm(responder);calm(animal);
 const talkBefore=E.talkEngagementScore(responder),petBefore=E.petResponseScore(animal);
 responder.relationships.zhen={familiarity:1,affinity:1,lastUpdatedTick:st.tick};

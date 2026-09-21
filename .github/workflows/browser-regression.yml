@@ -1,0 +1,71 @@
+name: Browser regression
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: browser-regression-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: social-response
+            test: tests/browser-social-response-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-social-response-qa
+          - suite: human-social-response
+            test: tests/browser-human-social-response-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-human-social-response-qa
+          - suite: memory-salience
+            test: tests/browser-memory-salience-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-memory-salience-qa
+          - suite: memory-deliberation
+            test: tests/browser-memory-deliberation-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-memory-deliberation-qa
+          - suite: social-outcome-memory
+            test: tests/browser-social-outcome-memory-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-social-outcome-memory-qa
+          - suite: observability-controls
+            test: tests/browser-observability-controls-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-observability-controls-qa
+          - suite: resident-view
+            test: tests/browser-resident-view-qa.mjs
+            extra_test: tests/browser-runtime-hook-pipeline-qa.mjs
+            artifact: artifacts/browser-resident-view-qa
+          - suite: world-authoring-editor
+            test: tests/browser-world-authoring-editor-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-world-authoring-editor-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - run: |
+          python3 -m http.server 4173 >/tmp/emergent-causal-sim-http.log 2>&1 &
+          echo $! > /tmp/emergent-causal-sim-http.pid
+          sleep 2
+      - run: node "${{ matrix.test }}"
+      - if: matrix.extra_test != ''
+        run: node "${{ matrix.extra_test }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-${{ matrix.suite }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: ignore

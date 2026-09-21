@@ -41,9 +41,9 @@ assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
-const workflow=fs.readFileSync(new URL('../.github/workflows/state-regression.yml',import.meta.url),'utf8');
+const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');
 const stateTests=[...workflow.matchAll(/node (tests\/[A-Za-z0-9._/-]+\.mjs)/g)].map(match=>match[1]);
-assert.ok(stateTests.length>0,'State regression workflow must enumerate Node regression tests');
+assert.ok(stateTests.length>0,'Node regression workflow must enumerate current Node regression tests');
 
 const retiredNames=Object.keys(TEST_PROFILE_CONTRACT.retiredSources);
 for(const relativePath of stateTests){

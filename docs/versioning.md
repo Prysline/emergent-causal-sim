@@ -57,7 +57,7 @@ World authoring 另有獨立 contract generation：`SimWorldAuthoring.VERSION = 
 
 ### 檔名 / workflow family 不是 current release marker
 
-像 `ui/resident-view.js`、`ui/entity-readable.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類歷史 family 名稱不等於 current release marker；Cleanup-5B-2 會把 current UI source再收斂成 semantic filename，而不是因 runtime marker 推進複製新版本檔。`spatial-passage-v1170.js` 則是本 slice 新增的 Passage contract owner。
+Current UI source與 current regression test / workflow 已使用 semantic filename；檔名本身不再承擔 current release marker。Subsystem generation仍由正式 schema/runtime marker表示，DOM data attribute或 historical console/output label若保留舊 generation字樣，也不得反推為整體 current release。
 
 判斷**整體 current release** 時，以 `state.version`、`SimRelease.VERSION / SimWorld.VERSION`、`SimUI.PRESENTATION_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 推進到 11.20.0 就把沒有 generation 變更的 Physical / Passage / Route / Locomotion / Relationship / Memory marker 假升到 11.20.0，也不得從舊 family 檔名反推整體 current release。
 
@@ -77,7 +77,7 @@ World authoring 另有獨立 contract generation：`SimWorldAuthoring.VERSION = 
 8. presentation / browser regression 的 expected version；
 9. Notion Architecture Current / relevant Current Design 文件。
 
-`tests/presentation-observability-v1140.mjs` 與對應 presentation regression 負責鎖定 repo 內可自動驗證的 version consistency。若 feature 已改但版本 marker 沒更新，PR review / Current documentation sync 仍必須把它視為 release-contract 缺漏，而不是單純 docs 問題。
+`tests/presentation-observability.mjs` 與對應 presentation regression 負責鎖定 repo 內可自動驗證的 version consistency。若 feature 已改但版本 marker 沒更新，PR review / Current documentation sync 仍必須把它視為 release-contract 缺漏，而不是單純 docs 問題。
 
 ## Historical correction
 
