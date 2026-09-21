@@ -22,6 +22,7 @@
 
   function runtimeLayers(authoring){
     if(authoring?.authoringSchema!==A.VERSION)throw new Error('Unsupported authoringSchema: '+String(authoring?.authoringSchema));
+    if(authoring?.furnitureCatalogVersion!==A.FURNITURE_CATALOG_VERSION)throw new Error('Unsupported furnitureCatalogVersion: '+String(authoring?.furnitureCatalogVersion));
     const layers=authoring?.map?.layers;
     if(!Array.isArray(layers)||!layers.length)throw new Error(A.VERSION+' runtime adapter requires at least one authored layer.');
     for(const layer of layers)if(!Number.isInteger(layer?.z))throw new Error(A.VERSION+' runtime adapter requires integer layer z values.');
@@ -49,14 +50,16 @@
   }
 
   function buildFurniture(authoring){
-    const furniture=clone(authoring.furniture||{});
-    for(const f of Object.values(furniture)){
+    const furniture={};
+    for(const [id,instance] of Object.entries(authoring.furniture||{})){
+      const f=clone(A.resolveFurnitureInstance(instance));
       f.footprint=(f.footprint||[]).map(runtimePosition);
       if(f.displayAt)f.displayAt=runtimePosition(f.displayAt);
       for(const slot of f.slots||[]){
         slot.position=runtimePosition(slot.position);
         slot.furnitureId=f.id;
       }
+      furniture[id]=f;
     }
     return furniture;
   }
@@ -83,7 +86,7 @@
   function authoringSlots(authoring){
     const out=[];
     for(const furnitureId of Object.keys(authoring.furniture||{}).sort()){
-      const furniture=authoring.furniture[furnitureId];
+      const furniture=A.resolveFurnitureInstance(authoring.furniture[furnitureId]);
       for(const slot of furniture.slots||[])out.push({...slot,furnitureId:furniture.id||furnitureId});
     }
     return out;
@@ -275,8 +278,9 @@
     return dedupePositions(authoring,out,cache);
   }
   function supportReachPositions(authoring,supportId,cache=null){
-    const furniture=authoring.furniture?.[supportId];
-    if(!furniture)return [];
+    const instance=authoring.furniture?.[supportId];
+    if(!instance)return [];
+    const furniture=A.resolveFurnitureInstance(instance);
     const out=[];
     for(const p of furniture.footprint||[])out.push(...neighborPositions(authoring,p,cache));
     for(const slot of furniture.slots||[])if(slot.position&&baseWalkable(authoring,slot.position,cache))out.push(slot.position);
