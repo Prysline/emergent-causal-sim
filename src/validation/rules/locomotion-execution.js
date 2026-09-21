@@ -1,7 +1,7 @@
 (() => {
-  const V=window.SimValidator,L=window.SimLocomotion,P=window.SimPhysical;if(!V||!L||!P)return;
+  const V=window.SimValidator,L=window.SimLocomotion,P=window.SimPhysical,C=window.SimEmbodimentCapabilities;if(!V||!L||!P||!C?.ALL_POSTURES)return;
   const PHASES=new Set(['idle','transition','moving']);
-  const POSTURES=new Set(['standing','sitting','lying','kneeling','prone']);
+  const POSTURES=new Set(C.ALL_POSTURES);
   const positiveInt=v=>Number.isInteger(Number(v))&&Number(v)>0;
 
   function validateLayer(st,base){
