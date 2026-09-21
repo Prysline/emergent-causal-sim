@@ -27,9 +27,9 @@ for(const cell of Object.values(authored.map.layers[0].cells)){
 }
 for(const f of Object.values(authored.furniture))for(const slot of f.slots||[])assert.equal(Object.prototype.hasOwnProperty.call(slot,'furnitureId'),false,'authoring slot must not persist furniture backlink');
 
-const st=I.createInitialState(authored,{seed:20260911,version:'11.22.0-spatial-z-identity'});
+const st=I.createInitialState(authored,{seed:20260911,version:'11.22.1-editor-resident-capabilities'});
 assert.equal(JSON.stringify(authored),authoredBefore,'raw compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.22.0-spatial-z-identity');
+assert.equal(st.version,'11.22.1-editor-resident-capabilities');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);
@@ -52,9 +52,9 @@ assert.equal(st.map.rooms&&Object.keys(st.map.rooms).length,0);
 assert.equal(st.map.roomRevision,0);
 assert.equal(st.map.passageConstraints,undefined);
 
-const again=I.createInitialState(authored,{seed:20260911,version:'11.22.0-spatial-z-identity'});
+const again=I.createInitialState(authored,{seed:20260911,version:'11.22.1-editor-resident-capabilities'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
-const otherSeed=I.createInitialState(authored,{seed:7,version:'11.22.0-spatial-z-identity'});
+const otherSeed=I.createInitialState(authored,{seed:7,version:'11.22.1-editor-resident-capabilities'});
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 
