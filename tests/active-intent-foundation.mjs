@@ -11,8 +11,8 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.22.0-spatial-z-identity');
-assert.equal(E.VERSION,'11.22.0-spatial-z-identity');
+assert.equal(st.version,'11.22.1-editor-resident-capabilities');
+assert.equal(E.VERSION,'11.22.1-editor-resident-capabilities');
 assert.equal(E.INTENT_SCHEMA_VERSION,'11.12.1-active-intent-foundation');
 for(const a of Object.values(st.agents))assert.equal(a.activeIntent,null,'reset should start without an Active Intent');
 noIssues('reset');
