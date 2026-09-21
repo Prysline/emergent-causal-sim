@@ -116,6 +116,9 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
 .entity-marker.marker-door{border-color:#d6a766;background:#3d2f1edd}.entity-marker.marker-exit{border-color:#8ec5e8;background:#17344add}
 .entity-marker.selected{outline:2px solid #d8ecff;outline-offset:1px}
 .entity-overflow{height:15px;min-width:15px;padding:0 2px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;background:#111820;border:1px solid #56616c;color:#dbe5ef}
+.interaction-port-markers{position:absolute;right:2px;top:2px;display:flex;gap:2px;z-index:7}
+.interaction-port-marker{min-width:16px;height:16px;padding:0 3px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1;background:#173225ee;border:1px solid #8ed7aa;color:#dff7e8;box-shadow:0 0 0 1px #0d1216;cursor:pointer}
+.interaction-port-marker.selected{outline:2px solid #d8ecff;outline-offset:1px}
 .summary-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 10px;font-size:12px}
 .summary-grid .key{color:var(--muted)}
 .selection-card{font-size:12px;line-height:1.55;padding:9px;border:1px solid #2c343d;border-radius:8px;background:#14191e;word-break:break-word}
