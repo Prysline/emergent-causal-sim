@@ -10,7 +10,7 @@
 <div class="editor-shell">
   <header class="editor-appbar">
     <div>
-      <div class="eyebrow">世界建構 · world-authoring-v3</div>
+      <div class="eyebrow">世界建構 · world-authoring-v4</div>
       <h1>地圖編輯器 <span>編輯器 → 模擬器試玩橋接</span></h1>
     </div>
     <div class="header-actions">
@@ -51,12 +51,10 @@
         <div class="tool-grid" role="group" aria-label="地圖工具">
           <button class="tool active" data-tool="select" type="button"><span>↖</span>選取／瀏覽</button>
           <button class="tool" data-tool="floor" type="button"><span>▫️</span>地板</button>
-          <button class="tool" data-tool="wall" type="button"><span>🧱</span>牆壁</button>
-          <button class="tool" data-tool="opening" type="button"><span>🚪</span>開口／門洞</button>
           <button class="tool" data-tool="erase" type="button"><span>⌫</span>清除</button>
           <button class="tool wide" data-tool="furniture" type="button"><span>▰</span>家具放置</button>
         </div>
-        <p class="hint"><strong>開口／門洞</strong>會寫入 <code>terrain: "doorway"</code>，表示牆體中的可通行結構開口；它不是「世界出口」，也不是可開關的門實體。現行 <code>canExit</code> 仍只是既有相容性橋接，正式門／出口模型留待後續獨立處理。</p>
+        <p class="hint">Cell 只描述地格本身。牆與結構開口請先選取格子，再在右側編輯北／東／南／西四條格線邊界；Door 與世界出口是獨立實體，不再借用家具或 <code>canExit</code>。</p>
       </section>
 
       <section>
@@ -80,8 +78,8 @@
         </div>
         <div class="legend">
           <span><i class="swatch floor"></i>地板</span>
-          <span><i class="swatch wall"></i>牆壁</span>
-          <span><i class="swatch opening"></i>開口／門洞</span>
+          <span><i class="swatch wall"></i>牆壁邊界</span>
+          <span><i class="swatch opening"></i>開口邊界</span>
           <span><i class="swatch void"></i>空白</span>
           <span><i class="marker-key resident">👤</i>居民</span>
           <span><i class="marker-key object">◈</i>物件</span>
