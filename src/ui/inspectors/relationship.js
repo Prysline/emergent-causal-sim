@@ -67,7 +67,7 @@
     document.addEventListener('click',event=>{if(event.target.closest?.('[data-v1140-tab]'))schedule();});
     schedule();
   },400);
-  if(!E.registerRuntimeObserver)throw new Error('ui-relationship-v1150.js requires runtime observer lifecycle');
+  if(!E.registerRuntimeObserver)throw new Error('ui/inspectors/relationship.js requires runtime observer lifecycle');
   E.registerRuntimeObserver('afterTick','relationshipView.schedule',schedule,1150);
   E.registerRuntimeObserver('afterReset','relationshipView.reset',schedule,750);
 

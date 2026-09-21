@@ -13,7 +13,7 @@ const EXPECTED=[
 const scripts=productionScriptPaths();
 const manifestIndex=scripts.indexOf('src/validation/manifest.js');
 assert.ok(manifestIndex>0,'production index must load a validator manifest');
-assert.ok(manifestIndex<scripts.findIndex(p=>p==='src/ui.js'),'validator registry must finalize before UI starts');
+assert.ok(manifestIndex<scripts.findIndex(p=>p==='src/ui/core.js'),'validator registry must finalize before UI starts');
 loadScriptsInThisContext(scripts.slice(0,manifestIndex));
 const V=globalThis.SimValidator,E=globalThis.SimEngine;
 assert.deepEqual(V.listValidationLayers(),EXPECTED.map(([id,order])=>({id,order})),'production validator layers must have explicit stable ownership/order');

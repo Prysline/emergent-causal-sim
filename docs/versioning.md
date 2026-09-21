@@ -57,7 +57,7 @@ World authoring 另有獨立 contract generation：`SimWorldAuthoring.VERSION = 
 
 ### 檔名 / workflow family 不是 current release marker
 
-像 `ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類歷史 family 名稱不等於 current release marker；Cleanup-5B-2 會把 current UI source再收斂成 semantic filename，而不是因 runtime marker 推進複製新版本檔。`spatial-passage-v1170.js` 則是本 slice 新增的 Passage contract owner。
+像 `ui/resident-view.js`、`ui/entity-readable.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類歷史 family 名稱不等於 current release marker；Cleanup-5B-2 會把 current UI source再收斂成 semantic filename，而不是因 runtime marker 推進複製新版本檔。`spatial-passage-v1170.js` 則是本 slice 新增的 Passage contract owner。
 
 判斷**整體 current release** 時，以 `state.version`、`SimRelease.VERSION / SimWorld.VERSION`、`SimUI.PRESENTATION_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 推進到 11.20.0 就把沒有 generation 變更的 Physical / Passage / Route / Locomotion / Relationship / Memory marker 假升到 11.20.0，也不得從舊 family 檔名反推整體 current release。
 
