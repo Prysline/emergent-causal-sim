@@ -18,6 +18,24 @@ assert.equal(C.VERSION,'embodiment-capabilities-v1');
 
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  const before=fp(doc);
+  let result=M.setCellMaterial(doc,{x:1,y:1,z:0,material:'stone'});
+  assert.equal(result.ok,true,result.issues.map(x=>x.code).join(','));
+  assert.equal(doc.map.layers[0].cells['1,1'].material,'wood','material mutation must not change the source document');
+  assert.equal(result.candidate.map.layers[0].cells['1,1'].material,'stone');
+  assert.equal(result.meta.operation,'setCellMaterial');
+  assert.equal(fp(doc),before,'successful material mutation must still leave the input fingerprint unchanged');
+  result=M.setCellMaterial(result.candidate,{x:1,y:1,z:0,material:'   '});
+  assert.equal(result.ok,true);
+  assert.equal(Object.hasOwn(result.candidate.map.layers[0].cells['1,1'],'material'),false,'blank material must remove only the material field');
+  const invalid=M.setCellMaterial(doc,{x:99,y:99,z:0,material:'stone'});
+  assert.equal(invalid.ok,false);
+  assert.equal(invalid.issues[0].code,'cell_material_cell_missing');
+  assert.equal(fp(doc),before,'rejected material mutation must leave the input fingerprint unchanged');
+}
+
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.entities.containers.syntheticPort={
     id:'syntheticPort',name:'Port follower',portable:true,contents:{},position:{x:5,y:2,z:0},supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:{x:5,y:3,z:0}}]
