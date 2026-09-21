@@ -54,6 +54,36 @@ assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snap
 
 const defaultDocument=snapshot.document;
 
+const localizedCopy=await page.evaluate(()=>({
+  body:document.body.textContent||'',
+  boundaryOpen:document.querySelector('.boundary-note')?.open===true
+}));
+for(const text of ['格子工具','家具目錄','場景','選取內容','建構資料摘要','驗證'])assert.match(localizedCopy.body,new RegExp(text));
+assert.equal(localizedCopy.boundaryOpen,false,'advanced runtime boundary should be collapsed by default');
+
+await page.click('[data-tool="select"]');
+await page.click('[data-cell="1,1"]');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  selectionText:document.querySelector('#selectionSummary')?.textContent||'',
+  materialValue:document.querySelector('[data-cell-material-input]')?.value||''
+}));
+assert.deepEqual(snapshot.session.selection,{kind:'cell',x:1,y:1,z:0});
+assert.equal(snapshot.materialValue,'wood');
+assert.match(snapshot.selectionText,/材質：木材（wood）/);
+await page.fill('[data-cell-material-input]','woven-rug');
+await page.click('[data-editor-action="apply-cell-material"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.equal(snapshot.document.map.layers[0].cells['1,1'].material,'woven-rug','material editor must preserve custom identifiers');
+assert.equal(snapshot.document.map.layers[0].cells['1,1'].terrain,'floor','material edit must not change terrain');
+assert.equal(snapshot.session.validation.ok,true);
+await page.click('[data-editor-action="clear-cell-material"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.equal(Object.hasOwn(snapshot.document.map.layers[0].cells['1,1'],'material'),false,'clear material must remove only the authored material field');
+assert.equal(snapshot.document.map.layers[0].cells['1,1'].terrain,'floor');
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
 assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id]').count(),5,'Furniture Catalog must expose the system-owned Definitions');
 await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
@@ -239,7 +269,7 @@ await page.click('[data-cell="5,2"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),actions:document.querySelector('#selectionActions')?.textContent||''}));
 assert.equal(snapshot.session.pendingOperation.kind,'resolve-object-support');
 assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:3,y:2,z:0},'ambiguous support target must reject atomically before explicit choice');
-assert.match(snapshot.actions,/Floor/);
+assert.match(snapshot.actions,/地面/);
 assert.match(snapshot.actions,/餐桌/);
 await page.click('[data-editor-action="resolve-support"][data-support-kind="floor"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
@@ -332,12 +362,24 @@ const mobile=await page.evaluate(()=>({
   docWidth:document.documentElement.scrollWidth,
   bodyWidth:document.body.scrollWidth,
   mapScroll:getComputedStyle(document.querySelector('.map-scroll')).overflowX,
+  touchTargets:['#testWorld','#layerPrev','.scene-item','[data-tool="floor"]'].map(selector=>{
+    const element=document.querySelector(selector),rect=element?.getBoundingClientRect();
+    return {selector,height:rect?.height||0};
+  }),
   session:window.SimWorldEditor.getSession()
 }));
 assert.ok(mobile.docWidth<=mobile.width+1,`mobile document overflow: ${mobile.docWidth}>${mobile.width}`);
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
 assert.ok(['auto','scroll'].includes(mobile.mapScroll),'map should scroll internally on narrow screens');
+for(const target of mobile.touchTargets)assert.ok(target.height>=44,`mobile touch target ${target.selector} must be at least 44px high, got ${target.height}`);
 assert.equal(mobile.session.validation.ok,true);
+await page.click('[data-tool="select"]');
+await page.click('[data-cell="1,1"]');
+await page.fill('[data-cell-material-input]','stone');
+await page.click('[data-editor-action="apply-cell-material"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.equal(snapshot.document.map.layers.find(layer=>layer.z===0).cells['1,1'].material,'stone','mobile layout must preserve Cell material editing');
+assert.equal(snapshot.session.validation.ok,true);
 await page.screenshot({path:`${outDir}/mobile-editor.png`,fullPage:true});
 
 await page.setViewportSize({width:1400,height:820});
