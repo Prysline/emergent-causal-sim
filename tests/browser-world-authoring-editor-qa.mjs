@@ -41,8 +41,10 @@ assert.equal(snapshot.sceneItems,
   Object.keys(snapshot.document.furniture||{}).length+
   Object.keys(snapshot.document.entities?.containers||{}).length+
   Object.keys(snapshot.document.entities?.sources||{}).length+
-  Object.keys(snapshot.document.residents||{}).length,
-  'scene list must expose every current furniture/object/resident instance');
+  Object.keys(snapshot.document.residents||{}).length+
+  Object.keys(snapshot.document.doors||{}).length+
+  Object.keys(snapshot.document.exits||{}).length,
+  'scene list must expose furniture, objects, residents, Doors, and world exits');
 assert.ok(snapshot.residentMarkers>0,'resident authored positions must use typed map markers');
 assert.ok(snapshot.objectMarkers>0,'container/source authored positions must use typed map markers');
 assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed');
@@ -344,14 +346,23 @@ snapshot=await page.evaluate(()=>({
 assert.deepEqual(snapshot.postureOptions,['standing','lying'],'Cat free move must not inherit Human kneel/prone locomotion postures');
 await page.click('[data-editor-action="cancel-operation"]');
 
-await page.click('[data-tool="opening"]');
-await page.click('[data-cell="2,2"]');
+await page.click('[data-tool="select"]');
+await page.click('[data-cell="3,4"]');
+await page.click('[data-editor-action="set-boundary"][data-boundary-id="v:4,4"][data-boundary-kind="opening"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),topology:window.SimWorldEditor.getDerivedTopology()}));
-assert.equal(snapshot.document.map.layers.find(layer=>layer.z===0).cells['2,2'].terrain,'doorway');
-assert.equal(snapshot.topology.cells['2,2'].structuralOpen,true,'Editor opening must derive structural openness without authored walkability flags');
-assert.equal(snapshot.topology.cells['2,2'].open,false,'existing fixed foodPantry must still block this opening by concrete geometry');
-assert.deepEqual(snapshot.topology.cells['2,2'].blockedBy,['container:foodPantry']);
+assert.equal(snapshot.document.map.layers.find(layer=>layer.z===0).boundaries['v:4,4'].kind,'opening','Editor must author an opening on the selected Cell edge');
+assert.equal(snapshot.document.map.layers.find(layer=>layer.z===0).cells['3,4'].terrain,'floor','boundary editing must not rewrite Cell terrain');
+assert.ok(snapshot.topology.cells['3,4'].adjacent.includes('4,4'),'authored opening edge must remain connected');
 assert.equal(snapshot.session.validation.ok,true);
+
+await page.click('[data-scene-type="door"][data-scene-id="frontDoor"]');
+await page.click('[data-editor-action="toggle-door-state"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.equal(snapshot.document.doors.frontDoor.state,'closed','Door state must edit independently from Furniture and opening truth');
+assert.equal(snapshot.session.validation.ok,true);
+await page.click('[data-editor-action="toggle-door-state"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
+assert.equal(snapshot.document.doors.frontDoor.state,'open','Door can reopen without changing the opening boundary');
 
 await page.screenshot({path:`${outDir}/desktop-editor.png`,fullPage:true});
 
@@ -389,7 +400,7 @@ const layeredPreviewDocument=structuredClone(previewDocument);
 layeredPreviewDocument.map.layers.push({z:1,cells:{
   '2,2':{terrain:'floor',material:'wood'},
   '3,2':{terrain:'floor',material:'wood'}
-}});
+},boundaries:{}});
 layeredPreviewDocument.residents.orange.initial.placement={mode:'exact',node:{x:2,y:2,z:1}};
 layeredPreviewDocument.residents.orange.initial.posture={kind:'standing'};
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),layeredPreviewDocument);
@@ -416,7 +427,7 @@ let runtimePreview=await page.evaluate(()=>{
     zLevels:[...(state.map.zLevels||[])],
     upperTile:state.map.tiles['2,2,1']?{terrain:state.map.tiles['2,2,1'].terrain,z:state.map.tiles['2,2,1'].z}:null,
     ui:{currentZ:window.SimUI?.getCurrentZ?.(),options:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,mapZ:document.querySelector('#map')?.dataset.z||''},
-    opening:{terrain:state.map.tiles['2,2'].terrain,derivedOpen:topology.cells['2,2'].open,runtimeWalkable:window.SimSpatial.walkable(state,{x:2,y:2,z:0}),blocker:window.SimSpatial.blockerAt(state,{x:2,y:2,z:0})},
+    opening:{kind:state.map.boundaries['0|v:4,4']?.kind||null,derivedAdjacent:topology.cells['3,4'].adjacent.includes('4,4'),runtimeEdgeOpen:window.SimSpatial.edgeStructurallyOpen(state,{x:3,y:4,z:0},{x:4,y:4,z:0})},
     under:{authored:window.SimWorldAuthoring.resolveFurnitureInstance(active.authoring.furniture.diningTable).spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance}
   };
 });
@@ -438,10 +449,9 @@ assert.deepEqual(runtimePreview.ui.options,['0','1']);
 assert.equal(runtimePreview.ui.currentZ,0);
 assert.equal(runtimePreview.ui.mapZ,'0');
 assert.equal(runtimePreview.ui.orangeMarkers,0,'z=1 resident must not be overlaid on the z=0 presentation layer');
-assert.equal(runtimePreview.opening.terrain,'doorway');
-assert.equal(runtimePreview.opening.derivedOpen,false);
-assert.equal(runtimePreview.opening.runtimeWalkable,false,'runtime blocker interpretation must match the Editor derived preview');
-assert.ok(runtimePreview.opening.blocker,'blocked Editor opening must retain a runtime blocker');
+assert.equal(runtimePreview.opening.kind,'opening');
+assert.equal(runtimePreview.opening.derivedAdjacent,true);
+assert.equal(runtimePreview.opening.runtimeEdgeOpen,true,'runtime boundary interpretation must match the Editor derived preview');
 assert.equal(runtimePreview.under.runtime,runtimePreview.under.authored,'under-clearance geometry must survive the same canonical initializer path');
 
 await page.selectOption('#runtimeLayerSelect','1');
