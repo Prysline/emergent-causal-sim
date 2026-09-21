@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.22.3-editor-authoring-presentation';
+const CURRENT_VERSION='11.23.0-world-boundary-door-exit';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const ROUTE_VERSION='11.18.0-route-semantics-split';
