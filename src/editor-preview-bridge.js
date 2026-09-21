@@ -99,8 +99,8 @@
     const editorLink=document.getElementById('worldEditorLink');
     if(editorLink)editorLink.href=requested&&active.ok?'editor.html?restore=preview':'editor.html';
     if(active.ok){
-      if(title)title.textContent='Editor Preview';
-      if(detail)detail.textContent='此模擬器由本次 Editor snapshot 啟動；重置會重建同一份 preview world。';
+      if(title)title.textContent='編輯器預覽';
+      if(detail)detail.textContent='此模擬器由本次編輯器快照啟動；重置會重建同一份預覽世界。';
       document.body.dataset.previewMode='editor';
     }else{
       if(title)title.textContent='Editor Preview 無法啟動';
