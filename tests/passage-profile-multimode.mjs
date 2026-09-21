@@ -10,7 +10,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.23.0-world-boundary-door-exit';
+const APP_VERSION='11.23.1-editor-source-port-observability';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
