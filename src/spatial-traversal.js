@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.11-spatial-traversal';
+  const VERSION='11.23.0-boundary-traversal';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -88,15 +88,15 @@
     return walk?walk.feasible:true;
   }
   function outsidePerimeterFloorNodes(st,entry,agent){
-    const out=new Map();for(const c of entry.surface.cells||[])for(const [dx,dy] of DIRS){const p=localPos(c.x+dx,c.y+dy,zOf(c));if(isFootprintCell(entry,p))continue;const n=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,n,agent))out.set(nodeKey(st,n),n);}return [...out.values()];
+    const out=new Map();for(const c of entry.surface.cells||[])for(const [dx,dy] of DIRS){const p=localPos(c.x+dx,c.y+dy,zOf(c));if(isFootprintCell(entry,p))continue;const n=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,n,agent)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,c,n)))out.set(nodeKey(st,n),n);}return [...out.values()];
   }
   function traversalNeighbors(st,p,aOrId=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeWalkable(st,n,a))return [];
     if(n.surfaceId===FLOOR){
-      for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeWalkable(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q))&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
-        for(const c of entry.surface.cells||[]){if(!sameLayer(c,n)||Math.abs(c.x-n.x)+Math.abs(c.y-n.y)!==1||isFootprintCell(entry,n))continue;const q=normalizeNode(st,c,entry.surface.id);if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
+        for(const c of entry.surface.cells||[]){if(!sameLayer(c,n)||Math.abs(c.x-n.x)+Math.abs(c.y-n.y)!==1||isFootprintCell(entry,n))continue;const q=normalizeNode(st,c,entry.surface.id);if(nodeWalkable(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,c))&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       }
     }else{
       const entry=surfaceEntry(st,n.surfaceId);if(!entry)return [];
@@ -125,12 +125,12 @@
   function candidateTraversalNeighbors(st,p,aOrId=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeLocomotionAccessible(st,n,a))return [];
     if(n.surfaceId===FLOOR){
-      for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeLocomotionAccessible(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q)))out.set(nodeKey(st,q),q);}
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
         for(const cell of entry.surface.cells||[]){
           if(!sameLayer(cell,n)||Math.abs(cell.x-n.x)+Math.abs(cell.y-n.y)!==1||isFootprintCell(entry,n))continue;
-          const q=normalizeNode(st,cell,entry.surface.id);if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
+          const q=normalizeNode(st,cell,entry.surface.id);if(nodeLocomotionAccessible(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,cell)))out.set(nodeKey(st,q),q);
         }
       }
     }else{
@@ -210,13 +210,13 @@
   function pathDistance(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'pathDistance'}).pathDistance;}
   function travelTime(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}).travelTime;}
 
-  function floorReachNodes(st,p,agent,{includeSelf=true}={}){const out=new Map(),target=normalizeNode(st,p,FLOOR);for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}if(includeSelf&&nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);return [...out.values()];}
+  function floorReachNodes(st,p,agent,{includeSelf=true}={}){const out=new Map(),target=normalizeNode(st,p,FLOOR);for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),FLOOR);if(nodeWalkable(st,q,agent)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,target,q)))out.set(nodeKey(st,q),q);}if(includeSelf&&nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);return [...out.values()];}
   function surfaceLocalReachNodes(st,node,agent){const target=normalizeNode(st,node),out=new Map();if(nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),target.surfaceId);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}return [...out.values()];}
   function crossSurfaceContactNodes(st,node,agent,affordance){
     if(!agent||agent.kind!=='human')return [];
     const target=normalizeNode(st,node),entry=surfaceEntry(st,target.surfaceId);if(!entry)return [];
     const allowed=new Set(['pickup','serve','eatFrom','drinkFrom','fill','takeResource','deposit','receive','default']);if(!allowed.has(affordance))return [];
-    const out=[];for(const [dx,dy] of DIRS){const p=localPos(target.x+dx,target.y+dy,zOf(target));if(isFootprintCell(entry,p))continue;const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent))out.push(q);}return out;
+    const out=[];for(const [dx,dy] of DIRS){const p=localPos(target.x+dx,target.y+dy,zOf(target));if(isFootprintCell(entry,p))continue;const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,target,q)))out.push(q);}return out;
   }
   function supportContactNodes(st,supportId,agent){
     const f=st.furniture?.[supportId],entry=f?.spatial?.surface;if(!f)return [];
