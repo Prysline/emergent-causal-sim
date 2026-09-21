@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.23.0-world-boundary-door-exit';
+  const VERSION='11.23.1-editor-source-port-observability';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{
