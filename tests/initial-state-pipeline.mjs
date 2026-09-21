@@ -10,7 +10,7 @@ const lifecyclePaths=productionScripts.filter(path=>
 );
 const lifecycleFiles=lifecyclePaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/spatial.js']);
+loadScriptsInThisContext(['src/furniture-definitions.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(lifecyclePaths);
@@ -57,7 +57,7 @@ assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED_SCHEMA,finaliz
 assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.22.1-editor-resident-capabilities','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.22.2-editor-furniture-definitions','full production schema set must preserve current release marker');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
@@ -77,13 +77,10 @@ assert.deepEqual(again,st,'same seed must remain deterministic after lifecycle c
 
 const A=globalThis.SimWorldAuthoring;
 const custom=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
-const chair=custom.furniture.chairNW,source=chair.footprint[0],dx=3-source.x,dy=4-source.y;
-chair.footprint=chair.footprint.map(p=>({...p,x:p.x+dx,y:p.y+dy}));
-chair.displayAt={...chair.displayAt,x:chair.displayAt.x+dx,y:chair.displayAt.y+dy};
-chair.slots=chair.slots.map(slot=>({...slot,position:{...slot.position,x:slot.position.x+dx,y:slot.position.y+dy}}));
+custom.furniture.chairNW.origin={x:3,y:4,z:0};
 const customState=W.createInitialStateFromAuthoring(custom,20260911);
 assert.deepEqual(customState.furniture.chairNW.footprint,[{x:3,y:4}],'explicit authoring factory must compile the supplied canonical document');
-assert.equal(customState.version,'11.22.1-editor-resident-capabilities');
+assert.equal(customState.version,'11.22.2-editor-furniture-definitions');
 assert.deepEqual(W.createInitialState(20260911).furniture.chairNW.footprint,st.furniture.chairNW.footprint,'explicit preview initialization must not mutate the default world factory');
 assert.deepEqual(W.createInitialStateFromAuthoring(custom,20260911),customState,'preview reset source must remain deterministic for the same snapshot and seed');
 

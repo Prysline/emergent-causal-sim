@@ -54,6 +54,23 @@ assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snap
 
 const defaultDocument=snapshot.document;
 
+assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id]').count(),5,'Furniture Catalog must expose the system-owned Definitions');
+await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
+assert.equal(snapshot.pendingOperation?.definitionId,'chair-basic');
+await page.click('[data-cell="3,4"]');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
+}));
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0}},'Catalog creation must persist only compact Furniture Instance truth');
+assert.deepEqual(snapshot.resolved.footprint,[{x:3,y:4,z:0}]);
+assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
+assert.equal(snapshot.session.validation.ok,true);
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
 assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'resident',id:'zhen'});
@@ -109,11 +126,16 @@ await page.click('[data-cell="3,4"]');
 let clickPlacement=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   document:window.SimWorldEditor.getDocument(),
+  resolvedChair:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture.chairNW),
   fingerprint:window.SimWorldEditor.semanticFingerprint()
 }));
 assert.equal(clickPlacement.session.dirty,true);
-assert.deepEqual(clickPlacement.document.furniture.chairNW.footprint,[{x:3,y:4,z:0}]);
-assert.deepEqual(clickPlacement.document.furniture.chairNW.slots[0].position,{x:3,y:4,z:0});
+assert.equal(clickPlacement.document.furniture.chairNW.definitionId,'chair-basic');
+assert.deepEqual(clickPlacement.document.furniture.chairNW.origin,{x:3,y:4,z:0});
+assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'footprint'),false,'canonical v3 instance must not persist Definition geometry');
+assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'slots'),false,'canonical v3 instance must not persist derived slots');
+assert.deepEqual(clickPlacement.resolvedChair.footprint,[{x:3,y:4,z:0}]);
+assert.deepEqual(clickPlacement.resolvedChair.slots[0].position,{x:3,y:4,z:0});
 assert.deepEqual(clickPlacement.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
 
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
@@ -140,13 +162,15 @@ await page.mouse.up();
 snapshot=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   document:window.SimWorldEditor.getDocument(),
+  resolvedChair:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture.chairNW),
   fingerprint:window.SimWorldEditor.semanticFingerprint()
 }));
 assert.equal(snapshot.session.dragState,null,'drop must clear ephemeral drag state');
 assert.equal(snapshot.session.selectedTool,'floor','direct drag must not silently change the active Cell tool');
 assert.equal(snapshot.fingerprint,clickPlacement.fingerprint,'click placement and drag drop must produce the same canonical semantic fingerprint');
-assert.deepEqual(snapshot.document.furniture.chairNW.footprint,[{x:3,y:4,z:0}]);
-assert.deepEqual(snapshot.document.furniture.chairNW.slots[0].position,{x:3,y:4,z:0});
+assert.deepEqual(snapshot.document.furniture.chairNW.origin,{x:3,y:4,z:0});
+assert.deepEqual(snapshot.resolvedChair.footprint,[{x:3,y:4,z:0}]);
+assert.deepEqual(snapshot.resolvedChair.slots[0].position,{x:3,y:4,z:0});
 assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'dragging unrelated chair must not affect diningTable followers');
 
 const beforeTablePreview=await page.evaluate(()=>window.SimWorldEditor.semanticFingerprint());
@@ -200,10 +224,13 @@ await page.click('[data-editor-action="duplicate-furniture"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation.kind,'duplicate-furniture');
 await page.click('[data-cell="3,5"]');
-snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.ok(snapshot.document.furniture['chairNW-copy'],'duplicate must create a canonical Furniture only after placement click');
-assert.equal(snapshot.document.furniture['chairNW-copy'].id,'chairNW-copy');
-assert.equal(snapshot.document.furniture['chairNW-copy'].slots[0].id,'chairNW-copy:seat');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
+}));
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:5,z:0},name:'餐椅 A'},'duplicate must copy only instance-owned facts and placement under Definition-based ID generation');
+assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
 
 await page.click('[data-scene-type="container"][data-scene-id="basket"]');
@@ -348,7 +375,7 @@ let runtimePreview=await page.evaluate(()=>{
     upperTile:state.map.tiles['2,2,1']?{terrain:state.map.tiles['2,2,1'].terrain,z:state.map.tiles['2,2,1'].z}:null,
     ui:{currentZ:window.SimUI?.getCurrentZ?.(),options:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,mapZ:document.querySelector('#map')?.dataset.z||''},
     opening:{terrain:state.map.tiles['2,2'].terrain,derivedOpen:topology.cells['2,2'].open,runtimeWalkable:window.SimSpatial.walkable(state,{x:2,y:2,z:0}),blocker:window.SimSpatial.blockerAt(state,{x:2,y:2,z:0})},
-    under:{authored:active.authoring.furniture.diningTable.spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance}
+    under:{authored:window.SimWorldAuthoring.resolveFurnitureInstance(active.authoring.furniture.diningTable).spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance}
   };
 });
 assert.equal(runtimePreview.previewMode,true);
@@ -411,14 +438,14 @@ const restoredEditor=await page.evaluate(()=>({
   search:location.search,
   fingerprint:window.SimWorldEditor.semanticFingerprint(),
   session:window.SimWorldEditor.getSession(),
-  chair:window.SimWorldEditor.getDocument().furniture.chairNW.footprint,
+  chair:window.SimWorldEditor.getDocument().furniture.chairNW.origin,
   zLevels:window.SimWorldEditor.getDocument().map.layers.map(layer=>layer.z),
   message:document.querySelector('#selectionSummary')?.textContent||''
 }));
 assert.equal(restoredEditor.search,'?restore=preview');
 assert.equal(restoredEditor.fingerprint,previewFingerprint,'Preview → Editor return must restore the exact canonical snapshot');
 assert.equal(restoredEditor.session.dirty,true,'restored sessionStorage snapshot must remain an unsaved working document');
-assert.deepEqual(restoredEditor.chair,[{x:3,y:4,z:0}],'restored Editor document must retain canonical authored z=0 positions');
+assert.deepEqual(restoredEditor.chair,{x:3,y:4,z:0},'restored Editor document must retain canonical compact Furniture origin');
 assert.deepEqual(restoredEditor.zLevels,[0,1]);
 
 page.once('dialog',dialog=>dialog.accept());
@@ -427,12 +454,12 @@ await page.waitForFunction(()=>window.SimWorldEditor?.getSession);
 const ordinaryEditor=await page.evaluate(()=>({
   fingerprint:window.SimWorldEditor.semanticFingerprint(),
   dirty:window.SimWorldEditor.getSession().dirty,
-  chair:window.SimWorldEditor.getDocument().furniture.chairNW.footprint,
+  chair:window.SimWorldEditor.getDocument().furniture.chairNW.origin,
   zLevels:window.SimWorldEditor.getDocument().map.layers.map(layer=>layer.z)
 }));
 assert.notEqual(ordinaryEditor.fingerprint,previewFingerprint,'ordinary Editor load must not consume stale preview storage');
 assert.equal(ordinaryEditor.dirty,false);
-assert.notDeepEqual(ordinaryEditor.chair,[{x:3,y:4}]);
+assert.notDeepEqual(ordinaryEditor.chair,{x:3,y:4,z:0});
 assert.deepEqual(ordinaryEditor.zLevels,[0]);
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});

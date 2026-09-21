@@ -22,7 +22,7 @@ function quietHuman(a){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.22.1-editor-resident-capabilities');
+assert.equal(st.version,'11.22.2-editor-furniture-definitions');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.12.4-soft-reconsideration');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);

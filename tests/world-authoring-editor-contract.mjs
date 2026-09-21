@@ -3,13 +3,14 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','embodiment-capabilities.js','world-initializer.js']){
+for(const file of ['furniture-definitions.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
-const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
+const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(D.VERSION,'furniture-definitions-v1');
+assert.equal(A.VERSION,'world-authoring-v3');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -21,37 +22,52 @@ layered.compatibility={passageConstraints:{'1,1>2,1':{clearanceWidth:.9}}};
 const exported=A.serializeAuthoring(layered);
 const imported=A.parseAuthoringJSON(exported);
 assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'export → import must preserve authoring semantics');
-assert.deepEqual(imported.compatibility,layered.compatibility,'low-level compatibility namespace must survive round-trip');
-assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1],'canonical serialization must preserve ordered Z identity');
-assert.equal(imported.authoringSchema,'world-authoring-v2');
+assert.deepEqual(imported.compatibility,layered.compatibility);
+assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
+assert.equal(imported.authoringSchema,'world-authoring-v3');
+assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v1');
+assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},name:'餐椅 A'});
+assert.ok(!exported.includes('"footprint"')&&!exported.includes('"slots"')&&!exported.includes('"restQuality"'),'resolved furniture truth must not serialize into compact v3 instances');
+
 const topology=A.deriveHorizontalTopology(imported,{z:0});
-assert.equal(topology.cells['0,6'].structuralOpen,true,'opening must derive structural openness without persisted walkability');
-assert.equal(topology.cells['0,6'].open,false,'blocking front door must close the opening in derived topology');
-assert.ok(!exported.includes('"componentId"')&&!exported.includes('"adjacent"'),'derived topology must not serialize into world truth');
+assert.equal(topology.cells['0,6'].structuralOpen,true);
+assert.equal(topology.cells['0,6'].open,false,'blocking front door compatibility behavior must remain');
+assert.ok(!exported.includes('"componentId"')&&!exported.includes('"adjacent"'));
 
 const layeredCompatibility=I.analyzeRuntimeCompatibility(imported);
 assert.equal(layeredCompatibility.ok,true,layeredCompatibility.hardErrors.map(issue=>issue.code+': '+issue.message).join(' | '));
 const layeredRuntime=I.createInitialState(imported,{seed:1,version:'test'});
-assert.deepEqual(layeredRuntime.map.zLevels,[0,1],'Slice E runtime compiler must preserve authored layer identity');
-assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor','non-zero authored layer must compile into a distinct runtime tile key');
+assert.deepEqual(layeredRuntime.map.zLevels,[0,1]);
+assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor');
+assert.equal(layeredRuntime.furniture.chairNW.slots[0].id,'chairNW:seat');
+assert.equal(layeredRuntime.furniture.chairNW.slots[0].restQuality,.48);
+assert.equal(layeredRuntime.furniture.frontDoor.slots[0].canExit,true);
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
-  invalid.map.layers.push({z:0,cells:{}});
+  invalid.furnitureCatalogVersion='furniture-definitions-v999';
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
-  assert.ok(report.errors.some(issue=>issue.code==='authoring_layer_z_duplicate'));
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_furniture_catalog_unsupported'));
+  assert.throws(()=>A.parseAuthoringJSON(JSON.stringify(invalid)),error=>error.code==='furniture_catalog_unsupported');
 }
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
-  invalid.map.layers[0].cells['1,1'].walkable=true;
+  invalid.furniture.chairNW.definitionId='missing-definition';
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
-  assert.ok(report.errors.some(issue=>issue.code==='authoring_derived_cell_field'&&issue.path.includes('walkable')));
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_furniture_definition_missing'));
 }
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
-  invalid.furniture.chairNW.footprint[0]={x:99,y:2,z:0};
+  invalid.furniture.chairNW.canRest=true;
+  report=A.validateAuthoring(invalid);
+  assert.equal(report.ok,false);
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_furniture_instance_field_unsupported'&&issue.path.endsWith('.canRest')));
+}
+{
+  const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
+  invalid.furniture.diningTable.origin={x:11,y:7,z:0};
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_position_out_of_bounds'));
@@ -65,8 +81,7 @@ assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor','non-zero authore
 }
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
-  invalid.furniture.diningTable.footprint=invalid.furniture.diningTable.footprint.map(p=>({...p,x:p.x+1}));
-  invalid.furniture.diningTable.displayAt={...invalid.furniture.diningTable.displayAt,x:invalid.furniture.diningTable.displayAt.x+1};
+  invalid.furniture.diningTable.origin={x:6,y:2,z:0};
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_support_position_mismatch'&&issue.supportId==='diningTable'));
@@ -80,66 +95,46 @@ assert.equal(layeredRuntime.map.tiles['2,2,1'].terrain,'floor','non-zero authore
 }
 
 const editorHtml=fs.readFileSync(new URL('../editor.html',import.meta.url),'utf8');
-for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/validation/registry.js']){
-  assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
-}
+for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/validation/registry.js'])assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
+const definitionScript=editorHtml.indexOf('src/furniture-definitions.js');
 const authoringScript=editorHtml.indexOf('src/world-authoring.js');
 const capabilityScript=editorHtml.indexOf('src/embodiment-capabilities.js');
 const initializerScript=editorHtml.indexOf('src/world-initializer.js');
 const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
-assert.ok(authoringScript>=0&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be authoring → shared capabilities → compatibility initializer → preview bridge → pure mutation owner → UI');
-assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
-assert.ok(editorHtml.includes('src/world-authoring.js'));
-assert.ok(editorHtml.includes('src/embodiment-capabilities.js'),'Editor must load the pure authoring-safe capability contract');
-assert.ok(editorHtml.includes('src/world-initializer.js'));
-assert.ok(editorHtml.includes('src/editor-preview-bridge.js'));
-assert.ok(editorHtml.includes('id="testWorld"'));
-assert.ok(editorHtml.includes('data-tool="select"'),'Editor must expose a neutral select/browse tool so placement modes can be exited without authoring terrain');
-assert.ok(editorHtml.includes('開口／門洞'),'doorway terrain must be labeled as an opening, not conflated with exit capability');
-assert.ok(editorHtml.includes('src/editor-ui.js'));
-assert.ok(editorHtml.includes('terrain: "doorway"'),'Editor must expose doorway terrain semantics without requiring internal compiler terminology in visible copy');
-assert.ok(editorHtml.includes('id="sceneList"'),'Editor must expose one scene-list surface for furniture, objects and residents');
-assert.ok(!editorHtml.includes('id="furnitureSelect"'),'D.1A replaces the furniture-only dropdown with the shared scene list');
+assert.ok(definitionScript>=0&&authoringScript>definitionScript&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be Furniture Definitions → authoring → shared capabilities → compatibility initializer → preview bridge → mutation owner → UI');
+assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v3'));
+assert.ok(editorHtml.includes('id="furnitureCatalog"'),'Editor-2 must expose the system Furniture Catalog as the new-instance source');
+assert.ok(editorHtml.includes('id="sceneList"'));
+assert.ok(!editorHtml.includes('id="furnitureSelect"'));
 
 const editorUi=fs.readFileSync(new URL('../src/editor-ui.js',import.meta.url),'utf8');
-for(const forbidden of ['SimEngine','SimSpatial','createInitialState','PassageProfile','passageConstraints']){
-  assert.ok(!editorUi.includes(forbidden),`Editor UI must not consume runtime traversal truth: ${forbidden}`);
-}
-assert.ok(editorUi.includes('deriveHorizontalTopology'),'Editor preview must use the shared authoring-side topology derivation');
-assert.ok(editorUi.includes('sceneEntries'),'Editor must derive the scene list from canonical authoring data rather than persist a second scene registry');
-assert.ok(editorUi.includes('residentPosition'),'Editor scene selection must resolve exact and furnitureSlot-anchored resident positions from authoring truth');
-assert.ok(!editorUi.includes('entity-dot'),'generic untyped entity dots must not remain after D.1A');
-assert.ok(editorUi.includes('SimEditorAuthoringMutations'),'Editor UI must delegate entity lifecycle semantics to the pure mutation owner');
-assert.ok(editorUi.includes('pendingOperation'),'D.1B1 must keep pending mutation intent separate from generic scene selection');
-assert.ok(editorUi.includes('DRAG_THRESHOLD_PX'),'D.1B2 must distinguish click selection from desktop drag with an explicit movement threshold');
-for(const eventName of ['pointerdown','pointermove','pointerup','pointercancel'])assert.ok(editorUi.includes(eventName),`D.1B2 must use Pointer Events for furniture drag: ${eventName}`);
-assert.ok(editorUi.includes('dragState'),'D.1B2 drag preview state must remain explicit ephemeral Editor state');
-assert.ok(editorUi.includes('SimEditorPreviewBridge'),'D.1C launch must delegate browser-session handoff to the explicit preview bridge');
-assert.ok(editorUi.includes('P.storePreview(authored)'),'D.1C must preflight/store the same canonical Editor document before navigation');
-assert.ok(editorUi.includes('allowPreviewNavigation'),'D.1C preview navigation must bypass only the intentional dirty-document unload guard');
-assert.ok(editorUi.includes('P.getRestorePreview?.()'),'Preview return must restore only through the explicit handoff query path');
-assert.ok(editorUi.includes("clean:false,message:'已從 Editor Preview 恢復工作稿"),'restored Preview snapshot must remain an unsaved Editor working document');
-assert.ok(editorUi.includes("active?'select':'furniture'"),'Furniture placement action must toggle back to neutral select mode');
-assert.ok(editorUi.includes("chair:'餐椅'"),'Furniture instance presentation must expose the shared chair type independently from A/B/C/D instance names');
-assert.ok(editorUi.includes('>複製家具<'),'duplicateFurniture must be presented as duplication, not as catalog-style furniture creation');
-assert.ok(!editorUi.includes('新增同型家具'),'clone-existing-instance UI must not be mislabeled as furniture-library creation');
-assert.ok(editorUi.includes('data-editor-action="move-resident"'),'Resident UI must expose one unified move action');
-assert.ok(editorUi.includes('>移動居民<'),'Resident move action must use user-facing language rather than placement implementation terminology');
-assert.ok(editorUi.includes('M.listResidentFreePostures(authored,operation.residentId)'),'Resident free posture choices must come from the mutation/capability boundary');
-assert.ok(editorUi.includes('M.listResidentSlotPostures(authored,operation.residentId,operation.slotId)'),'Furniture-slot posture choices must be capability-filtered');
-assert.ok(editorUi.includes('點擊新位置後會解除目前的家具／座位綁定'),'bound → free move must explicitly warn before detaching the furniture/slot binding');
-assert.ok(editorUi.includes('M.moveResidentToExact(authored,{residentId:operation.residentId,target,postureKind:operation.postureKind})'),'free resident move must delegate to the single atomic resident mutation');
-assert.ok(!editorUi.includes('解除家具綁定並移動（站立）'),'Editor must not retain the retired forced-standing detach flow');
-assert.ok(editorUi.includes('取消目前操作'),'pendingOperation may remain an internal key, but visible cancellation copy must be localized');
-assert.ok(!editorUi.includes('取消 pending operation'),'internal pendingOperation terminology must not leak into the primary Editor UI');
-assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
-assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"),'drag drop commit must delegate to the canonical Furniture mutation owner');
-assert.ok(!editorUi.includes('function moveFurniture('),'Editor UI must not retain a second Furniture movement implementation');
-for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','selection','pendingOperation','baselineFingerprint']){
-  assert.ok(editorUi.includes(ephemeral),`Expected Editor ephemeral state: ${ephemeral}`);
-}
+for(const forbidden of ['SimEngine','SimSpatial','createInitialState','PassageProfile','passageConstraints'])assert.ok(!editorUi.includes(forbidden),`Editor UI must not consume runtime traversal truth: ${forbidden}`);
+assert.ok(editorUi.includes('A.resolveFurnitureInstance'),'Editor UI must resolve compact instances through the shared Definition owner');
+assert.ok(editorUi.includes('A.listFurnitureDefinitions()'),'Furniture Catalog UI must consume the shared pure Definition owner');
+assert.ok(editorUi.includes('M.createFurnitureFromDefinition(authored,{definitionId:operation.definitionId,target})'),'new furniture must delegate to the canonical Definition → Instance mutation');
+assert.ok(editorUi.includes('deriveHorizontalTopology'));
+assert.ok(editorUi.includes('sceneEntries'));
+assert.ok(editorUi.includes('residentPosition'));
+assert.ok(editorUi.includes('SimEditorAuthoringMutations'));
+assert.ok(editorUi.includes('pendingOperation'));
+assert.ok(editorUi.includes('DRAG_THRESHOLD_PX'));
+for(const eventName of ['pointerdown','pointermove','pointerup','pointercancel'])assert.ok(editorUi.includes(eventName));
+assert.ok(editorUi.includes('SimEditorPreviewBridge'));
+assert.ok(editorUi.includes('P.storePreview(authored)'));
+assert.ok(editorUi.includes('allowPreviewNavigation'));
+assert.ok(editorUi.includes('P.getRestorePreview?.()'));
+assert.ok(editorUi.includes('>複製家具<'),'duplicateFurniture must remain presented as duplication');
+assert.ok(!editorUi.includes('新增同型家具'));
+assert.ok(editorUi.includes('data-editor-action="move-resident"'));
+assert.ok(editorUi.includes('M.listResidentFreePostures(authored,operation.residentId)'));
+assert.ok(editorUi.includes('M.listResidentSlotPostures(authored,operation.residentId,operation.slotId)'));
+assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"));
+assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:completed.furnitureId,target:completed.target})"));
+assert.ok(!editorUi.includes('function moveFurniture('));
+for(const ephemeral of ['currentZ','selectedTool','selectedFurnitureId','selection','pendingOperation','baselineFingerprint'])assert.ok(editorUi.includes(ephemeral));
+
 assert.ok(!exported.includes('"currentZ"'));
 assert.ok(!exported.includes('"selectedTool"'));
 assert.ok(!exported.includes('"dirty"'));

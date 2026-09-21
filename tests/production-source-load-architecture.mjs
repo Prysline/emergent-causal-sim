@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.22.1-editor-resident-capabilities';
+const CURRENT_VERSION='11.22.2-editor-furniture-definitions';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -23,6 +23,7 @@ for(const relativePath of scripts){
   assert.doesNotThrow(()=>readRepoFile(relativePath),'production source must exist: '+relativePath);
 }
 
+const furnitureDefinitionsIndex=indexOf('src/furniture-definitions.js');
 const authoringIndex=indexOf('src/world-authoring.js');
 const capabilityIndex=indexOf('src/embodiment-capabilities.js');
 const initializerIndex=indexOf('src/world-initializer.js');
@@ -42,6 +43,7 @@ const uiIndex=indexOf('src/ui/core.js');
 const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
+assert.ok(furnitureDefinitionsIndex<authoringIndex,'Furniture Definitions must load before world-authoring.js');
 assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<worldIndex,'shared embodiment capabilities must stay authoring-safe and load before initializer/runtime owners');
 const capabilitySource=readRepoFile('src/embodiment-capabilities.js');
 assert.doesNotMatch(capabilitySource,/SimEngine|SimSpatial|registerInitialStateInitializer/,'shared embodiment capability contract must stay pure and authoring-safe');
@@ -170,6 +172,7 @@ for(const path of validatorRules){
 
 loadProductionBefore('src/ui/core.js');
 
+const FD=globalThis.SimFurnitureDefinitions;
 const A=globalThis.SimWorldAuthoring;
 const EC=globalThis.SimEmbodimentCapabilities;
 const R=globalThis.SimRelease;
@@ -181,7 +184,9 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(FD.VERSION,'furniture-definitions-v1');
+assert.equal(A.VERSION,'world-authoring-v3');
+assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v1');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
