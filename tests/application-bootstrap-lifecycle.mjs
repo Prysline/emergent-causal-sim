@@ -13,11 +13,10 @@ loadProductionBefore('src/ui.js');
 
 const W=globalThis.SimWorld,E=globalThis.SimEngine,V=globalThis.SimValidator;
 assert.equal(W.isInitialStateRegistryFinalized(),true);
-assert.equal(E.isRuntimeHookRegistryFinalized(),false);
+assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before UI loads');
+assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'bootstrap prefix must not require Presentation observers');
 assert.equal(V.isValidationRegistryFinalized(),true);
 assert.equal(E.getState(),null,'engine module evaluation must not start the simulation');
-E.finalizeRuntimeHooks(E.currentRuntimeHookManifest());
-assert.equal(E.isRuntimeHookRegistryFinalized(),true);
 
 let uiStarts=0;
 globalThis.SimUI={start(){uiStarts++;return true;}};

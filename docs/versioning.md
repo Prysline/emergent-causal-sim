@@ -8,7 +8,7 @@
 
 `11.22.0-spatial-z-identity`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.22.0`；瀏覽器 document `<title>` 使用不帶 runtime 版本的穩定產品名稱 `因果湧現模擬器｜Emergent Causal Sim`，不持有 release truth。`state.version` 與 `SimWorld.PRESENTATION_SCHEMA_VERSION` 使用完整 current marker。Subsystem schema/runtime marker 代表各自 contract generation：Spatial Identity 使用 `SimSpatial.SPATIAL_IDENTITY_VERSION = 11.22.0-spatial-z-identity`；目前 Physical 使用 `SimWorld.PHYSICAL_SCHEMA_VERSION = 11.17.0-passage-profile-multimode`，Spatial Passage 使用 `SimSpatial.PASSAGE_PROFILE_VERSION = 11.17.0-passage-profile-multimode`，Route Semantics 使用 `SimSpatial.ROUTE_SEMANTICS_VERSION = 11.18.0-route-semantics-split`，Locomotion Execution 使用 `SimWorld.LOCOMOTION_SCHEMA_VERSION / SimLocomotion.VERSION = 11.19.0-locomotion-execution-posture`，Dynamic Congestion 使用 `SimCrowding.VERSION / SimSpatial.CROWDING_VERSION = 11.20.0-dynamic-congestion`；Relationship 仍保留自己的 `SimWorld.RELATIONSHIP_SCHEMA_VERSION = 11.15.2-relationship-responder-bias`，Memory→Deliberation 仍保留 `11.13.4-memory-deliberation-influence`，不因整體 current release 推進而假升未換代 subsystem。Resident / Physical / Locomotion / Entity Readable 等 UI version 若以 current Presentation marker 為 owner，則跟隨 current marker。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.22.0`；瀏覽器 document `<title>` 使用不帶 runtime 版本的穩定產品名稱 `因果湧現模擬器｜Emergent Causal Sim`，不持有 release truth。`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Subsystem schema/runtime marker 代表各自 contract generation：Spatial Identity 使用 `SimSpatial.SPATIAL_IDENTITY_VERSION = 11.22.0-spatial-z-identity`；目前 Physical 使用 `SimWorld.PHYSICAL_SCHEMA_VERSION = 11.17.0-passage-profile-multimode`，Spatial Passage 使用 `SimSpatial.PASSAGE_PROFILE_VERSION = 11.17.0-passage-profile-multimode`，Route Semantics 使用 `SimSpatial.ROUTE_SEMANTICS_VERSION = 11.18.0-route-semantics-split`，Locomotion Execution 使用 `SimWorld.LOCOMOTION_SCHEMA_VERSION / SimLocomotion.VERSION = 11.19.0-locomotion-execution-posture`，Dynamic Congestion 使用 `SimCrowding.VERSION / SimSpatial.CROWDING_VERSION = 11.20.0-dynamic-congestion`；Relationship 仍保留自己的 `SimWorld.RELATIONSHIP_SCHEMA_VERSION = 11.15.2-relationship-responder-bias`，Memory→Deliberation 仍保留 `11.13.4-memory-deliberation-influence`，不因整體 current release 推進而假升未換代 subsystem。Resident / Physical / Locomotion / Entity Readable 等 UI version 若以 current Presentation marker 為 owner，則跟隨 current marker。
 
 ### Current Slice E release
 
@@ -57,9 +57,9 @@ World authoring 另有獨立 contract generation：`SimWorldAuthoring.VERSION = 
 
 ### 檔名 / workflow family 不是 current release marker
 
-像 `presentation-schema-v1140.js`、`ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類名稱代表 subsystem / test family，可以跨後續 current release 延續，不需要因 runtime marker 推進就整組複製／改名。`spatial-passage-v1170.js` 則是本 slice 新增的 Passage contract owner。
+像 `ui-resident-view-v1140.js`、`ui-entity-readable-v1141.js`、`relationship-*-v1150.js`、`physical-*-v1160.js`、`browser-resident-view-v1140-qa` 這類歷史 family 名稱不等於 current release marker；Cleanup-5B-2 會把 current UI source再收斂成 semantic filename，而不是因 runtime marker 推進複製新版本檔。`spatial-passage-v1170.js` 則是本 slice 新增的 Passage contract owner。
 
-判斷**整體 current release** 時，以 `state.version`、`SimWorld.PRESENTATION_SCHEMA_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 推進到 11.20.0 就把沒有 generation 變更的 Physical / Passage / Route / Locomotion / Relationship / Memory marker 假升到 11.20.0，也不得從舊 family 檔名反推整體 current release。
+判斷**整體 current release** 時，以 `state.version`、`SimRelease.VERSION / SimWorld.VERSION`、`SimUI.PRESENTATION_VERSION`、玩家可見 app version 與 Current 文件為準；判斷**某 subsystem generation** 時，才看該 subsystem 自己的 schema/runtime marker。不得因整體 runtime 推進到 11.20.0 就把沒有 generation 變更的 Physical / Passage / Route / Locomotion / Relationship / Memory marker 假升到 11.20.0，也不得從舊 family 檔名反推整體 current release。
 
 若未來 subsystem generation 改變，舊 family 名稱造成實質誤導，再另行 rename；單純 current marker 推進不要求 rename。
 
@@ -67,9 +67,9 @@ World authoring 另有獨立 contract generation：`SimWorldAuthoring.VERSION = 
 
 需要升版的 PR 必須同步確認：
 
-1. `src/presentation-schema-v1140.js` 的 current runtime marker；
+1. `src/release.js` 的 canonical current runtime marker；
 2. 本次新增／改變 subsystem 的 schema/runtime marker（本線新增 `SimCrowding.VERSION / SimSpatial.CROWDING_VERSION`；既有 Physical / Passage / Route / Locomotion / Relationship / Memory marker 只有自身 contract generation 改變時才升），並確認未變更 subsystem 不被假升版；
-3. `state.version` / `SimWorld.PRESENTATION_SCHEMA_VERSION`；
+3. `state.version` / `SimRelease.VERSION` / `SimWorld.VERSION` / `SimUI.PRESENTATION_VERSION`；
 4. 由 Presentation current marker 持有的 UI version（目前包含 Resident View、Physical View、Locomotion View、Entity Readable View；其他 subsystem UI 依其 owner contract 判斷）沒有形成第二份 release marker；
 5. `index.html` 的 browser `<title>` 維持穩定、不複製 runtime 版本；頁首 current-version display 則必須與 current release 同步；
 6. `README.md` current runtime marker；

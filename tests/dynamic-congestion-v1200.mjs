@@ -5,7 +5,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
 loadRuntimeProfile([
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','presentation-schema-v1140.js',
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
   'systems/physical.js','spatial-passage.js',
   'systems/locomotion.js','crowding-runtime-v1200.js',
   'engine.js'

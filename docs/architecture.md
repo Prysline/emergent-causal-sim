@@ -356,9 +356,9 @@ Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud f
 
 上述清單是 architecture view；精確 implementation hook ID / owner / order 對照請查 `docs/tick-pipeline.md`。
 
-UI / readable Inspector 可以在更晚的 presentation hooks render，但不得改 simulation truth 或取代 pipeline dispatcher。
+Simulation `runtime-hook` manifest只涵蓋會改變模擬語意的 hooks，並可在 UI 載入前 finalize。UI / readable Inspector 的 refresh / reset 改走獨立 `runtime observer` lifecycle：observer 一律在該次 simulation `afterTick` / `afterReset` hooks 全部完成後才執行，保留 deterministic ID / order，但不參與 simulation schedule completeness，也不得改 simulation truth 或取代 pipeline dispatcher。
 
-Runtime hook extension 不再保留「沒有 pipeline 時 fallback wrapper」。任何需要 `registerRuntimeHook` 的 extension 若未先載入 `runtime-hook-pipeline.js` 必須 loud failure；focused Node test 也必須在 `engine.js` 後、任何 hook extension 前載入同一 production pipeline。正常 app 與 test 不再存在第二套 wrapper-stacking lifecycle。
+Runtime hook extension 不再保留「沒有 pipeline 時 fallback wrapper」。任何需要 `registerRuntimeHook` 的 extension 若未先載入 `runtime-hook-pipeline.js` 必須 loud failure；focused Node test 也必須在 `engine.js` 後、任何 hook extension 前載入同一 production pipeline。正常 app 與 test 不再存在第二套 wrapper-stacking lifecycle。`registerRuntimeObserver` 則是同一 dispatcher 提供的 read-only/post-simulation observer boundary，可在 simulation hook manifest finalize 後由 Presentation 註冊；它不能重新打開或改寫 finalized simulation hook set。
 
 Physical / Passage Profile Slice 2 沒有新增 runtime hook 或 tick phase；它提供同步 derived geometry / feasibility query，A* 只在既有 traversal expansion 中讀 `walk` feasibility。
 
@@ -453,6 +453,10 @@ PR #45 / #46 建立的 deterministic timing baseline 是這個 lifecycle 的 com
 `privateSocialOutcome` 仍是 requester-private experience path，不是 generic World Event observation。Event-created lifecycle cleanup 不改這條 truth boundary；Relationship 只在 requester 自己的 private memory 形成後做 requester-local consolidation。
 
 ## 8. Presentation ownership
+
+Presentation 不再參與 initial-state schema，也不再持有 `SimWorld.PRESENTATION_SCHEMA_VERSION`。Current Presentation marker 與 interaction labels 由 `SimUI.PRESENTATION_VERSION / SimUI.interactionLabel(...)` 持有，marker直接跟隨 canonical `SimRelease.VERSION`；這只描述 UI/presentation contract，不寫入 runtime state，也不成為 simulation schema owner。
+
+Presentation refresh/reset 使用上節的 runtime observer boundary。現行 observer relative order保留：afterTick `uiObservability.render-mobile-summary` → `residentView.schedule` → `relationshipView.schedule`；afterReset `uiObservability.reset` → `residentView.reset` → `relationshipView.reset`。這些 observer 永遠在完整 simulation phase之後執行。
 
 ### Canonical event text
 

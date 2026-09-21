@@ -34,10 +34,11 @@ flowchart TD
     A600 --> A700[700 Human Social Resolve]
     A700 --> A800[800 Memory-to-Deliberation Correction]
     A800 --> A900[900 Private Social Outcome Process]
-    A900 --> A1000[1000 Mobile Summary Render]
-    A1000 --> A1100[1100 Resident View Schedule]
-    A1100 --> A1150[1150 Relationship View Schedule]
-    A1150 --> END[return core tick result]
+    A900 --> SIMEND[simulation afterTick complete]
+    SIMEND -. Presentation observer lifecycle .-> O1000[1000 Mobile Summary Render]
+    O1000 --> O1100[1100 Resident View Schedule]
+    O1100 --> O1150[1150 Relationship View Schedule]
+    O1150 --> END[return core tick result]
 
     EVENT[[Core-owned Event Creation\nevent-created notification]] -. non-core producer: immediate .-> MEM[Memory Observation Consumer]
     EVENT -. during core loop: enqueue .-> QUEUE[Deferred Core-event FIFO]
@@ -89,11 +90,30 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見 |
 | 800 | `memoryDeliberation.correct-initial` | Memory → Deliberation | 修正本 tick core 初始 social target / utility choice | 因此 600/700 的 psychological update 若延後到 800 之後會改變現況 |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
-| 1000 | `uiObservability.render-mobile-summary` | Presentation | 更新 mobile derived summary | presentation-only；不得回寫 simulation truth |
-| 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render | presentation-only；不得影響 simulation ordering |
-| 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection | presentation-only；不得影響 simulation ordering |
 
-v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition 與 v11.20.0 Dynamic Congestion 都**不新增 runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 只讓每次 route planning / next-edge execution讀取當下 Crowd Profile，將 soft congestion cost加入 route burden並把 delay ticks加入該edge movement timing。沒有 crowding beforeTick / afterTick phase，也沒有 persistent congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
+Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition 與 v11.20.0 Dynamic Congestion 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 只讓每次 route planning / next-edge execution讀取當下 Crowd Profile，將 soft congestion cost加入 route burden並把 delay ticks加入該edge movement timing。沒有 crowding beforeTick / afterTick phase，也沒有 persistent congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
+
+## 4.1 Presentation runtime observers
+
+Presentation observer registry與 simulation runtime-hook manifest分離。Simulation manifest可以在 UI 尚未載入時完成 finalize；UI 之後透過 `registerRuntimeObserver` 註冊 refresh/reset observer。Dispatcher固定先完成全部 simulation hooks，再執行對應 observer phase，因此 observer order只決定 Presentation 內部相對順序，不會改變同 tick 的 simulation visibility。
+
+### afterTick observers
+
+| Order | Observer ID | Owner | 責任 |
+|---:|---|---|---|
+| 1000 | `uiObservability.render-mobile-summary` | Presentation | 更新 mobile derived summary |
+| 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render |
+| 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection |
+
+### afterReset observers
+
+| Order | Observer ID | Owner | 責任 |
+|---:|---|---|---|
+| 600 | `uiObservability.reset` | Presentation | 重畫 mobile summary |
+| 700 | `residentView.reset` | Presentation | 重設／排程 Resident View |
+| 750 | `relationshipView.reset` | Presentation | 重設／排程 Relationship projection |
+
+所有 observer 都是 state projection / refresh；不得把 Presentation side effect 寫回 simulation truth。Observer registry不參與 simulation hook manifest completeness。
 
 ## 5. `episodicMemoryCreated` 支線
 
@@ -129,9 +149,6 @@ flowchart LR
 | 300 | `memory.normalize-reset` | Episodic Memory | 清空 deferred FIFO，初始化／dedupe／prune memory state |
 | 400 | `affect.normalize-reset` | Affect | 正規化 current Affect |
 | 500 | `memoryRetention.normalize-reset` | Memory Retention | 套用 bounded retention / salience cap |
-| 600 | `uiObservability.reset` | Presentation | 重畫 mobile summary |
-| 700 | `residentView.reset` | Presentation | 重設／排程 Resident View |
-| 750 | `relationshipView.reset` | Presentation | 重設／排程 Relationship projection |
 
 Relationship persistent state 由 `src/systems/relationship/state.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `src/systems/physical.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20 Crowding完全 derived / uncached，不建立 reset-normalized state，也不新增 afterReset hook。
 

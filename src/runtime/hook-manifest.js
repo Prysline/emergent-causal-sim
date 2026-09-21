@@ -23,20 +23,14 @@
       {id:'socialResponse.resolve-pet-offers',order:600},
       {id:'humanSocial.resolve',order:700},
       {id:'memoryDeliberation.correct-initial',order:800},
-      {id:'socialOutcome.process',order:900},
-      {id:'uiObservability.render-mobile-summary',order:1000},
-      {id:'residentView.schedule',order:1100},
-      {id:'relationshipView.schedule',order:1150}
+      {id:'socialOutcome.process',order:900}
     ],
     afterReset:[
       {id:'intent.normalize-reset',order:100},
       {id:'socialBid.normalize-reset',order:200},
       {id:'memory.normalize-reset',order:300},
       {id:'affect.normalize-reset',order:400},
-      {id:'memoryRetention.normalize-reset',order:500},
-      {id:'uiObservability.reset',order:600},
-      {id:'residentView.reset',order:700},
-      {id:'relationshipView.reset',order:750}
+      {id:'memoryRetention.normalize-reset',order:500}
     ],
     episodicMemoryCreated:[
       {id:'appraisal.base',order:100},

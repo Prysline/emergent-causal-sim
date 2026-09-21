@@ -20,6 +20,9 @@ try{
       before:E.listRuntimeHooks('beforeTick'),
       after:E.listRuntimeHooks('afterTick'),
       reset:E.listRuntimeHooks('afterReset'),
+      afterObservers:E.listRuntimeObservers('afterTick'),
+      resetObservers:E.listRuntimeObservers('afterReset'),
+      finalized:E.isRuntimeHookRegistryFinalized(),
       tick:E.getState().tick
     };
   });
@@ -27,8 +30,11 @@ try{
   assert.equal(snapshot.pipelineVersion,'runtime-hook-pipeline-2');
   assert.equal(snapshot.tickOwned,true,'all browser/UI scripts must leave E.tick owned by the runtime pipeline');
   assert.equal(snapshot.resetOwned,true,'all browser/UI scripts must leave E.reset owned by the runtime pipeline');
-  assert.deepEqual(snapshot.after.slice(-3).map(x=>x.id),['uiObservability.render-mobile-summary','residentView.schedule','relationshipView.schedule'],'presentation hooks must run after simulation hooks in explicit order');
-  assert.deepEqual(snapshot.reset.slice(-3).map(x=>x.id),['uiObservability.reset','residentView.reset','relationshipView.reset'],'presentation reset hooks must run after simulation normalization in explicit order');
+  assert.equal(snapshot.finalized,true,'simulation runtime schedule must already be finalized in the browser');
+  assert.equal(snapshot.after.at(-1)?.id,'socialOutcome.process','simulation afterTick manifest must end before Presentation observers');
+  assert.equal(snapshot.reset.at(-1)?.id,'memoryRetention.normalize-reset','simulation afterReset manifest must end before Presentation observers');
+  assert.deepEqual(snapshot.afterObservers.map(x=>x.id),['uiObservability.render-mobile-summary','residentView.schedule','relationshipView.schedule'],'Presentation observers must retain explicit relative order after simulation hooks');
+  assert.deepEqual(snapshot.resetObservers.map(x=>x.id),['uiObservability.reset','residentView.reset','relationshipView.reset'],'Presentation reset observers must retain explicit relative order after simulation normalization');
 
   await page.locator('#step').click();
   await page.waitForFunction(tick=>window.SimEngine.getState().tick===tick+1,snapshot.tick);
