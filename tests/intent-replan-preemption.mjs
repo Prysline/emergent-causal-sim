@@ -18,7 +18,7 @@ function bind(a,kind,intentKind,extra={}){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.22.1-editor-resident-capabilities');
+assert.equal(st.version,'11.22.2-editor-furniture-definitions');
 assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.12.3-replan-preemption');
 noIssues('reset');
 
