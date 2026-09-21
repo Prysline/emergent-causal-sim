@@ -598,7 +598,14 @@
         return `<span class="entity-marker marker-${esc(entry.type)} ${isSelected?'selected':''}" data-entity-type="${esc(entry.type)}" data-entity-id="${esc(entry.id)}" title="${esc(entry.label)}：${esc(entry.entity.name||entry.id)}">${esc(entry.icon)}</span>`;
       }).join('')}${entities.length>3?`<span class="entity-overflow">+${entities.length-3}</span>`:''}</span>`:'';
       const terrainText=terrainLabel(terrain);
-      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${furnitureMarkup}${entityMarkup}</button>`;
+      const edgeMarkup=['north','east','south','west'].map(edge=>{
+        const boundaryId=boundaryIdForCellEdge(x,y,edge),info=boundaryInfo(currentZ,boundaryId);
+        if(!info.boundary)return '';
+        const closed=info.door?.state==='closed',kind=closed?'closed-door':info.boundary.kind;
+        const title=info.door?`${info.door.name||info.door.id}・${info.door.state}`:(info.boundary.kind==='wall'?'牆壁':'結構開口');
+        return `<i class="boundary-edge edge-${edge} boundary-${kind}" title="${esc(boundaryId)}・${esc(title)}"></i>`;
+      }).join('');
+      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${entityMarkup}</button>`;
     }
     host.innerHTML=html;
     applyDragPreviewDom();
