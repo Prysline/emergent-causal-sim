@@ -13,8 +13,57 @@ const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(A.VERSION,'world-authoring-v3');
+assert.equal(A.VERSION,'world-authoring-v4');
 assert.equal(C.VERSION,'embodiment-capabilities-v1');
+
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  const before=fp(doc);
+  let result=M.setCellTerrain(doc,{x:2,y:2,z:0,terrain:null});
+  assert.equal(result.ok,true);
+  assert.equal(doc.map.layers[0].cells['2,2'].terrain,'floor','Cell terrain mutation must not modify the source document');
+  assert.equal(result.candidate.map.layers[0].cells['2,2'],undefined);
+  result=M.setCellTerrain(result.candidate,{x:2,y:2,z:0,terrain:'floor'});
+  assert.equal(result.ok,true);
+  assert.equal(result.candidate.map.layers[0].cells['2,2'].terrain,'floor');
+  const invalidTerrain=M.setCellTerrain(doc,{x:2,y:2,z:0,terrain:'wall'});
+  assert.equal(invalidTerrain.ok,false);
+  assert.equal(invalidTerrain.issues[0].code,'cell_terrain_value_invalid');
+  assert.equal(fp(doc),before,'rejected Cell terrain mutation must leave source authoring unchanged');
+}
+
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  const before=fp(doc);
+  let result=M.setBoundary(doc,{z:0,boundaryId:'v:3,3',kind:'wall'});
+  assert.equal(result.ok,true,result.issues.map(x=>x.code).join(','));
+  assert.equal(doc.map.layers[0].boundaries['v:3,3'],undefined,'Boundary mutation must not modify the source document');
+  assert.equal(result.candidate.map.layers[0].boundaries['v:3,3'].kind,'wall');
+  result=M.setBoundary(result.candidate,{z:0,boundaryId:'v:3,3',kind:'opening'});
+  assert.equal(result.ok,true);
+  assert.equal(result.candidate.map.layers[0].boundaries['v:3,3'].kind,'opening');
+  result=M.setBoundary(result.candidate,{z:0,boundaryId:'v:3,3',kind:null});
+  assert.equal(result.ok,true);
+  assert.equal(result.candidate.map.layers[0].boundaries['v:3,3'],undefined);
+  const blocked=M.setBoundary(doc,{z:0,boundaryId:'v:1,6',kind:'wall'});
+  assert.equal(blocked.ok,false,'Door/Exit-owned opening must not silently become a wall');
+  assert.ok(blocked.issues.some(x=>x.code==='authoring_door_boundary_not_opening'||x.code==='authoring_exit_boundary_not_opening'));
+  assert.equal(fp(doc),before,'rejected Boundary mutation must leave source authoring unchanged');
+}
+
+{
+  const doc=clone(A.DEFAULT_WORLD_AUTHORING);
+  const before=fp(doc);
+  let result=M.setDoorState(doc,{doorId:'frontDoor',state:'closed'});
+  assert.equal(result.ok,true,result.issues.map(x=>x.code).join(','));
+  assert.equal(doc.doors.frontDoor.state,'open','Door state mutation must not modify the source document');
+  assert.equal(result.candidate.doors.frontDoor.state,'closed');
+  assert.equal(result.meta.operation,'setDoorState');
+  result=M.setDoorState(result.candidate,{doorId:'frontDoor',state:'open'});
+  assert.equal(result.ok,true);
+  assert.equal(result.candidate.doors.frontDoor.state,'open');
+  assert.equal(fp(doc),before,'Door state mutation must preserve source fingerprint');
+}
 
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
