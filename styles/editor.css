@@ -88,6 +88,13 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
 .author-cell.terrain-wall{background:repeating-linear-gradient(135deg,#535c66,#535c66 5px,#454d56 5px,#454d56 10px)}
 .author-cell.terrain-doorway{background:#5b4935}
 .author-cell.selected-cell{box-shadow:inset 0 0 0 2px #96c9ff}
+.boundary-edge{position:absolute;display:block;pointer-events:none;z-index:8}
+.boundary-edge.edge-north,.boundary-edge.edge-south{left:-1px;right:-1px;height:3px}
+.boundary-edge.edge-west,.boundary-edge.edge-east{top:-1px;bottom:-1px;width:3px}
+.boundary-edge.edge-north{top:-2px}.boundary-edge.edge-south{bottom:-2px}.boundary-edge.edge-west{left:-2px}.boundary-edge.edge-east{right:-2px}
+.boundary-edge.boundary-wall{background:#b1bbc5}
+.boundary-edge.boundary-opening{background:#d3a96a}
+.boundary-edge.boundary-closed-door{background:#e88787;box-shadow:0 0 0 1px #8d4545}
 .cell-coord{position:absolute;left:3px;top:2px;font-size:8px;color:#8190a0;pointer-events:none}
 .furniture-mark{position:absolute;inset:4px;border:1px dashed #c7a96a;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:17px;background:#6c522c55;pointer-events:auto;cursor:pointer;touch-action:none}
 .furniture-mark.selected{border-style:solid;border-color:#d8ecff;background:#496b8766}
@@ -106,6 +113,7 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
 .entity-marker{min-width:15px;height:15px;padding:0 2px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1;background:#101820dd;border:1px solid #536273;box-shadow:0 0 0 1px #0d1216;pointer-events:auto;cursor:pointer}
 .entity-marker.marker-resident{border-color:#6f9fd1;background:#17304add}
 .entity-marker.marker-container,.entity-marker.marker-source{border-color:#65a37f;background:#173225dd}
+.entity-marker.marker-door{border-color:#d6a766;background:#3d2f1edd}.entity-marker.marker-exit{border-color:#8ec5e8;background:#17344add}
 .entity-marker.selected{outline:2px solid #d8ecff;outline-offset:1px}
 .entity-overflow{height:15px;min-width:15px;padding:0 2px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:8px;background:#111820;border:1px solid #56616c;color:#dbe5ef}
 .summary-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 10px;font-size:12px}
@@ -133,6 +141,13 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
 .cell-editor-head b{font-size:12px}
 .cell-editor small{font-size:10px;line-height:1.45;color:var(--muted)}
 .cell-editor.disabled{opacity:.72;border-style:dashed}
+.boundary-editor{display:flex;flex-direction:column;gap:7px;padding:9px;border:1px solid #34404c;border-radius:8px;background:#141a20}
+.boundary-editor>small{font-size:10px;line-height:1.45;color:var(--muted)}
+.boundary-row{display:flex;flex-direction:column;gap:5px;padding-top:6px;border-top:1px solid #27313a}
+.boundary-row:first-of-type{border-top:0;padding-top:0}
+.boundary-copy{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.boundary-copy b{font-size:11px}.boundary-copy small{font-size:9px;color:var(--muted);text-align:right}
+.boundary-actions button.active-boundary{border-color:var(--accent);background:#20364e}
 .boundary-note{padding-bottom:0!important}
 .boundary-note summary{cursor:pointer;color:#cdd8e3;font-size:12px;font-weight:700;line-height:1.4}
 .boundary-note p{margin-top:9px}
