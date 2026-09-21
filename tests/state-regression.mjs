@@ -18,6 +18,7 @@ E.reset(20260911);
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
+  assert.equal(st.map.rooms.room1.value,313.6,'Door separation must preserve the previous default Room value');
   assert.equal(st.map.cellSizeMeters,1);
   assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='floor').length,60);
   assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='void').length,36);
