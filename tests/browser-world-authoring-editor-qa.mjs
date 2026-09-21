@@ -103,6 +103,12 @@ assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
+await page.click('[data-scene-type="source"][data-scene-id="tap"]');
+snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
+assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'source',id:'tap'});
+assert.equal(snapshot.session.dirty,false,'source selection must remain presentation-only');
+assert.match(snapshot.selectionText,/取水位置：水龍頭左側 · \(5, 5, 0\)/,'Source Inspector must expose the canonical water interaction port instead of hiding the usable side');
+
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
 assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'resident',id:'zhen'});
