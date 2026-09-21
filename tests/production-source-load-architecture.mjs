@@ -9,7 +9,8 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.22.0-spatial-z-identity';
+const CURRENT_VERSION='11.22.1-editor-resident-capabilities';
+const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
   const index=scripts.indexOf(path);
@@ -188,7 +189,7 @@ assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expos
 assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
-assert.equal(SP.SPATIAL_IDENTITY_VERSION,CURRENT_VERSION);
+assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.17.0-passage-profile-multimode');
