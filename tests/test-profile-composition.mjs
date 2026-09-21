@@ -57,6 +57,14 @@ for(const relativePath of stateTests){
   assert.doesNotMatch(source,/\bSP\.init\s*\(/,relativePath+' must not invoke the retired Spatial init lifecycle');
   const handLoadsEngine=/['"]engine\.js['"]/.test(source);
   const productionDerived=/productionScriptPaths|loadProductionBefore|loadProductionThrough/.test(source);
+  const profileComposed=/loadAuthoringProfile|loadSpatialCoreProfile|loadRuntimeProfile|loadInitialStateProfile/.test(source);
+  const handLoadsInitializer=/['"](?:src\/)?world-initializer\.js['"]/.test(source);
+  if(handLoadsInitializer&&!productionDerived&&!profileComposed){
+    assert.ok(
+      /['"](?:src\/)?embodiment-capabilities\.js['"]/.test(source),
+      relativePath+' must load embodiment-capabilities.js before a direct world-initializer.js stack'
+    );
+  }
   if(handLoadsEngine&&!productionDerived){
     assert.ok(source.includes('loadRuntimeProfile'),relativePath+' must compose handwritten Engine stacks through loadRuntimeProfile()');
   }
