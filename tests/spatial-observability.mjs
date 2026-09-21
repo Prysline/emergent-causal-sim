@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.23.0-world-boundary-door-exit');
-assert.equal(E.VERSION,'11.23.0-world-boundary-door-exit');
+assert.equal(st.version,'11.23.1-editor-source-port-observability');
+assert.equal(E.VERSION,'11.23.1-editor-source-port-observability');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
