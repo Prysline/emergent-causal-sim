@@ -1,9 +1,10 @@
 (() => {
   const A=window.SimWorldAuthoring;
+  const C=window.SimEmbodimentCapabilities;
   const M=window.SimEditorAuthoringMutations;
   const P=window.SimEditorPreviewBridge;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!M?.moveFurniture||!M?.moveObject||!P?.storePreview){
-    throw new Error('World authoring helpers, preview bridge, and editor mutation owner must load before editor-ui.js.');
+  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!M?.moveFurniture||!M?.moveObject||!P?.storePreview){
+    throw new Error('World authoring helpers, embodiment capabilities, preview bridge, and editor mutation owner must load before editor-ui.js.');
   }
 
   const $=id=>document.getElementById(id);
@@ -335,14 +336,10 @@
       commitMutation(result,{message:result.ok?'已移動物件。':'',select:result.ok?{type:operation.entityType,id:operation.entityId}:null});
       return true;
     }
-    if(operation.kind==='move-resident-exact'){
-      const result=M.moveResidentExact(authored,{residentId:operation.residentId,target});
-      commitMutation(result,{message:result.ok?'已移動 exact Resident。':'',select:result.ok?{type:'resident',id:operation.residentId}:null});
-      return true;
-    }
-    if(operation.kind==='convert-resident-exact'){
-      const result=M.convertResidentToExactStanding(authored,{residentId:operation.residentId,target});
-      commitMutation(result,{message:result.ok?'已改為 exact（standing）placement。':'',select:result.ok?{type:'resident',id:operation.residentId}:null});
+    if(operation.kind==='move-resident'){
+      const result=M.moveResidentToExact(authored,{residentId:operation.residentId,target,postureKind:operation.postureKind});
+      const posture=C.postureLabel(operation.postureKind);
+      commitMutation(result,{message:result.ok?`已移動居民到自由位置（${posture}）。`:'',select:result.ok?{type:'resident',id:operation.residentId}:null});
       return true;
     }
     return false;
@@ -618,15 +615,21 @@
     let pendingMarkup='';
     if(pendingOperation){
       const operation=pendingOperation;
-      const labels={'duplicate-furniture':'下一次點擊：放置家具副本','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident-exact':'下一次點擊：移動自由位置','convert-resident-exact':'下一次點擊：解除家具綁定並移動（站立）','rebind-resident-slot':'重新綁定家具位置'};
+      const labels={'duplicate-furniture':'下一次點擊：放置家具副本','move-object':'下一次點擊：移動物件','resolve-object-support':'選擇物件承載關係','move-resident':'移動居民到自由位置','rebind-resident-slot':'重新綁定家具位置'};
       pendingMarkup+=`<div class="pending-operation"><b>${esc(labels[operation.kind]||operation.kind)}</b>`;
       if(operation.kind==='resolve-object-support'){
         pendingMarkup+=`<small>target: <code>(${operation.target.x}, ${operation.target.y}, ${operation.target.z})</code></small><div class="action-row"><button type="button" data-editor-action="resolve-support" data-support-kind="floor">Floor</button>${(operation.candidates||[]).map(candidate=>`<button type="button" data-editor-action="resolve-support" data-support-kind="furniture" data-support-id="${esc(candidate.id)}">Support：${esc(candidate.name||candidate.id)}</button>`).join('')}</div>`;
+      }else if(operation.kind==='move-resident'){
+        const postures=M.listResidentFreePostures(authored,operation.residentId);
+        const binding=M.residentBinding(authored,operation.residentId);
+        pendingMarkup+=`<label class="operation-field">自由姿勢<select data-operation-field="postureKind">${postures.map(item=>`<option value="${esc(item.kind)}" ${operation.postureKind===item.kind?'selected':''}>${esc(item.label)}（${esc(item.kind)}）</option>`).join('')}</select></label>`;
+        if(binding?.bound)pendingMarkup+='<small><strong>注意：</strong>點擊新位置後會解除目前的家具／座位綁定。</small>';
+        pendingMarkup+='<small>選好姿勢後點擊地圖 cell；移動與解除綁定會以同一 atomic mutation 完成。</small>';
       }else if(operation.kind==='rebind-resident-slot'){
         const slots=M.listResidentSlots(authored,operation.residentId).filter(slot=>slot.compatible);
+        const postures=operation.slotId?M.listResidentSlotPostures(authored,operation.residentId,operation.slotId):[];
         pendingMarkup+=`<label class="operation-field">家具位置（slot）<select data-operation-field="slotId"><option value="">請選擇…</option>${slots.map(slot=>`<option value="${esc(slot.id)}" ${operation.slotId===slot.id?'selected':''}>${esc(slot.furnitureName)} · ${esc(slot.label)} (${slot.position.x},${slot.position.y},${slot.position.z??0})</option>`).join('')}</select></label>`;
-        const postureLabels={standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥'};
-        pendingMarkup+=`<label class="operation-field">姿勢<select data-operation-field="postureKind"><option value="">請選擇…</option>${['standing','sitting','lying','kneeling','prone'].map(kind=>`<option value="${kind}" ${operation.postureKind===kind?'selected':''}>${postureLabels[kind]}（${kind}）</option>`).join('')}</select></label><button type="button" data-editor-action="confirm-resident-rebind" ${!operation.slotId||!operation.postureKind?'disabled':''}>套用家具位置綁定</button>`;
+        pendingMarkup+=`<label class="operation-field">姿勢<select data-operation-field="postureKind" ${operation.slotId?'':'disabled'}><option value="">請選擇…</option>${postures.map(item=>`<option value="${esc(item.kind)}" ${operation.postureKind===item.kind?'selected':''}>${esc(item.label)}（${esc(item.kind)}）</option>`).join('')}</select></label><button type="button" data-editor-action="confirm-resident-rebind" ${!operation.slotId||!operation.postureKind?'disabled':''}>套用家具位置綁定</button>`;
       }else{
         pendingMarkup+='<small>點擊地圖 cell 執行；失敗時原 canonical document 不會改變。</small>';
       }
@@ -640,10 +643,8 @@
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
     }else if(entry?.type==='resident'){
       const binding=M.residentBinding(authored,entry.id);
-      const postureLabels={standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥'};
-      const canMoveFree=binding?.placementMode==='exact'&&!binding?.bound;
       const bindingLabel=binding?.bound?'家具／座位綁定':binding?.placementMode==='exact'?'自由座標':'其他';
-      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-resident-exact" ${canMoveFree?'':'disabled'}>移動自由位置</button><button type="button" data-editor-action="convert-resident-exact">解除家具綁定並移動（站立）</button><button type="button" data-editor-action="rebind-resident-slot">綁定到家具位置</button></div><small class="operation-note">位置模式：${esc(bindingLabel)} · 姿勢：${esc(postureLabels[binding?.postureKind]||binding?.postureKind||'—')}${canMoveFree?'':' · 「移動自由位置」只適用於未綁家具的自由座標居民'}</small>`;
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-resident">移動居民</button><button type="button" data-editor-action="rebind-resident-slot">綁定到家具位置</button></div><small class="operation-note">位置模式：${esc(bindingLabel)} · 姿勢：${esc(C.postureLabel(binding?.postureKind))}${binding?.bound?' · 移到自由位置時會先明確解除目前綁定':''}</small>`;
     }
     const metaMarkup=lastOperationMeta?`<div class="operation-meta">最近操作：<code>${esc(lastOperationMeta.operation||lastOperationMeta.phase||'result')}</code></div>`:'';
     host.innerHTML=pendingMarkup+entityMarkup+issueMarkup+metaMarkup;
@@ -735,16 +736,27 @@
     if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'複製家具：下一次點擊決定新副本位置。');return;}
     if(action==='delete-furniture'&&entry.type==='furniture'){deleteSelectedFurniture(entry.id);return;}
     if(action==='move-object'&&(entry.type==='container'||entry.type==='source')){beginOperation({kind:'move-object',entityType:entry.type,entityId:entry.id},'移動物件：下一次點擊決定 target。');return;}
-    if(action==='move-resident-exact'&&entry.type==='resident'){beginOperation({kind:'move-resident-exact',residentId:entry.id},'移動自由位置：下一次點擊決定新位置；不解除家具綁定、不修改姿勢。');return;}
-    if(action==='convert-resident-exact'&&entry.type==='resident'){beginOperation({kind:'convert-resident-exact',residentId:entry.id},'解除家具／座位綁定並移動：下一次點擊決定新位置，姿勢會明確改為站立。');return;}
+    if(action==='move-resident'&&entry.type==='resident'){
+      const options=M.listResidentFreePostures(authored,entry.id);
+      const current=entry.entity.initial?.posture?.kind;
+      const postureKind=options.some(item=>item.kind===current)?current:(options[0]?.kind||'');
+      const binding=M.residentBinding(authored,entry.id);
+      beginOperation({kind:'move-resident',residentId:entry.id,postureKind},binding?.bound?'移動居民：請選擇自由姿勢；點擊新位置時會解除目前家具／座位綁定。':'移動居民：請選擇自由姿勢後點擊新位置。');
+      return;
+    }
     if(action==='rebind-resident-slot'&&entry.type==='resident'){beginOperation({kind:'rebind-resident-slot',residentId:entry.id,slotId:'',postureKind:''},'請明確選擇家具位置與姿勢。');return;}
   });
   $('selectionActions').addEventListener('change',event=>{
     const field=event.target.closest('[data-operation-field]');
-    if(!field||pendingOperation?.kind!=='rebind-resident-slot')return;
-    pendingOperation={...pendingOperation,[field.dataset.operationField]:field.value};
+    if(!field||!['move-resident','rebind-resident-slot'].includes(pendingOperation?.kind))return;
+    if(pendingOperation.kind==='rebind-resident-slot'&&field.dataset.operationField==='slotId'){
+      pendingOperation={...pendingOperation,slotId:field.value,postureKind:''};
+      setMessage('請選擇此家具位置允許的姿勢後套用。');
+    }else{
+      pendingOperation={...pendingOperation,[field.dataset.operationField]:field.value};
+      setMessage(pendingOperation.kind==='move-resident'?'請點擊地圖選擇新的自由位置。':'請確認 slot 與 posture 後套用。');
+    }
     operationIssues=[];
-    setMessage('請確認 slot 與 posture 後套用。');
     render();
   });
   $('layerPrev').addEventListener('click',()=>navigateLayer(-1));
