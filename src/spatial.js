@@ -10,6 +10,30 @@
   const clonePos=p=>p?position(p.x,p.y,zOf(p)):null;
   const inBounds=p=>!!p&&p.x>=0&&p.y>=0&&p.x<WIDTH&&p.y<HEIGHT&&Number.isInteger(zOf(p));
   const hasRole=(obj,role)=>!!obj?.roles?.includes(role);
+  function boundaryIdBetween(a,b){
+    if(!a||!b||zOf(a)!==zOf(b)||Math.abs(a.x-b.x)+Math.abs(a.y-b.y)!==1)return null;
+    if(a.y===b.y)return 'v:'+Math.max(a.x,b.x)+','+a.y;
+    return 'h:'+a.x+','+Math.max(a.y,b.y);
+  }
+  const boundaryRuntimeKey=(z,id)=>z+'|'+id;
+  function boundaryById(st,z,id){return st.map?.boundaries?.[boundaryRuntimeKey(z,id)]||null;}
+  function boundaryBetween(st,a,b){const id=boundaryIdBetween(a,b);return id?boundaryById(st,zOf(a),id):null;}
+  function doorsForBoundary(st,z,id){return Object.values(st.doors||{}).filter(door=>door?.boundary?.z===z&&door?.boundary?.id===id);}
+  function edgeStructurallyOpen(st,a,b){
+    const id=boundaryIdBetween(a,b);if(!id)return false;
+    const boundary=boundaryById(st,zOf(a),id);if(!boundary)return true;
+    if(boundary.kind==='wall')return false;
+    if(boundary.kind!=='opening')return false;
+    return doorsForBoundary(st,zOf(a),id).every(door=>door.state==='open');
+  }
+  function allExits(st){return Object.values(st.exits||{});}
+  function getExit(st,id){return st.exits?.[id]||null;}
+  function exitStructurallyAvailable(st,exitOrId){
+    const exit=typeof exitOrId==='string'?getExit(st,exitOrId):exitOrId,ref=exit?.boundary;
+    if(!exit||exit.kind!=='offMap'||!ref||!exit.access)return false;
+    const boundary=boundaryById(st,ref.z,ref.id);
+    return boundary?.kind==='opening'&&doorsForBoundary(st,ref.z,ref.id).every(door=>door.state==='open');
+  }
 
   function tileAt(st,x,y,z=0){return st.map?.tiles?.[key({x,y,z})]||null;}
   function tileByPos(st,p){return p?tileAt(st,p.x,p.y,zOf(p)):null;}
@@ -43,14 +67,27 @@
     for(const t of Object.values(tiles)){
       if(!isRoomFloor(t)||t.roomId)continue;
       const id=`room${++seq}`,queue=[t],floors=[];t.roomId=id;
-      while(queue.length){const cur=queue.shift();floors.push(cur.id);for(const [dx,dy] of dirs){const n=tileAt(st,cur.x+dx,cur.y+dy,zOf(cur));if(isRoomFloor(n)&&!n.roomId){n.roomId=id;queue.push(n);}}}
-      const floorSet=new Set(floors),wallSet=new Set(),furnitureSet=new Set();
-      for(const tid of floors){const ft=tiles[tid];for(const fid of ft.furnitureIds||[])furnitureSet.add(fid);for(const [dx,dy] of dirs){const n=tileAt(st,ft.x+dx,ft.y+dy,zOf(ft));if(n?.terrain==='wall'||n?.terrain==='doorway')wallSet.add(n.id);}}
+      while(queue.length){
+        const cur=queue.shift();floors.push(cur.id);
+        for(const [dx,dy] of dirs){
+          const n=tileAt(st,cur.x+dx,cur.y+dy,zOf(cur));
+          if(isRoomFloor(n)&&!n.roomId&&edgeStructurallyOpen(st,cur,n)){n.roomId=id;queue.push(n);}
+        }
+      }
+      const floorSet=new Set(floors),boundarySet=new Set(),furnitureSet=new Set();
+      for(const tid of floors){
+        const ft=tiles[tid];
+        for(const fid of ft.furnitureIds||[])furnitureSet.add(fid);
+        for(const [dx,dy] of dirs){
+          const q=position(ft.x+dx,ft.y+dy,zOf(ft)),bid=boundaryIdBetween(ft,q),boundary=bid&&boundaryById(st,zOf(ft),bid);
+          if(boundary)boundarySet.add(boundaryRuntimeKey(zOf(ft),bid));
+        }
+      }
       const materialValue={wood:1,stone:2};let value=0;
       for(const tid of floors)value+=materialValue[tiles[tid].material]||1;
-      for(const wid of wallSet)value+=(materialValue[tiles[wid]?.material]||1)*1.2;
+      for(const bid of boundarySet)value+=(materialValue[st.map.boundaries?.[bid]?.material]||1)*1.2;
       for(const fid of furnitureSet)value+=furniture(st,fid)?.value||0;
-      rooms[id]={id,name:seq===1?'主室':`房間 ${seq}`,z:zOf(t),floorTiles:[...floorSet],wallTiles:[...wallSet],furnitureIds:[...furnitureSet],area:floors.length,value:Math.round(value*10)/10};
+      rooms[id]={id,name:seq===1?'主室':`房間 ${seq}`,z:zOf(t),floorTiles:[...floorSet],wallBoundaries:[...boundarySet],furnitureIds:[...furnitureSet],area:floors.length,value:Math.round(value*10)/10};
     }
     st.map.rooms=rooms;st.map.roomRevision=(st.map.roomRevision||0)+1;return rooms;
   }
@@ -67,7 +104,7 @@
   function comfortAt(st,p){const t=tileByPos(st,p);if(!t)return 0;const wet=tileLiquidAmount(t),crowd=Math.max(0,occupantsAt(st,p).length-1);return Math.max(0,Math.min(100,48+nearbyRestQuality(st,p)*28-wet*1.2-crowd*5-noiseAt(st,p)*.35));}
 
   function tileCost(st,p,a){const t=tileByPos(st,p),wet=tileLiquidAmount(t),occupied=occupantsAt(st,p,a?.id).length;return 1+wet*(a?.kind==='cat'?.015:.07)+occupied*(a?.kind==='cat'?2.5:5);}
-  function neighbors(st,p){const out=[],z=zOf(p);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const n=position(p.x+dx,p.y+dy,z);if(walkable(st,n))out.push(n);}return out;}
+  function neighbors(st,p){const out=[],z=zOf(p);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const n=position(p.x+dx,p.y+dy,z);if(walkable(st,n)&&edgeStructurallyOpen(st,p,n))out.push(n);}return out;}
   function astar(st,start,goal,agentId=null){
     if(!start||!goal||!walkable(st,start)||!walkable(st,goal))return [];if(same(start,goal))return [clonePos(start)];
     const a=agentId?st.agents?.[agentId]:null,open=new Set([key(start)]),came={},g={[key(start)]:0},f={[key(start)]:manhattan(start,goal)},pos={[key(start)]:clonePos(start)};
@@ -75,7 +112,7 @@
     return [];
   }
   function pathDistance(st,a,p){const path=astar(st,a.position,p,a.id);return path.length?path.length-1:Infinity;}
-  function adjacentWalkable(st,p){const out=[],z=zOf(p);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const q=position(p.x+dx,p.y+dy,z);if(walkable(st,q))out.push(q);}return out;}
+  function adjacentWalkable(st,p){const out=[],z=zOf(p);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const q=position(p.x+dx,p.y+dy,z);if(walkable(st,q)&&edgeStructurallyOpen(st,p,q))out.push(q);}return out;}
   function dedupeWalkable(st,list){const out=new Map();for(const p of list||[])if(p&&walkable(st,p))out.set(key(p),clonePos(p));return [...out.values()];}
   function reachPositions(st,p,{includeSelf=true}={}){if(!p)return [];const out=adjacentWalkable(st,p);if(includeSelf&&walkable(st,p))out.push(clonePos(p));return dedupeWalkable(st,out);}
   function interactionRule(obj,affordance){return obj?.interactions?.[affordance]||obj?.interactions?.default||null;}
@@ -119,5 +156,5 @@
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos;return nearestLabel(st,p);}
   function entitiesWithRole(st,role,collections=['containers','sources']){return collections.flatMap(k=>Object.values(st[k]||{})).filter(x=>hasRole(x,role));}
 
-  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole};
+  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole,boundaryIdBetween,boundaryById,boundaryBetween,doorsForBoundary,edgeStructurallyOpen,allExits,getExit,exitStructurallyAvailable};
 })();
