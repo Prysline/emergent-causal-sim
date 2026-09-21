@@ -781,7 +781,7 @@
     if(action==='resolve-support'){resolvePendingSupport(button.dataset.supportKind==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:button.dataset.supportId});return;}
     if(action==='confirm-resident-rebind'){confirmResidentRebind();return;}
     if((action==='apply-cell-material'||action==='clear-cell-material')&&selection?.kind==='cell'){
-      const input=host.querySelector('[data-cell-material-input]');
+      const input=$('selectionActions').querySelector('[data-cell-material-input]');
       const material=action==='clear-cell-material'?'':(input?.value??'');
       const result=M.setCellMaterial(authored,{x:selection.x,y:selection.y,z:selection.z,material});
       const display=typeof material==='string'&&material.trim()?materialDisplay(material.trim()):'未設定';
