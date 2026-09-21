@@ -60,6 +60,12 @@
       </section>
 
       <section>
+        <h2>Furniture Catalog</h2>
+        <p class="hint scene-hint">從 Definition 建立新的場景家具；選擇後點擊地圖位置，會產生新的 Furniture Instance。</p>
+        <div id="furnitureCatalog" class="scene-list" aria-label="家具定義目錄"></div>
+      </section>
+
+      <section>
         <h2>Scene</h2>
         <p class="hint scene-hint">選取實體會定位到其 authored position。選到 Furniture 時也會更新 Furniture placement target，但不會自動切換目前工具。</p>
         <div id="sceneList" class="scene-list" aria-label="場景實體列表"></div>
@@ -109,7 +115,8 @@
   </main>
 </div>
 
-<script src="src/furniture-definitions.js" defer></script>\n<script src="src/world-authoring.js" defer></script>
+<script src="src/furniture-definitions.js" defer></script>
+<script src="src/world-authoring.js" defer></script>
 <script src="src/embodiment-capabilities.js" defer></script>
 <script src="src/world-initializer.js" defer></script>
 <script src="src/editor-preview-bridge.js" defer></script>
