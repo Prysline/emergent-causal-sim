@@ -47,9 +47,9 @@ const door=A.resolveFurnitureInstance(authored.furniture.frontDoor);
 assert.equal(door.slots[0].id,'frontDoor:inside');
 assert.equal(door.slots[0].canExit,true,'frontDoor exit behavior is preserved only by the compatibility bridge');
 
-const st=I.createInitialState(authored,{seed:20260911,version:'11.22.2-editor-furniture-definitions'});
+const st=I.createInitialState(authored,{seed:20260911,version:'11.22.3-editor-authoring-presentation'});
 assert.equal(JSON.stringify(authored),authoredBefore,'compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.22.2-editor-furniture-definitions');
+assert.equal(st.version,'11.22.3-editor-authoring-presentation');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);
@@ -77,9 +77,9 @@ assert.match(serialized,/"definitionId": "chair-basic"/);
 assert.ok(!serialized.includes('"restQuality"')&&!serialized.includes('"sleepQuality"')&&!serialized.includes('"mealSeat"'),'legacy activity fields must not serialize in v3');
 assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must not serialize into Furniture Instances');
 
-const again=I.createInitialState(authored,{seed:20260911,version:'11.22.2-editor-furniture-definitions'});
+const again=I.createInitialState(authored,{seed:20260911,version:'11.22.3-editor-authoring-presentation'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
-const otherSeed=I.createInitialState(authored,{seed:7,version:'11.22.2-editor-furniture-definitions'});
+const otherSeed=I.createInitialState(authored,{seed:7,version:'11.22.3-editor-authoring-presentation'});
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 
