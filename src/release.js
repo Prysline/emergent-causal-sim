@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.22.0-spatial-z-identity';
+  const VERSION='11.22.1-editor-resident-capabilities';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{
