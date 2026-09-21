@@ -12,7 +12,7 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.22.2-editor-furniture-definitions');
+assert.equal(st.version,'11.22.3-editor-authoring-presentation');
 assert.equal(SP.VERSION,'11.11-spatial-traversal');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
