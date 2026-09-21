@@ -706,6 +706,18 @@
     else $('selectionSummary').textContent=transientMessage||'尚未選取。';
   }
 
+  const EDGE_LABELS={north:'北',east:'東',south:'南',west:'西'};
+  function boundaryEditorMarkup(x,y,z){
+    const rows=['north','east','south','west'].map(edge=>{
+      const boundaryId=boundaryIdForCellEdge(x,y,edge),info=boundaryInfo(z,boundaryId),kind=info.boundary?.kind||'';
+      const state=info.door?`門：${info.door.name||info.door.id}（${info.door.state}）`:kind==='wall'?'牆壁':kind==='opening'?'結構開口':'無明確邊界';
+      const exitText=info.exits.length?` · 出口：${info.exits.map(exit=>exit.name||exit.id).join('、')}`:'';
+      const doorButton=info.door?`<button type="button" data-editor-action="toggle-door-state" data-door-id="${esc(info.door.id)}">${info.door.state==='open'?'關門':'開門'}</button>`:'';
+      return `<div class="boundary-row"><div class="boundary-copy"><b>${EDGE_LABELS[edge]}側</b><small><code>${esc(boundaryId)}</code> · ${esc(state)}${esc(exitText)}</small></div><div class="action-row boundary-actions"><button type="button" class="${kind==='wall'?'active-boundary':''}" data-editor-action="set-boundary" data-boundary-id="${esc(boundaryId)}" data-boundary-kind="wall">牆</button><button type="button" class="${kind==='opening'?'active-boundary':''}" data-editor-action="set-boundary" data-boundary-id="${esc(boundaryId)}" data-boundary-kind="opening">開口</button><button type="button" class="ghost-action" data-editor-action="set-boundary" data-boundary-id="${esc(boundaryId)}" data-boundary-kind="">清除</button>${doorButton}</div></div>`;
+    }).join('');
+    return `<div class="boundary-editor"><div class="cell-editor-head"><b>牆／開口邊界</b><small>正式欄位 <code>boundaries</code></small></div>${rows}<small>牆與開口位於格線邊界，不會把整個格子改成 wall / doorway。若邊界已被 Door 或世界出口引用，改成牆或清除會由原子驗證拒絕。</small></div>`;
+  }
+
   function renderSelectionActions(){
     const host=$('selectionActions');
     if(!host)return;
@@ -744,9 +756,10 @@
         const currentMaterial=selectedCell.material||'';
         cellMarkup=`<div class="cell-editor"><div class="cell-editor-head"><b>格子材質</b><small>正式欄位 <code>material</code></small></div><label class="operation-field">材質識別字<input data-cell-material-input list="cellMaterialSuggestions" value="${esc(currentMaterial)}" placeholder="例如 wood"></label><datalist id="cellMaterialSuggestions"><option value="wood" label="木材"></option><option value="stone" label="石材"></option></datalist><div class="action-row"><button type="button" data-editor-action="apply-cell-material">套用材質</button><button type="button" class="ghost-action" data-editor-action="clear-cell-material" ${currentMaterial?'':'disabled'}>清除材質</button></div><small>常用值只是輸入提示，不是封閉選項清單。清除只移除 <code>material</code>，不會刪除格子或改變 <code>terrain</code>。</small></div>`;
       }else{
-        cellMarkup='<div class="cell-editor disabled"><b>格子材質</b><small>此座標目前是空白，尚未建立正式 Cell。請先使用地板、牆壁或開口／門洞工具建立格子。</small></div>';
+        cellMarkup='<div class="cell-editor disabled"><b>格子材質</b><small>此座標目前是空白，尚未建立正式 Cell。請先使用地板工具建立格子；牆／開口邊界仍可獨立編輯。</small></div>';
       }
     }
+    if(selection?.kind==='cell')cellMarkup+=boundaryEditorMarkup(selection.x,selection.y,selection.z);
     let entityMarkup='';
     if(entry?.type==='furniture'){
       const placementActive=selectedTool==='furniture'&&selectedFurnitureId===entry.id;
@@ -757,6 +770,11 @@
       const binding=M.residentBinding(authored,entry.id);
       const bindingLabel=binding?.bound?'家具／座位綁定':binding?.placementMode==='exact'?'自由座標':'其他';
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-resident">移動居民</button><button type="button" data-editor-action="rebind-resident-slot">綁定到家具位置</button></div><small class="operation-note">位置模式：${esc(bindingLabel)} · 姿勢：${esc(C.postureLabel(binding?.postureKind))}${binding?.bound?' · 移到自由位置時會先明確解除目前綁定':''}</small>`;
+    }
+    else if(entry?.type==='door'){
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="toggle-door-state" data-door-id="${esc(entry.id)}">${entry.entity.state==='open'?'關門':'開門'}</button></div><small class="operation-note">邊界：<code>${esc(entry.entity.boundary?.id||'—')}</code> · 狀態：<code>${esc(entry.entity.state)}</code></small>`;
+    }else if(entry?.type==='exit'){
+      entityMarkup=`<small class="operation-note">世界出口是獨立 endpoint；邊界：<code>${esc(entry.entity.boundary?.id||'—')}</code> · 內側接入：<code>(${esc(entry.entity.access?.x)}, ${esc(entry.entity.access?.y)}, ${esc(entry.entity.access?.z??0)})</code></small>`;
     }
     const metaMarkup=lastOperationMeta?`<div class="operation-meta">最近操作：<code>${esc(lastOperationMeta.operation||lastOperationMeta.phase||'result')}</code></div>`:'';
     host.innerHTML=pendingMarkup+cellMarkup+entityMarkup+issueMarkup+metaMarkup;
@@ -850,6 +868,20 @@
     if(action==='cancel-operation'){clearOperationState();lastOperationMeta=null;setMessage('');render();return;}
     if(action==='resolve-support'){resolvePendingSupport(button.dataset.supportKind==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:button.dataset.supportId});return;}
     if(action==='confirm-resident-rebind'){confirmResidentRebind();return;}
+    if(action==='set-boundary'&&selection?.kind==='cell'){
+      const kind=button.dataset.boundaryKind||null,boundaryId=button.dataset.boundaryId;
+      const result=M.setBoundary(authored,{z:selection.z,boundaryId,kind});
+      const label=kind==='wall'?'牆壁':kind==='opening'?'結構開口':'無明確邊界';
+      commitMutation(result,{message:result.ok?`邊界 ${boundaryId} → ${label}。`:''});
+      return;
+    }
+    if(action==='toggle-door-state'){
+      const doorId=button.dataset.doorId||((entry?.type==='door')?entry.id:null),door=authored.doors?.[doorId];
+      if(!door)return;
+      const state=door.state==='open'?'closed':'open',result=M.setDoorState(authored,{doorId,state});
+      commitMutation(result,{message:result.ok?`${door.name||doorId} → ${state==='open'?'開啟':'關閉'}。`:''});
+      return;
+    }
     if((action==='apply-cell-material'||action==='clear-cell-material')&&selection?.kind==='cell'){
       const input=$('selectionActions').querySelector('[data-cell-material-input]');
       const material=action==='clear-cell-material'?'':(input?.value??'');
