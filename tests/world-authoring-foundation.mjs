@@ -47,7 +47,7 @@ assert.equal(chair.slots[0].id,'chairNW:seat');
 assert.equal(chair.slots[0].restQuality,.48);
 assert.equal(chair.slots[0].mealSeat,undefined,'mealSeat must not survive into v4 Definition/runtime projection');
 assert.equal(authored.furniture.frontDoor,undefined,'Door must no longer exist as a Furniture Instance');
-assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open'});
+assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open',compatibility:{roomValueContribution:18}});
 assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:'offMap',boundary:{z:0,id:'v:1,6'},access:{x:1,y:6,z:0}});
 
 const st=I.createInitialState(authored,{seed:20260911,version:'11.23.0-world-boundary-door-exit'});
