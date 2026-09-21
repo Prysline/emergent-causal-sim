@@ -1,4 +1,4 @@
-name: State regression
+name: Node regression
 
 on:
   push:
@@ -9,11 +9,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: state-regression-${{ github.event.pull_request.number || github.ref }}
+  group: node-regression-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  state-regression:
+  node-regression:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,10 +21,11 @@ jobs:
         with:
           node-version: 22
       - run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: node tests/workflow-architecture.mjs
       - run: node tests/production-source-load-architecture.mjs
       - run: node tests/application-bootstrap-lifecycle.mjs
       - run: node tests/test-profile-composition.mjs
-      - run: node tests/v11-state-regression.mjs
+      - run: node tests/state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/initial-population-placement.mjs
       - run: node tests/world-authoring-editor-contract.mjs
@@ -36,17 +37,17 @@ jobs:
       - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
       - run: node tests/refill-water-geometry.mjs
-      - run: node tests/spatial-z-identity-v1220.mjs
+      - run: node tests/spatial-z-identity.mjs
       - run: node tests/spatial-traversal.mjs
       - run: node tests/spatial-observability.mjs
       - run: node tests/supported-contact-audit.mjs
       - run: node tests/spatial-floor-boundaries.mjs
       - run: node tests/surface-liquid-foundation.mjs
-      - run: node tests/physical-profile-foundation-v1160.mjs
-      - run: node tests/passage-profile-multimode-v1170.mjs
-      - run: node tests/route-semantics-v1180.mjs
-      - run: node tests/locomotion-execution-posture-v1190.mjs
-      - run: node tests/dynamic-congestion-v1200.mjs
+      - run: node tests/physical-profile-foundation.mjs
+      - run: node tests/passage-profile-multimode.mjs
+      - run: node tests/route-semantics.mjs
+      - run: node tests/locomotion-execution-posture.mjs
+      - run: node tests/dynamic-congestion.mjs
       - run: node tests/action-terminology.mjs
       - run: node tests/action-construction.mjs
       - run: node tests/active-intent-foundation.mjs
@@ -68,8 +69,8 @@ jobs:
       - run: node tests/memory-deliberation-influence.mjs
       - run: node tests/requester-social-outcome-memory.mjs
       - run: node tests/animal-social-outcome-memory.mjs
-      - run: node tests/relationship-foundation-v1150.mjs
-      - run: node tests/relationship-target-preference-v1151.mjs
-      - run: node tests/relationship-responder-bias-v1152.mjs
+      - run: node tests/relationship-foundation.mjs
+      - run: node tests/relationship-target-preference.mjs
+      - run: node tests/relationship-responder-bias.mjs
       - run: node tests/runtime-hook-pipeline.mjs
-      - run: node tests/presentation-observability-v1140.mjs
+      - run: node tests/presentation-observability.mjs
