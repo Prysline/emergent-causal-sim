@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.22.0-spatial-z-identity';
+const APP_VERSION='11.22.1-editor-resident-capabilities';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
