@@ -577,6 +577,27 @@
     return sceneEntries().filter(entry=>entry.type!=='furniture'&&entry.position?.x===x&&entry.position?.y===y&&(entry.position?.z??0)===z);
   }
 
+  function sourceInteractionPortsAtCell(x,y,z){
+    const out=[];
+    for(const [sourceId,source] of Object.entries(authored.entities?.sources||{})){
+      for(const port of source.interactionPorts||[]){
+        if(port?.position?.x===x&&port.position?.y===y&&(port.position?.z??0)===z)out.push({sourceId,source,port});
+      }
+    }
+    return out;
+  }
+
+  function sourcePortDirectionGlyph(source,port){
+    const sourcePos=source?.position,portPos=port?.position;
+    if(!sourcePos||!portPos)return '◇';
+    const dx=sourcePos.x-portPos.x,dy=sourcePos.y-portPos.y;
+    if(dx===1&&dy===0)return '→';
+    if(dx===-1&&dy===0)return '←';
+    if(dx===0&&dy===1)return '↓';
+    if(dx===0&&dy===-1)return '↑';
+    return '◇';
+  }
+
   function renderMap(){
     const host=$('editorMap'),layer=layerAt(currentZ),width=authored.map.width,height=authored.map.height;
     host.style.setProperty('--grid-w',width);
@@ -584,7 +605,7 @@
     const selectedPosition=selectionPosition();
     let html='';
     for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-      const cell=cellAt(layer,x,y),terrain=cell?.terrain||'void',furniture=furnitureAtCell(x,y,currentZ),entities=nonFurnitureEntitiesAtCell(x,y,currentZ);
+      const cell=cellAt(layer,x,y),terrain=cell?.terrain||'void',furniture=furnitureAtCell(x,y,currentZ),entities=nonFurnitureEntitiesAtCell(x,y,currentZ),interactionPorts=sourceInteractionPortsAtCell(x,y,currentZ);
       const selected=selectedPosition?.x===x&&selectedPosition?.y===y&&(selectedPosition?.z??0)===currentZ;
       const furnitureName=furniture.map(([id,item])=>item.name||id).join('、');
       const entityName=entities.map(entry=>entry.entity.name||entry.id).join('、');
@@ -597,6 +618,11 @@
         const isSelected=selection?.kind==='entity'&&selection.type===entry.type&&selection.id===entry.id;
         return `<span class="entity-marker marker-${esc(entry.type)} ${isSelected?'selected':''}" data-entity-type="${esc(entry.type)}" data-entity-id="${esc(entry.id)}" title="${esc(entry.label)}：${esc(entry.entity.name||entry.id)}">${esc(entry.icon)}</span>`;
       }).join('')}${entities.length>3?`<span class="entity-overflow">+${entities.length-3}</span>`:''}</span>`:'';
+      const interactionPortMarkup=interactionPorts.length?`<span class="interaction-port-markers">${interactionPorts.map(({sourceId,source,port})=>{
+        const isSelected=selection?.kind==='entity'&&selection.type==='source'&&selection.id===sourceId;
+        const affordanceLabel=(port.affordances||[]).includes('fill')&&source.resource==='water'?'取水位置':'互動位置';
+        return `<span class="interaction-port-marker ${isSelected?'selected':''}" data-entity-type="source" data-entity-id="${esc(sourceId)}" data-interaction-port-source-id="${esc(sourceId)}" data-interaction-port-id="${esc(port.id||'')}" title="${esc(affordanceLabel)}：${esc(port.label||port.id||source.name||sourceId)}">${esc(sourcePortDirectionGlyph(source,port))}</span>`;
+      }).join('')}</span>`:'';
       const terrainText=terrainLabel(terrain);
       const edgeMarkup=['north','east','south','west'].map(edge=>{
         const boundaryId=boundaryIdForCellEdge(x,y,edge),info=boundaryInfo(currentZ,boundaryId);
@@ -605,7 +631,7 @@
         const title=info.door?`${info.door.name||info.door.id}・${info.door.state}`:(info.boundary.kind==='wall'?'牆壁':'結構開口');
         return `<i class="boundary-edge edge-${edge} boundary-${kind}" title="${esc(boundaryId)}・${esc(title)}"></i>`;
       }).join('');
-      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${entityMarkup}</button>`;
+      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${entityMarkup}${interactionPortMarkup}</button>`;
     }
     host.innerHTML=html;
     applyDragPreviewDom();
@@ -678,6 +704,13 @@
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
         if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
+        if(entry.type==='source'){
+          const ports=(entry.entity.interactionPorts||[]).filter(port=>port?.position&&Array.isArray(port.affordances)&&port.affordances.includes('fill'));
+          if(ports.length){
+            const label=entry.entity.resource==='water'?'取水位置':'取用位置';
+            details+=`<br>${label}：${ports.map(port=>`${esc(port.label||port.id||'互動位置')} · <code>(${esc(port.position.x)}, ${esc(port.position.y)}, ${esc(port.position.z??0)})</code>`).join('、')}`;
+          }
+        }
         if(entry.type==='resident'){
           const placement=entry.entity.initial?.placement;
           const placementLabel=placement?.mode==='exact'?'自由座標（exact）':placement?.mode==='anchor'?'家具位置綁定（anchor）':placement?.mode||'—';

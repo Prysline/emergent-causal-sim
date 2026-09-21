@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.23.0-world-boundary-door-exit';
+const APP_VERSION='11.23.1-editor-source-port-observability';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const near=(actual,expected,eps=.001,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);

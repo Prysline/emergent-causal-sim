@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.23.0-world-boundary-door-exit';
+const CURRENT_VERSION='11.23.1-editor-source-port-observability';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

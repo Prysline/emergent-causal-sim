@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.23.0-world-boundary-door-exit');
-assert.equal(E.VERSION,'11.23.0-world-boundary-door-exit');
+assert.equal(st.version,'11.23.1-editor-source-port-observability');
+assert.equal(E.VERSION,'11.23.1-editor-source-port-observability');
 assert.equal(SP.SPATIAL_ENVIRONMENT_VERSION,'11.11.4-surface-liquid-foundation');
 
 // B architecture: one API, existing floor storage remains the actual source of truth.

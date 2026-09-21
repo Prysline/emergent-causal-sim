@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.23.0-world-boundary-door-exit';
+const CURRENT_VERSION='11.23.1-editor-source-port-observability';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
