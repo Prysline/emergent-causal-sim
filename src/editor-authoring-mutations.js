@@ -39,26 +39,34 @@
     return {reject:true,issues:[issue(code,message,data)],meta};
   }
 
-  function furnitureAnchor(furniture){
+  function resolvedFurniture(authoring,furnitureId){
+    const instance=authoring.furniture?.[furnitureId];
+    return instance?A.resolveFurnitureInstance(instance):null;
+  }
+
+  function furnitureAnchor(authoring,furnitureId){
+    const furniture=resolvedFurniture(authoring,furnitureId);
     return furniture?.displayAt||furniture?.footprint?.[0]||furniture?.slots?.[0]?.position||null;
   }
 
   function furnitureAtTarget(authoring,target,{supportsObjectsOnly=false}={}){
     const out=[];
-    for(const [id,furniture] of Object.entries(authoring.furniture||{})){
+    for(const id of Object.keys(authoring.furniture||{}).sort()){
+      const furniture=resolvedFurniture(authoring,id);
+      if(!furniture)continue;
       if(supportsObjectsOnly&&furniture.supportsObjects!==true)continue;
       if((furniture.footprint||[]).some(position=>samePosition(position,target))){
         out.push({id,name:furniture.name||id,supportsObjects:furniture.supportsObjects===true});
       }
     }
-    return out.sort((a,b)=>a.id.localeCompare(b.id));
+    return out;
   }
 
   function allSlots(authoring){
     const out=[];
     for(const furnitureId of Object.keys(authoring.furniture||{}).sort()){
-      const furniture=authoring.furniture[furnitureId];
-      for(const slot of furniture.slots||[])out.push({slot,furnitureId,name:furniture.name||furnitureId});
+      const furniture=resolvedFurniture(authoring,furnitureId);
+      for(const slot of furniture?.slots||[])out.push({slot,furnitureId,name:furniture.name||furnitureId});
     }
     return out;
   }
@@ -119,7 +127,7 @@
   }
 
   function furnitureReferenceReport(authoring,furnitureId){
-    const furniture=authoring.furniture?.[furnitureId];
+    const furniture=resolvedFurniture(authoring,furnitureId);
     if(!furniture)return [];
     const slotIds=new Set((furniture.slots||[]).map(slot=>slot.id));
     const blockers=[];
@@ -144,13 +152,10 @@
   function moveFurniture(authoring,{furnitureId,target}={}){
     return mutationResult(authoring,candidate=>{
       const furniture=candidate.furniture?.[furnitureId];
-      const anchor=furnitureAnchor(furniture);
       if(!furniture)return reject('furniture_missing','找不到 Furniture '+String(furnitureId)+'.',{furnitureId});
-      if(!anchor||!target)return reject('furniture_move_target_invalid','Furniture move 需要可用 anchor 與 target。',{furnitureId,target:target||null});
-      const dx=target.x-anchor.x,dy=target.y-anchor.y,dz=(target.z??0)-(anchor.z??0);
-      furniture.footprint=(furniture.footprint||[]).map(position=>translatePosition(position,dx,dy,dz));
-      if(furniture.displayAt)furniture.displayAt=translatePosition(furniture.displayAt,dx,dy,dz);
-      for(const slot of furniture.slots||[])if(slot.position)slot.position=translatePosition(slot.position,dx,dy,dz);
+      if(!furniture.origin||!target)return reject('furniture_move_target_invalid','Furniture move 需要目前 origin 與 target。',{furnitureId,target:target||null});
+      const dx=target.x-furniture.origin.x,dy=target.y-furniture.origin.y,dz=(target.z??0)-(furniture.origin.z??0);
+      furniture.origin=clone(target);
       const followers=[];
       const followerPositions=[];
       for(const [containerId,container] of Object.entries(candidate.entities?.containers||{})){
@@ -160,14 +165,15 @@
         followers.push(containerId);
         if(container.position)followerPositions.push({id:containerId,position:clone(container.position)});
       }
+      const preview=A.resolveFurnitureInstance(furniture);
       return {meta:{
         operation:'moveFurniture',
         furnitureId,
         delta:{dx,dy,dz},
         followers,
         preview:{
-          footprint:clone(furniture.footprint||[]),
-          displayAt:clone(furniture.displayAt||null),
+          footprint:clone(preview.footprint||[]),
+          displayAt:clone(preview.displayAt||null),
           followerPositions
         }
       }};
@@ -189,7 +195,7 @@
       if(entityType==='source')return {meta:{operation:'moveObject',entityType,entityId,delta:{dx,dy,dz}}};
 
       const previousSupport=entity.supportId||null;
-      const previousFurniture=previousSupport?candidate.furniture?.[previousSupport]:null;
+      const previousFurniture=previousSupport?resolvedFurniture(candidate,previousSupport):null;
       const remainsOnPrevious=!!previousFurniture&&(previousFurniture.footprint||[]).some(position=>samePosition(position,entity.position));
       const candidates=listSupportCandidates(candidate,entity.position);
       if(remainsOnPrevious){
@@ -210,48 +216,47 @@
     });
   }
 
-  function nextFurnitureId(authoring,sourceId){
+  function nextFurnitureId(authoring,definitionId){
     const furniture=authoring.furniture||{};
-    const base=sourceId+'-copy';
-    if(!furniture[base])return base;
-    for(let i=2;;i++)if(!furniture[base+'-'+i])return base+'-'+i;
+    for(let i=1;;i++){
+      const candidate=definitionId+'-'+i;
+      if(!furniture[candidate])return candidate;
+    }
   }
 
-  function uniqueSlotId(base,used){
-    if(!used.has(base)){used.add(base);return base;}
-    for(let i=2;;i++){
-      const candidate=base+'-'+i;
-      if(!used.has(candidate)){used.add(candidate);return candidate;}
+  function createFurnitureFromDefinition(authoring,{definitionId,target,name}={}){
+    if(!A.listFurnitureDefinitions().some(definition=>definition.id===definitionId)){
+      return {ok:false,candidate:null,issues:[issue('furniture_definition_missing','找不到 Furniture Definition '+String(definitionId)+'.',{definitionId})],meta:{}};
     }
+    return mutationResult(authoring,candidate=>{
+      if(!target)return reject('furniture_create_target_invalid','新增 Furniture 需要 placement target。',{definitionId});
+      const newId=nextFurnitureId(candidate,definitionId);
+      const instance={id:newId,definitionId,origin:clone(target)};
+      if(typeof name==='string'&&name.trim())instance.name=name.trim();
+      candidate.furniture??={};
+      candidate.furniture[newId]=instance;
+      const resolved=A.resolveFurnitureInstance(instance);
+      return {meta:{operation:'createFurnitureFromDefinition',definitionId,newId,preview:{footprint:clone(resolved.footprint||[]),displayAt:clone(resolved.displayAt||null)}}};
+    });
   }
 
   function duplicateFurniture(authoring,{sourceId,target}={}){
     return mutationResult(authoring,candidate=>{
       const source=candidate.furniture?.[sourceId];
-      const anchor=furnitureAnchor(source);
       if(!source)return reject('furniture_missing','找不到要複製的 Furniture '+String(sourceId)+'.',{sourceId});
-      if(!anchor||!target)return reject('furniture_duplicate_target_invalid','Furniture duplicate 需要 source anchor 與 target。',{sourceId,target:target||null});
-      const newId=nextFurnitureId(candidate,sourceId);
-      const copy=clone(source);
-      copy.id=newId;
-      const used=new Set(allSlots(candidate).map(entry=>entry.slot.id));
-      const slotIdMap={};
-      copy.slots=(copy.slots||[]).map((slot,index)=>{
-        const next=clone(slot);
-        const semanticPrefix=typeof slot.id==='string'&&slot.id.startsWith(sourceId+':');
-        const suffix=semanticPrefix?slot.id.slice(sourceId.length+1):'slot-'+(index+1);
-        const base=newId+':'+suffix;
-        next.id=uniqueSlotId(base,used);
-        if(slot.id)slotIdMap[slot.id]=next.id;
-        return next;
-      });
-      const dx=target.x-anchor.x,dy=target.y-anchor.y,dz=(target.z??0)-(anchor.z??0);
-      copy.footprint=(copy.footprint||[]).map(position=>translatePosition(position,dx,dy,dz));
-      if(copy.displayAt)copy.displayAt=translatePosition(copy.displayAt,dx,dy,dz);
-      for(const slot of copy.slots||[])if(slot.position)slot.position=translatePosition(slot.position,dx,dy,dz);
+      if(!source.origin||!target)return reject('furniture_duplicate_target_invalid','Furniture duplicate 需要 source origin 與 target。',{sourceId,target:target||null});
+      const newId=nextFurnitureId(candidate,source.definitionId);
+      const copy={id:newId,definitionId:source.definitionId,origin:clone(target)};
+      if(typeof source.name==='string'&&source.name)copy.name=source.name;
       candidate.furniture??={};
       candidate.furniture[newId]=copy;
-      return {meta:{operation:'duplicateFurniture',sourceId,newId,slotIdMap,delta:{dx,dy,dz}}};
+      const sourceResolved=A.resolveFurnitureInstance(source),copyResolved=A.resolveFurnitureInstance(copy);
+      const slotIdMap={};
+      for(let index=0;index<Math.min(sourceResolved.slots?.length||0,copyResolved.slots?.length||0);index++){
+        slotIdMap[sourceResolved.slots[index].id]=copyResolved.slots[index].id;
+      }
+      const dx=target.x-source.origin.x,dy=target.y-source.origin.y,dz=(target.z??0)-(source.origin.z??0);
+      return {meta:{operation:'duplicateFurniture',sourceId,newId,definitionId:source.definitionId,slotIdMap,delta:{dx,dy,dz}}};
     });
   }
 
@@ -311,6 +316,7 @@
   window.SimEditorAuthoringMutations={
     moveFurniture,
     moveObject,
+    createFurnitureFromDefinition,
     duplicateFurniture,
     deleteFurniture,
     moveResidentToExact,
