@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.22.1-editor-resident-capabilities`。
+目前 runtime marker：`11.22.2-editor-furniture-definitions`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -17,7 +17,7 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - canonical World Event：`state.events / state.causes`
 - Agent / Object 的物理位置
 - Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
-- authored passage geometry：Furniture `spatial.under` 與可選 `map.passageConstraints`
+- authored passage geometry：Furniture Definition 的 local `spatial.under` 與可選 `map.passageConstraints`
 - Container / Source / Surface Environment 的實際 resource contents
 - posture、held container、reservations
 - Action 正在如何執行的 state machine
@@ -27,9 +27,9 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；目前 contract generation 是 `authoringSchema: "world-authoring-v2"`。現行 loader asset 暫時沿用 `src/world-authoring-v1.js` 檔名，但 authoring contract truth 只由 `SimWorldAuthoring.VERSION / authoringSchema` 決定，不能從檔名推斷。這個 generation 與 current simulation runtime marker 分離。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；目前 contract generation 是 `authoringSchema: "world-authoring-v3"`，並以 `furnitureCatalogVersion: "furniture-definitions-v1"` pin 住 system-owned Furniture Catalog。Current authoring owner 是 `src/world-authoring.js`；Furniture Catalog owner 是 pure `src/furniture-definitions.js`。Authoring generation、Furniture Catalog generation 與 current simulation runtime marker 分離，不能互相假升。
 
-Authoring package 保存「這個 world instance 開場是什麼」：map terrain / material、Furniture instance / footprint / slot / concrete under-clearance、Container / Source instance config與初始內容物／位置、Resident identity / traits / opening Needs / wellbeing / status與 initial placement。它不保存可由 geometry/runtime推導的 `walkable / crawlOnly / roomId / map.rooms / roomRevision / tile.furnitureIds / slot.furnitureId / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+Authoring package 保存「這個 world instance 開場是什麼」：map terrain / material、compact Furniture Instance（`id / definitionId / origin / optional name`）、Container / Source instance config與初始內容物／位置、Resident identity / traits / opening Needs / wellbeing / status與 initial placement。Furniture 的 intrinsic name/icon/kind、local footprint/display offset、slot、under-clearance與 activity suitability 由 `SimFurnitureDefinitions` 的 Furniture Definition 持有；`SimWorldAuthoring.resolveFurnitureInstance(...)` 將 Definition-local geometry + Instance world origin 解析成 world geometry與 `<instanceId>:<slotKey>`。Canonical v3 不保存 instance-level `footprint / displayAt / slots / spatial / value / restQuality / sleepQuality / canExit`。它同樣不保存可由 geometry/runtime推導的 `walkable / crawlOnly / roomId / map.rooms / roomRevision / tile.furnitureIds / slot.furnitureId / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
 `src/world-initializer.js` 是 authoring → runtime compatibility adapter；`src/world.js` 則是唯一 `SimWorld.createInitialState(seed)` lifecycle owner。Base authoring package先由 initializer 編譯成既有 `state.map / furniture / containers / sources / agents` shape，再由 `world.js` 的 named initial-state pipeline依 explicit order執行 subsystem initializer。任何需要參與開場 state 建構的 subsystem extension / schema 都只能呼叫 `registerInitialStateInitializer(id, handler, order)`，不得再用 `const baseCreateInitialState = W.createInitialState` 疊 wrapper。duplicate initializer ID、缺少 canonical pipeline都必須 loud failure；exact registry / order由 `tests/initial-state-pipeline.mjs` 鎖定。
 
@@ -39,7 +39,7 @@ Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time valid
 
 Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})`。它從 authored terrain/opening、Furniture footprint / under-clearance、fixed Container / Source blocker 派生 structural openness、static blocker、furniture membership、cardinal adjacency、connected components與 under-clearance diagnostics；結果只存在 query/preview/compiler 邊界，不 serialize 成第二份 world truth。`doorway` 是 authored opening：本身提供 floor-level structural openness；blocking door / Furniture / fixed entity 可再依 concrete geometry 關閉通行。Runtime compatibility `tile.walkable / tile.furnitureIds` 仍可存在，但只能由 compiler 產生，Editor 不直接 author。Initializer placement diagnostics與 Editor derived preview共用同一 geometry interpretation。
 
-`world-authoring-v1 → v2` migration 是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，migration 會一次性寫入正式 Furniture geometry；v2 runtime 不再以 `diningTable` ID hidden fallback補值。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
+歷史 Slice D 的 `world-authoring-v1 → v2` migration 曾是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，當時 migration 會一次性寫入 v2 Furniture geometry。Current v3 已改由 Furniture Definition 持有該 intrinsic geometry；因產品尚未正式公開，v2→v3 不提供 production migration machinery，unsupported schema / catalog generation 直接由 current import boundary 拒絕。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
 
 Slice D.1C 起，`editor.html` 除 authoring helper / mutation / presentation code外，會載入 pure `world-initializer.js` 與 `editor-preview-bridge.js`，只用於 runtime compatibility preflight與同 origin browser-session handoff；它仍不載入 `world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，也可用 `SimWorldInitializer.analyzeRuntimeCompatibility(...)` 驗證 current runtime 是否可接受同一 canonical document，但不得複製 runtime traversal owner。這讓 multi-layer authoring可合法 import / export / round-trip；Slice E 起 runtime compatibility preflight也接受可編譯的 multi-layer document，Simulator則以 z-aware identity與 layer filter呈現。Editor presentation仍不能建立 vertical traversal truth。
 
@@ -48,6 +48,8 @@ Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furni
 Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor canonical mutation ownership boundary**。它不保存 world state，也不是 simulation subsystem；Furniture / Container / Source / Resident lifecycle operation只接收 canonical authoring document，clone candidate、套用單一 operation、呼叫 `SimWorldAuthoring.validateAuthoring(...)`，candidate valid才回傳可 commit document。`editor-ui.js` 只保存 `selection / selectedTool / selectedFurnitureId / pendingOperation` 與 structured operation result 等 ephemeral state，不得複製 move / delete / duplicate semantics。Furniture support follower、explicit support choice、deterministic duplicate ID、guarded delete與 Resident explicit placement transition都屬 authoring mutation contract；Editor仍不載入 runtime Initializer / Spatial / Engine / Validator。
 
 Editor-1 在既有 boundary 上加入 pure `src/embodiment-capabilities.js` 作為 **authoring-safe capability contract**。它只持有現行 Human / Cat default Physical template、locomotion mode ↔ posture vocabulary，以及 free / slot posture query；不註冊 initial-state initializer、不讀 `SimEngine / SimSpatial`，也不保存 Agent runtime state。`systems/physical.js` 仍負責把 shared default template clone 成每個 Agent 的 authoritative `physical` state，`systems/locomotion.js` 仍負責 runtime locomotion execution；Editor只用同一 capability contract篩選可 author 的 posture，不再複製另一份 species規則。Resident free placement收斂為單一 atomic `moveResidentToExact(...)`：作者必須明確選擇 capability-supported free posture；若 Resident 原本綁定 furnitureSlot，這次 move會明確解除 slot / furniture reference並一次 commit。`sitting` 仍是 slot-bound posture；`lying` 是 rest/static posture，不因它不是 locomotion mode就從 free posture vocabulary消失。
+
+Editor-2 將 Furniture authoring 正式拆成 **Furniture Catalog → Furniture Definition → Furniture Instance**。System-owned pure `SimFurnitureDefinitions.VERSION = "furniture-definitions-v1"` 同時供 Editor、authoring validation/topology 與 initializer/compiler 使用；v3 document 必須 pin 同一 catalog generation。Definition 擁有 intrinsic facts與 local geometry，Instance 只擁有 stable instance ID、`definitionId`、world `origin` 與可選 scene-specific name。新 instance ID 由 `<definitionId>-N` deterministic 產生；default world 為維持既有 explicit references，保留 `diningTable / chairNW / chairNE / chairSW / chairSE / sofa / bed / frontDoor` 等既有 instance ID。Definition → new Instance 使用 `createFurnitureFromDefinition(...)`；`duplicateFurniture(...)` 則只複製 instance-owned facts + 新 placement，不複製 supported objects、Resident bindings或其他外部 relation。Runtime initializer 仍輸出既有 expanded furniture shape，並從 activity suitability / compatibility metadata 狹義投影舊 `restQuality / sleepQuality / value / canExit` consumer 所需欄位；這些 projection 不回寫 canonical v3。Current `spatial-traversal.js` 對 `diningTable` surface traversal 的 ID-specific compatibility hardcode仍保留，完整 Furniture Traversal Geometry/generalization 另屬後續 slice。
 
 Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
 
