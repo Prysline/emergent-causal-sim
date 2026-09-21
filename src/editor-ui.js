@@ -363,25 +363,14 @@
     return labels[furniture?.kind]||furniture?.kind||'Furniture';
   }
 
-  function terrainForTool(tool){
-    return tool==='floor'?'floor':tool==='wall'?'wall':tool==='opening'?'doorway':null;
-  }
+  function terrainForTool(tool){return tool==='floor'?'floor':null;}
 
   function setTerrain(x,y,tool){
-    const layer=layerAt(currentZ);
-    if(!layer)return;
-    const id=cellId(x,y);
-    if(tool==='erase')delete layer.cells[id];
-    else{
-      const terrain=terrainForTool(tool);
-      if(!terrain)return;
-      const previous=layer.cells[id]||{};
-      layer.cells[id]={...previous,terrain};
-      for(const derived of ['walkable','roomId','furnitureIds'])delete layer.cells[id][derived];
-    }
-    selection={kind:'cell',x,y,z:currentZ};
-    setMessage(tool==='erase'?`已清除格子 ${id}`:`格子 ${id} → ${terrainLabel(terrainForTool(tool))}`);
-    render();
+    const terrain=tool==='erase'?null:terrainForTool(tool);
+    if(tool!=='erase'&&!terrain)return;
+    const result=M.setCellTerrain(authored,{x,y,z:currentZ,terrain});
+    if(result.ok)selection={kind:'cell',x,y,z:currentZ};
+    commitMutation(result,{message:result.ok?(terrain?'格子 '+cellId(x,y)+' → 地板':'已清除格子 '+cellId(x,y)):''});
   }
 
   function handleFurniturePlacement(target){
@@ -480,7 +469,7 @@
     const z=Number($('newLayerZ').value);
     if(!Number.isInteger(z)){setMessage('Z-level 必須是整數。');render();return;}
     if(layerAt(z)){setMessage(`Z ${z} 已存在。`);render();return;}
-    authored.map.layers.push({z,cells:{}});
+    authored.map.layers.push({z,cells:{},boundaries:{}});
     authored.map.layers.sort((a,b)=>a.z-b.z);
     currentZ=z;
     selection=null;
@@ -492,8 +481,8 @@
     const layer=layerAt(currentZ);
     if(!layer)return;
     if(layers().length<=1){setMessage('至少必須保留一個 Z-level。');render();return;}
-    const cellCount=Object.keys(layer.cells||{}).length,refs=layerReferenceCount(currentZ);
-    if(cellCount||refs){setMessage(`Z ${currentZ} 仍有 ${cellCount} 個已建構格、${refs} 個位置參照；不會自動刪除或搬移。`);render();return;}
+    const cellCount=Object.keys(layer.cells||{}).length,boundaryCount=Object.keys(layer.boundaries||{}).length,refs=layerReferenceCount(currentZ);
+    if(cellCount||boundaryCount||refs){setMessage(`Z ${currentZ} 仍有 ${cellCount} 個已建構格、${boundaryCount} 條邊界、${refs} 個位置參照；不會自動刪除或搬移。`);render();return;}
     const oldZ=currentZ;
     authored.map.layers=authored.map.layers.filter(item=>item!==layer);
     const list=layers();
