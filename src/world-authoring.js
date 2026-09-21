@@ -22,7 +22,7 @@
       boundaries['h:'+x+',7']={kind:'wall',material:'stone'};
     }
     for(let y=1;y<=6;y++){
-      boundaries['v:1,'+y]={kind:y===6?'opening':'wall',material:'stone'};
+      boundaries['v:1,'+y]={kind:y===6?'opening':'wall',material:y===6?'wood':'stone'};
       boundaries['v:11,'+y]={kind:'wall',material:'stone'};
     }
     return boundaries;
@@ -52,7 +52,7 @@
       bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5)}
     },
     doors:{
-      frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open'}
+      frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open',compatibility:{roomValueContribution:18}}
     },
     exits:{
       frontExit:{id:'frontExit',name:'大門外',kind:'offMap',boundary:boundaryRef(0,'v:1,6'),access:pos(1,6)}
