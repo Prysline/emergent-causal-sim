@@ -23,6 +23,8 @@ for(const relativePath of scripts){
 }
 
 const authoringIndex=indexOf('src/world-authoring.js');
+const capabilityIndex=indexOf('src/embodiment-capabilities.js');
+const initializerIndex=indexOf('src/world-initializer.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
 const engineIndex=indexOf('src/engine.js');
@@ -39,6 +41,9 @@ const uiIndex=indexOf('src/ui/core.js');
 const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
+assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<worldIndex,'shared embodiment capabilities must stay authoring-safe and load before initializer/runtime owners');
+const capabilitySource=readRepoFile('src/embodiment-capabilities.js');
+assert.doesNotMatch(capabilitySource,/SimEngine|SimSpatial|registerInitialStateInitializer/,'shared embodiment capability contract must stay pure and authoring-safe');
 assert.ok(authoringIndex<worldIndex,'current authoring owner must load before world.js');
 assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production must not load the retired legacy-named authoring asset');
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
@@ -165,6 +170,7 @@ for(const path of validatorRules){
 loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring;
+const EC=globalThis.SimEmbodimentCapabilities;
 const R=globalThis.SimRelease;
 const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
@@ -175,6 +181,8 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(EC.VERSION,'embodiment-capabilities-v1');
+assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
