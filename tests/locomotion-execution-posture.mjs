@@ -11,7 +11,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js','validation/rules/locomotion-execution.js'
 ]);
 
-const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION='11.22.0-spatial-z-identity';
 const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -56,6 +56,8 @@ let st=E.getState(),human=st.agents.zhen;
 assert.equal(st.version,APP_VERSION);
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,LOCOMOTION_VERSION);
 assert.equal(L.VERSION,LOCOMOTION_VERSION);
+assert.equal(L.POSTURE_BY_MODE,C.POSTURE_BY_MODE,'runtime locomotion must consume the shared mode → posture owner');
+assert.equal(L.MODE_BY_POSTURE,C.MODE_BY_POSTURE,'runtime locomotion must consume the shared posture → mode owner');
 assert.deepEqual(human.locomotion,{mode:null,phase:'idle'});
 assert.equal(L.postureForMode('walk'),'standing');
 assert.equal(L.postureForMode('kneelCrawl'),'kneeling');
