@@ -23,6 +23,7 @@
   function runtimeLayers(authoring){
     if(authoring?.authoringSchema!==A.VERSION)throw new Error('Unsupported authoringSchema: '+String(authoring?.authoringSchema));
     if(authoring?.furnitureCatalogVersion!==A.FURNITURE_CATALOG_VERSION)throw new Error('Unsupported furnitureCatalogVersion: '+String(authoring?.furnitureCatalogVersion));
+    if(Number(authoring?.map?.cellSizeMeters)!==A.CELL_SIZE_METERS)throw new Error('Unsupported map.cellSizeMeters: '+String(authoring?.map?.cellSizeMeters));
     const layers=authoring?.map?.layers;
     if(!Array.isArray(layers)||!layers.length)throw new Error(A.VERSION+' runtime adapter requires at least one authored layer.');
     for(const layer of layers)if(!Number.isInteger(layer?.z))throw new Error(A.VERSION+' runtime adapter requires integer layer z values.');
@@ -47,6 +48,25 @@
       }
     }
     return tiles;
+  }
+
+  function buildBoundaries(authoring){
+    const boundaries={};
+    for(const layer of runtimeLayers(authoring))for(const [id,boundary] of Object.entries(layer.boundaries||{})){
+      const key=layer.z+'|'+id;
+      boundaries[key]={id,z:layer.z,...clone(boundary)};
+    }
+    return boundaries;
+  }
+
+  function buildDoors(authoring){
+    return clone(authoring.doors||{});
+  }
+
+  function buildExits(authoring){
+    const exits=clone(authoring.exits||{});
+    for(const exit of Object.values(exits))if(exit.access)exit.access=runtimePosition(exit.access);
+    return exits;
   }
 
   function buildFurniture(authoring){
@@ -244,10 +264,10 @@
   }
   function baseWalkable(authoring,p,cache=null){const derived=topologyFor(authoring,zOf(p),cache).cells[cellKey(p)];return !!derived?.open;}
   function neighborPositions(authoring,p,cache=null){
-    const out=[],z=zOf(p);
-    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
-      const q={x:p.x+dx,y:p.y+dy,z};
-      if(baseWalkable(authoring,q,cache))out.push(q);
+    const z=zOf(p),topology=topologyFor(authoring,z,cache),cell=topology.cells[cellKey(p)],out=[];
+    if(!cell?.open)return out;
+    for(const neighborId of cell.adjacent||[]){
+      const [x,y]=neighborId.split(',').map(Number);out.push({x,y,z});
     }
     return out;
   }
@@ -296,7 +316,10 @@
   function accessTargets(authoring,kind,type,cache=null){
     const out=[];
     if(type==='exit'){
-      for(const slot of authoringSlots(authoring))if(slot.canExit&&slot.position&&baseWalkable(authoring,slot.position,cache))out.push(slot.position);
+      for(const exit of Object.values(authoring.exits||{})){
+        const ref=exit?.boundary;
+        if(exit?.kind==='offMap'&&exit.access&&ref&&A.boundaryPassable(authoring,ref.z,ref.id)&&baseWalkable(authoring,exit.access,cache))out.push(exit.access);
+      }
     }else if(type==='food'){
       for(const c of Object.values(authoring.entities?.containers||{}))if(c.canEatFrom&&Number(c.contents?.food)>0)out.push(...objectAccessPositions(authoring,c,'eatFrom',cache));
     }else if(type==='water'){
@@ -430,14 +453,14 @@
 
   function createInitialState(authoring,{seed=20260911,version,supplyTrigger=70}={}){
     const n=(Number(seed)>>>0)||20260911,placementReport=assertInitialPlacements(authoring),zLevels=runtimeLayers(authoring).map(layer=>layer.z);
-    const map={width:authoring.map.width,height:authoring.map.height,zLevels,tiles:buildTiles(authoring),rooms:{},roomRevision:0};
+    const map={width:authoring.map.width,height:authoring.map.height,cellSizeMeters:authoring.map.cellSizeMeters,zLevels,tiles:buildTiles(authoring),boundaries:buildBoundaries(authoring),rooms:{},roomRevision:0};
     const lowLevel=authoring.compatibility?.passageConstraints;
     if(lowLevel&&Object.keys(lowLevel).length)map.passageConstraints=clone(lowLevel);
     const furniture=buildFurniture(authoring);
     const state={
       version,tick:0,day:authoring.scenario?.startDay??1,minute:authoring.scenario?.startMinute??12*60,seed:n,rngState:n,
       map,
-      furniture,activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
+      furniture,doors:buildDoors(authoring),exits:buildExits(authoring),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:supplyTrigger,trips:0,totalProduced:0},
       containers:buildContainers(authoring),
       sources:buildSources(authoring),
