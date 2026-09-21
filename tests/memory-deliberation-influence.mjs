@@ -33,7 +33,7 @@ function calm(a,{social=55}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue
 function socialCandidate(st,a){return E.candidateIntents(st,a).find(c=>c.intentKind==='socialize')||null;}
 
 E.reset(11340);let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.22.2-editor-furniture-definitions');
+assert.equal(st.version,'11.22.3-editor-authoring-presentation');
 assert.equal(E.MEMORY_DELIBERATION_SCHEMA_VERSION,'11.13.4-memory-deliberation-influence');
 assert.equal(E.MEMORY_DELIBERATION_MAX_DELTA,18);
 noIssues('reset');
