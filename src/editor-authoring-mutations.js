@@ -149,6 +149,24 @@
     return blockers;
   }
 
+  function setCellMaterial(authoring,{x,y,z,material}={}){
+    return mutationResult(authoring,candidate=>{
+      if(!Number.isInteger(x)||!Number.isInteger(y)||!Number.isInteger(z)){
+        return reject('cell_material_target_invalid','材質編輯需要有效的 Cell x / y / z。',{x,y,z});
+      }
+      const layer=(candidate.map?.layers||[]).find(item=>item.z===z);
+      const cell=layer?.cells?.[x+','+y];
+      if(!cell)return reject('cell_material_cell_missing','只能編輯已建構 Cell 的材質。',{x,y,z});
+      if(material!==null&&material!==undefined&&typeof material!=='string'){
+        return reject('cell_material_value_invalid','Cell material 必須是字串或空值。',{x,y,z,material});
+      }
+      const normalized=typeof material==='string'?material.trim():'';
+      if(normalized)cell.material=normalized;
+      else delete cell.material;
+      return {meta:{operation:'setCellMaterial',target:{x,y,z},material:normalized||null}};
+    });
+  }
+
   function moveFurniture(authoring,{furnitureId,target}={}){
     return mutationResult(authoring,candidate=>{
       const furniture=candidate.furniture?.[furnitureId];
@@ -314,6 +332,7 @@
   }
 
   window.SimEditorAuthoringMutations={
+    setCellMaterial,
     moveFurniture,
     moveObject,
     createFurnitureFromDefinition,
