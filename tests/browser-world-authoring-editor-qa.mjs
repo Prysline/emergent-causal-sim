@@ -103,10 +103,15 @@ assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
-await page.click('[data-scene-type="source"][data-scene-id="tap"]');
+const tapPort=page.locator('[data-interaction-port-source-id="tap"][data-interaction-port-id="tap:west"]');
+assert.equal(await tapPort.count(),1,'Editor map must render the canonical tap interaction port exactly once');
+assert.equal(await tapPort.evaluate(node=>node.closest('[data-cell]')?.dataset.cell),'5,5','tap:west marker must appear on the actual interaction Cell');
+assert.equal((await tapPort.textContent())?.trim(),'→','west-side interaction marker must point from the usable Cell toward the tap');
+assert.match(await tapPort.getAttribute('title'),/取水位置：水龍頭左側/);
+await tapPort.click();
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
 assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'source',id:'tap'});
-assert.equal(snapshot.session.dirty,false,'source selection must remain presentation-only');
+assert.equal(snapshot.session.dirty,false,'source port selection must remain presentation-only');
 assert.match(snapshot.selectionText,/取水位置：水龍頭左側 · \(5, 5, 0\)/,'Source Inspector must expose the canonical water interaction port instead of hiding the usable side');
 
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
