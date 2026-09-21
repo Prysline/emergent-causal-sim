@@ -10,9 +10,9 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.22.0-spatial-z-identity';
+const APP_VERSION='11.22.1-editor-resident-capabilities';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
-const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 E.reset(11700);
@@ -20,6 +20,8 @@ const st=E.getState(),zhen=st.agents.zhen,zhou=st.agents.zhou,orange=st.agents.o
 assert.equal(st.version,APP_VERSION);
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
+assert.equal(C.VERSION,'embodiment-capabilities-v1');
+assert.equal(W.PHYSICAL_DEFAULT_PROFILES,C.DEFAULT_PHYSICAL_PROFILES,'runtime Physical defaults must reference the shared capability owner');
 assert.equal(W.defaultPhysicalProfile('unknown-kind'),null,'unknown kinds must not silently inherit Human physical geometry');
 
 for(const a of [zhen,zhou,orange]){

@@ -17,6 +17,7 @@ let snapshot=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   document:window.SimWorldEditor.getDocument(),
   runtimeGlobals:{
+    capabilities:typeof window.SimEmbodimentCapabilities,
     initializer:typeof window.SimWorldInitializer,
     previewBridge:typeof window.SimEditorPreviewBridge,
     world:typeof window.SimWorld,
@@ -45,6 +46,7 @@ assert.equal(snapshot.sceneItems,
 assert.ok(snapshot.residentMarkers>0,'resident authored positions must use typed map markers');
 assert.ok(snapshot.objectMarkers>0,'container/source authored positions must use typed map markers');
 assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed');
+assert.equal(snapshot.runtimeGlobals.capabilities,'object','Editor must load the pure shared embodiment capability contract without bootstrapping runtime');
 assert.equal(snapshot.runtimeGlobals.initializer,'object','D.1C Editor may load the pure world initializer only for runtime compatibility preflight');
 assert.equal(snapshot.runtimeGlobals.previewBridge,'object','D.1C Editor must expose the explicit browser-session preview bridge');
 for(const key of ['world','spatial','engine','validator'])assert.equal(snapshot.runtimeGlobals[key],'undefined',`Editor must not bootstrap runtime module: ${key}`);
@@ -226,11 +228,45 @@ assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:6,y:2,
 assert.equal(snapshot.document.entities.containers.basket.supportId,'diningTable');
 
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
-await page.click('[data-editor-action="move-resident-exact"]');
+await page.click('[data-editor-action="move-resident"]');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  postureOptions:[...document.querySelectorAll('[data-operation-field="postureKind"] option')].map(option=>option.value).filter(Boolean),
+  actions:document.querySelector('#selectionActions')?.textContent||''
+}));
+assert.deepEqual(snapshot.postureOptions,['standing','lying','kneeling','prone'],'Human free move must expose only shared-capability postures');
+await page.selectOption('[data-operation-field="postureKind"]','kneeling');
 await page.click('[data-cell="8,4"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.deepEqual(snapshot.document.residents.zhen.initial.placement.node,{x:8,y:4,z:0});
-assert.equal(snapshot.document.residents.zhen.initial.posture.kind,'standing');
+assert.deepEqual(snapshot.document.residents.zhen.initial.placement,{mode:'exact',node:{x:8,y:4,z:0}});
+assert.deepEqual(snapshot.document.residents.zhen.initial.posture,{kind:'kneeling'});
+
+await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
+await page.click('[data-editor-action="rebind-resident-slot"]');
+await page.selectOption('[data-operation-field="slotId"]','sofa:left');
+snapshot=await page.evaluate(()=>({
+  postureOptions:[...document.querySelectorAll('[data-operation-field="postureKind"] option')].map(option=>option.value).filter(Boolean)
+}));
+assert.deepEqual(snapshot.postureOptions,['standing','sitting','lying','kneeling','prone'],'Human sofa binding must expose capability + slot legal postures');
+await page.selectOption('[data-operation-field="postureKind"]','sitting');
+await page.click('[data-editor-action="confirm-resident-rebind"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().residents.zhen.initial);
+assert.deepEqual(snapshot.placement,{mode:'anchor',anchor:{kind:'furnitureSlot',id:'sofa:left'}});
+assert.deepEqual(snapshot.posture,{kind:'sitting',slotId:'sofa:left',furnitureId:'sofa'});
+
+await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
+await page.click('[data-editor-action="move-resident"]');
+snapshot=await page.evaluate(()=>({
+  actions:document.querySelector('#selectionActions')?.textContent||'',
+  postureOptions:[...document.querySelectorAll('[data-operation-field="postureKind"] option')].map(option=>option.value).filter(Boolean)
+}));
+assert.match(snapshot.actions,/解除目前的家具／座位綁定/,'bound resident move must explicitly warn about detaching the binding');
+assert.deepEqual(snapshot.postureOptions,['standing','lying','kneeling','prone']);
+await page.selectOption('[data-operation-field="postureKind"]','prone');
+await page.click('[data-cell="8,4"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().residents.zhen.initial);
+assert.deepEqual(snapshot.placement,{mode:'exact',node:{x:8,y:4,z:0}});
+assert.deepEqual(snapshot.posture,{kind:'prone'},'bound → free move must detach slot/furniture refs atomically while preserving selected free posture');
 
 await page.click('[data-scene-type="furniture"][data-scene-id="diningTable"]');
 await page.click('[data-editor-action="delete-furniture"]');
@@ -244,6 +280,12 @@ await page.click('[data-entity-type="resident"][data-entity-id="orange"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),selectionText:document.querySelector('#selectionSummary')?.textContent||''}));
 assert.deepEqual(snapshot.session.selection,{kind:'entity',type:'resident',id:'orange'},'map marker selection must share the scene-list selection owner');
 assert.match(snapshot.selectionText,/橘子/);
+await page.click('[data-editor-action="move-resident"]');
+snapshot=await page.evaluate(()=>({
+  postureOptions:[...document.querySelectorAll('[data-operation-field="postureKind"] option')].map(option=>option.value).filter(Boolean)
+}));
+assert.deepEqual(snapshot.postureOptions,['standing','lying'],'Cat free move must not inherit Human kneel/prone locomotion postures');
+await page.click('[data-editor-action="cancel-operation"]');
 
 await page.click('[data-tool="opening"]');
 await page.click('[data-cell="2,2"]');

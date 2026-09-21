@@ -9,7 +9,8 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.22.0-spatial-z-identity';
+const CURRENT_VERSION='11.22.1-editor-resident-capabilities';
+const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
   const index=scripts.indexOf(path);
@@ -23,6 +24,8 @@ for(const relativePath of scripts){
 }
 
 const authoringIndex=indexOf('src/world-authoring.js');
+const capabilityIndex=indexOf('src/embodiment-capabilities.js');
+const initializerIndex=indexOf('src/world-initializer.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
 const engineIndex=indexOf('src/engine.js');
@@ -39,6 +42,9 @@ const uiIndex=indexOf('src/ui/core.js');
 const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
+assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<worldIndex,'shared embodiment capabilities must stay authoring-safe and load before initializer/runtime owners');
+const capabilitySource=readRepoFile('src/embodiment-capabilities.js');
+assert.doesNotMatch(capabilitySource,/SimEngine|SimSpatial|registerInitialStateInitializer/,'shared embodiment capability contract must stay pure and authoring-safe');
 assert.ok(authoringIndex<worldIndex,'current authoring owner must load before world.js');
 assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production must not load the retired legacy-named authoring asset');
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
@@ -165,6 +171,7 @@ for(const path of validatorRules){
 loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring;
+const EC=globalThis.SimEmbodimentCapabilities;
 const R=globalThis.SimRelease;
 const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
@@ -175,12 +182,14 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(A.VERSION,'world-authoring-v2');
+assert.equal(EC.VERSION,'embodiment-capabilities-v1');
+assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
-assert.equal(SP.SPATIAL_IDENTITY_VERSION,CURRENT_VERSION);
+assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.17.0-passage-profile-multimode');

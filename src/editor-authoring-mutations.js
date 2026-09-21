@@ -1,10 +1,9 @@
 (() => {
-  const A=window.SimWorldAuthoring;
+  const A=window.SimWorldAuthoring,C=window.SimEmbodimentCapabilities;
   if(!A?.cloneAuthoring||!A?.validateAuthoring||!A?.canonicalizeAuthoring||!A?.semanticFingerprint){
     throw new Error('SimWorldAuthoring must load before editor-authoring-mutations.js.');
   }
-
-  const POSTURES=new Set(['standing','sitting','lying','kneeling','prone']);
+  if(!C?.freePosturesForKind||!C?.slotPosturesForKind)throw new Error('SimEmbodimentCapabilities must load before editor-authoring-mutations.js.');
   const issue=(code,message,data={})=>({code,message,...data});
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
@@ -87,6 +86,21 @@
       allowKinds:clone(entry.slot.allowKinds||[]),
       compatible:!entry.slot.allowKinds?.length||entry.slot.allowKinds.includes(resident.kind)
     }));
+  }
+
+  function postureOptions(kinds){return kinds.map(kind=>({kind,label:C.postureLabel(kind)}));}
+
+  function listResidentFreePostures(authoring,residentId){
+    const resident=authoring.residents?.[residentId];
+    return resident?postureOptions(C.freePosturesForKind(resident.kind)):[];
+  }
+
+  function listResidentSlotPostures(authoring,residentId,slotId){
+    const resident=authoring.residents?.[residentId],resolved=uniqueSlot(authoring,slotId);
+    if(!resident||!resolved)return [];
+    const {slot}=resolved;
+    if(slot.allowKinds?.length&&!slot.allowKinds.includes(resident.kind))return [];
+    return postureOptions(C.slotPosturesForKind(resident.kind,slot));
   }
 
   function residentBinding(authoring,residentId){
@@ -255,28 +269,20 @@
     });
   }
 
-  function moveResidentExact(authoring,{residentId,target}={}){
+  function moveResidentToExact(authoring,{residentId,target,postureKind}={}){
     return mutationResult(authoring,candidate=>{
       const resident=candidate.residents?.[residentId];
       if(!resident)return reject('resident_missing','找不到 Resident '+String(residentId)+'.',{residentId});
-      const binding=residentBinding(candidate,residentId);
-      if(binding?.placementMode!=='exact')return reject('resident_move_requires_exact','Generic resident move 只支援 exact placement。',{residentId,binding});
-      if(binding.bound)return reject('resident_move_bound','Resident 仍有 furniture / slot binding；generic move 不會 silent detach。',{residentId,binding});
       if(!target)return reject('resident_move_target_invalid','Resident move 缺少 target。',{residentId});
-      resident.initial.placement={...resident.initial.placement,mode:'exact',node:clone(target)};
-      return {meta:{operation:'moveResidentExact',residentId}};
-    });
-  }
-
-  function convertResidentToExactStanding(authoring,{residentId,target}={}){
-    return mutationResult(authoring,candidate=>{
-      const resident=candidate.residents?.[residentId];
-      if(!resident)return reject('resident_missing','找不到 Resident '+String(residentId)+'.',{residentId});
-      if(!target)return reject('resident_move_target_invalid','Convert-to-exact-standing 缺少 target。',{residentId});
+      const allowed=C.freePosturesForKind(resident.kind);
+      if(!allowed.includes(postureKind)){
+        return reject('resident_free_posture_unsupported','Resident free posture 不受該居民能力支援。',{residentId,kind:resident.kind,postureKind,allowed:clone(allowed)});
+      }
+      const binding=residentBinding(candidate,residentId);
       resident.initial??={};
       resident.initial.placement={mode:'exact',node:clone(target)};
-      resident.initial.posture={kind:'standing'};
-      return {meta:{operation:'convertResidentToExactStanding',residentId}};
+      resident.initial.posture={kind:postureKind};
+      return {meta:{operation:'moveResidentToExact',residentId,postureKind,detachedBinding:!!binding?.bound,previousBinding:clone(binding)}};
     });
   }
 
@@ -284,15 +290,16 @@
     return mutationResult(authoring,candidate=>{
       const resident=candidate.residents?.[residentId];
       if(!resident)return reject('resident_missing','找不到 Resident '+String(residentId)+'.',{residentId});
-      if(!POSTURES.has(postureKind))return reject('resident_posture_invalid','重新綁定 slot 時必須明確選擇合法 posture。',{residentId,slotId,postureKind});
+      if(!C.ALL_POSTURES.includes(postureKind))return reject('resident_posture_invalid','重新綁定 slot 時必須明確選擇合法 posture。',{residentId,slotId,postureKind});
       const resolved=uniqueSlot(candidate,slotId);
       if(!resolved)return reject('resident_slot_missing_or_ambiguous','Target furnitureSlot 不存在或不唯一。',{residentId,slotId});
       const {slot,furnitureId}=resolved;
       if(slot.allowKinds?.length&&!slot.allowKinds.includes(resident.kind)){
         return reject('resident_slot_kind_mismatch','Resident kind 不在 slot.allowKinds。',{residentId,slotId,kind:resident.kind,allowKinds:clone(slot.allowKinds)});
       }
-      if(postureKind==='lying'&&!slot.canRest&&!slot.canSleep){
-        return reject('resident_slot_posture_unusable','lying posture 需要 slot 支援 rest 或 sleep。',{residentId,slotId,postureKind});
+      const allowed=C.slotPosturesForKind(resident.kind,slot);
+      if(!allowed.includes(postureKind)){
+        return reject('resident_slot_posture_unsupported','Resident posture 不受該居民能力或 slot 能力支援。',{residentId,slotId,kind:resident.kind,postureKind,allowed:clone(allowed)});
       }
       resident.initial??={};
       resident.initial.placement={mode:'anchor',anchor:{kind:'furnitureSlot',id:slotId}};
@@ -306,11 +313,12 @@
     moveObject,
     duplicateFurniture,
     deleteFurniture,
-    moveResidentExact,
-    convertResidentToExactStanding,
+    moveResidentToExact,
     rebindResidentToSlot,
     listSupportCandidates,
     listResidentSlots,
+    listResidentFreePostures,
+    listResidentSlotPostures,
     residentBinding,
     furnitureReferenceReport
   };

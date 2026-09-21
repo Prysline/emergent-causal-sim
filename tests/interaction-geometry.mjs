@@ -9,7 +9,7 @@ const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.22.0-spatial-z-identity');
+assert.equal(st.version,'11.22.1-editor-resident-capabilities');
 assert.equal(st.interactionModel,undefined);
 
 const pickup=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'pickup');

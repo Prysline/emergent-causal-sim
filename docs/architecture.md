@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.22.0-spatial-z-identity`。
+目前 runtime marker：`11.22.1-editor-resident-capabilities`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -46,6 +46,8 @@ Slice D.1C 起，`editor.html` 除 authoring helper / mutation / presentation co
 Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furniture、Container、Source、Resident 清單與地圖 typed marker都由 canonical authoring document即時投影；sidebar 選取、map marker選取與 Inspector focus共用同一個 ephemeral `selection` owner，不建立 serialized scene registry。Furniture placement target仍是 Editor operation state；選取 furniture只更新 target，不會偷改 active authoring tool。Resident marker位置可從 exact placement 或唯一 furnitureSlot anchor解析，但這仍是 authoring-side presentation，不啟動 runtime initializer。主模擬器只新增通往 `editor.html` 的入口；Editor→Simulator world handoff仍留在 D.1C。
 
 Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor canonical mutation ownership boundary**。它不保存 world state，也不是 simulation subsystem；Furniture / Container / Source / Resident lifecycle operation只接收 canonical authoring document，clone candidate、套用單一 operation、呼叫 `SimWorldAuthoring.validateAuthoring(...)`，candidate valid才回傳可 commit document。`editor-ui.js` 只保存 `selection / selectedTool / selectedFurnitureId / pendingOperation` 與 structured operation result 等 ephemeral state，不得複製 move / delete / duplicate semantics。Furniture support follower、explicit support choice、deterministic duplicate ID、guarded delete與 Resident explicit placement transition都屬 authoring mutation contract；Editor仍不載入 runtime Initializer / Spatial / Engine / Validator。
+
+Editor-1 在既有 boundary 上加入 pure `src/embodiment-capabilities.js` 作為 **authoring-safe capability contract**。它只持有現行 Human / Cat default Physical template、locomotion mode ↔ posture vocabulary，以及 free / slot posture query；不註冊 initial-state initializer、不讀 `SimEngine / SimSpatial`，也不保存 Agent runtime state。`systems/physical.js` 仍負責把 shared default template clone 成每個 Agent 的 authoritative `physical` state，`systems/locomotion.js` 仍負責 runtime locomotion execution；Editor只用同一 capability contract篩選可 author 的 posture，不再複製另一份 species規則。Resident free placement收斂為單一 atomic `moveResidentToExact(...)`：作者必須明確選擇 capability-supported free posture；若 Resident 原本綁定 furnitureSlot，這次 move會明確解除 slot / furniture reference並一次 commit。`sitting` 仍是 slot-bound posture；`lying` 是 rest/static posture，不因它不是 locomotion mode就從 free posture vocabulary消失。
 
 Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
 

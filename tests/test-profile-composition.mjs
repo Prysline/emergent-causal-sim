@@ -10,10 +10,12 @@ import {
 
 assert.deepEqual(authoringProfilePaths(),[
   'src/world-authoring.js',
+  'src/embodiment-capabilities.js',
   'src/world-initializer.js'
 ]);
 assert.deepEqual(spatialCoreProfilePaths(),[
   'src/world-authoring.js',
+  'src/embodiment-capabilities.js',
   'src/world-initializer.js',
   'src/world.js',
   'src/release.js',
@@ -37,7 +39,7 @@ assert.throws(
   'runtime profiles must reject retired source names rather than silently alias them'
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
+  'world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
   'spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
@@ -55,6 +57,14 @@ for(const relativePath of stateTests){
   assert.doesNotMatch(source,/\bSP\.init\s*\(/,relativePath+' must not invoke the retired Spatial init lifecycle');
   const handLoadsEngine=/['"]engine\.js['"]/.test(source);
   const productionDerived=/productionScriptPaths|loadProductionBefore|loadProductionThrough/.test(source);
+  const profileComposed=/loadAuthoringProfile|loadSpatialCoreProfile|loadRuntimeProfile|loadInitialStateProfile/.test(source);
+  const handLoadsInitializer=/['"](?:src\/)?world-initializer\.js['"]/.test(source);
+  if(handLoadsInitializer&&!productionDerived&&!profileComposed){
+    assert.ok(
+      /['"](?:src\/)?embodiment-capabilities\.js['"]/.test(source),
+      relativePath+' must load embodiment-capabilities.js before a direct world-initializer.js stack'
+    );
+  }
   if(handLoadsEngine&&!productionDerived){
     assert.ok(source.includes('loadRuntimeProfile'),relativePath+' must compose handwritten Engine stacks through loadRuntimeProfile()');
   }

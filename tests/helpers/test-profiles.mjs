@@ -65,6 +65,7 @@ const RETIRED_SOURCES=Object.freeze({
 
 const AUTHORING_PROFILE=Object.freeze([
   'world-authoring.js',
+  'embodiment-capabilities.js',
   'world-initializer.js'
 ]);
 
@@ -99,6 +100,12 @@ function unique(paths){
   return paths.filter(path=>!seen.has(path)&&seen.add(path));
 }
 
+function ensureEmbodimentCapabilities(paths){
+  const initializerIndex=paths.indexOf('world-initializer.js');
+  if(initializerIndex>=0&&!paths.includes('embodiment-capabilities.js'))paths.splice(initializerIndex,0,'embodiment-capabilities.js');
+  return paths;
+}
+
 export function authoringProfilePaths(extra=[]){
   const paths=unique([...AUTHORING_PROFILE,...extra]);
   assertCurrentSources(paths);
@@ -112,7 +119,7 @@ export function spatialCoreProfilePaths(extra=[]){
 }
 
 export function runtimeProfilePaths(paths){
-  const current=unique([...paths]);
+  const current=ensureEmbodimentCapabilities(unique([...paths]));
   assertCurrentSources(current);
   const engineIndex=current.indexOf('engine.js');
   if(engineIndex<0)throw new Error('Runtime test profile requires engine.js.');
@@ -126,7 +133,7 @@ export function runtimeProfilePaths(paths){
 }
 
 export function initialStateProfilePaths(paths){
-  const current=unique([...paths]);
+  const current=ensureEmbodimentCapabilities(unique([...paths]));
   assertCurrentSources(current);
   if(current.includes('engine.js'))throw new Error('Initial-state profile must not load engine.js.');
   if(!current.includes('world.js'))throw new Error('Initial-state profile requires world.js.');

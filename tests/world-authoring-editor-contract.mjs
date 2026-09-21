@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['world-authoring.js','world-initializer.js']){
+for(const file of ['world-authoring.js','embodiment-capabilities.js','world-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
@@ -84,13 +84,15 @@ for(const forbidden of ['src/world.js','src/spatial.js','src/engine.js','src/val
   assert.ok(!editorHtml.includes(forbidden),`Editor entry must not load runtime owner: ${forbidden}`);
 }
 const authoringScript=editorHtml.indexOf('src/world-authoring.js');
+const capabilityScript=editorHtml.indexOf('src/embodiment-capabilities.js');
 const initializerScript=editorHtml.indexOf('src/world-initializer.js');
 const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
-assert.ok(authoringScript>=0&&initializerScript>authoringScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'D.1C Editor load order must be authoring → compatibility initializer → preview bridge → pure mutation owner → UI');
+assert.ok(authoringScript>=0&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be authoring → shared capabilities → compatibility initializer → preview bridge → pure mutation owner → UI');
 assert.ok(editorHtml.includes('WORLD AUTHORING · world-authoring-v2'));
 assert.ok(editorHtml.includes('src/world-authoring.js'));
+assert.ok(editorHtml.includes('src/embodiment-capabilities.js'),'Editor must load the pure authoring-safe capability contract');
 assert.ok(editorHtml.includes('src/world-initializer.js'));
 assert.ok(editorHtml.includes('src/editor-preview-bridge.js'));
 assert.ok(editorHtml.includes('id="testWorld"'));
@@ -123,8 +125,13 @@ assert.ok(editorUi.includes("active?'select':'furniture'"),'Furniture placement 
 assert.ok(editorUi.includes("chair:'餐椅'"),'Furniture instance presentation must expose the shared chair type independently from A/B/C/D instance names');
 assert.ok(editorUi.includes('>複製家具<'),'duplicateFurniture must be presented as duplication, not as catalog-style furniture creation');
 assert.ok(!editorUi.includes('新增同型家具'),'clone-existing-instance UI must not be mislabeled as furniture-library creation');
-assert.ok(editorUi.includes('移動自由位置'),'Resident UI must describe the exact-only move in user language');
-assert.ok(editorUi.includes('解除家具綁定並移動（站立）'),'Resident UI must describe the explicit detach + standing conversion');
+assert.ok(editorUi.includes('data-editor-action="move-resident"'),'Resident UI must expose one unified move action');
+assert.ok(editorUi.includes('>移動居民<'),'Resident move action must use user-facing language rather than placement implementation terminology');
+assert.ok(editorUi.includes('M.listResidentFreePostures(authored,operation.residentId)'),'Resident free posture choices must come from the mutation/capability boundary');
+assert.ok(editorUi.includes('M.listResidentSlotPostures(authored,operation.residentId,operation.slotId)'),'Furniture-slot posture choices must be capability-filtered');
+assert.ok(editorUi.includes('點擊新位置後會解除目前的家具／座位綁定'),'bound → free move must explicitly warn before detaching the furniture/slot binding');
+assert.ok(editorUi.includes('M.moveResidentToExact(authored,{residentId:operation.residentId,target,postureKind:operation.postureKind})'),'free resident move must delegate to the single atomic resident mutation');
+assert.ok(!editorUi.includes('解除家具綁定並移動（站立）'),'Editor must not retain the retired forced-standing detach flow');
 assert.ok(editorUi.includes('取消目前操作'),'pendingOperation may remain an internal key, but visible cancellation copy must be localized');
 assert.ok(!editorUi.includes('取消 pending operation'),'internal pendingOperation terminology must not leak into the primary Editor UI');
 assert.ok(editorUi.includes("M.moveFurniture(authored,{furnitureId:dragState.furnitureId,target})"),'drag preview must delegate to the canonical Furniture mutation owner');
