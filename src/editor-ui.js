@@ -678,6 +678,13 @@
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
         if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
+        if(entry.type==='source'){
+          const ports=(entry.entity.interactionPorts||[]).filter(port=>port?.position&&Array.isArray(port.affordances)&&port.affordances.includes('fill'));
+          if(ports.length){
+            const label=entry.entity.resource==='water'?'取水位置':'取用位置';
+            details+=`<br>${label}：${ports.map(port=>`${esc(port.label||port.id||'互動位置')} · <code>(${esc(port.position.x)}, ${esc(port.position.y)}, ${esc(port.position.z??0)})</code>`).join('、')}`;
+          }
+        }
         if(entry.type==='resident'){
           const placement=entry.entity.initial?.placement;
           const placementLabel=placement?.mode==='exact'?'自由座標（exact）':placement?.mode==='anchor'?'家具位置綁定（anchor）':placement?.mode||'—';
