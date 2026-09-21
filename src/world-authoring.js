@@ -431,7 +431,9 @@
       if(!cell.open)continue;
       for(const [dx,dy] of dirs){
         const other=cells[(cell.x+dx)+','+(cell.y+dy)];
-        if(other?.open)cell.adjacent.push(other.id);
+        if(!other?.open)continue;
+        const boundaryId=boundaryIdBetween(cell,other);
+        if(boundaryId&&boundaryPassable(authoring,z,boundaryId))cell.adjacent.push(other.id);
       }
       cell.adjacent.sort();
     }
@@ -501,11 +503,17 @@
   window.SimWorldAuthoring={
     VERSION,
     FURNITURE_CATALOG_VERSION,
+    CELL_SIZE_METERS,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,
     listFurnitureDefinitions,
     resolveFurnitureInstance,
     resolvedFurnitureMap,
+    boundaryIdBetween,
+    boundaryAt,
+    doorsForBoundary,
+    boundaryPassable,
+    boundaryTouchesCell,
     deriveHorizontalTopology,
     validateAuthoring,
     assertValidAuthoring,
