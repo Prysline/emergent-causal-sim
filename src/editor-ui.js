@@ -632,6 +632,7 @@
     const host=$('sceneList'),entries=sceneEntries();
     const groups=[
       ['家具',entries.filter(entry=>entry.type==='furniture')],
+      ['結構／出口',entries.filter(entry=>entry.type==='door'||entry.type==='exit')],
       ['物件',entries.filter(entry=>entry.type==='container'||entry.type==='source')],
       ['居民',entries.filter(entry=>entry.type==='resident')]
     ];
@@ -645,11 +646,13 @@
   }
 
   function renderSummary(validation,topology){
-    const layerList=layers(),furnitureCount=Object.keys(authored.furniture||{}).length,residentCount=Object.keys(authored.residents||{}).length;
+    const layerList=layers(),furnitureCount=Object.keys(authored.furniture||{}).length,residentCount=Object.keys(authored.residents||{}).length,boundaryCount=layerList.reduce((sum,layer)=>sum+Object.keys(layer.boundaries||{}).length,0),doorCount=Object.keys(authored.doors||{}).length,exitCount=Object.keys(authored.exits||{}).length;
     $('documentSummary').innerHTML=[
       ['世界 ID',authored.id||'—'],
       ['建構資料版本',authored.authoringSchema],
-      ['地圖尺寸',`${authored.map.width} × ${authored.map.height}`],
+      ['地圖尺寸',`${authored.map.width} × ${authored.map.height} · ${authored.map.cellSizeMeters}m / 格`],
+      ['牆／開口邊界',boundaryCount],
+      ['門／世界出口',`${doorCount} / ${exitCount}`],
       ['Z 層',layerList.map(layer=>layer.z).join(', ')],
       ['家具',furnitureCount],
       ['居民',residentCount],
@@ -665,6 +668,8 @@
         heading=`${esc(entry.icon)} ${esc(entry.entity.name||entry.id)}`;
         details=`<br>${esc(entry.label)} · ID：<code>${esc(entry.id)}</code>`;
         if(entry.type==='furniture')details+=`<br>占地：${(entry.entity.footprint||[]).length} 格`;
+        if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
+        if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
         if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
         if(entry.type==='resident'){
           const placement=entry.entity.initial?.placement;
