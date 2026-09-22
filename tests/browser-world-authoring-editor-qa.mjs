@@ -42,9 +42,10 @@ assert.equal(snapshot.sceneItems,
   Object.keys(snapshot.document.entities?.containers||{}).length+
   Object.keys(snapshot.document.entities?.sources||{}).length+
   Object.keys(snapshot.document.residents||{}).length+
+  Object.keys(snapshot.document.structures||{}).length+
   Object.keys(snapshot.document.doors||{}).length+
   Object.keys(snapshot.document.exits||{}).length,
-  'scene list must expose furniture, objects, residents, Doors, and world exits');
+  'scene list must expose furniture, objects, residents, Structures, Doors, and world exits');
 assert.ok(snapshot.residentMarkers>0,'resident authored positions must use typed map markers');
 assert.ok(snapshot.objectMarkers>0,'container/source authored positions must use typed map markers');
 assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed');
@@ -414,9 +415,31 @@ layeredPreviewDocument.map.layers.push({z:1,cells:{
   '2,2':{terrain:'floor',material:'wood'},
   '3,2':{terrain:'floor',material:'wood'}
 },boundaries:{}});
+layeredPreviewDocument.structures={
+  stairA:{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:2,y:2,z:1},clearanceWidth:.8,clearanceHeight:2}
+};
 layeredPreviewDocument.residents.orange.initial.placement={mode:'exact',node:{x:2,y:2,z:1}};
 layeredPreviewDocument.residents.orange.initial.posture={kind:'standing'};
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),layeredPreviewDocument);
+let structureEditor=await page.evaluate(()=>({
+  scene:document.querySelectorAll('#sceneList [data-scene-type="structure"][data-scene-id="stairA"]').length,
+  lower:document.querySelectorAll('#editorMap [data-entity-type="structure"][data-structure-endpoint="lower"]').length,
+  upper:document.querySelectorAll('#editorMap [data-entity-type="structure"][data-structure-endpoint="upper"]').length,
+  validation:window.SimWorldEditor.getSession().validation
+}));
+assert.equal(structureEditor.scene,1,'Scene Inspector must expose the authored stair Structure');
+assert.equal(structureEditor.lower,1,'z=0 map must expose the stair lower endpoint');
+assert.equal(structureEditor.upper,0,'z=0 map must not overlay the upper endpoint');
+assert.equal(structureEditor.validation.ok,true);
+await page.selectOption('#layerSelect','1');
+await page.waitForTimeout(20);
+structureEditor=await page.evaluate(()=>({
+  lower:document.querySelectorAll('#editorMap [data-entity-type="structure"][data-structure-endpoint="lower"]').length,
+  upper:document.querySelectorAll('#editorMap [data-entity-type="structure"][data-structure-endpoint="upper"]').length
+}));
+assert.equal(structureEditor.lower,0);
+assert.equal(structureEditor.upper,1,'z=1 map must expose the stair upper endpoint');
+await page.selectOption('#layerSelect','0');
 const previewFingerprint=await page.evaluate(()=>window.SimWorldEditor.semanticFingerprint());
 await Promise.all([
   page.waitForURL('**/index.html?preview=editor'),
@@ -441,7 +464,8 @@ let runtimePreview=await page.evaluate(()=>{
     upperTile:state.map.tiles['2,2,1']?{terrain:state.map.tiles['2,2,1'].terrain,z:state.map.tiles['2,2,1'].z}:null,
     ui:{currentZ:window.SimUI?.getCurrentZ?.(),options:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,mapZ:document.querySelector('#map')?.dataset.z||''},
     opening:{kind:state.map.boundaries['0|v:4,4']?.kind||null,derivedAdjacent:topology.cells['3,4'].adjacent.includes('4,4'),runtimeEdgeOpen:window.SimSpatial.edgeStructurallyOpen(state,{x:3,y:4,z:0},{x:4,y:4,z:0})},
-    under:{authored:window.SimWorldAuthoring.resolveFurnitureInstance(active.authoring.furniture.diningTable).spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance}
+    under:{authored:window.SimWorldAuthoring.resolveFurnitureInstance(active.authoring.furniture.diningTable).spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance},
+    stair:{runtime:state.structures?.stairA||null,edge:window.SimSpatial.structureBetween(state,{x:8,y:4,z:0,surfaceId:'floor'},{x:2,y:2,z:1,surfaceId:'floor'})?.id||null,route:window.SimSpatial.planRoute(state,state.agents.zhen,{x:2,y:2,z:1},{mode:'walk',objective:'pathDistance'}).pathDistance}
   };
 });
 assert.equal(runtimePreview.previewMode,true);
@@ -466,6 +490,9 @@ assert.equal(runtimePreview.opening.kind,'opening');
 assert.equal(runtimePreview.opening.derivedAdjacent,true);
 assert.equal(runtimePreview.opening.runtimeEdgeOpen,true,'runtime boundary interpretation must match the Editor derived preview');
 assert.equal(runtimePreview.under.runtime,runtimePreview.under.authored,'under-clearance geometry must survive the same canonical initializer path');
+assert.equal(runtimePreview.stair.runtime?.id,'stairA','Preview must compile authored Structure truth into runtime state');
+assert.equal(runtimePreview.stair.edge,'stairA','runtime Spatial must resolve the preview stair edge');
+assert.equal(runtimePreview.stair.route,1,'Preview resident at the lower endpoint must route across the authored stair');
 
 await page.selectOption('#runtimeLayerSelect','1');
 await page.waitForTimeout(30);

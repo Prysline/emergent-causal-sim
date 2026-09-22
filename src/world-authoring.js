@@ -3,7 +3,7 @@
   if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
-  const VERSION='world-authoring-v4';
+  const VERSION='world-authoring-v5';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -42,6 +42,7 @@
     label:'Current MVP Default World',
     scenario:{startDay:1,startMinute:12*60},
     map:{width:12,height:8,cellSizeMeters:CELL_SIZE_METERS,layers:[{z:0,cells:buildDefaultCells(),boundaries:buildDefaultBoundaries()}]},
+    structures:{},
     furniture:{
       diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2)},
       chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),name:'餐椅 A'},
@@ -89,6 +90,8 @@
   const BOUNDARY_ID_PATTERN=/^([vh]):(-?\d+),(-?\d+)$/;
   const BOUNDARY_KINDS=new Set(['wall','opening']);
   const DOOR_STATES=new Set(['open','closed']);
+  const STRUCTURE_KINDS=new Set(['stair']);
+  const structureFields=new Set(['id','kind','lower','upper','clearanceWidth','clearanceHeight']);
 
   function boundaryIdBetween(a,b){
     if(!a||!b||(a.z??0)!==(b.z??0)||Math.abs(a.x-b.x)+Math.abs(a.y-b.y)!==1)return null;
@@ -234,6 +237,28 @@
       }
       if(!layerZs.has(z)){
         errors.push(authoringIssue('authoring_position_layer_missing',path,`Position references missing Z-level ${z}.`,{z}));
+      }
+    }
+
+    if(!isRecord(authoring.structures))errors.push(authoringIssue('authoring_structures_invalid','structures','structures must be an object.'));
+    for(const [key,structure] of Object.entries(authoring.structures||{})){
+      const basePath=`structures.${key}`;
+      if(!isRecord(structure)){errors.push(authoringIssue('authoring_structure_invalid',basePath,'Structure entry must be an object.'));continue;}
+      if(structure.id!==key)errors.push(authoringIssue('authoring_structure_id_mismatch',basePath+'.id','Structure key '+key+' does not match id '+String(structure.id)+'.'));
+      if(!STRUCTURE_KINDS.has(structure.kind))errors.push(authoringIssue('authoring_structure_kind_invalid',basePath+'.kind','Current Structure kind must be stair.'));
+      validatePosition(structure.lower,basePath+'.lower');
+      validatePosition(structure.upper,basePath+'.upper');
+      if(isRecord(structure.lower)&&isRecord(structure.upper)
+        &&Number.isInteger(structure.lower.z)&&Number.isInteger(structure.upper.z)){
+        if(samePosition(structure.lower,structure.upper))errors.push(authoringIssue('authoring_structure_endpoints_same',basePath,'Structure lower and upper endpoints must be different.'));
+        if(structure.lower.z>=structure.upper.z)errors.push(authoringIssue('authoring_structure_vertical_order_invalid',basePath,'Structure lower.z must be below upper.z.'));
+      }
+      for(const field of ['clearanceWidth','clearanceHeight']){
+        const value=structure[field];
+        if(value!==undefined&&(!Number.isFinite(Number(value))||Number(value)<=0))errors.push(authoringIssue('authoring_structure_metric_invalid',basePath+'.'+field,'Structure '+field+' must be a positive SI-meter value.',{structureId:key,field}));
+      }
+      for(const field of Object.keys(structure))if(!structureFields.has(field)){
+        errors.push(authoringIssue('authoring_structure_field_unsupported',basePath+'.'+field,'Structure field '+field+' is not part of compact '+VERSION+' Structure truth.',{structureId:key,field}));
       }
     }
 
@@ -456,6 +481,23 @@
     return {z,width,height,cells,components};
   }
 
+  function deriveStructureConnections(authoring){
+    assertCurrentSchema(authoring);
+    const out=[];
+    for(const [key,structure] of Object.entries(authoring.structures||{})){
+      if(!isRecord(structure)||structure.kind!=='stair'||!isRecord(structure.lower)||!isRecord(structure.upper))continue;
+      out.push({
+        id:structure.id||key,
+        kind:structure.kind,
+        lower:clone(structure.lower),
+        upper:clone(structure.upper),
+        ...(Number.isFinite(Number(structure.clearanceWidth))?{clearanceWidth:Number(structure.clearanceWidth)}:{}),
+        ...(Number.isFinite(Number(structure.clearanceHeight))?{clearanceHeight:Number(structure.clearanceHeight)}:{})
+      });
+    }
+    return out.sort((a,b)=>a.id.localeCompare(b.id));
+  }
+
   function assertValidAuthoring(authoring){
     const report=validateAuthoring(authoring);
     if(!report.ok){
@@ -518,6 +560,7 @@
     boundaryPassable,
     boundaryTouchesCell,
     deriveHorizontalTopology,
+    deriveStructureConnections,
     validateAuthoring,
     assertValidAuthoring,
     canonicalizeAuthoring,

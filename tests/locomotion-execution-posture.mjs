@@ -11,10 +11,18 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js','validation/rules/locomotion-execution.js'
 ]);
 
-const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.25.0-furniture-traversal-geometry';
+const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+const APP_VERSION='11.26.0-vertical-structure-traversal';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
+
+const verticalAuthoring=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+verticalAuthoring.map.layers.push({z:1,cells:{'8,4':{terrain:'floor',material:'wood'}},boundaries:{}});
+verticalAuthoring.structures={
+  stairA:{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8,clearanceHeight:2}
+};
+E.configureResetStateSource('locomotion-vertical-fixture',seed=>W.createInitialStateFromAuthoring(verticalAuthoring,seed));
+
 
 function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
   E.reset(11900);
@@ -133,6 +141,23 @@ armWander(f);tickN(8);
 assert.ok(!SP.nodeSame(E.getState(),f.human.position,f.goal),'agent must not arrive before the selected plan travelTime');
 E.tick();
 assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'actual movement must honor the speedFactor-sensitive selected mode timing');
+
+// F: a legal stair route executes a real cross-Z movement step without a stair-specific action.
+E.reset(11901);
+st=E.getState();human=st.agents.zhen;
+st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+const stairLower=SP.normalizeNode(st,{x:8,y:4,z:0},'floor');
+const stairUpper=SP.normalizeNode(st,{x:8,y:4,z:1},'floor');
+human.position={...stairLower};human.action=null;human.posture={kind:'standing',slotId:null,furnitureId:null};human.locomotion={mode:null,phase:'idle'};
+plan=SP.planRoute(st,human,stairUpper,{mode:'auto',objective:'traversalCost'});
+assert.equal(plan.pathDistance,1);
+assert.equal(plan.travelTime,1);
+assert.deepEqual(plan.steps.map(x=>x.mode),['walk']);
+armWander({st,human,goal:stairUpper});
+E.tick();
+assert.ok(SP.nodeSame(E.getState(),human.position,stairUpper),'one walk movement tick must execute the Structure cross-Z step');
+assert.equal(human.posture.kind,'standing');
+assert.equal(human.locomotion.mode,'walk');
 
 // Validator owns locomotion/posture consistency and pending edge timing.
 let validation=V.validateState(E.getState());

@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.25.0-furniture-traversal-geometry';
-const CROWDING_VERSION='11.20.0-dynamic-congestion';
+const CURRENT_VERSION='11.26.0-vertical-structure-traversal';
+const CROWDING_VERSION='11.26.0-vertical-flow-congestion';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
-const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
+const PASSAGE_VERSION='11.26.0-vertical-structure-passage';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
@@ -149,7 +149,7 @@ assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.25\.0・Furniture Traversal Geometry/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.26\.0・Vertical Structure Traversal/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');

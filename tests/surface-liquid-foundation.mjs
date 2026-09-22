@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.25.0-furniture-traversal-geometry');
-assert.equal(E.VERSION,'11.25.0-furniture-traversal-geometry');
+assert.equal(st.version,'11.26.0-vertical-structure-traversal');
+assert.equal(E.VERSION,'11.26.0-vertical-structure-traversal');
 assert.equal(SP.SPATIAL_ENVIRONMENT_VERSION,'11.11.4-surface-liquid-foundation');
 
 // B architecture: one API, existing floor storage remains the actual source of truth.

@@ -1,6 +1,6 @@
 (() => {
   const SP=window.SimSpatial,P=window.SimPhysical,L=window.SimLocomotion;if(!SP||!P)return;
-  const VERSION='11.20.0-dynamic-congestion';
+  const VERSION='11.26.0-vertical-flow-congestion';
   const CONFIG=Object.freeze({
     baseOccupantPressure:.35,
     maneuveringOtherWidthFactor:.65,
@@ -15,9 +15,9 @@
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=(v,d=4)=>Math.round(v*10**d)/10**d;
   function agentFor(st,aOrId){return typeof aOrId==='string'?st.agents?.[aOrId]||null:aOrId||null;}
-  function vec(a,b){return a&&b?{x:b.x-a.x,y:b.y-a.y}:null;}
-  function sameVec(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y;}
-  function reverseVec(a,b){return !!a&&!!b&&a.x===-b.x&&a.y===-b.y;}
+  function vec(a,b){return a&&b?{x:b.x-a.x,y:b.y-a.y,z:(SP.zOf?.(b)??b.z??0)-(SP.zOf?.(a)??a.z??0)}:null;}
+  function sameVec(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y&&a.z===b.z;}
+  function reverseVec(a,b){return !!a&&!!b&&a.x===-b.x&&a.y===-b.y&&a.z===-b.z;}
 
   function plannedNextNode(st,a){
     if(!a||a.offMap)return null;

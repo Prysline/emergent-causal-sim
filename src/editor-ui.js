@@ -303,6 +303,10 @@
       const furniture=resolvedFurniture(id);
       if(furniture)push('furniture',id,furniture,furniturePosition(furniture),furniture.icon||'▰','家具');
     }
+    for(const [id,structure] of Object.entries(authored.structures||{})){
+      const position=(structure.lower?.z??0)===currentZ?structure.lower:(structure.upper?.z??0)===currentZ?structure.upper:structure.lower;
+      push('structure',id,structure,position,'↕','結構 · 樓梯');
+    }
     for(const [id,door] of Object.entries(authored.doors||{}))push('door',id,door,doorScenePosition(door),'🚪','結構 · 門');
     for(const [id,exit] of Object.entries(authored.exits||{}))push('exit',id,exit,exit.access,'↗','世界出口');
     for(const [id,container] of Object.entries(authored.entities?.containers||{}))push('container',id,container,container.position,container.icon||'◈','物件 · 容器');
@@ -352,6 +356,9 @@
     for(const [id,resident] of Object.entries(authored.residents||{})){
       const position=residentPosition(resident);
       if(position)push(position,`resident:${id}`);
+    }
+    for(const [id,structure] of Object.entries(authored.structures||{})){
+      push(structure.lower,`structure-lower:${id}`);push(structure.upper,`structure-upper:${id}`);
     }
     for(const [id,exit] of Object.entries(authored.exits||{}))push(exit.access,`exit:${id}`);
     return out;
@@ -574,7 +581,18 @@
   }
 
   function nonFurnitureEntitiesAtCell(x,y,z){
-    return sceneEntries().filter(entry=>entry.type!=='furniture'&&entry.position?.x===x&&entry.position?.y===y&&(entry.position?.z??0)===z);
+    return sceneEntries().filter(entry=>entry.type!=='furniture'&&entry.type!=='structure'&&entry.position?.x===x&&entry.position?.y===y&&(entry.position?.z??0)===z);
+  }
+
+  function structureEndpointsAtCell(x,y,z){
+    const out=[];
+    for(const [id,structure] of Object.entries(authored.structures||{})){
+      for(const endpoint of ['lower','upper']){
+        const position=structure?.[endpoint];
+        if(position?.x===x&&position?.y===y&&(position.z??0)===z)out.push({id,structure,endpoint,position});
+      }
+    }
+    return out;
   }
 
   function sourceInteractionPortsAtCell(x,y,z){
@@ -605,7 +623,7 @@
     const selectedPosition=selectionPosition();
     let html='';
     for(let y=0;y<height;y++)for(let x=0;x<width;x++){
-      const cell=cellAt(layer,x,y),terrain=cell?.terrain||'void',furniture=furnitureAtCell(x,y,currentZ),entities=nonFurnitureEntitiesAtCell(x,y,currentZ),interactionPorts=sourceInteractionPortsAtCell(x,y,currentZ);
+      const cell=cellAt(layer,x,y),terrain=cell?.terrain||'void',furniture=furnitureAtCell(x,y,currentZ),entities=nonFurnitureEntitiesAtCell(x,y,currentZ),structures=structureEndpointsAtCell(x,y,currentZ),interactionPorts=sourceInteractionPortsAtCell(x,y,currentZ);
       const selected=selectedPosition?.x===x&&selectedPosition?.y===y&&(selectedPosition?.z??0)===currentZ;
       const furnitureName=furniture.map(([id,item])=>item.name||id).join('、');
       const entityName=entities.map(entry=>entry.entity.name||entry.id).join('、');
@@ -618,6 +636,11 @@
         const isSelected=selection?.kind==='entity'&&selection.type===entry.type&&selection.id===entry.id;
         return `<span class="entity-marker marker-${esc(entry.type)} ${isSelected?'selected':''}" data-entity-type="${esc(entry.type)}" data-entity-id="${esc(entry.id)}" title="${esc(entry.label)}：${esc(entry.entity.name||entry.id)}">${esc(entry.icon)}</span>`;
       }).join('')}${entities.length>3?`<span class="entity-overflow">+${entities.length-3}</span>`:''}</span>`:'';
+      const structureMarkup=structures.length?`<span class="entity-markers structure-endpoints">${structures.map(({id,structure,endpoint})=>{
+        const isSelected=selection?.kind==='entity'&&selection.type==='structure'&&selection.id===id;
+        const endpointLabel=endpoint==='lower'?'下端':'上端';
+        return `<span class="entity-marker marker-structure ${isSelected?'selected':''}" data-entity-type="structure" data-entity-id="${esc(id)}" data-structure-endpoint="${endpoint}" title="樓梯${endpointLabel}：${esc(id)}">↕</span>`;
+      }).join('')}</span>`:'';
       const interactionPortMarkup=interactionPorts.length?`<span class="interaction-port-markers">${interactionPorts.map(({sourceId,source,port})=>{
         const isSelected=selection?.kind==='entity'&&selection.type==='source'&&selection.id===sourceId;
         const affordanceLabel=(port.affordances||[]).includes('fill')&&source.resource==='water'?'取水位置':'互動位置';
@@ -631,7 +654,7 @@
         const title=info.door?`${info.door.name||info.door.id}・${info.door.state}`:(info.boundary.kind==='wall'?'牆壁':'結構開口');
         return `<i class="boundary-edge edge-${edge} boundary-${kind}" title="${esc(boundaryId)}・${esc(title)}"></i>`;
       }).join('');
-      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${entityMarkup}${interactionPortMarkup}</button>`;
+      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${structureMarkup}${entityMarkup}${interactionPortMarkup}</button>`;
     }
     host.innerHTML=html;
     applyDragPreviewDom();
@@ -665,7 +688,7 @@
     const host=$('sceneList'),entries=sceneEntries();
     const groups=[
       ['家具',entries.filter(entry=>entry.type==='furniture')],
-      ['結構／出口',entries.filter(entry=>entry.type==='door'||entry.type==='exit')],
+      ['結構／出口',entries.filter(entry=>entry.type==='structure'||entry.type==='door'||entry.type==='exit')],
       ['物件',entries.filter(entry=>entry.type==='container'||entry.type==='source')],
       ['居民',entries.filter(entry=>entry.type==='resident')]
     ];
@@ -679,13 +702,13 @@
   }
 
   function renderSummary(validation,topology){
-    const layerList=layers(),furnitureCount=Object.keys(authored.furniture||{}).length,residentCount=Object.keys(authored.residents||{}).length,boundaryCount=layerList.reduce((sum,layer)=>sum+Object.keys(layer.boundaries||{}).length,0),doorCount=Object.keys(authored.doors||{}).length,exitCount=Object.keys(authored.exits||{}).length;
+    const layerList=layers(),furnitureCount=Object.keys(authored.furniture||{}).length,residentCount=Object.keys(authored.residents||{}).length,structureCount=Object.keys(authored.structures||{}).length,boundaryCount=layerList.reduce((sum,layer)=>sum+Object.keys(layer.boundaries||{}).length,0),doorCount=Object.keys(authored.doors||{}).length,exitCount=Object.keys(authored.exits||{}).length;
     $('documentSummary').innerHTML=[
       ['世界 ID',authored.id||'—'],
       ['建構資料版本',authored.authoringSchema],
       ['地圖尺寸',`${authored.map.width} × ${authored.map.height} · ${authored.map.cellSizeMeters}m / 格`],
       ['牆／開口邊界',boundaryCount],
-      ['門／世界出口',`${doorCount} / ${exitCount}`],
+      ['垂直結構／門／世界出口',`${structureCount} / ${doorCount} / ${exitCount}`],
       ['Z 層',layerList.map(layer=>layer.z).join(', ')],
       ['家具',furnitureCount],
       ['居民',residentCount],
@@ -702,6 +725,7 @@
         details=`<br>${esc(entry.label)} · ID：<code>${esc(entry.id)}</code>`;
         if(entry.type==='furniture')details+=`<br>占地：${(entry.entity.footprint||[]).length} 格`;
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
+        if(entry.type==='structure')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>下端：<code>(${esc(entry.entity.lower?.x)}, ${esc(entry.entity.lower?.y)}, ${esc(entry.entity.lower?.z)})</code><br>上端：<code>(${esc(entry.entity.upper?.x)}, ${esc(entry.entity.upper?.y)}, ${esc(entry.entity.upper?.z)})</code>${entry.entity.clearanceWidth!==undefined?`<br>淨寬：${esc(entry.entity.clearanceWidth)}m`:''}${entry.entity.clearanceHeight!==undefined?`<br>淨高：${esc(entry.entity.clearanceHeight)}m`:''}`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
         if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
         if(entry.type==='source'){

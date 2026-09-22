@@ -15,9 +15,9 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v4');
+assert.equal(A.VERSION,'world-authoring-v5');
 assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v3');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v4');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v5');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v3');
 assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable).spatial.under.clearance,.72);
 
@@ -54,6 +54,16 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
   authored.doors.testDoor.state='open';
   topology=A.deriveHorizontalTopology(authored,{z:0});
   assert.equal(topology.cells['3,4'].adjacent.includes('4,4'),true,'open Door must restore its opening edge');
+}
+
+{
+  const authored=clone(A.DEFAULT_WORLD_AUTHORING);
+  authored.map.layers.push({z:1,cells:{'8,4':{terrain:'floor',material:'wood'}},boundaries:{}});
+  authored.structures.stairA={id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8};
+  const horizontal=A.deriveHorizontalTopology(authored,{z:0});
+  assert.equal(horizontal.cells['8,4'].adjacent.includes('8,4,1'),false,'horizontal topology must never serialize or derive a cross-Z neighbor');
+  const connections=A.deriveStructureConnections(authored);
+  assert.deepEqual(connections,[{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8}],'vertical connectivity must have a separate pure Structure derivation owner');
 }
 
 {

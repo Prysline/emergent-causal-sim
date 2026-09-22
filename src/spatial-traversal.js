@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.25.0-furniture-traversal-geometry';
+  const VERSION='11.26.0-vertical-structure-traversal';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -12,6 +12,7 @@
     cat:{requiredClearance:.32,surfaceMoveCost:1.1,transitionCost:1.6}
   };
   const FLOOR='floor';
+  const STRUCTURE_TRAVERSAL_PROFILES=Object.freeze({stair:Object.freeze({upBurden:1,downBurden:.5})});
 
   const zOf=p=>SP.zOf?SP.zOf(p):(p?.z??0);
   const localPos=(x,y,z=0)=>z===0?{x,y}:{x,y,z};
@@ -74,6 +75,12 @@
   function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t);let cost=1+wet*(a?.kind==='cat'?.015:.07);if(!crowdingRuntime()){const occupied=nodeOccupantsAt(st,node,a?.id).length;cost+=occupied*(a?.kind==='cat'?2.5:5);}return cost;}
   function surfaceStepCost(st,node,a){const entry=surfaceEntry(st,node.surfaceId),configured=entry?.surface?.moveCost?.[a?.kind];return configured??profile(a).surfaceMoveCost;}
   function baseTraversalEdgeCost(st,from,to,a){
+    const structure=SP.structureBetween?.(st,from,to)||null;
+    if(structure){
+      const profile=STRUCTURE_TRAVERSAL_PROFILES[structure.kind];if(!profile)return Infinity;
+      const direction=zOf(to)>zOf(from)?'up':'down';
+      return floorStepCost(st,to,a)+(direction==='up'?profile.upBurden:profile.downBurden);
+    }
     if(from.surfaceId===to.surfaceId)return to.surfaceId===FLOOR?floorStepCost(st,to,a):surfaceStepCost(st,to,a);
     const surfaceNode=from.surfaceId===FLOOR?to:from,entry=surfaceEntry(st,surfaceNode.surfaceId);if(!entry)return Infinity;
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
@@ -98,6 +105,7 @@
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeWalkable(st,n,a))return [];
     if(n.surfaceId===FLOOR){
       for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeWalkable(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q))&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
+      for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
         for(const c of entry.surface.cells||[]){if(!sameLayer(c,n)||Math.abs(c.x-n.x)+Math.abs(c.y-n.y)!==1||isFootprintCell(entry,n))continue;const q=normalizeNode(st,c,entry.surface.id);if(nodeWalkable(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,c))&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
@@ -130,6 +138,7 @@
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeLocomotionAccessible(st,n,a))return [];
     if(n.surfaceId===FLOOR){
       for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeLocomotionAccessible(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q)))out.set(nodeKey(st,q),q);}
+      for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
         for(const cell of entry.surface.cells||[]){
@@ -284,5 +293,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
 })();

@@ -10,9 +10,9 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.25.0-furniture-traversal-geometry';
+const APP_VERSION='11.26.0-vertical-structure-traversal';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
-const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
+const PASSAGE_VERSION='11.26.0-vertical-structure-passage';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

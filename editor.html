@@ -10,7 +10,7 @@
 <div class="editor-shell">
   <header class="editor-appbar">
     <div>
-      <div class="eyebrow">世界建構 · world-authoring-v4</div>
+      <div class="eyebrow">世界建構 · world-authoring-v5</div>
       <h1>地圖編輯器 <span>編輯器 → 模擬器試玩橋接</span></h1>
     </div>
     <div class="header-actions">
@@ -84,6 +84,7 @@
           <span><i class="marker-key resident">👤</i>居民</span>
           <span><i class="marker-key object">◈</i>物件</span>
           <span><i class="marker-key furniture">▰</i>家具</span>
+          <span><i class="marker-key object">↕</i>樓梯端點</span>
         </div>
       </div>
       <div class="map-scroll">
@@ -107,7 +108,7 @@
       </section>
       <details class="boundary-note">
         <summary>進階：模擬器預覽與執行期邊界</summary>
-        <p>「在模擬器中測試」會先以目前建構資料驗證與 <code>SimWorldInitializer</code> 相容性預檢查同一份正式文件，再透過同來源的 <code>sessionStorage</code> 與明確的 <code>?preview=editor</code> 啟動模擬器。多 Z 層資料可進入執行期，但目前仍沒有樓梯、斜坡或其他跨層結構，因此沒有具體垂直結構時跨 Z 路徑必須不可達。一般直接開啟 <code>index.html</code> 不會讀取編輯器預覽快照。</p>
+        <p>「在模擬器中測試」會先以目前建構資料驗證與 <code>SimWorldInitializer</code> 相容性預檢查同一份正式文件，再透過同來源的 <code>sessionStorage</code> 與明確的 <code>?preview=editor</code> 啟動模擬器。多 Z 層資料可進入執行期；只有正式 <code>structures</code> 中的垂直結構才會建立跨 Z 路徑，同 XY 不同 Z 不會自動相連。一般直接開啟 <code>index.html</code> 不會讀取編輯器預覽快照。</p>
       </details>
     </aside>
   </main>
