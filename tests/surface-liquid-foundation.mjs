@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.27.1-resident-private-badge');
-assert.equal(E.VERSION,'11.27.1-resident-private-badge');
+assert.equal(st.version,'11.27.2-room-value-legacy-removal');
+assert.equal(E.VERSION,'11.27.2-room-value-legacy-removal');
 assert.equal(SP.SPATIAL_ENVIRONMENT_VERSION,'11.11.4-surface-liquid-foundation');
 
 // B architecture: one API, existing floor storage remains the actual source of truth.
