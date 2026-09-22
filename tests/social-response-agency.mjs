@@ -45,7 +45,7 @@ noIssues('deterministic response bands');
 
 // High social need: human intent becomes an observable petOffer, animal accepts, then and only then petAnimal succeeds.
 st=armDirectPet(90,21321);E.tick();st=E.getState();
-assert.equal(st.version,'11.26.0-vertical-structure-traversal');
+assert.equal(st.version,'11.27.0-furniture-orientation');
 const acceptOffer=latestAction('petOffer'),acceptResponse=latestAction('acceptPet');
 assert.ok(acceptOffer?.data?.socialBid,'high-social case must create observable petOffer');
 assert.equal(acceptOffer.data.bidKind,'petOffer');
