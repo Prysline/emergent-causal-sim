@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.27.1-resident-private-badge';
+const CURRENT_VERSION='11.27.2-room-value-legacy-removal';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
