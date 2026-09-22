@@ -184,7 +184,7 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v2');
+assert.equal(FD.VERSION,'furniture-definitions-v3');
 assert.equal(A.VERSION,'world-authoring-v4');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v1');
