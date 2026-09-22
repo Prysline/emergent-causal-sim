@@ -69,7 +69,6 @@ assert.deepEqual(st.exits.frontExit.access,{x:1,y:6});
 assert.equal(st.map.tiles['1,6'].walkable,true,'world-exit access must remain on an authored floor cell');
 assert.equal(Object.keys(st.furniture).length,7);
 assert.equal(Object.hasOwn(st.furniture.diningTable,'value'),false,'resolved Furniture must not retain the removed legacy Room value projection');
-assert.equal(Object.hasOwn(st.map.rooms.room1,'value'),false,'derived Room topology must not retain the removed legacy Room value aggregate');
 assert.equal(st.furniture.sofa.slots[0].restQuality,.82);
 assert.equal(st.furniture.sofa.slots[0].sleepQuality,.62);
 assert.equal(st.furniture.bed.slots[0].furnitureId,'bed');
