@@ -57,7 +57,7 @@ assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED_SCHEMA,finaliz
 assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.24.0-locomotion-traversal-cost','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.25.0-furniture-traversal-geometry','full production schema set must preserve current release marker');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
@@ -66,7 +66,7 @@ for(const agent of Object.values(st.agents||{})){
   assert.ok(agent.affect&&agent.affect.valence===0&&agent.affect.activation===0&&agent.affect.frustration===0,`${agent.id}: neutral affect initialization parity`);
   assert.ok(agent.physical,`${agent.id}: physical profile initialization parity`);
 }
-assert.ok(st.furniture?.diningTable?.spatial?.surface,'Spatial initializer must install authored surface traversal definitions');
+assert.ok(st.furniture?.diningTable?.spatial?.surface,'Furniture Definition resolution must provide runtime surface traversal geometry');
 assert.equal(st.agents?.zhen?.position?.surfaceId,'floor','Spatial finalizer must normalize persistent agent surface identity');
 assert.ok(st.agents?.zhen?.position?.spaceId,'Spatial finalizer must normalize persistent agent room-space identity');
 assert.equal(st.containers?.mealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
@@ -80,7 +80,7 @@ const custom=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 custom.furniture.chairNW.origin={x:3,y:4,z:0};
 const customState=W.createInitialStateFromAuthoring(custom,20260911);
 assert.deepEqual(customState.furniture.chairNW.footprint,[{x:3,y:4}],'explicit authoring factory must compile the supplied canonical document');
-assert.equal(customState.version,'11.24.0-locomotion-traversal-cost');
+assert.equal(customState.version,'11.25.0-furniture-traversal-geometry');
 assert.deepEqual(W.createInitialState(20260911).furniture.chairNW.footprint,st.furniture.chairNW.footprint,'explicit preview initialization must not mutate the default world factory');
 assert.deepEqual(W.createInitialStateFromAuthoring(custom,20260911),customState,'preview reset source must remain deterministic for the same snapshot and seed');
 

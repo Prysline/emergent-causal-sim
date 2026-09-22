@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.24.0-locomotion-traversal-cost');
-assert.equal(E.VERSION,'11.24.0-locomotion-traversal-cost');
+assert.equal(st.version,'11.25.0-furniture-traversal-geometry');
+assert.equal(E.VERSION,'11.25.0-furniture-traversal-geometry');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.24.0-locomotion-traversal-cost';
+const APP_VERSION='11.25.0-furniture-traversal-geometry';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
@@ -35,9 +35,9 @@ function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
   water.supportId=null;water.position=floor(st,3,1);
   st.furniture={
     testPassageCover:{
-      id:'testPassageCover',name:'測試通道上蓋',blocksMovement:true,
+      id:'testPassageCover',name:'測試通道上蓋',
       footprint:[{x:2,y:1}],displayAt:{x:2,y:1},slots:[],
-      spatial:{under:{clearance:height,clearanceWidth:width,cover:'overhead'}}
+      spatial:{floor:{mode:'under'},under:{clearance:height,clearanceWidth:width,cover:'overhead'}}
     }
   };
   st.map.passageConstraints={};

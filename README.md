@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.24.0・Locomotion Traversal Cost**（`11.24.0-locomotion-traversal-cost`）。
+目前 runtime marker：**v11.25.0・Furniture Traversal Geometry**（`11.25.0-furniture-traversal-geometry`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -11,8 +11,8 @@
 ### 一個事實只保留一份 authoritative truth
 
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
-- Current default world 的 authored truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v4`，並以 `furnitureCatalogVersion: "furniture-definitions-v2"` pin 住 system-owned `SimFurnitureDefinitions` Catalog。Map 明確保存 `cellSizeMeters: 1`、每層 floor Cell 與格線 `boundaries`；Door 與 off-map Exit 是獨立 root entity，不再借用 Furniture / `canExit`。Container / Source、Resident opening state 與 Furniture Instance 仍由同一 authoring package 持有，`SimWorldInitializer` 將它編譯成 runtime state。
-- `world-authoring-v4` 的 Furniture Instance 仍只保存 `id / definitionId / origin / optional name`；Furniture Definition 持有 intrinsic name/icon/kind、local footprint/display offset、slot、under-clearance 與 activity suitability。Editor、validation、topology preview 與 initializer 共用同一 resolver，將 Definition-local geometry + Instance world origin 解析成實際幾何與 `<instanceId>:<slotKey>`。Runtime 仍可由 compiler 狹義投影 `restQuality / sleepQuality / value` 給既有 consumer，但 Door / Exit 已退出 Furniture compatibility；`front-door` Definition 與 `runtimeExitSlotKeys / canExit` 不再存在於 current catalog。Import/export 同時檢查 `authoringSchema` 與 catalog generation；本專案尚未公開，因此 v3→v4 不建立 production migration machinery。Editor Furniture Catalog 可由 Definition 建立新的 `<definitionId>-N` Instance；duplicate 只複製 instance-owned facts 與新 placement，不複製外部 references。
+- Current default world 的 authored truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v4`，並以 `furnitureCatalogVersion: "furniture-definitions-v3"` pin 住 system-owned `SimFurnitureDefinitions` Catalog。Map 明確保存 `cellSizeMeters: 1`、每層 floor Cell 與格線 `boundaries`；Door 與 off-map Exit 是獨立 root entity，不再借用 Furniture / `canExit`。Container / Source、Resident opening state 與 Furniture Instance 仍由同一 authoring package 持有，`SimWorldInitializer` 將它編譯成 runtime state。
+- `world-authoring-v4` 的 Furniture Instance 仍只保存 `id / definitionId / origin / optional name`；`furniture-definitions-v3` 的 Furniture Definition 持有 intrinsic name/icon/kind、local footprint/display offset、slot、`spatial.floor.mode`、`spatial.under`、可選 `spatial.surface` 與 activity suitability。`open / solid / under` 明確區分 floor-level traversal geometry；surface key 由 resolver 產生 `<instanceId>:<surfaceKey>` 與 world surface cells。Editor、validation、topology preview、initializer 與 Spatial 共用同一 Definition truth；`src/spatial-traversal.js` 不再對 `diningTable` 補 surface hardcode。Runtime 仍可由 compiler 狹義投影 `restQuality / sleepQuality / value` 給既有 consumer，但 Door / Exit 已退出 Furniture compatibility。
 - Resident opening placement 支援 `exact` 與 explicit `furnitureSlot` anchor。`SimWorldInitializer.analyzeInitialPlacements(...)` 分開回傳 hard errors 與 diagnostic-only 問題：missing/conflicting/blocked slot 或 position 會拒絕初始化；密室、無出口、資源不可達與非 exclusive node overlap 只提示，不自動搬人或修改世界。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。

@@ -396,15 +396,18 @@
       for(const p of furniture.footprint||[]){
         const cell=at(p);if(!cell)continue;
         if(!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
-        if(!furniture.blocksMovement)continue;
-        const under=furniture.spatial?.under;
-        if(under){
+        const floorMode=furniture.spatial?.floor?.mode;
+        if(floorMode==='open')continue;
+        if(floorMode==='under'){
+          const under=furniture.spatial?.under;
           cell.under.push({
             furnitureId:id,
-            clearanceHeight:Number.isFinite(Number(under.clearance))?Number(under.clearance):null,
-            clearanceWidth:Number.isFinite(Number(under.clearanceWidth))?Number(under.clearanceWidth):null
+            clearanceHeight:Number.isFinite(Number(under?.clearance))?Number(under.clearance):null,
+            clearanceWidth:Number.isFinite(Number(under?.clearanceWidth))?Number(under.clearanceWidth):null
           });
-        }else{
+          continue;
+        }
+        if(floorMode==='solid'){
           cell.staticBlocked=true;
           cell.blockedBy.push('furniture:'+id);
         }

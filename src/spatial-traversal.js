@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.23.0-boundary-traversal';
+  const VERSION='11.25.0-furniture-traversal-geometry';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -24,11 +24,12 @@
   function nodeSame(st,a,b){if(!a||!b)return false;const x=normalizeNode(st,a),y=normalizeNode(st,b);return localSame(x,y)&&x.spaceId===y.spaceId&&x.surfaceId===y.surfaceId;}
   function profile(agent){return TRAVERSAL_PROFILES[agent?.kind]||TRAVERSAL_PROFILES.human;}
 
-  function installSpatialDefs(st){
-    const table=st.furniture?.diningTable;
-    if(table){
-      table.spatial??={};
-      table.spatial.surface={id:'diningTable:surface',label:'餐桌桌面',traversable:true,allowKinds:['human','cat'],cells:(table.footprint||[]).map(p=>SP.clonePos(p)),moveCost:{human:4,cat:1.1},transitionCost:{human:9,cat:1.6}};
+  function ensureSpatialDefs(st){
+    for(const furniture of Object.values(st.furniture||{})){
+      const mode=furniture.spatial?.floor?.mode;
+      if(!['open','solid','under'].includes(mode))throw new Error('Furniture '+furniture.id+' has invalid runtime floor geometry.');
+      const surface=furniture.spatial?.surface;
+      if(surface&&(!surface.id||!Array.isArray(surface.cells)))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
     }
     return st;
   }
@@ -43,7 +44,7 @@
   function fixedFloorBlocker(st,p){
     const t=SP.tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
     const furniture=(t.furnitureIds||[]).map(id=>st.furniture?.[id]).filter(Boolean);
-    const solid=furniture.find(f=>f.blocksMovement&&!f.spatial?.under);if(solid)return `furniture:${solid.id}`;
+    const solid=furniture.find(f=>SP.furnitureFloorMode?.(f)==='solid');if(solid)return `furniture:${solid.id}`;
     const fixedContainer=Object.values(st.containers||{}).find(c=>c.portable===false&&!c.supportId&&localSame(baseObjectPosition(st,c.id),p));if(fixedContainer)return `container:${fixedContainer.id}`;
     const source=Object.values(st.sources||{}).find(s=>s.blocksMovement!==false&&localSame(s.position,p));if(source)return `source:${source.id}`;
     return null;
@@ -271,7 +272,7 @@
 
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos,n=normalizeNode(st,p);if(n.surfaceId!==FLOOR){const entry=surfaceEntry(st,n.surfaceId);if(entry)return entry.surface.label||`${entry.furniture.name}表面`;}
     const overhead=overheadAt(st,n);if(overhead.length)return `${overhead[0].name}下`;return baseDescribePlace(st,aOrPos);}
-  W.registerInitialStateInitializer('spatial.schema',(st)=>{installSpatialDefs(st);},10);
+  W.registerInitialStateInitializer('spatial.schema',(st)=>{ensureSpatialDefs(st);},10);
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
   SP.pathDistance=pathDistance;

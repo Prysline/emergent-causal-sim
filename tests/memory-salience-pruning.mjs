@@ -28,7 +28,7 @@ function memory(agent,eventId,{tick=0,last=tick,relevance=.1,congruence=0,action
 }
 
 E.reset(1133);let st=E.getState(),a=st.agents.zhou;
-assert.equal(st.version,'11.24.0-locomotion-traversal-cost');
+assert.equal(st.version,'11.25.0-furniture-traversal-geometry');
 assert.equal(E.MEMORY_RETENTION_SCHEMA_VERSION,'11.13.3-memory-salience-pruning');
 assert.equal(E.MAX_EPISODIC_MEMORIES,64);
 noIssues('reset');

@@ -10,7 +10,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.24.0-locomotion-traversal-cost';
+const APP_VERSION='11.25.0-furniture-traversal-geometry';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
@@ -30,9 +30,9 @@ function resetFixture({height=2,width=.8,edgeWidth=null}={}){
   const water=st.containers.waterBucket;
   water.supportId=null;water.position=floor(st,3,1);
   st.furniture.testPassageCover={
-    id:'testPassageCover',name:'測試通道上蓋',blocksMovement:true,
+    id:'testPassageCover',name:'測試通道上蓋',
     footprint:[{x:2,y:1}],displayAt:{x:2,y:1},slots:[],
-    spatial:{under:{clearance:height,clearanceWidth:width,cover:'overhead'}}
+    spatial:{floor:{mode:'under'},under:{clearance:height,clearanceWidth:width,cover:'overhead'}}
   };
   st.map.passageConstraints={};
   const start=floor(st,1,1),mid=floor(st,2,1),goal=floor(st,3,1);

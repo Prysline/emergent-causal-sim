@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v2';
+  const VERSION='furniture-definitions-v3';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -17,12 +17,15 @@
       name:'餐桌',
       icon:'▰',
       kind:'table',
-      blocksMovement:true,
       supportsObjects:true,
       footprint:[local(0,0),local(1,0),local(0,1),local(1,1)],
       displayOffset:local(0,0),
       slots:[],
-      spatial:{under:{clearance:.72,cover:'overhead'}},
+      spatial:{
+        floor:{mode:'under'},
+        under:{clearance:.72,cover:'overhead'},
+        surface:{key:'surface',label:'餐桌桌面',coverage:'footprint',traversable:true,allowKinds:['human','cat']}
+      },
       compatibility:{roomValueContribution:30}
     },
     'chair-basic':{
@@ -30,12 +33,12 @@
       name:'餐椅',
       icon:'🪑',
       kind:'chair',
-      blocksMovement:false,
       footprint:[local(0,0)],
       displayOffset:local(0,0),
       slots:[
         {key:'seat',label:'座位',offset:local(0,0),canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
       ],
+      spatial:{floor:{mode:'open'}},
       compatibility:{roomValueContribution:10}
     },
     'sofa-basic':{
@@ -43,13 +46,13 @@
       name:'沙發',
       icon:'🛋️',
       kind:'sofa',
-      blocksMovement:false,
       footprint:[local(0,0),local(1,0)],
       displayOffset:local(0,0),
       slots:[
         {key:'left',label:'左側',offset:local(0,0),canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}},
         {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}}
       ],
+      spatial:{floor:{mode:'open'}},
       compatibility:{roomValueContribution:35}
     },
     'double-bed':{
@@ -57,13 +60,13 @@
       name:'雙人床',
       icon:'🛏️',
       kind:'bed',
-      blocksMovement:false,
       footprint:[local(0,0),local(1,0)],
       displayOffset:local(0,0),
       slots:[
         {key:'left',label:'左側',offset:local(0,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}},
         {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}}
       ],
+      spatial:{floor:{mode:'open'}},
       compatibility:{roomValueContribution:55}
     }
   };
@@ -74,8 +77,55 @@
     }
   }
 
+  const FLOOR_MODES=new Set(['open','solid','under']);
+
+  function assertCostMap(costs,path){
+    if(costs===undefined)return;
+    if(!isRecord(costs))throw new Error(path+' must be an object keyed by agent kind.');
+    for(const [kind,value] of Object.entries(costs)){
+      if(!kind||!Number.isFinite(value)||value<0)throw new Error(path+' has invalid cost for '+String(kind)+'.');
+    }
+  }
+
+  function assertSpatialGeometry(definition,key){
+    const spatial=definition.spatial;
+    if(!isRecord(spatial)||!isRecord(spatial.floor)||!FLOOR_MODES.has(spatial.floor.mode)){
+      throw new Error('Furniture Definition '+key+' requires spatial.floor.mode = open / solid / under.');
+    }
+    if(spatial.floor.mode==='under'){
+      if(!isRecord(spatial.under)||!Number.isFinite(spatial.under.clearance)||spatial.under.clearance<=0){
+        throw new Error('Furniture Definition '+key+' under floor mode requires positive spatial.under.clearance.');
+      }
+    }else if(spatial.under!==undefined){
+      throw new Error('Furniture Definition '+key+' may only define spatial.under when floor mode is under.');
+    }
+    if(spatial.under?.clearanceWidth!==undefined&&(!Number.isFinite(spatial.under.clearanceWidth)||spatial.under.clearanceWidth<=0)){
+      throw new Error('Furniture Definition '+key+' has invalid spatial.under.clearanceWidth.');
+    }
+    if(spatial.under?.cover!==undefined&&(typeof spatial.under.cover!=='string'||!spatial.under.cover)){
+      throw new Error('Furniture Definition '+key+' has invalid spatial.under.cover.');
+    }
+    const surface=spatial.surface;
+    if(surface===undefined)return;
+    if(isRecord(surface)&&(Object.prototype.hasOwnProperty.call(surface,'id')||Object.prototype.hasOwnProperty.call(surface,'cells'))){
+      throw new Error('Furniture Definition '+key+' spatial.surface must not persist runtime id / cells.');
+    }
+    if(!isRecord(surface)||typeof surface.key!=='string'||!surface.key||surface.key.includes(':')){
+      throw new Error('Furniture Definition '+key+' has invalid spatial.surface.key.');
+    }
+    if(typeof surface.label!=='string'||!surface.label)throw new Error('Furniture Definition '+key+' spatial.surface requires label.');
+    if(surface.coverage!=='footprint')throw new Error('Furniture Definition '+key+' spatial.surface.coverage must be footprint.');
+    if(typeof surface.traversable!=='boolean')throw new Error('Furniture Definition '+key+' spatial.surface.traversable must be boolean.');
+    if(surface.allowKinds!==undefined&&(!Array.isArray(surface.allowKinds)||surface.allowKinds.some(kind=>typeof kind!=='string'||!kind))){
+      throw new Error('Furniture Definition '+key+' spatial.surface.allowKinds must contain non-empty strings.');
+    }
+    assertCostMap(surface.moveCost,key+'.spatial.surface.moveCost');
+    assertCostMap(surface.transitionCost,key+'.spatial.surface.transitionCost');
+  }
+
   function assertDefinition(definition,key){
     if(!isRecord(definition)||definition.id!==key)throw new Error('Furniture Definition id mismatch: '+key);
+    if(Object.prototype.hasOwnProperty.call(definition,'blocksMovement'))throw new Error('Furniture Definition '+key+' must use spatial.floor.mode instead of blocksMovement.');
     if(typeof definition.name!=='string'||!definition.name)throw new Error('Furniture Definition '+key+' requires name.');
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
@@ -94,6 +144,7 @@
         if(value!==undefined&&(!Number.isFinite(value)||value<0))throw new Error('Furniture Definition '+key+' has invalid '+activity+' suitability.');
       }
     }
+    assertSpatialGeometry(definition,key);
     const roomValue=definition.compatibility?.roomValueContribution;
     if(roomValue!==undefined&&!Number.isFinite(roomValue))throw new Error('Furniture Definition '+key+' has invalid compatibility room value.');
   }
@@ -111,27 +162,21 @@
     return Object.values(DEFINITIONS);
   }
 
-  function resolveInstance(instance){
+  function resolveWithDefinition(definition,instance){
     if(!isRecord(instance)||typeof instance.id!=='string'||!instance.id)throw new Error('Furniture Instance requires id.');
-    const definition=getDefinition(instance.definitionId);
-    if(!definition){
-      const error=new RangeError('Unknown Furniture Definition: '+String(instance.definitionId));
-      error.code='furniture_definition_missing';
-      throw error;
-    }
     const origin=instance.origin;
     if(!isRecord(origin)||!Number.isInteger(origin.x)||!Number.isInteger(origin.y)||!Number.isInteger(origin.z)){
       const error=new TypeError('Furniture Instance '+instance.id+' requires integer origin x / y / z.');
       error.code='furniture_instance_origin_invalid';
       throw error;
     }
+    const footprint=definition.footprint.map(offset=>add(origin,offset));
     const resolved={
       id:instance.id,
       name:instance.name||definition.name,
       icon:definition.icon,
       kind:definition.kind,
-      blocksMovement:definition.blocksMovement===true,
-      footprint:definition.footprint.map(offset=>add(origin,offset)),
+      footprint,
       displayAt:add(origin,definition.displayOffset),
       slots:(definition.slots||[]).map(slot=>{
         const out={
@@ -149,10 +194,38 @@
       })
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
-    if(definition.spatial)resolved.spatial=clone(definition.spatial);
+    if(definition.spatial){
+      resolved.spatial=clone(definition.spatial);
+      if(resolved.spatial.surface){
+        const key=resolved.spatial.surface.key;
+        resolved.spatial.surface.id=instance.id+':'+key;
+        resolved.spatial.surface.cells=footprint.map(position=>clone(position));
+        delete resolved.spatial.surface.key;
+        delete resolved.spatial.surface.coverage;
+      }
+    }
     const roomValue=definition.compatibility?.roomValueContribution;
     if(Number.isFinite(roomValue))resolved.value=roomValue;
     return resolved;
+  }
+
+  function resolveDefinitionInstance(definition,instance){
+    if(!isRecord(definition)||typeof definition.id!=='string'||!definition.id)throw new Error('Furniture Definition requires id.');
+    assertDefinition(definition,definition.id);
+    if(instance?.definitionId!==undefined&&instance.definitionId!==definition.id){
+      throw new Error('Furniture Instance definitionId mismatch: '+String(instance.definitionId));
+    }
+    return resolveWithDefinition(definition,instance);
+  }
+
+  function resolveInstance(instance){
+    const definition=getDefinition(instance?.definitionId);
+    if(!definition){
+      const error=new RangeError('Unknown Furniture Definition: '+String(instance?.definitionId));
+      error.code='furniture_definition_missing';
+      throw error;
+    }
+    return resolveWithDefinition(definition,instance);
   }
 
   window.SimFurnitureDefinitions=Object.freeze({
@@ -160,6 +233,7 @@
     DEFINITIONS,
     getDefinition,
     listDefinitions,
+    resolveDefinitionInstance,
     resolveInstance
   });
 })();
