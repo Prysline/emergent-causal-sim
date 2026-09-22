@@ -14,7 +14,7 @@ const waitEndFor=bidId=>E.getState().events.find(e=>e.data?.action==='socialWait
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.26.0-vertical-structure-traversal');
+assert.equal(st.version,'11.27.0-furniture-orientation');
 assert.equal(E.SOCIAL_BID_SCHEMA_VERSION,'11.12.2-social-bid-lifecycle');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='socialBid.respond-animal-affection'),'Social Bid responder option provider must be registered');
 for(const a of Object.values(st.agents)){
