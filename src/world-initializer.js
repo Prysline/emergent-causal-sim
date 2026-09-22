@@ -75,6 +75,7 @@
       const f=clone(A.resolveFurnitureInstance(instance));
       f.footprint=(f.footprint||[]).map(runtimePosition);
       if(f.displayAt)f.displayAt=runtimePosition(f.displayAt);
+      if(Array.isArray(f.spatial?.surface?.cells))f.spatial.surface.cells=f.spatial.surface.cells.map(runtimePosition);
       for(const slot of f.slots||[]){
         slot.position=runtimePosition(slot.position);
         slot.furnitureId=f.id;
