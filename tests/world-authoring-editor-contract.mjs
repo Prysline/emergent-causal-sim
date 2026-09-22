@@ -9,8 +9,8 @@ for(const file of ['furniture-definitions.js','world-authoring.js','embodiment-c
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v3');
-assert.equal(A.VERSION,'world-authoring-v5');
+assert.equal(D.VERSION,'furniture-definitions-v4');
+assert.equal(A.VERSION,'world-authoring-v6');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -25,8 +25,8 @@ const imported=A.parseAuthoringJSON(exported);
 assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'export → import must preserve authoring semantics');
 assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
-assert.equal(imported.authoringSchema,'world-authoring-v5');
-assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v3');
+assert.equal(imported.authoringSchema,'world-authoring-v6');
+assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v4');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
 assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},name:'餐椅 A'});
@@ -120,7 +120,7 @@ const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
 assert.ok(definitionScript>=0&&authoringScript>definitionScript&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be Furniture Definitions → authoring → shared capabilities → compatibility initializer → preview bridge → mutation owner → UI');
-assert.ok(editorHtml.includes('世界建構 · world-authoring-v5'));
+assert.ok(editorHtml.includes('世界建構 · world-authoring-v6'));
 assert.ok(editorHtml.includes('id="furnitureCatalog"'),'Editor-2 must expose the system Furniture Catalog as the new-instance source');
 assert.ok(editorHtml.includes('id="sceneList"'));
 assert.ok(!editorHtml.includes('id="furnitureSelect"'));
