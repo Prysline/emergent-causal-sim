@@ -146,8 +146,9 @@
     const events=recentPlayerEvents(st,id);
     if(!events.length)return '<div class="resident-empty">最近沒有特別值得記下來的事情。</div>';
     return `<div class="resident-life-list">${events.map(e=>{
-      const privatePrefix=e.data?.visibility==='private'&&e.data?.owner===id?'自己的經驗・':'';
-      return `<button class="resident-life-event" data-entity="event:${esc(e.id)}"><time>${esc(e.time||'')}</time><span>${esc(privatePrefix+(e.text||''))}</span></button>`;
+      const isPrivate=e.data?.visibility==='private'&&e.data?.owner===id;
+      const privateBadge=isPrivate?'<span class="resident-private-badge">私人</span>':'';
+      return `<button class="resident-life-event" data-entity="event:${esc(e.id)}"><time>${esc(e.time||'')}</time><span class="resident-life-event-text">${privateBadge}${esc(e.text||'')}</span></button>`;
     }).join('')}</div>`;
   }
   function observedMemoryText(st,m){

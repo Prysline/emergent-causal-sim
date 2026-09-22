@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.27.0・Furniture Orientation**（`11.27.0-furniture-orientation`）。
+目前 runtime marker：**v11.27.1・Resident Private Badge**（`11.27.1-resident-private-badge`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -115,6 +115,7 @@
 - UI 不得改寫 canonical event text。
 - core 保有 `E.actionLabel` ownership；presentation 透過 action-label resolver 派生 readable status。
 - recent social presentation 直接從 bounded canonical events + event creation `tick` 推導，不保存第二份 `recentSocialByAgent` lifecycle cache。
+- Resident View「最近發生的事」對 owner-private event 顯示獨立「私人」badge；正文保持原事件文字，公開 event 不顯示 badge。這只是 Presentation 投影，不改 private / owner、Memory 或 Relationship truth。
 - `ui.js` 是 Inspector base render owner；Spatial / Intent / Memory / Appraisal / Affect / Retention / Memory→Deliberation / Social Outcome / Resident / Relationship / Physical / Entity Readable 使用具名且排序明確的 Inspector decorator，不再以 MutationObserver 充當 Inspector completion lifecycle。
 
 ## Runtime lifecycle
