@@ -3,7 +3,7 @@
   const C=window.SimEmbodimentCapabilities;
   const M=window.SimEditorAuthoringMutations;
   const P=window.SimEditorPreviewBridge;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!M?.setCellTerrain||!M?.setBoundary||!M?.setDoorState||!M?.setCellMaterial||!M?.moveFurniture||!M?.moveObject||!P?.storePreview){
+  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!M?.setCellTerrain||!M?.setBoundary||!M?.setDoorState||!M?.setCellMaterial||!M?.moveFurniture||!M?.rotateFurniture||!M?.moveObject||!P?.storePreview){
     throw new Error('World authoring helpers, embodiment capabilities, preview bridge, and editor mutation owner must load before editor-ui.js.');
   }
 
@@ -26,6 +26,7 @@
     cell_material_value_invalid:'材質識別字必須是文字或空值。',
     furniture_missing:'找不到指定的家具。',
     furniture_move_target_invalid:'家具的新位置無效。',
+    furniture_orientation_invalid:'家具方向必須是 north / east / south / west。',
     object_missing:'找不到指定的物件。',
     object_move_target_invalid:'物件的新位置無效。',
     support_choice_invalid:'承載關係選擇無效。',
@@ -116,6 +117,7 @@
       cell.classList.remove('drag-ghost-cell','drag-follower-cell','drag-drop-target','drag-valid','drag-invalid');
     }
     for(const marker of host.querySelectorAll('.furniture-mark.drag-source'))marker.classList.remove('drag-source');
+    for(const marker of host.querySelectorAll('.drag-orientation-marker'))marker.remove();
   }
 
   function dragCellAt(position){
@@ -133,7 +135,11 @@
     host.dataset.dragFurnitureId=dragState.furnitureId;
     host.dataset.dragState=dragState.valid?'valid':'invalid';
     const targetCell=dragCellAt(dragState.target);
-    if(targetCell)targetCell.classList.add('drag-drop-target',validity);
+    if(targetCell){
+      targetCell.classList.add('drag-drop-target',validity);
+      const orientation=authored.furniture?.[dragState.furnitureId]?.orientation;
+      if(orientation)targetCell.insertAdjacentHTML('beforeend',`<span class="furniture-orientation-marker drag-orientation-marker" data-orientation="${esc(orientation)}">${esc(orientationGlyph(orientation))}</span>`);
+    }
     for(const position of dragState.preview?.footprint||[]){
       const cell=dragCellAt(position);
       if(cell)cell.classList.add('drag-ghost-cell',validity);
@@ -371,6 +377,39 @@
   function furnitureKindLabel(furniture){
     const labels={chair:'餐椅',table:'餐桌',sofa:'沙發',bed:'床'};
     return labels[furniture?.kind]||furniture?.kind||'Furniture';
+  }
+  const ORIENTATION_GLYPHS=Object.freeze({north:'↑',east:'→',south:'↓',west:'←'});
+  const ORIENTATION_LABELS=Object.freeze({north:'北',east:'東',south:'南',west:'西'});
+  function orientationGlyph(orientation){return ORIENTATION_GLYPHS[orientation]||'◇';}
+  function contextualFurnitureOrientationIds(){
+    const ids=new Set();
+    if(selection?.kind==='entity'&&selection.type==='furniture')ids.add(selection.id);
+    if(selectedTool==='furniture'&&selectedFurnitureId)ids.add(selectedFurnitureId);
+    return ids;
+  }
+  function furnitureOrientationMarkersAtCell(x,y,z){
+    const out=[];
+    for(const id of contextualFurnitureOrientationIds()){
+      const instance=authored.furniture?.[id];
+      if(instance?.origin?.x===x&&instance.origin?.y===y&&(instance.origin?.z??0)===z)out.push({id,orientation:instance.orientation});
+    }
+    return out;
+  }
+  function clearPlacementOrientationPreviewDom(){
+    for(const marker of $('editorMap')?.querySelectorAll('.placement-orientation-marker')||[])marker.remove();
+  }
+  function applyPlacementOrientationPreviewDom(event){
+    clearPlacementOrientationPreviewDom();
+    if(dragState?.active)return;
+    const target=dragTargetFromPoint(event.clientX,event.clientY);
+    if(!target)return;
+    let orientation=null;
+    if(pendingOperation?.kind==='create-furniture')orientation='north';
+    else if(pendingOperation?.kind==='duplicate-furniture')orientation=authored.furniture?.[pendingOperation.furnitureId]?.orientation||null;
+    else if(selectedTool==='furniture'&&selectedFurnitureId)orientation=authored.furniture?.[selectedFurnitureId]?.orientation||null;
+    if(!orientation)return;
+    const cell=dragCellAt(target);
+    if(cell)cell.insertAdjacentHTML('beforeend',`<span class="furniture-orientation-marker placement-orientation-marker" data-orientation="${esc(orientation)}">${esc(orientationGlyph(orientation))}</span>`);
   }
 
   function terrainForTool(tool){return tool==='floor'?'floor':null;}
@@ -646,6 +685,7 @@
         const affordanceLabel=(port.affordances||[]).includes('fill')&&source.resource==='water'?'取水位置':'互動位置';
         return `<span class="interaction-port-marker ${isSelected?'selected':''}" data-entity-type="source" data-entity-id="${esc(sourceId)}" data-interaction-port-source-id="${esc(sourceId)}" data-interaction-port-id="${esc(port.id||'')}" title="${esc(affordanceLabel)}：${esc(port.label||port.id||source.name||sourceId)}">${esc(sourcePortDirectionGlyph(source,port))}</span>`;
       }).join('')}</span>`:'';
+      const orientationMarkup=furnitureOrientationMarkersAtCell(x,y,currentZ).map(({id,orientation})=>`<span class="furniture-orientation-marker" data-orientation-furniture-id="${esc(id)}" data-orientation="${esc(orientation)}" title="方向：${esc(ORIENTATION_LABELS[orientation]||orientation)}（${esc(orientation)}）">${esc(orientationGlyph(orientation))}</span>`).join('');
       const terrainText=terrainLabel(terrain);
       const edgeMarkup=['north','east','south','west'].map(edge=>{
         const boundaryId=boundaryIdForCellEdge(x,y,edge),info=boundaryInfo(currentZ,boundaryId);
@@ -654,7 +694,7 @@
         const title=info.door?`${info.door.name||info.door.id}・${info.door.state}`:(info.boundary.kind==='wall'?'牆壁':'結構開口');
         return `<i class="boundary-edge edge-${edge} boundary-${kind}" title="${esc(boundaryId)}・${esc(title)}"></i>`;
       }).join('');
-      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${structureMarkup}${entityMarkup}${interactionPortMarkup}</button>`;
+      html+=`<button class="author-cell terrain-${esc(terrain)} ${selected?'selected-cell':''}" type="button" data-cell="${x},${y}" aria-label="座標 ${x},${y},${currentZ}，${esc(terrainText)}" title="(${x}, ${y}, ${currentZ})・${esc(terrainText)}（${esc(terrain)}）${furnitureName?'・家具：'+esc(furnitureName):''}${entityName?'・物件：'+esc(entityName):''}"><span class="cell-coord">${x},${y}</span>${edgeMarkup}${furnitureMarkup}${structureMarkup}${entityMarkup}${interactionPortMarkup}${orientationMarkup}</button>`;
     }
     host.innerHTML=html;
     applyDragPreviewDom();
@@ -723,7 +763,7 @@
       if(entry){
         heading=`${esc(entry.icon)} ${esc(entry.entity.name||entry.id)}`;
         details=`<br>${esc(entry.label)} · ID：<code>${esc(entry.id)}</code>`;
-        if(entry.type==='furniture')details+=`<br>占地：${(entry.entity.footprint||[]).length} 格`;
+        if(entry.type==='furniture')details+=`<br>占地：${(entry.entity.footprint||[]).length} 格<br>方向：${esc(orientationGlyph(entry.entity.orientation))} <code>${esc(entry.entity.orientation)}</code>`;
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
         if(entry.type==='structure')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>下端：<code>(${esc(entry.entity.lower?.x)}, ${esc(entry.entity.lower?.y)}, ${esc(entry.entity.lower?.z)})</code><br>上端：<code>(${esc(entry.entity.upper?.x)}, ${esc(entry.entity.upper?.y)}, ${esc(entry.entity.upper?.z)})</code>${entry.entity.clearanceWidth!==undefined?`<br>淨寬：${esc(entry.entity.clearanceWidth)}m`:''}${entry.entity.clearanceHeight!==undefined?`<br>淨高：${esc(entry.entity.clearanceHeight)}m`:''}`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
@@ -803,6 +843,8 @@
         pendingMarkup+=`<label class="operation-field">家具位置（slot）<select data-operation-field="slotId"><option value="">請選擇…</option>${slots.map(slot=>`<option value="${esc(slot.id)}" ${operation.slotId===slot.id?'selected':''}>${esc(slot.furnitureName)} · ${esc(slot.label)} (${slot.position.x},${slot.position.y},${slot.position.z??0})</option>`).join('')}</select></label>`;
         pendingMarkup+=`<label class="operation-field">姿勢<select data-operation-field="postureKind" ${operation.slotId?'':'disabled'}><option value="">請選擇…</option>${postures.map(item=>`<option value="${esc(item.kind)}" ${operation.postureKind===item.kind?'selected':''}>${esc(item.label)}（${esc(item.kind)}）</option>`).join('')}</select></label><button type="button" data-editor-action="confirm-resident-rebind" ${!operation.slotId||!operation.postureKind?'disabled':''}>套用家具位置綁定</button>`;
       }else{
+        const previewOrientation=operation.kind==='create-furniture'?'north':operation.kind==='duplicate-furniture'?authored.furniture?.[operation.furnitureId]?.orientation:null;
+        if(previewOrientation)pendingMarkup+=`<small class="operation-orientation-preview">方向預覽：<b>${esc(orientationGlyph(previewOrientation))}</b> <code>${esc(previewOrientation)}</code>；移到地圖格上可看到 placement marker。</small>`;
         pendingMarkup+='<small>點擊地圖格執行；失敗時正式建構資料不會改變。</small>';
       }
       pendingMarkup+='<button type="button" class="ghost-action" data-editor-action="cancel-operation">取消目前操作</button></div>';
@@ -820,7 +862,9 @@
     let entityMarkup='';
     if(entry?.type==='furniture'){
       const placementActive=selectedTool==='furniture'&&selectedFurnitureId===entry.id;
-      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">複製家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · 實例 ID：<code>${esc(entry.id)}</code></small>`;
+      const orientation=authored.furniture?.[entry.id]?.orientation||entry.entity.orientation;
+      const orientationButtons=A.FURNITURE_ORIENTATIONS.map(value=>`<button type="button" class="${orientation===value?'active-orientation':''}" data-editor-action="rotate-furniture" data-orientation="${esc(value)}" title="${esc(ORIENTATION_LABELS[value]||value)}">${esc(orientationGlyph(value))}</button>`).join('');
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">複製家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><div class="orientation-control"><span>方向：<b>${esc(orientationGlyph(orientation))}</b> <code>${esc(orientation)}</code></span><div class="action-row">${orientationButtons}</div></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · 實例 ID：<code>${esc(entry.id)}</code></small>`;
     }else if(entry?.type==='container'||entry?.type==='source'){
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
     }else if(entry?.type==='resident'){
@@ -880,6 +924,8 @@
 
   $('editorMap').addEventListener('pointerdown',beginFurnitureDrag);
   $('editorMap').addEventListener('pointermove',continueFurnitureDrag);
+  $('editorMap').addEventListener('pointermove',applyPlacementOrientationPreviewDom);
+  $('editorMap').addEventListener('pointerleave',clearPlacementOrientationPreviewDom);
   $('editorMap').addEventListener('pointerup',finishFurnitureDrag);
   $('editorMap').addEventListener('pointercancel',cancelFurnitureDrag);
 
@@ -948,6 +994,12 @@
       return;
     }
     if(!entry)return;
+    if(action==='rotate-furniture'&&entry.type==='furniture'){
+      const orientation=button.dataset.orientation;
+      const result=M.rotateFurniture(authored,{furnitureId:entry.id,orientation});
+      commitMutation(result,{message:result.ok?`已將 ${entry.entity.name||entry.id} 旋轉為 ${ORIENTATION_LABELS[orientation]||orientation}（${orientation}）。`:'',select:result.ok?{type:'furniture',id:entry.id}:null});
+      return;
+    }
     if(action==='arm-furniture-placement'&&entry.type==='furniture'){const active=selectedTool==='furniture'&&selectedFurnitureId===entry.id;selectedFurnitureId=entry.id;selectedTool=active?'select':'furniture';clearOperationState();setMessage(active?'家具放置已停止。':'家具放置已啟用；點擊地圖決定新位置。');render();return;}
     if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'複製家具：下一次點擊決定新副本位置。');return;}
     if(action==='delete-furniture'&&entry.type==='furniture'){deleteSelectedFurniture(entry.id);return;}
