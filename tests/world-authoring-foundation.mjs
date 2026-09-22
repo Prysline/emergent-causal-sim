@@ -9,7 +9,7 @@ for(const file of ['furniture-definitions.js','world-authoring.js','embodiment-c
 
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
 assert.equal(D.VERSION,'furniture-definitions-v3');
-assert.equal(A.VERSION,'world-authoring-v4');
+assert.equal(A.VERSION,'world-authoring-v5');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,D.VERSION);
