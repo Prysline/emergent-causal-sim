@@ -15,10 +15,10 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v5');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v3');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v5');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v3');
+assert.equal(A.VERSION,'world-authoring-v6');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v4');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v6');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v4');
 assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable).spatial.under.clearance,.72);
 
 {
