@@ -100,6 +100,17 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
 .furniture-mark.selected{border-style:solid;border-color:#d8ecff;background:#496b8766}
 .furniture-mark.placement-target{border-color:#ffd68a}
 .furniture-mark.selected.placement-target{box-shadow:0 0 0 1px #ffd68a}
+.furniture-orientation-marker{position:absolute;right:2px;bottom:2px;min-width:18px;height:18px;padding:0 3px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;line-height:1;background:#13202aee;border:1px solid #a8cfff;color:#e9f5ff;pointer-events:none;z-index:9;box-shadow:0 1px 4px #0008}
+.furniture-orientation-marker.placement-orientation-marker{border-color:#ffd68a;color:#fff0c8}
+.furniture-orientation-marker.drag-orientation-marker{border-color:#8ed7aa;color:#dff7e8}
+.editor-map.drag-invalid .furniture-orientation-marker.drag-orientation-marker{border-color:#ff8f96;color:#ffd9dc}
+.orientation-control{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px;padding:8px 10px;border:1px solid #34475a;border-radius:8px;background:#111a22}
+.orientation-control>span{font-size:12px;color:#b9c8d7}
+.orientation-control .action-row{margin:0}
+.orientation-control button{min-width:34px}
+.orientation-control button.active-orientation{border-color:#a8cfff;background:#28445d;color:#f3f9ff}
+.operation-orientation-preview{display:block;margin-top:6px}
+
 .furniture-mark.multi{font-size:10px}
 .furniture-mark.drag-source{opacity:.42;cursor:grabbing}
 .editor-map.drag-active{cursor:grabbing}

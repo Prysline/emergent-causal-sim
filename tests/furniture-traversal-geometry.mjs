@@ -12,7 +12,7 @@ const D=globalThis.SimFurnitureDefinitions,E=globalThis.SimEngine,SP=globalThis.
 const local=(x,y,z=0)=>({x,y,z});
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
-assert.equal(D.VERSION,'furniture-definitions-v3');
+assert.equal(D.VERSION,'furniture-definitions-v4');
 
 const invalidLegacyDefinition={
   id:'invalid-legacy',
@@ -26,7 +26,7 @@ const invalidLegacyDefinition={
   spatial:{floor:{mode:'solid'}}
 };
 assert.throws(
-  ()=>D.resolveDefinitionInstance(invalidLegacyDefinition,{id:'invalidLegacy',definitionId:'invalid-legacy',origin:{x:0,y:0,z:0}}),
+  ()=>D.resolveDefinitionInstance(invalidLegacyDefinition,{id:'invalidLegacy',definitionId:'invalid-legacy',origin:{x:0,y:0,z:0},orientation:'north'}),
   /blocksMovement/,
   'legacy blocksMovement must be rejected rather than interpreted as traversal truth'
 );
@@ -56,7 +56,8 @@ const platformDefinition={
 const resolved=D.resolveDefinitionInstance(platformDefinition,{
   id:'testPlatform',
   definitionId:'test-low-platform',
-  origin:local(3,4)
+  origin:local(3,4),
+  orientation:'north'
 });
 assert.deepEqual(resolved.footprint,[local(3,4),local(4,4)]);
 assert.equal(resolved.spatial.floor.mode,'solid');
@@ -66,7 +67,7 @@ assert.equal(resolved.blocksMovement,undefined,'resolved traversal truth must co
 const invalidRuntimeSurface=JSON.parse(JSON.stringify(platformDefinition));
 invalidRuntimeSurface.spatial.surface.id='precomputed:top';
 assert.throws(
-  ()=>D.resolveDefinitionInstance(invalidRuntimeSurface,{id:'invalidSurface',definitionId:'test-low-platform',origin:local(1,1)}),
+  ()=>D.resolveDefinitionInstance(invalidRuntimeSurface,{id:'invalidSurface',definitionId:'test-low-platform',origin:local(1,1),orientation:'north'}),
   /runtime id \/ cells/,
   'Definition must not persist instance-specific runtime surface identity'
 );

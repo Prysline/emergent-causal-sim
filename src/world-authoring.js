@@ -3,7 +3,7 @@
   if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
-  const VERSION='world-authoring-v5';
+  const VERSION='world-authoring-v6';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -44,13 +44,13 @@
     map:{width:12,height:8,cellSizeMeters:CELL_SIZE_METERS,layers:[{z:0,cells:buildDefaultCells(),boundaries:buildDefaultBoundaries()}]},
     structures:{},
     furniture:{
-      diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2)},
-      chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),name:'餐椅 A'},
-      chairNE:{id:'chairNE',definitionId:'chair-basic',origin:pos(7,2),name:'餐椅 B'},
-      chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),name:'餐椅 C'},
-      chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),name:'餐椅 D'},
-      sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2)},
-      bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5)}
+      diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2),orientation:'north'},
+      chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),orientation:'north',name:'餐椅 A'},
+      chairNE:{id:'chairNE',definitionId:'chair-basic',origin:pos(7,2),orientation:'north',name:'餐椅 B'},
+      chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),orientation:'north',name:'餐椅 C'},
+      chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),orientation:'north',name:'餐椅 D'},
+      sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2),orientation:'north'},
+      bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5),orientation:'north'}
     },
     doors:{
       frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open',compatibility:{roomValueContribution:18}}
@@ -86,7 +86,8 @@
   const derivedMapFields=new Set(['tiles','rooms','roomRevision']);
   const derivedCellFields=new Set(['walkable','crawlOnly','roomId','furnitureIds']);
   const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor']);
-  const furnitureInstanceFields=new Set(['id','definitionId','origin','name']);
+  const furnitureInstanceFields=new Set(['id','definitionId','origin','orientation','name']);
+  const FURNITURE_ORIENTATIONS=new Set(D.ORIENTATIONS||[]);
   const BOUNDARY_ID_PATTERN=/^([vh]):(-?\d+),(-?\d+)$/;
   const BOUNDARY_KINDS=new Set(['wall','opening']);
   const DOOR_STATES=new Set(['open','closed']);
@@ -277,13 +278,16 @@
         errors.push(authoringIssue('authoring_furniture_definition_missing',`${basePath}.definitionId`,`Furniture Definition ${instance.definitionId} does not exist.`,{definitionId:instance.definitionId}));
       }
       validatePosition(instance.origin,`${basePath}.origin`);
+      if(!FURNITURE_ORIENTATIONS.has(instance.orientation)){
+        errors.push(authoringIssue('authoring_furniture_orientation_invalid',`${basePath}.orientation`,'Furniture Instance orientation must be north / east / south / west.',{orientation:instance.orientation}));
+      }
       if(instance.name!==undefined&&(typeof instance.name!=='string'||!instance.name.trim())){
         errors.push(authoringIssue('authoring_furniture_name_invalid',`${basePath}.name`,'Optional Furniture Instance name must be a non-empty string.'));
       }
       for(const field of Object.keys(instance))if(!furnitureInstanceFields.has(field)){
         errors.push(authoringIssue('authoring_furniture_instance_field_unsupported',`${basePath}.${field}`,`Furniture Instance field ${field} is not part of compact ${VERSION} ownership.`,{field}));
       }
-      if(!D.getDefinition(instance.definitionId)||!isRecord(instance.origin)||!Number.isInteger(instance.origin.x)||!Number.isInteger(instance.origin.y)||!Number.isInteger(instance.origin.z))continue;
+      if(!D.getDefinition(instance.definitionId)||!isRecord(instance.origin)||!Number.isInteger(instance.origin.x)||!Number.isInteger(instance.origin.y)||!Number.isInteger(instance.origin.z)||!FURNITURE_ORIENTATIONS.has(instance.orientation))continue;
       let furniture;
       try{furniture=resolveFurnitureInstance(instance);}
       catch(error){
@@ -548,6 +552,7 @@
   window.SimWorldAuthoring={
     VERSION,
     FURNITURE_CATALOG_VERSION,
+    FURNITURE_ORIENTATIONS:Object.freeze(Array.from(FURNITURE_ORIENTATIONS)),
     CELL_SIZE_METERS,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,

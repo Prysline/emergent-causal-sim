@@ -15,10 +15,10 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v5');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v3');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v5');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v3');
+assert.equal(A.VERSION,'world-authoring-v6');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v4');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v6');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v4');
 assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable).spatial.under.clearance,.72);
 
 {
@@ -68,7 +68,7 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
 
 {
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
-  authored.furniture.testCover={id:'testCover',definitionId:'dining-table',origin:{x:3,y:4,z:0}};
+  authored.furniture.testCover={id:'testCover',definitionId:'dining-table',origin:{x:3,y:4,z:0},orientation:'north'};
   const topology=A.deriveHorizontalTopology(authored,{z:0});
   assert.equal(topology.cells['3,4'].open,true,'Definition-owned under-clearance geometry must remain generically connected');
   assert.deepEqual(topology.cells['3,4'].under,[{furnitureId:'testCover',clearanceHeight:.72,clearanceWidth:null}]);

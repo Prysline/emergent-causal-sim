@@ -9,8 +9,8 @@ for(const file of ['furniture-definitions.js','world-authoring.js','embodiment-c
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v3');
-assert.equal(A.VERSION,'world-authoring-v5');
+assert.equal(D.VERSION,'furniture-definitions-v4');
+assert.equal(A.VERSION,'world-authoring-v6');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -25,12 +25,12 @@ const imported=A.parseAuthoringJSON(exported);
 assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'export → import must preserve authoring semantics');
 assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
-assert.equal(imported.authoringSchema,'world-authoring-v5');
-assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v3');
+assert.equal(imported.authoringSchema,'world-authoring-v6');
+assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v4');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
-assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},name:'餐椅 A'});
-assert.ok(!exported.includes('"footprint"')&&!exported.includes('"slots"')&&!exported.includes('"restQuality"'),'resolved furniture truth must not serialize into compact v5 instances');
+assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},orientation:'north',name:'餐椅 A'});
+assert.ok(!exported.includes('"footprint"')&&!exported.includes('"slots"')&&!exported.includes('"restQuality"'),'resolved furniture truth must not serialize into compact v6 instances');
 
 const topology=A.deriveHorizontalTopology(imported,{z:0});
 assert.equal(topology.cells['1,6'].structuralOpen,true);
@@ -120,7 +120,7 @@ const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
 assert.ok(definitionScript>=0&&authoringScript>definitionScript&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be Furniture Definitions → authoring → shared capabilities → compatibility initializer → preview bridge → mutation owner → UI');
-assert.ok(editorHtml.includes('世界建構 · world-authoring-v5'));
+assert.ok(editorHtml.includes('世界建構 · world-authoring-v6'));
 assert.ok(editorHtml.includes('id="furnitureCatalog"'),'Editor-2 must expose the system Furniture Catalog as the new-instance source');
 assert.ok(editorHtml.includes('id="sceneList"'));
 assert.ok(!editorHtml.includes('id="furnitureSelect"'));
@@ -130,6 +130,8 @@ for(const forbidden of ['SimEngine','SimSpatial','createInitialState','PassagePr
 assert.ok(editorUi.includes('A.resolveFurnitureInstance'),'Editor UI must resolve compact instances through the shared Definition owner');
 assert.ok(editorUi.includes('A.listFurnitureDefinitions()'),'Furniture Catalog UI must consume the shared pure Definition owner');
 assert.ok(editorUi.includes('M.createFurnitureFromDefinition(authored,{definitionId:operation.definitionId,target})'),'new furniture must delegate to the canonical Definition → Instance mutation');
+assert.ok(editorUi.includes('M.rotateFurniture(authored,{furnitureId:entry.id,orientation})'),'Furniture rotation must delegate to the canonical mutation owner');
+assert.ok(editorUi.includes('furniture-orientation-marker'),'orientation observability must remain contextual Editor presentation');
 assert.ok(editorUi.includes('deriveHorizontalTopology'));
 assert.ok(editorUi.includes('sceneEntries'));
 assert.ok(editorUi.includes('residentPosition'));

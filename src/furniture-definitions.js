@@ -1,8 +1,10 @@
 (() => {
-  const VERSION='furniture-definitions-v3';
+  const VERSION='furniture-definitions-v4';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
+  const ORIENTATIONS=Object.freeze(['north','east','south','west']);
+  const ORIENTATION_INDEX=Object.freeze({north:0,east:1,south:2,west:3});
 
   function deepFreeze(value){
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
@@ -130,6 +132,9 @@
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
     definition.footprint.forEach((position,index)=>assertLocalPosition(position,key+'.footprint['+index+']'));
+    const minX=Math.min(...definition.footprint.map(position=>position.x));
+    const minY=Math.min(...definition.footprint.map(position=>position.y));
+    if(minX!==0||minY!==0)throw new Error('Furniture Definition '+key+' footprint must use canonical north local frame with minX = 0 and minY = 0.');
     assertLocalPosition(definition.displayOffset,key+'.displayOffset');
     if(definition.slots!==undefined&&!Array.isArray(definition.slots))throw new Error('Furniture Definition '+key+' slots must be an array.');
     const keys=new Set();
@@ -153,6 +158,70 @@
   deepFreeze(DEFINITIONS);
 
   const add=(origin,offset)=>({x:origin.x+offset.x,y:origin.y+offset.y,z:origin.z+offset.z});
+  const subtract=(position,origin)=>({x:position.x-origin.x,y:position.y-origin.y,z:position.z-origin.z});
+
+  function assertOrientation(orientation,path='Furniture orientation'){
+    if(!ORIENTATIONS.includes(orientation)){
+      const error=new RangeError(path+' must be north / east / south / west.');
+      error.code='furniture_orientation_invalid';
+      throw error;
+    }
+  }
+
+  function definitionFrame(definition){
+    const width=Math.max(...definition.footprint.map(position=>position.x))+1;
+    const height=Math.max(...definition.footprint.map(position=>position.y))+1;
+    return {width,height};
+  }
+
+  function transformLocalPosition(definition,position,orientation){
+    assertLocalPosition(position,'Furniture local position');
+    assertOrientation(orientation);
+    const {width,height}=definitionFrame(definition);
+    if(orientation==='north')return {x:position.x,y:position.y,z:position.z};
+    if(orientation==='east')return {x:height-1-position.y,y:position.x,z:position.z};
+    if(orientation==='south')return {x:width-1-position.x,y:height-1-position.y,z:position.z};
+    return {x:position.y,y:width-1-position.x,z:position.z};
+  }
+
+  function inverseTransformLocalPosition(definition,position,orientation){
+    assertLocalPosition(position,'Furniture oriented local position');
+    assertOrientation(orientation);
+    const {width,height}=definitionFrame(definition);
+    if(orientation==='north')return {x:position.x,y:position.y,z:position.z};
+    if(orientation==='east')return {x:position.y,y:height-1-position.x,z:position.z};
+    if(orientation==='south')return {x:width-1-position.x,y:height-1-position.y,z:position.z};
+    return {x:width-1-position.y,y:position.x,z:position.z};
+  }
+
+  function localToWorld(definition,instance,position){
+    if(!isRecord(instance?.origin)||!Number.isInteger(instance.origin.x)||!Number.isInteger(instance.origin.y)||!Number.isInteger(instance.origin.z)){
+      const error=new TypeError('Furniture Instance '+String(instance?.id)+' requires integer origin x / y / z.');
+      error.code='furniture_instance_origin_invalid';
+      throw error;
+    }
+    assertOrientation(instance.orientation,'Furniture Instance '+String(instance.id)+' orientation');
+    return add(instance.origin,transformLocalPosition(definition,position,instance.orientation));
+  }
+
+  function worldToLocal(definition,instance,position){
+    assertLocalPosition(position,'Furniture world position');
+    if(!isRecord(instance?.origin)||!Number.isInteger(instance.origin.x)||!Number.isInteger(instance.origin.y)||!Number.isInteger(instance.origin.z)){
+      const error=new TypeError('Furniture Instance '+String(instance?.id)+' requires integer origin x / y / z.');
+      error.code='furniture_instance_origin_invalid';
+      throw error;
+    }
+    assertOrientation(instance.orientation,'Furniture Instance '+String(instance.id)+' orientation');
+    return inverseTransformLocalPosition(definition,subtract(position,instance.origin),instance.orientation);
+  }
+
+  function reorientCardinalDirection(direction,fromOrientation,toOrientation){
+    assertOrientation(direction,'Furniture-local cardinal direction');
+    assertOrientation(fromOrientation,'Furniture previous orientation');
+    assertOrientation(toOrientation,'Furniture next orientation');
+    const turns=(ORIENTATION_INDEX[toOrientation]-ORIENTATION_INDEX[fromOrientation]+4)%4;
+    return ORIENTATIONS[(ORIENTATION_INDEX[direction]+turns)%4];
+  }
 
   function getDefinition(definitionId){
     return DEFINITIONS[definitionId]||null;
@@ -170,19 +239,21 @@
       error.code='furniture_instance_origin_invalid';
       throw error;
     }
-    const footprint=definition.footprint.map(offset=>add(origin,offset));
+    assertOrientation(instance.orientation,'Furniture Instance '+instance.id+' orientation');
+    const footprint=definition.footprint.map(offset=>localToWorld(definition,instance,offset));
     const resolved={
       id:instance.id,
       name:instance.name||definition.name,
       icon:definition.icon,
       kind:definition.kind,
+      orientation:instance.orientation,
       footprint,
-      displayAt:add(origin,definition.displayOffset),
+      displayAt:localToWorld(definition,instance,definition.displayOffset),
       slots:(definition.slots||[]).map(slot=>{
         const out={
           id:instance.id+':'+slot.key,
           label:slot.label||slot.key,
-          position:add(origin,slot.offset)
+          position:localToWorld(definition,instance,slot.offset)
         };
         if(slot.canRest===true)out.canRest=true;
         if(slot.canSleep===true)out.canSleep=true;
@@ -231,6 +302,13 @@
   window.SimFurnitureDefinitions=Object.freeze({
     VERSION,
     DEFINITIONS,
+    ORIENTATIONS,
+    definitionFrame,
+    transformLocalPosition,
+    inverseTransformLocalPosition,
+    localToWorld,
+    worldToLocal,
+    reorientCardinalDirection,
     getDefinition,
     listDefinitions,
     resolveDefinitionInstance,

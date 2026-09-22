@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.26.0-vertical-structure-traversal';
+const APP_VERSION='11.27.0-furniture-orientation';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

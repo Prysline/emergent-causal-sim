@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.26.0-vertical-structure-traversal');
-assert.equal(E.VERSION,'11.26.0-vertical-structure-traversal');
+assert.equal(st.version,'11.27.0-furniture-orientation');
+assert.equal(E.VERSION,'11.27.0-furniture-orientation');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
