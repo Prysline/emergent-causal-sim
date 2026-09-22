@@ -107,6 +107,9 @@
     }
     const surface=spatial.surface;
     if(surface===undefined)return;
+    if(isRecord(surface)&&(Object.prototype.hasOwnProperty.call(surface,'id')||Object.prototype.hasOwnProperty.call(surface,'cells'))){
+      throw new Error('Furniture Definition '+key+' spatial.surface must not persist runtime id / cells.');
+    }
     if(!isRecord(surface)||typeof surface.key!=='string'||!surface.key||surface.key.includes(':')){
       throw new Error('Furniture Definition '+key+' has invalid spatial.surface.key.');
     }
@@ -122,6 +125,7 @@
 
   function assertDefinition(definition,key){
     if(!isRecord(definition)||definition.id!==key)throw new Error('Furniture Definition id mismatch: '+key);
+    if(Object.prototype.hasOwnProperty.call(definition,'blocksMovement'))throw new Error('Furniture Definition '+key+' must use spatial.floor.mode instead of blocksMovement.');
     if(typeof definition.name!=='string'||!definition.name)throw new Error('Furniture Definition '+key+' requires name.');
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
