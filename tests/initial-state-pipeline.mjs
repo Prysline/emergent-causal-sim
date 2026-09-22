@@ -66,7 +66,7 @@ for(const agent of Object.values(st.agents||{})){
   assert.ok(agent.affect&&agent.affect.valence===0&&agent.affect.activation===0&&agent.affect.frustration===0,`${agent.id}: neutral affect initialization parity`);
   assert.ok(agent.physical,`${agent.id}: physical profile initialization parity`);
 }
-assert.ok(st.furniture?.diningTable?.spatial?.surface,'Spatial initializer must install authored surface traversal definitions');
+assert.ok(st.furniture?.diningTable?.spatial?.surface,'Furniture Definition resolution must provide runtime surface traversal geometry');
 assert.equal(st.agents?.zhen?.position?.surfaceId,'floor','Spatial finalizer must normalize persistent agent surface identity');
 assert.ok(st.agents?.zhen?.position?.spaceId,'Spatial finalizer must normalize persistent agent room-space identity');
 assert.equal(st.containers?.mealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
