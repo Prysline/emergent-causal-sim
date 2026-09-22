@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.27.0-furniture-orientation');
-assert.equal(E.VERSION,'11.27.0-furniture-orientation');
+assert.equal(st.version,'11.27.1-resident-private-badge');
+assert.equal(E.VERSION,'11.27.1-resident-private-badge');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
