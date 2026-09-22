@@ -50,9 +50,9 @@ assert.equal(authored.furniture.frontDoor,undefined,'Door must no longer exist a
 assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open',compatibility:{roomValueContribution:18}});
 assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:'offMap',boundary:{z:0,id:'v:1,6'},access:{x:1,y:6,z:0}});
 
-const st=I.createInitialState(authored,{seed:20260911,version:'11.24.0-locomotion-traversal-cost'});
+const st=I.createInitialState(authored,{seed:20260911,version:'11.25.0-furniture-traversal-geometry'});
 assert.equal(JSON.stringify(authored),authoredBefore,'compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.24.0-locomotion-traversal-cost');
+assert.equal(st.version,'11.25.0-furniture-traversal-geometry');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);
@@ -91,9 +91,9 @@ assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must
 assert.ok(serialized.includes('"boundaries"')&&serialized.includes('"doors"')&&serialized.includes('"exits"'),'v4 structural truth must serialize explicitly');
 assert.ok(!serialized.includes('"canExit"'),'v4 must not serialize legacy furniture exit compatibility');
 
-const again=I.createInitialState(authored,{seed:20260911,version:'11.24.0-locomotion-traversal-cost'});
+const again=I.createInitialState(authored,{seed:20260911,version:'11.25.0-furniture-traversal-geometry'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
-const otherSeed=I.createInitialState(authored,{seed:7,version:'11.24.0-locomotion-traversal-cost'});
+const otherSeed=I.createInitialState(authored,{seed:7,version:'11.25.0-furniture-traversal-geometry'});
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 
