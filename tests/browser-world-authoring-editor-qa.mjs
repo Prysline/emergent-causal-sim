@@ -30,6 +30,7 @@ let snapshot=await page.evaluate(()=>({
   residentMarkers:document.querySelectorAll('#editorMap [data-entity-type="resident"]').length,
   objectMarkers:document.querySelectorAll('#editorMap [data-entity-type="container"], #editorMap [data-entity-type="source"]').length,
   oldEntityDots:document.querySelectorAll('#editorMap .entity-dot').length,
+  orientationMarkers:document.querySelectorAll('#editorMap .furniture-orientation-marker').length,
   width:innerWidth,
   docWidth:document.documentElement.scrollWidth
 }));
@@ -49,6 +50,7 @@ assert.equal(snapshot.sceneItems,
 assert.ok(snapshot.residentMarkers>0,'resident authored positions must use typed map markers');
 assert.ok(snapshot.objectMarkers>0,'container/source authored positions must use typed map markers');
 assert.equal(snapshot.oldEntityDots,0,'generic green entity dots must be removed');
+assert.equal(snapshot.orientationMarkers,0,'Furniture orientation arrows must not be always-on when nothing is selected or being placed');
 assert.equal(snapshot.runtimeGlobals.capabilities,'object','Editor must load the pure shared embodiment capability contract without bootstrapping runtime');
 assert.equal(snapshot.runtimeGlobals.initializer,'object','D.1C Editor may load the pure world initializer only for runtime compatibility preflight');
 assert.equal(snapshot.runtimeGlobals.previewBridge,'object','D.1C Editor must expose the explicit browser-session preview bridge');
@@ -92,16 +94,42 @@ await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
 assert.equal(snapshot.pendingOperation?.definitionId,'chair-basic');
+await page.hover('[data-cell="3,4"]');
+let orientationPreview=page.locator('#editorMap .placement-orientation-marker');
+assert.equal(await orientationPreview.count(),1,'new Furniture placement hover must expose a contextual orientation marker');
+assert.equal((await orientationPreview.textContent())?.trim(),'↑');
+assert.equal(await orientationPreview.getAttribute('data-orientation'),'north');
 await page.click('[data-cell="3,4"]');
 snapshot=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   document:window.SimWorldEditor.getDocument(),
   resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
 }));
-assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0}},'Catalog creation must persist only compact Furniture Instance truth');
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0},orientation:'north'},'Catalog creation must persist compact placement + orientation truth');
 assert.deepEqual(snapshot.resolved.footprint,[{x:3,y:4,z:0}]);
 assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.validation.ok,true);
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
+// Browser import/export must preserve the new canonical orientation fact.
+const orientationImport=structuredClone(defaultDocument);
+orientationImport.furniture.sofa.orientation='east';
+const orientationImportPath=`${outDir}/orientation-import.world.json`;
+fs.writeFileSync(orientationImportPath,JSON.stringify(orientationImport,null,2));
+await page.setInputFiles('#importWorld',orientationImportPath);
+await page.waitForFunction(()=>window.SimWorldEditor.getDocument().furniture.sofa.orientation==='east');
+snapshot=await page.evaluate(()=>({
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture.sofa)
+}));
+assert.equal(snapshot.document.furniture.sofa.orientation,'east');
+assert.deepEqual(snapshot.resolved.footprint,[{x:9,y:2,z:0},{x:9,y:3,z:0}],'imported orientation must drive asymmetric resolved geometry');
+const orientationDownloadPromise=page.waitForEvent('download');
+await page.click('#exportWorld');
+const orientationDownload=await orientationDownloadPromise;
+const orientationDownloadPath=await orientationDownload.path();
+const orientationExport=JSON.parse(fs.readFileSync(orientationDownloadPath,'utf8'));
+assert.equal(orientationExport.furniture.sofa.orientation,'east','export must retain canonical orientation');
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
 const tapPort=page.locator('[data-interaction-port-source-id="tap"][data-interaction-port-id="tap:west"]');
@@ -150,8 +178,41 @@ assert.equal(afterLayerSwitch.session.dirty,false,'Z-level presentation switch m
 assert.equal(afterLayerSwitch.fingerprint,cleanFingerprint,'Z-level presentation switch must be state-inert');
 
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
+// Selected Furniture exposes orientation; rotating a 2×1 sofa must visibly change the footprint while preserving origin.
+await page.click('[data-scene-type="furniture"][data-scene-id="sofa"]');
+let orientationState=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  markers:[...document.querySelectorAll('#editorMap .furniture-orientation-marker')].map(node=>({text:node.textContent?.trim(),orientation:node.dataset.orientation})),
+  summary:document.querySelector('#selectionSummary')?.textContent||''
+}));
+assert.equal(orientationState.markers.length,1,'selected Furniture must expose exactly one orientation marker at its placement anchor');
+assert.deepEqual(orientationState.markers[0],{text:'↑',orientation:'north'});
+assert.match(orientationState.summary,/方向：↑ north/);
+await page.click('[data-editor-action="rotate-furniture"][data-orientation="east"]');
+orientationState=await page.evaluate(()=>({
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture.sofa),
+  markers:[...document.querySelectorAll('#editorMap .furniture-orientation-marker')].map(node=>({text:node.textContent?.trim(),orientation:node.dataset.orientation}))
+}));
+assert.deepEqual(orientationState.document.furniture.sofa.origin,{x:9,y:2,z:0},'rotation must preserve placement-anchor origin');
+assert.equal(orientationState.document.furniture.sofa.orientation,'east');
+assert.deepEqual(orientationState.resolved.footprint,[{x:9,y:2,z:0},{x:9,y:3,z:0}],'asymmetric 2×1 footprint must become vertical when facing east');
+assert.deepEqual(orientationState.markers,[{text:'→',orientation:'east'}]);
+await page.click('[data-editor-action="rotate-furniture"][data-orientation="south"]');
+orientationState=await page.evaluate(()=>({
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture.sofa),
+  marker:[...document.querySelectorAll('#editorMap .furniture-orientation-marker')].map(node=>node.textContent?.trim())
+}));
+assert.equal(orientationState.document.furniture.sofa.orientation,'south');
+assert.deepEqual(orientationState.resolved.footprint,[{x:10,y:2,z:0},{x:9,y:2,z:0}],'south keeps the same two occupied cells as north but reverses facing semantics');
+assert.deepEqual(orientationState.marker,['↓'],'contextual marker must disambiguate north/south when footprint occupancy is identical');
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
 await page.click('[data-scene-type="furniture"][data-scene-id="chairNW"]');
 let furnitureSelection=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(await page.locator('#editorMap .furniture-orientation-marker').count(),1,'selected chair should expose one contextual direction marker');
 assert.deepEqual(furnitureSelection.selection,{kind:'entity',type:'furniture',id:'chairNW'});
 assert.equal(furnitureSelection.selectedFurnitureId,'chairNW');
 assert.equal(furnitureSelection.selectedTool,'floor','selecting a scene entity must not silently change the active authoring tool');
@@ -195,12 +256,14 @@ await page.mouse.move(dragTargetBox.x+dragTargetBox.width/2,dragTargetBox.y+drag
 let dragPreview=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   ghostCount:document.querySelectorAll('#editorMap .drag-ghost-cell').length,
-  mapDragState:document.querySelector('#editorMap')?.dataset.dragState||''
+  mapDragState:document.querySelector('#editorMap')?.dataset.dragState||'',
+  orientationMarkers:[...document.querySelectorAll('#editorMap .drag-orientation-marker')].map(node=>node.textContent?.trim())
 }));
 assert.equal(dragPreview.session.dragState?.active,true,'desktop mouse movement past threshold must enter drag mode');
 assert.equal(dragPreview.session.dragState?.valid,true,'valid chair target must preview as valid');
 assert.equal(dragPreview.ghostCount,1,'chair drag preview must expose its full one-cell footprint');
 assert.equal(dragPreview.mapDragState,'valid');
+assert.deepEqual(dragPreview.orientationMarkers,['↑'],'drag preview must expose the preserved Furniture orientation');
 await page.mouse.up();
 
 snapshot=await page.evaluate(()=>({
@@ -273,7 +336,7 @@ snapshot=await page.evaluate(()=>({
   document:window.SimWorldEditor.getDocument(),
   resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
 }));
-assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:5,z:0},name:'餐椅 A'},'duplicate must copy only instance-owned facts and placement under Definition-based ID generation');
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:5,z:0},orientation:'north',name:'餐椅 A'},'duplicate must copy instance-owned orientation and placement under Definition-based ID generation');
 assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
 
@@ -411,6 +474,7 @@ await page.setViewportSize({width:1400,height:820});
 await page.waitForTimeout(50);
 const previewDocument=await page.evaluate(()=>window.SimWorldEditor.getDocument());
 const layeredPreviewDocument=structuredClone(previewDocument);
+layeredPreviewDocument.furniture.sofa.orientation='east';
 layeredPreviewDocument.map.layers.push({z:1,cells:{
   '2,2':{terrain:'floor',material:'wood'},
   '3,2':{terrain:'floor',material:'wood'}
@@ -457,6 +521,7 @@ let runtimePreview=await page.evaluate(()=>{
     bannerHidden:document.querySelector('#editorPreviewBanner')?.hidden,
     bannerText:document.querySelector('#editorPreviewBanner')?.textContent||'',
     chair:state.furniture.chairNW.footprint,
+    sofa:{orientation:active.authoring.furniture.sofa.orientation,footprint:state.furniture.sofa.footprint},
     basket:{position:{x:state.containers.basket.position.x,y:state.containers.basket.position.y},supportId:state.containers.basket.supportId||null,spaceId:state.containers.basket.position.spaceId||null,surfaceId:state.containers.basket.position.surfaceId||null},
     zhen:{x:state.agents.zhen.position.x,y:state.agents.zhen.position.y,z:window.SimSpatial.zOf(state.agents.zhen.position)},
     orange:{x:state.agents.orange.position.x,y:state.agents.orange.position.y,z:window.SimSpatial.zOf(state.agents.orange.position)},
@@ -474,6 +539,8 @@ assert.equal(runtimePreview.activeFingerprint,previewFingerprint);
 assert.equal(runtimePreview.bannerHidden,false);
 assert.match(runtimePreview.bannerText,/編輯器預覽/);
 assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'Simulator preview must use the Editor furniture position');
+assert.equal(runtimePreview.sofa.orientation,'east','Preview handoff must retain canonical Furniture orientation');
+assert.deepEqual(runtimePreview.sofa.footprint,[{x:9,y:2},{x:9,y:3}],'Preview runtime must compile the same rotated geometry');
 assert.deepEqual(runtimePreview.basket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
 assert.equal(runtimePreview.basket.supportId,'diningTable');
 assert.equal(runtimePreview.basket.surfaceId,'diningTable:surface','runtime may enrich the canonical supported-object position with derived surface identity');
@@ -531,6 +598,7 @@ const restoredEditor=await page.evaluate(()=>({
   fingerprint:window.SimWorldEditor.semanticFingerprint(),
   session:window.SimWorldEditor.getSession(),
   chair:window.SimWorldEditor.getDocument().furniture.chairNW.origin,
+  sofaOrientation:window.SimWorldEditor.getDocument().furniture.sofa.orientation,
   zLevels:window.SimWorldEditor.getDocument().map.layers.map(layer=>layer.z),
   message:document.querySelector('#selectionSummary')?.textContent||''
 }));
@@ -538,6 +606,7 @@ assert.equal(restoredEditor.search,'?restore=preview');
 assert.equal(restoredEditor.fingerprint,previewFingerprint,'Preview → Editor return must restore the exact canonical snapshot');
 assert.equal(restoredEditor.session.dirty,true,'restored sessionStorage snapshot must remain an unsaved working document');
 assert.deepEqual(restoredEditor.chair,{x:3,y:4,z:0},'restored Editor document must retain canonical compact Furniture origin');
+assert.equal(restoredEditor.sofaOrientation,'east','Preview → Editor restore must preserve orientation');
 assert.deepEqual(restoredEditor.zLevels,[0,1]);
 
 page.once('dialog',dialog=>dialog.accept());
