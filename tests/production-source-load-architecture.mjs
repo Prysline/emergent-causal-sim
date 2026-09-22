@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.24.0-locomotion-traversal-cost';
+const CURRENT_VERSION='11.25.0-furniture-traversal-geometry';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
