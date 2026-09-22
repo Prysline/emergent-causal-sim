@@ -17,7 +17,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(D.VERSION,'furniture-definitions-v4');
+assert.equal(D.VERSION,'furniture-definitions-v5');
 assert.equal(A.VERSION,'world-authoring-v6');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
