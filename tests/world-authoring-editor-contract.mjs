@@ -15,6 +15,7 @@ assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default can
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 layered.map.layers.push({z:1,cells:{'2,2':{terrain:'floor',material:'wood'}},boundaries:{}});
+layered.structures.stairA={id:'stairA',kind:'stair',lower:{x:1,y:6,z:0},upper:{x:2,y:2,z:1},clearanceWidth:.8,clearanceHeight:2};
 let report=A.validateAuthoring(layered);
 assert.equal(report.ok,true,report.errors.map(issue=>issue.code+': '+issue.path).join(' | '));
 
@@ -26,8 +27,10 @@ assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
 assert.equal(imported.authoringSchema,'world-authoring-v5');
 assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v3');
+assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
+assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
 assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},name:'餐椅 A'});
-assert.ok(!exported.includes('"footprint"')&&!exported.includes('"slots"')&&!exported.includes('"restQuality"'),'resolved furniture truth must not serialize into compact v4 instances');
+assert.ok(!exported.includes('"footprint"')&&!exported.includes('"slots"')&&!exported.includes('"restQuality"'),'resolved furniture truth must not serialize into compact v5 instances');
 
 const topology=A.deriveHorizontalTopology(imported,{z:0});
 assert.equal(topology.cells['1,6'].structuralOpen,true);
@@ -45,6 +48,7 @@ assert.equal(layeredRuntime.furniture.chairNW.slots[0].restQuality,.48);
 assert.equal(layeredRuntime.furniture.frontDoor,undefined,'Door must not compile as Furniture');
 assert.equal(layeredRuntime.doors.frontDoor.state,'open');
 assert.equal(layeredRuntime.exits.frontExit.kind,'offMap');
+assert.deepEqual(layeredRuntime.structures.stairA,layered.structures.stairA,'Initializer must compile the canonical Structure root without rewriting its endpoints');
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -88,6 +92,15 @@ assert.equal(layeredRuntime.exits.frontExit.kind,'offMap');
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_support_position_mismatch'&&issue.supportId==='diningTable'));
+}
+{
+  const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
+  invalid.map.layers.push({z:1,cells:{'2,2':{terrain:'floor'}},boundaries:{}});
+  invalid.structures.bad={id:'bad',kind:'stair',lower:{x:2,y:2,z:1},upper:{x:1,y:6,z:0},upCost:99};
+  report=A.validateAuthoring(invalid);
+  assert.equal(report.ok,false);
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_structure_vertical_order_invalid'));
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_structure_field_unsupported'&&issue.path.endsWith('.upCost')));
 }
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
