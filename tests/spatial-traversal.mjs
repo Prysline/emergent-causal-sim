@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.25.0-furniture-traversal-geometry');
-assert.equal(SP.VERSION,'11.25.0-furniture-traversal-geometry');
+assert.equal(st.version,'11.26.0-vertical-structure-traversal');
+assert.equal(SP.VERSION,'11.26.0-vertical-structure-traversal');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'橘子可在餐桌下方 floor 通行');
