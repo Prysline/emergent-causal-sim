@@ -26,6 +26,27 @@
     if(boundary.kind!=='opening')return false;
     return doorsForBoundary(st,zOf(a),id).every(door=>door.state==='open');
   }
+  function allStructures(st){return Object.values(st.structures||{});}
+  function getStructure(st,id){return st.structures?.[id]||null;}
+  function structureEndpointMatches(node,endpoint){
+    return !!node&&!!endpoint&&node.x===endpoint.x&&node.y===endpoint.y&&zOf(node)===zOf(endpoint)&&(node.surfaceId??'floor')==='floor';
+  }
+  function structureBetween(st,a,b){
+    if(!a||!b)return null;
+    return allStructures(st).find(structure=>
+      (structureEndpointMatches(a,structure.lower)&&structureEndpointMatches(b,structure.upper))
+      ||(structureEndpointMatches(a,structure.upper)&&structureEndpointMatches(b,structure.lower))
+    )||null;
+  }
+  function structureNeighborNodes(st,p){
+    if(!p||(p.surfaceId??'floor')!=='floor')return [];
+    const out=[];
+    for(const structure of allStructures(st)){
+      if(structureEndpointMatches(p,structure.lower))out.push(normalizeNode(st,structure.upper,'floor'));
+      else if(structureEndpointMatches(p,structure.upper))out.push(normalizeNode(st,structure.lower,'floor'));
+    }
+    return out.filter(Boolean);
+  }
   function allExits(st){return Object.values(st.exits||{});}
   function getExit(st,id){return st.exits?.[id]||null;}
   function exitStructurallyAvailable(st,exitOrId){
@@ -161,5 +182,5 @@
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos;return nearestLabel(st,p);}
   function entitiesWithRole(st,role,collections=['containers','sources']){return collections.flatMap(k=>Object.values(st[k]||{})).filter(x=>hasRole(x,role));}
 
-  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,furnitureFloorMode,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole,boundaryIdBetween,boundaryById,boundaryBetween,doorsForBoundary,edgeStructurallyOpen,allExits,getExit,exitStructurallyAvailable};
+  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,furnitureFloorMode,allSlots,getSlot,slotsForFurniture,slotAllows,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole,boundaryIdBetween,boundaryById,boundaryBetween,doorsForBoundary,edgeStructurallyOpen,allStructures,getStructure,structureBetween,structureNeighborNodes,allExits,getExit,exitStructurallyAvailable};
 })();
