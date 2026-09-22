@@ -9,7 +9,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.24.0-locomotion-traversal-cost';
+const APP_VERSION='11.25.0-furniture-traversal-geometry';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
