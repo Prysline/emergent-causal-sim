@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.27.1・Resident Private Badge**（`11.27.1-resident-private-badge`）。
+目前 runtime marker：**v11.27.2・Room Value Legacy Removal**（`11.27.2-room-value-legacy-removal`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -11,8 +11,8 @@
 ### 一個事實只保留一份 authoritative truth
 
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
-- Current default world 的 authored truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v6`，並以 `furnitureCatalogVersion: "furniture-definitions-v4"` pin 住 system-owned `SimFurnitureDefinitions` Catalog。Map 明確保存 `cellSizeMeters: 1`、每層 floor Cell 與格線 `boundaries`；Door、off-map Exit 與 vertical `structures` 都是獨立 root entity。第一個 Structure contract 是抽象 `stair`，只保存 lower / upper endpoints 與可選 clearance，不保存 route cost / adjacency。Container / Source、Resident opening state 與 Furniture Instance 仍由同一 authoring package 持有，`SimWorldInitializer` 將它編譯成 runtime state。
-- `world-authoring-v6` 的 Furniture Instance 保存 `id / definitionId / origin / orientation / optional name`；`orientation` 使用 `north / east / south / west`，而 Definition 以 north 為 canonical local frame。`furniture-definitions-v4` 的 shared resolver 統一把 local footprint / display offset / slot / surface geometry 依 orientation 旋轉後再套用 Instance origin；rotated geometry 不 persistent 成第二份 truth。Definition 仍持有 intrinsic name/icon/kind、local geometry、`spatial.floor.mode`、`spatial.under`、可選 `spatial.surface` 與 activity suitability。Editor、validation、topology preview、initializer 與 Spatial 共用同一 resolved geometry；`src/spatial-traversal.js` 不知道家具朝向特例。Runtime 仍可由 compiler 狹義投影 `restQuality / sleepQuality / value` 給既有 consumer，但 Door / Exit 已退出 Furniture compatibility。
+- Current default world 的 authored truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v6`，並以 `furnitureCatalogVersion: "furniture-definitions-v5"` pin 住 system-owned `SimFurnitureDefinitions` Catalog。Map 明確保存 `cellSizeMeters: 1`、每層 floor Cell 與格線 `boundaries`；Door、off-map Exit 與 vertical `structures` 都是獨立 root entity。第一個 Structure contract 是抽象 `stair`，只保存 lower / upper endpoints 與可選 clearance，不保存 route cost / adjacency。Container / Source、Resident opening state 與 Furniture Instance 仍由同一 authoring package 持有，`SimWorldInitializer` 將它編譯成 runtime state。
+- `world-authoring-v6` 的 Furniture Instance 保存 `id / definitionId / origin / orientation / optional name`；`orientation` 使用 `north / east / south / west`，而 Definition 以 north 為 canonical local frame。`furniture-definitions-v5` 的 shared resolver 統一把 local footprint / display offset / slot / surface geometry 依 orientation 旋轉後再套用 Instance origin；rotated geometry 不 persistent 成第二份 truth。Definition 仍持有 intrinsic name/icon/kind、local geometry、`spatial.floor.mode`、`spatial.under`、可選 `spatial.surface` 與 activity suitability。Editor、validation、topology preview、initializer 與 Spatial 共用同一 resolved geometry；`src/spatial-traversal.js` 不知道家具朝向特例。Runtime 仍由 compiler 狹義投影 `restQuality / sleepQuality` 給既有 activity consumer；Room value legacy cleanup 已移除 Furniture `value` projection 與 Door parity metadata。
 - Resident opening placement 支援 `exact` 與 explicit `furnitureSlot` anchor。`SimWorldInitializer.analyzeInitialPlacements(...)` 分開回傳 hard errors 與 diagnostic-only 問題：missing/conflicting/blocked slot 或 position 會拒絕初始化；密室、無出口、資源不可達與非 exclusive node overlap 只提示，不自動搬人或修改世界。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。
@@ -29,7 +29,7 @@
 ### Spatial / Physical world
 
 - **Geometry-derived Horizontal Topology**：`SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})` 從 floor Cell、格線 `boundaries`、Door state、concrete blocker、Furniture footprint 與 under-clearance 即時計算 structural openness、static blocker、cardinal adjacency、connected components 與 diagnostics。普通 `wall` boundary 阻斷兩格之間的 edge；`opening` boundary 保留 edge，若同一 opening 有 closed Door 則暫時阻斷。`SimSpatial.getPassageProfile(...)` 另外讀取 opening 的 metric `clearanceWidth / clearanceHeight`，因此「一條 1m 格線」不等於固定 1m 門洞。Editor preview、initializer diagnostics 與 runtime route 共用同一 boundary interpretation；derived topology 不 serialize。Runtime `tile.walkable / tile.furnitureIds` 暫時保留為 compiler 產物，不是 Editor authoring truth。Slice E 已把 `z` 納入 runtime Tile / Spatial Node / occupancy / route / contact / crowding identity；v11.26 再以明確 `structures` 建立第一個 concrete cross-Z edge。只有 Structure endpoint 會跨層相連，同 XY 不同 Z 仍不自動相鄰；`deriveHorizontalTopology(...)` 繼續只負責同層 cardinal topology，vertical connection 由獨立 Structure derivation 提供。
-- Room、Tile、Furniture Surface、Local Position 與 Spatial Node。
+- Room、Tile、Furniture Surface、Local Position 與 Spatial Node。Room 目前只保存由拓樸推導的 identity / membership / area 等結構資料，不再保存沒有 gameplay consumer 的 legacy `value` aggregate。
 - A* traversal、dynamic blocker、supported contact、surface environment / liquid。
 - Interaction Geometry 依 affordance + target data 決定合法接觸位置。
 - Container / Source / Surface Environment 的實體資源 transfer、Serving、Carry Load、Restock、External Supply。
