@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.25.0-furniture-traversal-geometry';
+const CURRENT_VERSION='11.26.0-vertical-structure-traversal';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
