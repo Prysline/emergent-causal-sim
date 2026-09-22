@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.27.0-furniture-orientation';
+const CURRENT_VERSION='11.27.1-resident-private-badge';
 const CROWDING_VERSION='11.26.0-vertical-flow-congestion';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';

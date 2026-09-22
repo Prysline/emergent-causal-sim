@@ -22,7 +22,7 @@ function quietHuman(a){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.27.0-furniture-orientation');
+assert.equal(st.version,'11.27.1-resident-private-badge');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.12.4-soft-reconsideration');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);

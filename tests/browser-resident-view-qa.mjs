@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.27.0-furniture-orientation';
+const CURRENT_VERSION='11.27.1-resident-private-badge';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -35,6 +35,7 @@ async function snapshot(){
       residentVisible:!!resident&&!resident.hidden&&!!resident.getClientRects().length,
       debugVisible:!!debug&&!debug.hidden&&!!debug.getClientRects().length,
       residentText:resident?.innerText??'',debugText:debug?.innerText??'',spatialText:document.querySelector('.spatial-observability-section')?.innerText??'',
+      recentRows:[...(resident?.querySelectorAll('.resident-life-event')||[])].map(row=>{const ref=row.dataset.entity||'',eventId=ref.startsWith('event:')?ref.slice(6):null,source=eventId?st.causes?.[eventId]:null;return {eventId,text:row.innerText,badges:[...row.querySelectorAll('.resident-private-badge')].map(b=>b.textContent?.trim()||''),visibility:source?.data?.visibility||'public',owner:source?.data?.owner||null};}),
       validator:window.SimValidator.validateState(st),
       affectLabels:{neutral:E.residentAffectLabel({valence:0,activation:0,frustration:0}),frustrated:E.residentAffectLabel({valence:-.1,activation:.2,frustration:.6})},
       width:innerWidth,docWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,
@@ -221,7 +222,13 @@ await page.click('[data-v1140-tab="recent"]');
 const recent=await snapshot();
 assert.equal(recent.activeTab,'recent');
 assert.ok(recent.residentText.includes('最近發生的事'));
-assert.ok(recent.residentText.includes('自己的經驗・老周等了一會兒，沒有得到立即回應，便不再等了。'),'requester-private wait end should be visible only as the resident own experience');
+const privateRecent=recent.recentRows.find(row=>row.text.includes('老周等了一會兒，沒有得到立即回應，便不再等了。'));
+assert.ok(privateRecent,'requester-private wait end should be visible in the resident own recent view');
+assert.deepEqual(privateRecent.badges,['私人'],'requester-private recent event should carry exactly one private badge');
+assert.ok(!privateRecent.text.includes('自己的經驗・'),'private badge should replace the old inline prefix');
+const publicRecent=recent.recentRows.find(row=>row.visibility!=='private');
+assert.ok(publicRecent,'resident recent view fixture should include at least one public event');
+assert.deepEqual(publicRecent.badges,[],'public recent events must not carry a private badge');
 assert.ok(!recent.residentText.includes('故意忽略'),'private recent experience must not invent responder intent');
 assert.ok(recent.docWidth<=recent.width+1,`desktop overflow: ${recent.docWidth}>${recent.width}`);
 
@@ -304,7 +311,7 @@ await page.evaluate(()=>{
   E.rememberRequesterSocialOutcome(st,st.causes[waitId]);document.querySelector('[data-entity="agent:orange"]')?.click();
 });
 await page.waitForFunction(()=>document.querySelector('[data-v1140-resident-view]')?.innerText.includes('橘子'));
-await page.click('[data-v1140-tab="recent"]');const catRecent=await snapshot();assert.ok(catRecent.residentText.includes('自己的經驗・橘子等了一會兒，沒有得到立即回應，便不再等了。'),'animal requester private wait end should appear in own recent view');
+await page.click('[data-v1140-tab="recent"]');const catRecent=await snapshot();const catPrivateRecent=catRecent.recentRows.find(row=>row.text.includes('橘子等了一會兒，沒有得到立即回應，便不再等了。'));assert.ok(catPrivateRecent,'animal requester private wait end should appear in own recent view');assert.deepEqual(catPrivateRecent.badges,['私人'],'animal requester private recent event should carry the private badge');assert.ok(!catPrivateRecent.text.includes('自己的經驗・'),'animal private badge should replace the old inline prefix');
 await page.click('[data-v1140-tab="memory"]');const catMemory=await snapshot();assert.ok(catMemory.residentText.includes('曾向老周發起親近互動，但當時沒有得到回應。'),`animal requester memory should use interaction semantics: ${catMemory.residentText}`);assert.ok(!catMemory.residentText.includes('故意忽略'),'animal memory must not invent intentional ignoring');assert.ok(!catMemory.residentText.includes('聊天邀請'),'animal memory must not be mislabeled as human chat');assert.equal(catMemory.validator.issueCount,0,`animal mobile validator: ${catMemory.validator.issues.map(x=>x.code).join(', ')}`);
 await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPage:true});
 
