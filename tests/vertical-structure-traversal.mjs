@@ -82,15 +82,15 @@ const zhen=st.agents.zhen;
 const zhou=st.agents.zhou;
 const orange=st.agents.orange;
 zhen.position={...lower};zhen.action=null;
-zhou.position={...upper};zhou.action=null;
-orange.position={...upperEast};orange.action=null;
+zhou.offMap=true;orange.offMap=true;
 
 const up=SP.planRoute(st,zhen,upper,{mode:'walk',objective:'traversalCost'});
 assert.equal(up.pathDistance,1,'stair must provide one abstract cross-Z edge');
 assert.equal(up.steps[0].moveTicks,1,'empty stair traversal must not be hard-coded to two ticks');
 assert.equal(up.travelTime,1);
 
-const down=SP.planRoute(st,zhou,lower,{mode:'walk',objective:'traversalCost'});
+zhen.position={...upper};
+const down=SP.planRoute(st,zhen,lower,{mode:'walk',objective:'traversalCost'});
 assert.equal(down.pathDistance,1);
 assert.equal(down.steps[0].moveTicks,1);
 assert.equal(down.travelTime,1);
@@ -106,10 +106,12 @@ assert.equal(feasibility.modes.kneelCrawl.feasible,false,'stair proof must not s
 
 const flatCost=SP.traversalEdgeCost(st,upper,upperEast,zhen,'walk','walk');
 const upCost=SP.traversalEdgeCost(st,lower,upper,zhen,'walk','walk');
-const downCost=SP.traversalEdgeCost(st,upper,lower,zhou,'walk','walk');
+const downCost=SP.traversalEdgeCost(st,upper,lower,zhen,'walk','walk');
 assert.ok(upCost>downCost,`expected stair up cost > down cost, got ${upCost} <= ${downCost}`);
 assert.ok(downCost>=flatCost,`expected stair down cost >= flat cost, got ${downCost} < ${flatCost}`);
 
+zhen.position={...lower};
+zhou.offMap=false;zhou.position={...upper};
 zhou.action={locomotionStep:{mode:'walk',to:{...lower},toKey:SP.nodeKey(st,lower),ticksRemaining:1}};
 const crowd=C.getCrowdingProfile(st,zhen,lower,upper,'walk');
 assert.equal(crowd.widthKnown,true,'Structure clearanceWidth must feed existing Crowding');
