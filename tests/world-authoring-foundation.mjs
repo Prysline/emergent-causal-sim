@@ -8,7 +8,7 @@ for(const file of ['furniture-definitions.js','world-authoring.js','embodiment-c
 }
 
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
-assert.equal(D.VERSION,'furniture-definitions-v2');
+assert.equal(D.VERSION,'furniture-definitions-v3');
 assert.equal(A.VERSION,'world-authoring-v4');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
@@ -71,7 +71,11 @@ assert.equal(st.furniture.sofa.slots[0].restQuality,.82);
 assert.equal(st.furniture.sofa.slots[0].sleepQuality,.62);
 assert.equal(st.furniture.bed.slots[0].furnitureId,'bed');
 assert.ok(st.map.tiles['5,2'].furnitureIds.includes('diningTable'));
+assert.equal(st.furniture.diningTable.spatial.floor.mode,'under','Definition floor geometry must survive runtime compilation');
 assert.equal(st.furniture.diningTable.spatial.under.clearance,.72,'Definition under-clearance must survive runtime compilation');
+assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface','Definition surface key must derive a stable instance surface id');
+assert.deepEqual(st.furniture.diningTable.spatial.surface.cells,[{x:5,y:2},{x:6,y:2},{x:5,y:3},{x:6,y:3}],'Definition-local surface coverage must compile to runtime world cells');
+assert.equal(st.furniture.diningTable.blocksMovement,undefined,'runtime Furniture must not retain blocksMovement as intrinsic traversal truth');
 assert.deepEqual(st.agents.zhen.position,{x:9,y:3});
 assert.deepEqual(st.agents.zhou.position,{x:7,y:3});
 assert.deepEqual(st.agents.orange.position,{x:2,y:6});
@@ -80,7 +84,7 @@ assert.equal(st.map.roomRevision,0);
 assert.equal(st.map.passageConstraints,undefined);
 
 const serialized=A.serializeAuthoring(authored);
-assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v2"/);
+assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v3"/);
 assert.match(serialized,/"definitionId": "chair-basic"/);
 assert.ok(!serialized.includes('"restQuality"')&&!serialized.includes('"sleepQuality"')&&!serialized.includes('"mealSeat"'),'legacy activity fields must not serialize in v4');
 assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must not serialize into Furniture Instances');
