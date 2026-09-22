@@ -28,6 +28,7 @@ assert.equal(authored.map.layers[0].z,0);
 assert.equal(authored.map.cellSizeMeters,1);
 assert.equal(Object.keys(authored.map.layers[0].boundaries).length,32);
 assert.equal(authored.map.layers[0].boundaries['v:1,6'].kind,'opening');
+assert.deepEqual(authored.structures,{},'default world may remain single-level without inventing a demonstration stair');
 
 for(const cell of Object.values(authored.map.layers[0].cells)){
   for(const derived of ['walkable','roomId','furnitureIds'])assert.equal(Object.prototype.hasOwnProperty.call(cell,derived),false,'authoring cell must not persist '+derived);
@@ -35,7 +36,7 @@ for(const cell of Object.values(authored.map.layers[0].cells)){
 for(const instance of Object.values(authored.furniture)){
   assert.deepEqual(Object.keys(instance).sort(),instance.name===undefined?['definitionId','id','origin']:['definitionId','id','name','origin']);
   for(const legacy of ['value','mealSeat','restQuality','sleepQuality','footprint','displayAt','slots','blocksMovement','supportsObjects','spatial','canExit','quality','condition']){
-    assert.equal(Object.prototype.hasOwnProperty.call(instance,legacy),false,'v4 instance must not persist intrinsic field '+legacy);
+    assert.equal(Object.prototype.hasOwnProperty.call(instance,legacy),false,'v5 instance must not persist intrinsic field '+legacy);
   }
 }
 
@@ -45,7 +46,7 @@ assert.equal(chair.name,'餐椅 A');
 assert.deepEqual(chair.footprint,[{x:4,y:2,z:0}]);
 assert.equal(chair.slots[0].id,'chairNW:seat');
 assert.equal(chair.slots[0].restQuality,.48);
-assert.equal(chair.slots[0].mealSeat,undefined,'mealSeat must not survive into v4 Definition/runtime projection');
+assert.equal(chair.slots[0].mealSeat,undefined,'mealSeat must not survive into v5 Definition/runtime projection');
 assert.equal(authored.furniture.frontDoor,undefined,'Door must no longer exist as a Furniture Instance');
 assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open',compatibility:{roomValueContribution:18}});
 assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:'offMap',boundary:{z:0,id:'v:1,6'},access:{x:1,y:6,z:0}});
@@ -59,6 +60,7 @@ assert.equal(Object.keys(st.map.tiles).length,96);
 assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='floor').length,60);
 assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='void').length,36);
 assert.equal(st.map.cellSizeMeters,1);
+assert.deepEqual(st.structures,{},'Initializer must expose the formal runtime Structure root even when the default world has none');
 assert.equal(Object.keys(st.map.boundaries).length,32);
 assert.equal(st.map.boundaries['0|v:1,6'].kind,'opening');
 assert.equal(st.doors.frontDoor.state,'open');
@@ -86,10 +88,10 @@ assert.equal(st.map.passageConstraints,undefined);
 const serialized=A.serializeAuthoring(authored);
 assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v3"/);
 assert.match(serialized,/"definitionId": "chair-basic"/);
-assert.ok(!serialized.includes('"restQuality"')&&!serialized.includes('"sleepQuality"')&&!serialized.includes('"mealSeat"'),'legacy activity fields must not serialize in v4');
+assert.ok(!serialized.includes('"restQuality"')&&!serialized.includes('"sleepQuality"')&&!serialized.includes('"mealSeat"'),'legacy activity fields must not serialize in v5');
 assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must not serialize into Furniture Instances');
-assert.ok(serialized.includes('"boundaries"')&&serialized.includes('"doors"')&&serialized.includes('"exits"'),'v4 structural truth must serialize explicitly');
-assert.ok(!serialized.includes('"canExit"'),'v4 must not serialize legacy furniture exit compatibility');
+assert.ok(serialized.includes('"structures"')&&serialized.includes('"boundaries"')&&serialized.includes('"doors"')&&serialized.includes('"exits"'),'v5 structural truth must serialize explicitly');
+assert.ok(!serialized.includes('"canExit"'),'v5 must not serialize legacy furniture exit compatibility');
 
 const again=I.createInitialState(authored,{seed:20260911,version:'11.26.0-vertical-structure-traversal'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
