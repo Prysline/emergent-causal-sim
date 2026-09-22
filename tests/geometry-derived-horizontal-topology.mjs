@@ -58,6 +58,16 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
 
 {
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
+  authored.map.layers.push({z:1,cells:{'8,4':{terrain:'floor',material:'wood'}},boundaries:{}});
+  authored.structures.stairA={id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8};
+  const horizontal=A.deriveHorizontalTopology(authored,{z:0});
+  assert.equal(horizontal.cells['8,4'].adjacent.includes('8,4,1'),false,'horizontal topology must never serialize or derive a cross-Z neighbor');
+  const connections=A.deriveStructureConnections(authored);
+  assert.deepEqual(connections,[{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8}],'vertical connectivity must have a separate pure Structure derivation owner');
+}
+
+{
+  const authored=clone(A.DEFAULT_WORLD_AUTHORING);
   authored.furniture.testCover={id:'testCover',definitionId:'dining-table',origin:{x:3,y:4,z:0}};
   const topology=A.deriveHorizontalTopology(authored,{z:0});
   assert.equal(topology.cells['3,4'].open,true,'Definition-owned under-clearance geometry must remain generically connected');
