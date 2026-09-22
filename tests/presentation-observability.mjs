@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.23.1-editor-source-port-observability';
+const CURRENT_VERSION='11.24.0-locomotion-traversal-cost';
 const CROWDING_VERSION='11.20.0-dynamic-congestion';
-const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
-const ROUTE_VERSION='11.18.0-route-semantics-split';
+const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
+const ROUTE_VERSION='11.24.0-route-locomotion-cost';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const PASSAGE_VERSION='11.23.0-boundary-passage-profile';
 const files=[
@@ -97,7 +97,7 @@ assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial m
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
 assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
 const routeSource=fs.readFileSync(new URL('../src/spatial-traversal.js',import.meta.url),'utf8');
-assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.18\.0-route-semantics-split'/,'Spatial must expose the Route Semantics contract marker');
+assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.24\.0-route-locomotion-cost'/,'Spatial must expose the Route Semantics contract marker');
 assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expose canonical planRoute');
 assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
 assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must keep pathDistance distinct from traversalCost');
@@ -149,7 +149,7 @@ assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.23\.1・Editor Source Port Observability/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.24\.0・Locomotion Traversal Cost/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');

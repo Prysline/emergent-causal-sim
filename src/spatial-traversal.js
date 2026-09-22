@@ -77,10 +77,13 @@
     const surfaceNode=from.surfaceId===FLOOR?to:from,entry=surfaceEntry(st,surfaceNode.surfaceId);if(!entry)return Infinity;
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
   }
-  function traversalEdgeCost(st,from,to,a,mode=null){
-    const base=baseTraversalEdgeCost(st,from,to,a),C=crowdingRuntime();if(!C||!a||!Number.isFinite(base))return base;
-    const resolvedMode=mode||a.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk',crowding=C.getCrowdingProfile?.(st,a,from,to,resolvedMode);
-    return base+(crowding?.congestionCost||0);
+  function traversalEdgeCost(st,from,to,a,mode=null,fromMode=mode){
+    const base=baseTraversalEdgeCost(st,from,to,a);if(!Number.isFinite(base))return base;
+    const resolvedMode=mode||a?.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk';
+    const locomotion=locomotionRuntime(),modeBurden=locomotion?.modeTraversalBurden?.(a,resolvedMode)??0,transitionBurden=locomotion?.modeTransitionBurden?.(a,fromMode,resolvedMode)??0;
+    if(!Number.isFinite(modeBurden)||!Number.isFinite(transitionBurden))return Infinity;
+    const crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,from,to,resolvedMode)||null;
+    return base+modeBurden+transitionBurden+(crowding?.congestionCost||0);
   }
   function walkEdgeFeasible(st,a,from,to){
     if(!a)return true;
@@ -174,7 +177,7 @@
       for(const q of candidateTraversalNeighbors(st,cur.node,a)){
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode))continue;
-          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode);
+          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks))continue;
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?1:edgeCost),
@@ -184,7 +187,7 @@
           };
           const qk=routeStateKey(st,q,nextMode);
           if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
-          const step={from:cloneNode(cur.node),to:cloneNode(q),mode:nextMode,transitionTicks:transition,moveTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,edgeTraversalCost:edgeCost,congestion:crowding};
+          const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,transitionTicks:transition,moveTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,edgeTraversalCost:edgeCost,congestion:crowding};
           came[qk]={prev:ck,step};score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
         }
       }
@@ -194,7 +197,7 @@
   function routeMetrics(st,a,route){
     if(!route?.path?.length)return {pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
     let traversalCost=0,travelTime=0,transitions=0;
-    for(const step of route.steps||[]){traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
+    for(const step of route.steps||[]){traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode,step.fromMode??step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
     return {pathDistance:Math.max(0,route.path.length-1),traversalCost,travelTime,transitionTicks:transitions};
   }
   function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost'}={}){
@@ -280,5 +283,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.18.0-route-semantics-split',TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
 })();

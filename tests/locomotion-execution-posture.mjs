@@ -12,8 +12,8 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.23.1-editor-source-port-observability';
-const LOCOMOTION_VERSION='11.19.0-locomotion-execution-posture';
+const APP_VERSION='11.24.0-locomotion-traversal-cost';
+const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
@@ -65,6 +65,10 @@ assert.equal(L.postureForMode('proneCrawl'),'prone');
 assert.equal(L.edgeMoveTicks(human,'walk'),1);
 assert.equal(L.edgeMoveTicks(human,'kneelCrawl'),2);
 assert.equal(L.edgeMoveTicks(human,'proneCrawl'),3);
+assert.equal(L.modeTraversalBurden(human,'walk'),0);
+assert.equal(L.modeTraversalBurden(human,'kneelCrawl'),1);
+assert.equal(L.modeTraversalBurden(human,'proneCrawl'),2);
+assert.equal(L.modeTransitionBurden(human,'walk','proneCrawl'),1);
 
 // A: normal corridor stays walk-first; no posture-transition tax when already standing.
 let f=resetFixture({height:2,width:.8});
@@ -118,13 +122,14 @@ assert.deepEqual(plan.path,[]);
 assert.equal(plan.travelTime,Infinity);
 assert.equal(f.human.posture.kind,'standing');
 
-// E: individual speedFactor override can change executable mode choice on an equal traversal-cost route.
+// E: speedFactor remains execution timing; it must not redefine objective mode burden.
 f=resetFixture({height:.95,width:.8,kneelSpeed:.25});
 plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(L.edgeMoveTicks(f.human,'kneelCrawl'),4,'individual profile override must change kneel edge timing');
-assert.deepEqual(plan.steps.map(x=>x.mode),['proneCrawl','proneCrawl'],'when kneel becomes slower than prone, executable-time tie-break may choose prone');
-assert.equal(plan.travelTime,7,'selected prone route is one transition tick plus two three-tick edges');
-armWander(f);tickN(6);
+assert.deepEqual(plan.steps.map(x=>x.mode),['kneelCrawl','kneelCrawl'],'lower objective burden must beat faster execution time');
+assert.equal(plan.traversalCost,5,'kneel objective burden is independent from speedFactor');
+assert.equal(plan.travelTime,9,'standing -> kneel costs one tick, then two four-tick edges');
+armWander(f);tickN(8);
 assert.ok(!SP.nodeSame(E.getState(),f.human.position,f.goal),'agent must not arrive before the selected plan travelTime');
 E.tick();
 assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'actual movement must honor the speedFactor-sensitive selected mode timing');
@@ -140,4 +145,4 @@ f.human.action={kind:'wander',phase:'move',locomotionStep:{mode:'kneelCrawl',to:
 validation=V.validateState(f.st);
 assert.ok(validation.issues.some(x=>x.code==='locomotion_step_ticks_invalid'));
 
-console.log('v11.19.0 locomotion execution + posture transition regression: ok');
+console.log('v11.24.0 locomotion execution + objective burden regression: ok');
