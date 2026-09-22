@@ -12,7 +12,7 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.27.1-resident-private-badge');
+assert.equal(st.version,'11.27.2-room-value-legacy-removal');
 assert.equal(SP.VERSION,'11.26.0-vertical-structure-traversal');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
