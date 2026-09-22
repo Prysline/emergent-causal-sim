@@ -105,15 +105,7 @@
           if(boundary)boundarySet.add(boundaryRuntimeKey(zOf(ft),bid));
         }
       }
-      const materialValue={wood:1,stone:2};let value=0;
-      for(const tid of floors)value+=materialValue[tiles[tid].material]||1;
-      for(const bid of boundarySet)value+=(materialValue[st.map.boundaries?.[bid]?.material]||1)*1.2;
-      for(const fid of furnitureSet)value+=furniture(st,fid)?.value||0;
-      for(const door of Object.values(st.doors||{})){
-        const ref=door?.boundary,contribution=Number(door?.compatibility?.roomValueContribution)||0;
-        if(ref&&contribution&&boundarySet.has(boundaryRuntimeKey(ref.z,ref.id)))value+=contribution;
-      }
-      rooms[id]={id,name:seq===1?'主室':`房間 ${seq}`,z:zOf(t),floorTiles:[...floorSet],wallBoundaries:[...boundarySet],furnitureIds:[...furnitureSet],area:floors.length,value:Math.round(value*10)/10};
+      rooms[id]={id,name:seq===1?'主室':`房間 ${seq}`,z:zOf(t),floorTiles:[...floorSet],wallBoundaries:[...boundarySet],furnitureIds:[...furnitureSet],area:floors.length};
     }
     st.map.rooms=rooms;st.map.roomRevision=(st.map.roomRevision||0)+1;return rooms;
   }

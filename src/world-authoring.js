@@ -53,7 +53,7 @@
       bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5),orientation:'north'}
     },
     doors:{
-      frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open',compatibility:{roomValueContribution:18}}
+      frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open'}
     },
     exits:{
       frontExit:{id:'frontExit',name:'大門外',kind:'offMap',boundary:boundaryRef(0,'v:1,6'),access:pos(1,6)}

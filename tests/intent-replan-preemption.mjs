@@ -18,7 +18,7 @@ function bind(a,kind,intentKind,extra={}){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.27.1-resident-private-badge');
+assert.equal(st.version,'11.27.2-room-value-legacy-removal');
 assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.12.3-replan-preemption');
 noIssues('reset');
 

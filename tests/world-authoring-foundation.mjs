@@ -8,7 +8,7 @@ for(const file of ['furniture-definitions.js','world-authoring.js','embodiment-c
 }
 
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
-assert.equal(D.VERSION,'furniture-definitions-v4');
+assert.equal(D.VERSION,'furniture-definitions-v5');
 assert.equal(A.VERSION,'world-authoring-v6');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
@@ -48,12 +48,12 @@ assert.equal(chair.slots[0].id,'chairNW:seat');
 assert.equal(chair.slots[0].restQuality,.48);
 assert.equal(chair.slots[0].mealSeat,undefined,'mealSeat must not survive into v6 Definition/runtime projection');
 assert.equal(authored.furniture.frontDoor,undefined,'Door must no longer exist as a Furniture Instance');
-assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open',compatibility:{roomValueContribution:18}});
+assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open'});
 assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:'offMap',boundary:{z:0,id:'v:1,6'},access:{x:1,y:6,z:0}});
 
-const st=I.createInitialState(authored,{seed:20260911,version:'11.27.1-resident-private-badge'});
+const st=I.createInitialState(authored,{seed:20260911,version:'11.27.2-room-value-legacy-removal'});
 assert.equal(JSON.stringify(authored),authoredBefore,'compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.27.1-resident-private-badge');
+assert.equal(st.version,'11.27.2-room-value-legacy-removal');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);
@@ -68,7 +68,7 @@ assert.equal(st.exits.frontExit.kind,'offMap');
 assert.deepEqual(st.exits.frontExit.access,{x:1,y:6});
 assert.equal(st.map.tiles['1,6'].walkable,true,'world-exit access must remain on an authored floor cell');
 assert.equal(Object.keys(st.furniture).length,7);
-assert.equal(st.furniture.diningTable.value,30,'Room value compatibility projection must preserve current runtime behavior');
+assert.equal(Object.hasOwn(st.furniture.diningTable,'value'),false,'resolved Furniture must not retain the removed legacy Room value projection');
 assert.equal(st.furniture.sofa.slots[0].restQuality,.82);
 assert.equal(st.furniture.sofa.slots[0].sleepQuality,.62);
 assert.equal(st.furniture.bed.slots[0].furnitureId,'bed');
@@ -86,7 +86,7 @@ assert.equal(st.map.roomRevision,0);
 assert.equal(st.map.passageConstraints,undefined);
 
 const serialized=A.serializeAuthoring(authored);
-assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v4"/);
+assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v5"/);
 assert.match(serialized,/"definitionId": "chair-basic"/);
 assert.ok(!serialized.includes('"restQuality"')&&!serialized.includes('"sleepQuality"')&&!serialized.includes('"mealSeat"'),'legacy activity fields must not serialize in v6');
 assert.ok(serialized.includes('"orientation": "north"'),'v6 Furniture Instances must serialize canonical orientation');
@@ -94,9 +94,9 @@ assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must
 assert.ok(serialized.includes('"structures"')&&serialized.includes('"boundaries"')&&serialized.includes('"doors"')&&serialized.includes('"exits"'),'v6 structural truth must serialize explicitly');
 assert.ok(!serialized.includes('"canExit"'),'v6 must not serialize legacy furniture exit compatibility');
 
-const again=I.createInitialState(authored,{seed:20260911,version:'11.27.1-resident-private-badge'});
+const again=I.createInitialState(authored,{seed:20260911,version:'11.27.2-room-value-legacy-removal'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
-const otherSeed=I.createInitialState(authored,{seed:7,version:'11.27.1-resident-private-badge'});
+const otherSeed=I.createInitialState(authored,{seed:7,version:'11.27.2-room-value-legacy-removal'});
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 

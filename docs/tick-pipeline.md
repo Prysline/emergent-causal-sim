@@ -2,9 +2,9 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.27.1-resident-private-badge`。
+目前 runtime marker：`11.27.2-room-value-legacy-removal`。
 
-> `11.27.1-resident-private-badge` 只改 Resident View 的玩家可讀 Presentation；simulation hook / Presentation observer 註冊與相對順序均未改。
+> `11.27.2-room-value-legacy-removal` 只清理 initial-state derived Room / Furniture compatibility shape；simulation hook / Presentation observer 註冊與相對順序均未改。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v4';
+  const VERSION='furniture-definitions-v5';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -27,8 +27,7 @@
         floor:{mode:'under'},
         under:{clearance:.72,cover:'overhead'},
         surface:{key:'surface',label:'餐桌桌面',coverage:'footprint',traversable:true,allowKinds:['human','cat']}
-      },
-      compatibility:{roomValueContribution:30}
+      }
     },
     'chair-basic':{
       id:'chair-basic',
@@ -40,8 +39,7 @@
       slots:[
         {key:'seat',label:'座位',offset:local(0,0),canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
       ],
-      spatial:{floor:{mode:'open'}},
-      compatibility:{roomValueContribution:10}
+      spatial:{floor:{mode:'open'}}
     },
     'sofa-basic':{
       id:'sofa-basic',
@@ -54,8 +52,7 @@
         {key:'left',label:'左側',offset:local(0,0),canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}},
         {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}}
       ],
-      spatial:{floor:{mode:'open'}},
-      compatibility:{roomValueContribution:35}
+      spatial:{floor:{mode:'open'}}
     },
     'double-bed':{
       id:'double-bed',
@@ -68,8 +65,7 @@
         {key:'left',label:'左側',offset:local(0,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}},
         {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}}
       ],
-      spatial:{floor:{mode:'open'}},
-      compatibility:{roomValueContribution:55}
+      spatial:{floor:{mode:'open'}}
     }
   };
 
@@ -150,8 +146,6 @@
       }
     }
     assertSpatialGeometry(definition,key);
-    const roomValue=definition.compatibility?.roomValueContribution;
-    if(roomValue!==undefined&&!Number.isFinite(roomValue))throw new Error('Furniture Definition '+key+' has invalid compatibility room value.');
   }
 
   for(const [key,definition] of Object.entries(DEFINITIONS))assertDefinition(definition,key);
@@ -275,8 +269,6 @@
         delete resolved.spatial.surface.coverage;
       }
     }
-    const roomValue=definition.compatibility?.roomValueContribution;
-    if(Number.isFinite(roomValue))resolved.value=roomValue;
     return resolved;
   }
 

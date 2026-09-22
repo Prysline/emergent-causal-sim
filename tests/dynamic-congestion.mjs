@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.27.1-resident-private-badge';
+const CURRENT_VERSION='11.27.2-room-value-legacy-removal';
 const CROWDING_VERSION='11.26.0-vertical-flow-congestion';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

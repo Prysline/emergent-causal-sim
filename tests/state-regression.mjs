@@ -14,11 +14,11 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.27.1-resident-private-badge');
+  assert.equal(st.version,'11.27.2-room-value-legacy-removal');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
-  assert.equal(st.map.rooms.room1.value,313.6,'Door separation must preserve the previous default Room value');
+  assert.equal(Object.hasOwn(st.map.rooms.room1,'value'),false,'Derived Room topology must not retain the removed legacy Room value aggregate');
   assert.equal(st.map.cellSizeMeters,1);
   assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='floor').length,60);
   assert.equal(Object.values(st.map.tiles).filter(t=>t.terrain==='void').length,36);
