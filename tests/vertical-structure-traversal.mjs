@@ -71,7 +71,7 @@ assert.equal(
 
 const st=W.createInitialStateFromAuthoring(imported,20260922);
 assert.deepEqual(st.map.zLevels,[0,1]);
-assert.deepEqual(st.structures.stairA,authored.structures.stairA,'Initializer must project canonical Structure truth into runtime state');
+assert.deepEqual(st.structures.stairA,{id:'stairA',kind:'stair',lower:{x:8,y:4},upper:{x:8,y:4,z:1},clearanceWidth:.8,clearanceHeight:2},'Initializer must project Structure truth using the existing runtime z=0 position convention');
 
 const lower=SP.normalizeNode(st,{x:8,y:4,z:0},'floor');
 const upper=SP.normalizeNode(st,{x:8,y:4,z:1},'floor');
