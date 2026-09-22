@@ -1,9 +1,10 @@
 (() => {
-  const A=window.SimWorldAuthoring,C=window.SimEmbodimentCapabilities;
+  const A=window.SimWorldAuthoring,C=window.SimEmbodimentCapabilities,D=window.SimFurnitureDefinitions;
   if(!A?.cloneAuthoring||!A?.validateAuthoring||!A?.canonicalizeAuthoring||!A?.semanticFingerprint){
     throw new Error('SimWorldAuthoring must load before editor-authoring-mutations.js.');
   }
   if(!C?.freePosturesForKind||!C?.slotPosturesForKind)throw new Error('SimEmbodimentCapabilities must load before editor-authoring-mutations.js.');
+  if(!D?.getDefinition||!D?.worldToLocal||!D?.localToWorld||!D?.reorientCardinalDirection)throw new Error('SimFurnitureDefinitions orientation helpers must load before editor-authoring-mutations.js.');
   const issue=(code,message,data={})=>({code,message,...data});
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
@@ -243,6 +244,58 @@
     });
   }
 
+  function rotateFurniture(authoring,{furnitureId,orientation}={}){
+    return mutationResult(authoring,candidate=>{
+      const furniture=candidate.furniture?.[furnitureId];
+      if(!furniture)return reject('furniture_missing','找不到 Furniture '+String(furnitureId)+'.',{furnitureId});
+      if(!D.ORIENTATIONS?.includes(orientation)){
+        return reject('furniture_orientation_invalid','Furniture orientation 必須是 north / east / south / west。',{furnitureId,orientation});
+      }
+      const definition=D.getDefinition(furniture.definitionId);
+      if(!definition)return reject('furniture_definition_missing','找不到 Furniture Definition '+String(furniture.definitionId)+'.',{furnitureId,definitionId:furniture.definitionId});
+      const previousInstance=clone(furniture);
+      const previousOrientation=previousInstance.orientation;
+      const followerFrames=[];
+      for(const [containerId,container] of Object.entries(candidate.entities?.containers||{})){
+        if(container.supportId!==furnitureId)continue;
+        followerFrames.push({
+          id:containerId,
+          position:container.position?D.worldToLocal(definition,previousInstance,container.position):null,
+          ports:(container.interactionPorts||[]).map(port=>({
+            position:port.position?D.worldToLocal(definition,previousInstance,port.position):null,
+            edge:D.ORIENTATIONS.includes(port.edge)?port.edge:null
+          }))
+        });
+      }
+      furniture.orientation=orientation;
+      const followerPositions=[];
+      for(const frame of followerFrames){
+        const container=candidate.entities.containers[frame.id];
+        if(frame.position)container.position=D.localToWorld(definition,furniture,frame.position);
+        for(let index=0;index<frame.ports.length;index++){
+          const port=container.interactionPorts?.[index],portFrame=frame.ports[index];
+          if(!port)continue;
+          if(portFrame.position)port.position=D.localToWorld(definition,furniture,portFrame.position);
+          if(portFrame.edge)port.edge=D.reorientCardinalDirection(portFrame.edge,previousOrientation,orientation);
+        }
+        if(container.position)followerPositions.push({id:frame.id,position:clone(container.position)});
+      }
+      const preview=A.resolveFurnitureInstance(furniture);
+      return {meta:{
+        operation:'rotateFurniture',
+        furnitureId,
+        previousOrientation,
+        orientation,
+        followers:followerFrames.map(frame=>frame.id),
+        preview:{
+          footprint:clone(preview.footprint||[]),
+          displayAt:clone(preview.displayAt||null),
+          followerPositions
+        }
+      }};
+    });
+  }
+
   function moveObject(authoring,{entityType,entityId,target,supportChoice=null}={}){
     if(!['container','source'].includes(entityType)){
       return {ok:false,candidate:null,issues:[issue('object_type_unsupported','Object move 只支援 container / source。',{entityType,entityId})],meta:{}};
@@ -294,7 +347,7 @@
     return mutationResult(authoring,candidate=>{
       if(!target)return reject('furniture_create_target_invalid','新增 Furniture 需要 placement target。',{definitionId});
       const newId=nextFurnitureId(candidate,definitionId);
-      const instance={id:newId,definitionId,origin:clone(target)};
+      const instance={id:newId,definitionId,origin:clone(target),orientation:'north'};
       if(typeof name==='string'&&name.trim())instance.name=name.trim();
       candidate.furniture??={};
       candidate.furniture[newId]=instance;
@@ -309,7 +362,7 @@
       if(!source)return reject('furniture_missing','找不到要複製的 Furniture '+String(sourceId)+'.',{sourceId});
       if(!source.origin||!target)return reject('furniture_duplicate_target_invalid','Furniture duplicate 需要 source origin 與 target。',{sourceId,target:target||null});
       const newId=nextFurnitureId(candidate,source.definitionId);
-      const copy={id:newId,definitionId:source.definitionId,origin:clone(target)};
+      const copy={id:newId,definitionId:source.definitionId,origin:clone(target),orientation:source.orientation};
       if(typeof source.name==='string'&&source.name)copy.name=source.name;
       candidate.furniture??={};
       candidate.furniture[newId]=copy;
@@ -382,6 +435,7 @@
     setDoorState,
     setCellMaterial,
     moveFurniture,
+    rotateFurniture,
     moveObject,
     createFurnitureFromDefinition,
     duplicateFurniture,
