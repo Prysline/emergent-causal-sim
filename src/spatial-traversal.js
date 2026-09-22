@@ -26,7 +26,7 @@
 
   function ensureSpatialDefs(st){
     for(const furniture of Object.values(st.furniture||{})){
-      const mode=SP.furnitureFloorMode?.(furniture);
+      const mode=furniture.spatial?.floor?.mode;
       if(!['open','solid','under'].includes(mode))throw new Error('Furniture '+furniture.id+' has invalid runtime floor geometry.');
       const surface=furniture.spatial?.surface;
       if(surface&&(!surface.id||!Array.isArray(surface.cells)))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
