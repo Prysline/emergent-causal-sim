@@ -69,6 +69,16 @@
     return exits;
   }
 
+  function buildStructures(authoring){
+    const structures={};
+    for(const connection of A.deriveStructureConnections(authoring)){
+      structures[connection.id]=clone(connection);
+      structures[connection.id].lower=runtimePosition(connection.lower);
+      structures[connection.id].upper=runtimePosition(connection.upper);
+    }
+    return structures;
+  }
+
   function buildFurniture(authoring){
     const furniture={};
     for(const [id,instance] of Object.entries(authoring.furniture||{})){
@@ -263,12 +273,29 @@
     if(!cache.has(z))cache.set(z,A.deriveHorizontalTopology(authoring,{z}));
     return cache.get(z);
   }
+  function structureConnectionIndex(authoring,cache=null){
+    const cacheKey='structure-connections';
+    if(cache?.has(cacheKey))return cache.get(cacheKey);
+    const index=new Map();
+    for(const connection of A.deriveStructureConnections(authoring)){
+      for(const [from,to] of [[connection.lower,connection.upper],[connection.upper,connection.lower]]){
+        const key=posKey(from),list=index.get(key)||[];
+        list.push({x:to.x,y:to.y,z:zOf(to),structureId:connection.id});
+        index.set(key,list);
+      }
+    }
+    if(cache)cache.set(cacheKey,index);
+    return index;
+  }
   function baseWalkable(authoring,p,cache=null){const derived=topologyFor(authoring,zOf(p),cache).cells[cellKey(p)];return !!derived?.open;}
   function neighborPositions(authoring,p,cache=null){
     const z=zOf(p),topology=topologyFor(authoring,z,cache),cell=topology.cells[cellKey(p)],out=[];
     if(!cell?.open)return out;
     for(const neighborId of cell.adjacent||[]){
       const [x,y]=neighborId.split(',').map(Number);out.push({x,y,z});
+    }
+    for(const q of structureConnectionIndex(authoring,cache).get(posKey(p))||[]){
+      if(baseWalkable(authoring,q,cache))out.push({x:q.x,y:q.y,z:q.z});
     }
     return out;
   }
@@ -461,7 +488,7 @@
     const state={
       version,tick:0,day:authoring.scenario?.startDay??1,minute:authoring.scenario?.startMinute??12*60,seed:n,rngState:n,
       map,
-      furniture,doors:buildDoors(authoring),exits:buildExits(authoring),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
+      structures:buildStructures(authoring),furniture,doors:buildDoors(authoring),exits:buildExits(authoring),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       supply:{trigger:supplyTrigger,trips:0,totalProduced:0},
       containers:buildContainers(authoring),
       sources:buildSources(authoring),
