@@ -48,7 +48,7 @@ assert.equal(layeredRuntime.furniture.chairNW.slots[0].restQuality,.48);
 assert.equal(layeredRuntime.furniture.frontDoor,undefined,'Door must not compile as Furniture');
 assert.equal(layeredRuntime.doors.frontDoor.state,'open');
 assert.equal(layeredRuntime.exits.frontExit.kind,'offMap');
-assert.deepEqual(layeredRuntime.structures.stairA,layered.structures.stairA,'Initializer must compile the canonical Structure root without rewriting its endpoints');
+assert.deepEqual(layeredRuntime.structures.stairA,{id:'stairA',kind:'stair',lower:{x:1,y:6},upper:{x:2,y:2,z:1},clearanceWidth:.8,clearanceHeight:2},'Initializer must compile Structure endpoints with the existing runtime z=0 position convention');
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
