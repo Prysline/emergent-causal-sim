@@ -39,6 +39,7 @@ jobs:
       - run: node tests/interaction-geometry.mjs
       - run: node tests/refill-water-geometry.mjs
       - run: node tests/spatial-z-identity.mjs
+      - run: node tests/vertical-structure-traversal.mjs
       - run: node tests/spatial-traversal.mjs
       - run: node tests/furniture-traversal-geometry.mjs
       - run: node tests/spatial-observability.mjs
