@@ -13,7 +13,7 @@ const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(A.VERSION,'world-authoring-v5');
+assert.equal(A.VERSION,'world-authoring-v6');
 assert.equal(C.VERSION,'embodiment-capabilities-v1');
 
 {
@@ -123,7 +123,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v1');
   const result=M.createFurnitureFromDefinition(doc,{definitionId:'chair-basic',target:{x:3,y:4,z:0}});
   assert.equal(result.ok,true,result.issues.map(x=>x.code).join(','));
   assert.equal(result.meta.newId,'chair-basic-1');
-  assert.deepEqual(result.candidate.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0}});
+  assert.deepEqual(result.candidate.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0},orientation:'north'});
   assert.equal(A.resolveFurnitureInstance(result.candidate.furniture['chair-basic-1']).slots[0].id,'chair-basic-1:seat');
 }
 {
