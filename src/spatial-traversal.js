@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.23.0-boundary-traversal';
+  const VERSION='11.25.0-furniture-traversal-geometry';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
