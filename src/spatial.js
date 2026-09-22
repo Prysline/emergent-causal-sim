@@ -54,7 +54,7 @@
 
   function blockerAt(st,p){
     const t=tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
-    const blockingFurniture=furnitureAt(st,p).find(f=>furnitureFloorMode(f)==='solid');if(blockingFurniture)return `furniture:${blockingFurniture.id}`;
+    const blockingFurniture=furnitureAt(st,p).find(f=>furnitureFloorMode(f)!=='open');if(blockingFurniture)return `furniture:${blockingFurniture.id}`;
     const fixedContainer=Object.values(st.containers||{}).find(c=>c.portable===false&&!c.supportId&&same(objectPosition(st,c.id),p));if(fixedContainer)return `container:${fixedContainer.id}`;
     const source=Object.values(st.sources||{}).find(s=>s.blocksMovement!==false&&same(s.position,p));if(source)return `source:${source.id}`;
     return null;
