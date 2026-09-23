@@ -66,6 +66,16 @@ assert.equal(SP.nodeOccupantsAt(st,zhen.position).includes(zhen),false,'slot-bou
 validation=V.validateState(st);
 assert.equal(validation.issues.some(issue=>issue.code==='agent_on_untraversable_node'&&issue.agentId==='zhen'),false,'slot-bound Agent must not be rejected for occupying furniture body geometry');
 
+// Slot egress candidates must exclude ordinary floor occupants.
+const bedLeftEgress=SP.slotEgressNodes(st,bedLeft,zhen,'walk');
+assert.ok(bedLeftEgress.length>0,'bed:left must expose at least one legal egress when its outside floor is free');
+const blockedEgress={...bedLeftEgress[0]};
+zhou.position={...blockedEgress};
+zhou.posture={kind:'standing',slotId:null,furnitureId:null};
+assert.equal(SP.slotEgressNodes(st,bedLeft,zhen,'walk').some(node=>SP.nodeSame(st,node,blockedEgress)),false,'slot egress must not select a floor node occupied by another ordinary Agent');
+zhou.position={x:7,y:4,z:0};
+
+
 E.reset(20260911);
 for(let i=0;i<500;i++)E.tick();
 validation=V.validateState(E.getState());
