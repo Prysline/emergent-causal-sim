@@ -1,7 +1,7 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
+  const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.26.0-vertical-structure-traversal';
+  const VERSION='11.28.0-furniture-local-geometry';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -27,32 +27,42 @@
 
   function ensureSpatialDefs(st){
     for(const furniture of Object.values(st.furniture||{})){
-      const mode=furniture.spatial?.floor?.mode;
-      if(!['open','solid','under'].includes(mode))throw new Error('Furniture '+furniture.id+' has invalid runtime floor geometry.');
+      if(!Array.isArray(furniture.spatial?.solids)||!furniture.spatial.solids.length)throw new Error('Furniture '+furniture.id+' has invalid runtime metric solids.');
       const surface=furniture.spatial?.surface;
-      if(surface&&(!surface.id||!Array.isArray(surface.cells)))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
+      if(surface&&(!surface.id||!Array.isArray(surface.cells)||!surface.sourceSolidKey))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
     }
     return st;
   }
   function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.surface?[{furniture:f,surface:f.spatial.surface}]:[]);}
   function surfaceEntry(st,surfaceId){return surfaceEntries(st).find(x=>x.surface.id===surfaceId)||null;}
   function surfaceAt(st,p){return surfaceEntries(st).find(({surface})=>(surface.cells||[]).some(c=>localSame(c,p)))||null;}
-  function overheadAt(st,p){return Object.values(st.furniture||{}).filter(f=>f.spatial?.under&&(f.footprint||[]).some(fp=>localSame(fp,p)));}
+  function furnitureSolids(st,z){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.solids||[]).filter(solid=>solid.layerZ===z);}
+  function floorGeometry(st,p){return D.analyzeFloorTile(furnitureSolids(st,zOf(p)),p.x,p.y,zOf(p));}
+  function overheadAt(st,p){
+    const z=zOf(p);
+    return Object.values(st.furniture||{}).filter(f=>(f.spatial?.solids||[]).some(solid=>{
+      if(solid.layerZ!==z||solid.bounds?.z<=0)return false;
+      const b=solid.bounds;
+      return Math.min(p.x+1,b.x+b.width)-Math.max(p.x,b.x)>1e-9&&Math.min(p.y+1,b.y+b.depth)-Math.max(p.y,b.y)>1e-9;
+    }));
+  }
   function isSurfaceCell(entry,p){return !!entry&&(entry.surface.cells||[]).some(c=>localSame(c,p));}
   function isFootprintCell(entry,p){return !!entry&&(entry.furniture.footprint||[]).some(c=>localSame(c,p));}
   function agentFor(st,aOrId){if(typeof aOrId==='string')return st.agents?.[aOrId]||null;return aOrId||null;}
 
   function fixedFloorBlocker(st,p){
     const t=SP.tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
-    const furniture=(t.furnitureIds||[]).map(id=>st.furniture?.[id]).filter(Boolean);
-    const solid=furniture.find(f=>SP.furnitureFloorMode?.(f)==='solid');if(solid)return `furniture:${solid.id}`;
+    if(floorGeometry(st,p).blocked)return `furniture:${t.furnitureIds?.[0]||'geometry'}`;
     const fixedContainer=Object.values(st.containers||{}).find(c=>c.portable===false&&!c.supportId&&localSame(baseObjectPosition(st,c.id),p));if(fixedContainer)return `container:${fixedContainer.id}`;
     const source=Object.values(st.sources||{}).find(s=>s.blocksMovement!==false&&localSame(s.position,p));if(source)return `source:${source.id}`;
     return null;
   }
   function floorWalkable(st,p,agent=null){
     if(fixedFloorBlocker(st,p))return false;
-    if(agent){const needed=window.SimPhysical?.requiredClearance?.(agent,'walk')??profile(agent).requiredClearance;for(const f of overheadAt(st,p)){if((f.spatial?.under?.clearance??Infinity)<needed)return false;}}
+    if(agent){
+      const envelope=physicalRuntime()?.getMovementEnvelope?.(agent,'walk');
+      if(envelope&&!D.envelopeFitsTile(furnitureSolids(st,zOf(p)),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth))return false;
+    }
     return true;
   }
   function surfaceWalkable(st,node,agent=null){
@@ -69,7 +79,7 @@
     if(c?.supportId){const entry=st.furniture?.[c.supportId]?.spatial?.surface; if(entry)surfaceId=entry.id;}
     return normalizeNode(st,obj.position,surfaceId);
   }
-  function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&a.id!==except&&nodeSame(st,a.position,n));}
+  function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&!a.posture?.slotId&&a.id!==except&&nodeSame(st,a.position,n));}
 
   function crowdingRuntime(){return window.SimCrowding||null;}
   function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t);let cost=1+wet*(a?.kind==='cat'?.015:.07);if(!crowdingRuntime()){const occupied=nodeOccupantsAt(st,node,a?.id).length;cost+=occupied*(a?.kind==='cat'?2.5:5);}return cost;}
