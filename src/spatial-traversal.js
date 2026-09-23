@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions;if(!W||!SP||!D)return;
+  const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
   const VERSION='11.28.0-furniture-local-geometry';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
@@ -65,10 +65,22 @@
     }
     return true;
   }
+  function movementEnvelopeFor(agent,mode='walk'){
+    const runtime=physicalRuntime()?.getMovementEnvelope?.(agent,mode);
+    if(runtime)return runtime;
+    const physical=C?.defaultPhysicalProfile?.(agent?.kind),body=physical?.bodyGeometry,profile=physical?.locomotionProfiles?.[mode];
+    if(!body||!profile||physical?.locomotionCapabilities?.[mode]!==true)return null;
+    return {
+      clearanceHeight:body.height*(profile.heightFactor??1),
+      clearanceWidth:body.width*(profile.widthFactor??1),
+      bodyLength:body.length*(profile.lengthFactor??1),
+      speedFactor:profile.speedFactor??1
+    };
+  }
   function floorNodeFitsMode(st,p,agent,mode='walk'){
     const n=normalizeNode(st,p,FLOOR);if(!n||fixedFloorBlocker(st,n))return false;
     if(!agent)return true;
-    const envelope=physicalRuntime()?.getMovementEnvelope?.(agent,mode);if(!envelope)return false;
+    const envelope=movementEnvelopeFor(agent,mode);if(!envelope)return false;
     return D.envelopeFitsTile(furnitureSolids(st,zOf(n)),n.x,n.y,zOf(n),envelope.clearanceHeight,envelope.clearanceWidth);
   }
   function surfaceWalkable(st,node,agent=null){
@@ -343,5 +355,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
 })();
