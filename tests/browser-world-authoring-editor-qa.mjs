@@ -237,8 +237,8 @@ let clickPlacement=await page.evaluate(()=>({
 assert.equal(clickPlacement.session.dirty,true);
 assert.equal(clickPlacement.document.furniture.chairNW.definitionId,'chair-basic');
 assert.deepEqual(clickPlacement.document.furniture.chairNW.origin,{x:3,y:4,z:0});
-assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'footprint'),false,'canonical v3 instance must not persist Definition geometry');
-assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'slots'),false,'canonical v3 instance must not persist derived slots');
+assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'footprint'),false,'canonical World v6 instance must not persist Definition geometry');
+assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'slots'),false,'canonical World v6 instance must not persist derived slots');
 assert.deepEqual(clickPlacement.resolvedChair.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(clickPlacement.resolvedChair.slots[0].position,{x:3,y:4,z:0});
 assert.deepEqual(clickPlacement.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
@@ -263,7 +263,7 @@ assert.equal(dragPreview.session.dragState?.active,true,'desktop mouse movement 
 assert.equal(dragPreview.session.dragState?.valid,true,'valid chair target must preview as valid');
 assert.equal(dragPreview.ghostCount,1,'chair drag preview must expose its full one-cell footprint');
 assert.equal(dragPreview.mapDragState,'valid');
-assert.deepEqual(dragPreview.orientationMarkers,['↑'],'drag preview must expose the preserved Furniture orientation');
+assert.deepEqual(dragPreview.orientationMarkers,['→'],'drag preview must preserve chairNW authored east orientation');
 await page.mouse.up();
 
 snapshot=await page.evaluate(()=>({
