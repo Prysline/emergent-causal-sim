@@ -21,13 +21,13 @@ assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),true,'partial table geometry
 assert.equal(SP.nodeWalkable(st,table(st,5,2),orange),true,'橘子可站上餐桌桌面');
 assert.equal(SP.nodeWalkable(st,table(st,5,2),zhen),true,'人類能力上也可爬上餐桌');
 
-orange.position={...floor(st,4,2)};
+orange.position={...floor(st,5,1)};
 let catPath=SP.astar(st,orange.position,table(st,5,2),orange.id);
 assert.ok(catPath.length>=2,'橘子應有 floor → tabletop 路徑');
 assert.equal(catPath.at(-1).surfaceId,'diningTable:surface');
 assert.ok(catPath.some(p=>p.surfaceId==='diningTable:surface'),'橘子路徑必須真的進入 tabletop surface');
 
-zhen.position={...floor(st,4,2)};
+zhen.position={...floor(st,5,1)};
 const humanPath=SP.astar(st,zhen.position,table(st,5,2),zhen.id);
 assert.ok(humanPath.length>=2,'人類仍應能爬上餐桌');
 assert.ok(SP.pathCost(st,zhen,table(st,5,2))>SP.pathCost(st,orange,table(st,5,2)),'人類爬桌成本應高於貓');
@@ -40,14 +40,14 @@ assert.equal(SP.isAtInteraction(st,orange,tray,'eatFrom'),false,'橘子站在桌
 orange.position={...table(st,5,2)};
 assert.equal(SP.isAtInteraction(st,orange,tray,'eatFrom'),true,'橘子上桌後可直接吃桌面食物');
 
-zhen.position={...floor(st,4,2)};
-assert.equal(SP.isAtInteraction(st,zhen,tray,'eatFrom'),true,'成人站在相鄰桌邊可直接接觸桌面食物');
-zhen.position={...floor(st,7,2)};
+zhen.position={...floor(st,5,1)};
+assert.equal(SP.isAtInteraction(st,zhen,tray,'eatFrom'),true,'成人站在實際可容納身體的相鄰桌邊可直接接觸桌面食物');
+zhen.position={...floor(st,7,4)};
 assert.equal(SP.isAtInteraction(st,zhen,tray,'eatFrom'),false,'成人不能隔著整張桌子直接吃遠端 mealTray');
 
 const humanTrayGeometry=SP.interactionGeometry(st,tray,zhen,'eatFrom');
-assert.ok(humanTrayGeometry.positions.some(p=>SP.nodeSame(st,p,floor(st,4,2))),'human eatFrom 應保留相鄰 floor → tabletop contact');
-assert.ok(!humanTrayGeometry.positions.some(p=>SP.nodeSame(st,p,floor(st,7,2))),'human eatFrom 不得回到整張 support perimeter');
+assert.ok(humanTrayGeometry.positions.some(p=>SP.nodeSame(st,p,floor(st,5,1))),'human eatFrom 應保留合法相鄰 floor → tabletop contact');
+assert.ok(!humanTrayGeometry.positions.some(p=>SP.nodeSame(st,p,floor(st,7,4))),'human eatFrom 不得回到遠端 floor');
 
 orange.position={...floor(st,5,2)};
 zhen.position={...table(st,5,2)};
