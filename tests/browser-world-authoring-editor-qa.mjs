@@ -548,7 +548,7 @@ assert.equal(runtimePreview.bannerHidden,false);
 assert.match(runtimePreview.bannerText,/編輯器預覽/);
 assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'Simulator preview must use the Editor furniture position');
 assert.equal(runtimePreview.sofa.orientation,'east','Preview handoff must retain canonical Furniture orientation');
-assert.deepEqual(runtimePreview.sofa.footprint,[{x:9,y:2},{x:9,y:3}],'Preview runtime must compile the same rotated geometry');
+assert.deepEqual(runtimePreview.sofa.footprint,[{x:9,y:3},{x:9,y:2}],'Preview runtime must compile the same south-canonical rotated geometry');
 assert.deepEqual(runtimePreview.basket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
 assert.equal(runtimePreview.basket.supportId,'diningTable');
 assert.equal(runtimePreview.basket.surfaceId,'diningTable:surface','runtime may enrich the canonical supported-object position with derived surface identity');
