@@ -97,15 +97,15 @@ assert.equal(snapshot.pendingOperation?.definitionId,'chair-basic');
 await page.hover('[data-cell="3,4"]');
 let orientationPreview=page.locator('#editorMap .placement-orientation-marker');
 assert.equal(await orientationPreview.count(),1,'new Furniture placement hover must expose a contextual orientation marker');
-assert.equal((await orientationPreview.textContent())?.trim(),'↑');
-assert.equal(await orientationPreview.getAttribute('data-orientation'),'north');
+assert.equal((await orientationPreview.textContent())?.trim(),'↓');
+assert.equal(await orientationPreview.getAttribute('data-orientation'),'south');
 await page.click('[data-cell="3,4"]');
 snapshot=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   document:window.SimWorldEditor.getDocument(),
   resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
 }));
-assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0},orientation:'north'},'Catalog creation must persist compact placement + orientation truth');
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0},orientation:'south'},'Catalog creation must persist compact placement + orientation truth');
 assert.deepEqual(snapshot.resolved.footprint,[{x:3,y:4,z:0}]);
 assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.validation.ok,true);
@@ -123,7 +123,7 @@ snapshot=await page.evaluate(()=>({
   resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture.sofa)
 }));
 assert.equal(snapshot.document.furniture.sofa.orientation,'east');
-assert.deepEqual(snapshot.resolved.footprint,[{x:9,y:2,z:0},{x:9,y:3,z:0}],'imported orientation must drive asymmetric resolved geometry');
+assert.deepEqual(snapshot.resolved.footprint,[{x:9,y:3,z:0},{x:9,y:2,z:0}],'imported orientation must drive asymmetric resolved geometry');
 const orientationDownloadPromise=page.waitForEvent('download');
 await page.click('#exportWorld');
 const orientationDownload=await orientationDownloadPromise;
@@ -179,16 +179,16 @@ assert.equal(afterLayerSwitch.fingerprint,cleanFingerprint,'Z-level presentation
 
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
-// Selected Furniture exposes orientation; rotating a 2×1 sofa must visibly change the footprint while preserving origin.
+// Directional Furniture exposes facing orientation; rotating a 2×1 sofa must visibly change the footprint while preserving origin.
 await page.click('[data-scene-type="furniture"][data-scene-id="sofa"]');
 let orientationState=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   markers:[...document.querySelectorAll('#editorMap .furniture-orientation-marker')].map(node=>({text:node.textContent?.trim(),orientation:node.dataset.orientation})),
   summary:document.querySelector('#selectionSummary')?.textContent||''
 }));
-assert.equal(orientationState.markers.length,1,'selected Furniture must expose exactly one orientation marker at its placement anchor');
-assert.deepEqual(orientationState.markers[0],{text:'↑',orientation:'north'});
-assert.match(orientationState.summary,/方向：↑ north/);
+assert.equal(orientationState.markers.length,1,'selected directional Furniture must expose exactly one facing marker at its placement anchor');
+assert.deepEqual(orientationState.markers[0],{text:'↓',orientation:'south'});
+assert.match(orientationState.summary,/方向：↓ south/);
 await page.click('[data-editor-action="rotate-furniture"][data-orientation="east"]');
 orientationState=await page.evaluate(()=>({
   document:window.SimWorldEditor.getDocument(),
@@ -197,7 +197,7 @@ orientationState=await page.evaluate(()=>({
 }));
 assert.deepEqual(orientationState.document.furniture.sofa.origin,{x:9,y:2,z:0},'rotation must preserve placement-anchor origin');
 assert.equal(orientationState.document.furniture.sofa.orientation,'east');
-assert.deepEqual(orientationState.resolved.footprint,[{x:9,y:2,z:0},{x:9,y:3,z:0}],'asymmetric 2×1 footprint must become vertical when facing east');
+assert.deepEqual(orientationState.resolved.footprint,[{x:9,y:3,z:0},{x:9,y:2,z:0}],'asymmetric 2×1 footprint must become vertical when facing east');
 assert.deepEqual(orientationState.markers,[{text:'→',orientation:'east'}]);
 await page.click('[data-editor-action="rotate-furniture"][data-orientation="south"]');
 orientationState=await page.evaluate(()=>({
@@ -206,8 +206,16 @@ orientationState=await page.evaluate(()=>({
   marker:[...document.querySelectorAll('#editorMap .furniture-orientation-marker')].map(node=>node.textContent?.trim())
 }));
 assert.equal(orientationState.document.furniture.sofa.orientation,'south');
-assert.deepEqual(orientationState.resolved.footprint,[{x:10,y:2,z:0},{x:9,y:2,z:0}],'south keeps the same two occupied cells as north but reverses facing semantics');
-assert.deepEqual(orientationState.marker,['↓'],'contextual marker must disambiguate north/south when footprint occupancy is identical');
+assert.deepEqual(orientationState.resolved.footprint,[{x:9,y:2,z:0},{x:10,y:2,z:0}],'south is the canonical unrotated sofa frame');
+assert.deepEqual(orientationState.marker,['↓'],'contextual marker must point from the sofa back toward its front');
+
+await page.click('[data-scene-type="furniture"][data-scene-id="diningTable"]');
+const frameOnlyState=await page.evaluate(()=>({
+  markers:[...document.querySelectorAll('#editorMap .furniture-orientation-marker')].length,
+  summary:document.querySelector('#selectionSummary')?.textContent||''
+}));
+assert.equal(frameOnlyState.markers,0,'frame-only Furniture must not render a facing arrow');
+assert.match(frameOnlyState.summary,/局部框架旋轉：0° south/,'frame-only Furniture must expose rotation without pretending it has a facing direction');
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
 await page.click('[data-scene-type="furniture"][data-scene-id="chairNW"]');
