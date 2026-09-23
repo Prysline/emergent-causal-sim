@@ -9,7 +9,7 @@ const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.27.2-room-value-legacy-removal');
+assert.equal(st.version,'11.28.0-furniture-local-geometry');
 assert.equal(st.interactionModel,undefined);
 
 const pickup=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'pickup');
