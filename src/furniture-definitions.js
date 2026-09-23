@@ -283,17 +283,26 @@
     const left=Math.max(x,bounds.x),right=Math.min(x+1,bounds.x+bounds.width),top=Math.max(y,bounds.y),bottom=Math.min(y+1,bounds.y+bounds.depth);
     return right-left>EPS&&bottom-top>EPS?{left,right,top,bottom}:null;
   }
-  function floorRects(solids,x,y,layerZ,height=EPS){
+  function floorRects(solids,x,y,layerZ,height){
     const out=[];
     for(const solid of resolvedSolidsForLayer(solids,layerZ)){
       const b=solid.bounds;
-      if(b.z>=height-EPS||b.z+b.height<=0)continue;
+      if(b.z>=height-EPS||b.z+b.height<=EPS)continue;
+      const rect=clippedRect(b,x,y);if(rect)out.push({...rect,solidKey:solid.key});
+    }
+    return out;
+  }
+  function floorStartRects(solids,x,y,layerZ){
+    const out=[];
+    for(const solid of resolvedSolidsForLayer(solids,layerZ)){
+      const b=solid.bounds;
+      if(b.z>EPS||b.z+b.height<=EPS)continue;
       const rect=clippedRect(b,x,y);if(rect)out.push({...rect,solidKey:solid.key});
     }
     return out;
   }
   function analyzeFloorTile(solids,x,y,layerZ){
-    const rects=floorRects(solids,x,y,layerZ,EPS);
+    const rects=floorStartRects(solids,x,y,layerZ);
     const xs=[x,x+1],ys=[y,y+1];
     for(const r of rects){xs.push(r.left,r.right);ys.push(r.top,r.bottom);}
     const X=[...new Set(xs.map(v=>Number(v.toFixed(9))))].sort((a,b)=>a-b),Y=[...new Set(ys.map(v=>Number(v.toFixed(9))))].sort((a,b)=>a-b);
@@ -451,6 +460,7 @@
     surfaceCellsForBounds,
     mergeIntervals,
     intersectIntervals,
+    floorStartRects,
     analyzeFloorTile,
     envelopeFitsTile,
     edgeClearanceOptions,
