@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.27.2-room-value-legacy-removal';
-const CROWDING_VERSION='11.26.0-vertical-flow-congestion';
+const CURRENT_VERSION='11.28.0-furniture-local-geometry';
+const CROWDING_VERSION='11.28.0-effective-passage-width';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
-const PASSAGE_VERSION='11.26.0-vertical-structure-passage';
+const PASSAGE_VERSION='11.28.0-positioned-passage-options';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
