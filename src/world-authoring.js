@@ -3,7 +3,7 @@
   if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
-  const VERSION='world-authoring-v6';
+  const VERSION='world-authoring-v7';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -44,13 +44,13 @@
     map:{width:12,height:8,cellSizeMeters:CELL_SIZE_METERS,layers:[{z:0,cells:buildDefaultCells(),boundaries:buildDefaultBoundaries()}]},
     structures:{},
     furniture:{
-      diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2),orientation:'north'},
+      diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2),orientation:'south'},
       chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),orientation:'east',name:'餐椅 A'},
       chairNE:{id:'chairNE',definitionId:'chair-basic',origin:pos(7,2),orientation:'west',name:'餐椅 B'},
       chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),orientation:'east',name:'餐椅 C'},
       chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),orientation:'west',name:'餐椅 D'},
-      sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2),orientation:'north'},
-      bed:{id:'bed',definitionId:'double-bed',origin:pos(8,5),orientation:'south'}
+      sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2),orientation:'south'},
+      bed:{id:'bed',definitionId:'double-bed',origin:pos(8,5),orientation:'north'}
     },
     doors:{
       frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open'}

@@ -347,7 +347,7 @@
     return mutationResult(authoring,candidate=>{
       if(!target)return reject('furniture_create_target_invalid','新增 Furniture 需要 placement target。',{definitionId});
       const newId=nextFurnitureId(candidate,definitionId);
-      const instance={id:newId,definitionId,origin:clone(target),orientation:'north'};
+      const instance={id:newId,definitionId,origin:clone(target),orientation:D.CANONICAL_ORIENTATION};
       if(typeof name==='string'&&name.trim())instance.name=name.trim();
       candidate.furniture??={};
       candidate.furniture[newId]=instance;
