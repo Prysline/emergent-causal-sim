@@ -123,4 +123,35 @@ assert.equal(overlap.occupantCount,1);
 assert.equal(overlap.hardBlocked,false);
 assert.ok(overlap.congestionCost>0,'shared-node traffic should have a soft objective consequence');
 
+
+function measureTargetRouteWork(agentId,kind){
+  E.reset(20260911);
+  const st=E.getState(),agent=st.agents[agentId];
+  for(const other of Object.values(st.agents))if(other.id!==agent.id)other.offMap=true;
+  const originalFeasibility=SP.traversalFeasibility;
+  const originalPathDistance=SP.pathDistance;
+  const originalBestSlotApproach=SP.bestSlotApproachNode;
+  const metrics={agentId,kind,bestSlotApproachCalls:0,pathDistanceCalls:0,traversalFeasibilityCalls:0,targetCount:0,floorTargetCount:0};
+  SP.traversalFeasibility=(...args)=>{metrics.traversalFeasibilityCalls++;return originalFeasibility(...args);};
+  SP.pathDistance=(...args)=>{metrics.pathDistanceCalls++;return originalPathDistance(...args);};
+  SP.bestSlotApproachNode=(...args)=>{metrics.bestSlotApproachCalls++;return originalBestSlotApproach(...args);};
+  try{
+    const targets=kind==='sleep'?SP.sleepTargets(st,agent):SP.restTargets(st,agent);
+    metrics.targetCount=targets.length;
+    metrics.floorTargetCount=targets.filter(target=>target.kind==='floor').length;
+    return metrics;
+  }finally{
+    SP.traversalFeasibility=originalFeasibility;
+    SP.pathDistance=originalPathDistance;
+    SP.bestSlotApproachNode=originalBestSlotApproach;
+  }
+}
+
+const targetRouteMetrics=[
+  measureTargetRouteWork('zhen','rest'),
+  measureTargetRouteWork('zhen','sleep'),
+  measureTargetRouteWork('orange','rest')
+];
+console.log('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
+
 console.log('v11.20.0 Dynamic Congestion regression: ok');
