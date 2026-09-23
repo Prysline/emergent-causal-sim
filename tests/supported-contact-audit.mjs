@@ -24,12 +24,12 @@ E.reset(20260911);
   for(const plate of [plateA,plateB])for(const affordance of ['pickup','eatFrom'])assert.equal(plate.interactions[affordance]?.mode,'reach',`${plate.id} ${affordance} 必須使用物件局部 reach`);
   for(const drink of [cupA,cupB,bottle])for(const affordance of ['pickup','drinkFrom','fill'])assert.equal(drink.interactions[affordance]?.mode,'reach',`${drink.id} ${affordance} 必須使用物件局部 reach`);
 
-  human.position={...floor(st,7,2)};
+  human.position={...floor(st,6,1)};
   for(const affordance of ['pickup','drinkFrom','fill']){
     const g=SP.interactionGeometry(st,{kind:'object',id:'cupA'},human,affordance);
     assert.equal(g.mode,'reach');
-    assert.ok(hasNode(st,g.positions,floor(st,7,2)),`cupA ${affordance} 應允許相鄰桌邊 floor 接觸`);
-    assert.ok(!hasNode(st,g.positions,floor(st,4,2)),`cupA ${affordance} 不得使用整張餐桌 perimeter`);
+    assert.ok(hasNode(st,g.positions,floor(st,6,1)),`cupA ${affordance} 應允許未被椅子占用的北側 floor 接觸`);
+    assert.ok(!hasNode(st,g.positions,floor(st,4,2)),`cupA ${affordance} 不得穿過左側餐椅取得遠端接觸`);
   }
 
   cat.position={...floor(st,7,2)};
@@ -37,16 +37,16 @@ E.reset(20260911);
   cat.position={...table(st,6,2)};
   assert.equal(SP.isAtInteraction(st,cat,{kind:'object',id:'cupA'},'drinkFrom'),true,'貓上桌後可喝桌面杯子');
 
-  human.position={...floor(st,4,2)};
+  human.position={...floor(st,5,1)};
   for(const affordance of ['serve','deposit','receive']){
     const g=SP.interactionGeometry(st,{kind:'object',id:'mealTray'},human,affordance);
     assert.equal(g.mode,'reach');
-    assert.ok(hasNode(st,g.positions,floor(st,4,2)),`mealTray ${affordance} 應允許物件相鄰桌邊 contact`);
-    assert.ok(!hasNode(st,g.positions,floor(st,7,2)),`mealTray ${affordance} 不得隔整張桌子操作`);
+    assert.ok(hasNode(st,g.positions,floor(st,5,1)),`mealTray ${affordance} 應允許未被椅子占用的北側 contact`);
+    assert.ok(!hasNode(st,g.positions,floor(st,7,2)),`mealTray ${affordance} 不得把被餐椅占用的右側格當成人類站位`);
   }
 
   const platePickup=SP.interactionGeometry(st,{kind:'object',id:'plateB'},human,'pickup');
-  assert.ok(hasNode(st,platePickup.positions,floor(st,7,3)),'plateB pickup 應允許右側相鄰桌邊');
+  assert.ok(!hasNode(st,platePickup.positions,floor(st,7,3)),'plateB pickup 不得把 chairSE 佔用格當成人類站位');
   assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'plateB pickup 應允許下側相鄰桌邊');
   assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'plateB pickup 不得從餐桌另一側遠取');
   noIssues('geometry contract');
@@ -70,7 +70,7 @@ E.reset(20260911);
   const st=E.getState(),a=st.agents.zhen,cupA=st.containers.cupA,cupB=st.containers.cupB,bottle=st.containers.alcoholBottle;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   cupA.contents={};cupB.contents={};bottle.contents={alcohol:120};
-  a.position={...floor(st,7,3)};
+  a.position={...floor(st,7,4)};
   a.needs.thirst=82;
   a.action={kind:'drinkAlcohol',phase:'chooseVessel',resource:'alcohol',started:st.tick,wait:0};
   for(let i=0;i<60&&a.action;i++){E.tick();noIssues(`tabletop bottle fill ${i}`);}
