@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','validation/registry.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','engine.js','validation/registry.js']);
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 
 function noIssues(label){const v=V.validateState(E.getState());if(v.issueCount)console.error('STATE_DEBUG',label,JSON.stringify(v,null,2));assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
@@ -63,7 +63,7 @@ E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:7,y:5};b.position={x:10,y:5};a.needs.sleepNeed=90;b.needs.sleepNeed=90;
   for(const x of [a,b])x.action={kind:'sleep',phase:'chooseSurface',sleepTicks:0,started:st.tick,wait:0};
-  for(let i=0;i<20&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}if(a.posture.furnitureId!=='bed'||b.posture.furnitureId!=='bed'){const bedSlots=SP.allSlots(st).filter(slot=>slot.furnitureId==='bed');console.log('sleep-debug',JSON.stringify({a:{position:a.position,posture:a.posture,action:a.action},b:{position:b.position,posture:b.posture,action:b.action},reservations:st.reservations,slots:bedSlots.map(slot=>({id:slot.id,position:slot.position,approachEdges:slot.approachEdges,availableForA:SP.slotAvailable(st,slot.id,a.id),availableForB:SP.slotAvailable(st,slot.id,b.id),aApproach:SP.slotApproachNodes?.(st,slot,a,'walk'),bApproach:SP.slotApproachNodes?.(st,slot,b,'walk')})),aTargets:SP.sleepTargets(st,a),bTargets:SP.sleepTargets(st,b),events:st.events.filter(e=>['sleep','sleepWake','abort'].includes(e.data?.action)).slice(0,12).map(e=>({tick:e.tick,text:e.text,data:e.data}))},null,2));}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);assert.ok(['bed:left','bed:right'].includes(a.posture.slotId));assert.ok(['bed:left','bed:right'].includes(b.posture.slotId));
+  for(let i=0;i<20&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);assert.ok(['bed:left','bed:right'].includes(a.posture.slotId));assert.ok(['bed:left','bed:right'].includes(b.posture.slotId));
 }
 
 E.reset(20260911);
