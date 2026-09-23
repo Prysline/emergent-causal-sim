@@ -67,7 +67,7 @@ const resolved=D.resolveDefinitionInstance(platformDefinition,{
   id:'testPlatform',
   definitionId:'test-low-platform',
   origin:local(3,4),
-  orientation:'north'
+  orientation:'south'
 });
 assert.deepEqual(resolved.footprint,[local(3,4),local(4,4)]);
 assert.equal(resolved.spatial.solids.length,1);
@@ -79,7 +79,7 @@ assert.equal(D.analyzeFloorTile(resolved.spatial.solids,3,4,0).blocked,true,'flo
 const invalidRuntimeSurface=JSON.parse(JSON.stringify(platformDefinition));
 invalidRuntimeSurface.spatial.surface.id='precomputed:top';
 assert.throws(
-  ()=>D.resolveDefinitionInstance(invalidRuntimeSurface,{id:'invalidSurface',definitionId:'test-low-platform',origin:local(1,1),orientation:'north'}),
+  ()=>D.resolveDefinitionInstance(invalidRuntimeSurface,{id:'invalidSurface',definitionId:'test-low-platform',origin:local(1,1),orientation:'south'}),
   /runtime id \/ cells/,
   'Definition must not persist instance-specific runtime surface identity'
 );
