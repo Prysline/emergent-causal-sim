@@ -75,6 +75,7 @@ assert.deepEqual(resolved.spatial.solids[0],{key:'body',layerZ:0,bounds:{x:3,y:4
 assert.equal(resolved.spatial.surface.id,'testPlatform:top');
 assert.deepEqual(resolved.spatial.surface.cells,[local(3,4),local(4,4)]);
 assert.equal(resolved.blocksMovement,undefined,'resolved traversal truth must come from spatial geometry, not blocksMovement');
+assert.equal(D.analyzeFloorTile(resolved.spatial.solids,3,4,0).blocked,true,'floor-start solid must block generic floor topology, not only agent-specific envelope checks');
 const invalidRuntimeSurface=JSON.parse(JSON.stringify(platformDefinition));
 invalidRuntimeSurface.spatial.surface.id='precomputed:top';
 assert.throws(
