@@ -26,6 +26,7 @@ jobs:
       - run: node tests/application-bootstrap-lifecycle.mjs
       - run: node tests/test-profile-composition.mjs
       - run: node tests/embodiment-capabilities.mjs
+      - run: node tests/dynamic-congestion.mjs
       - run: node tests/state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/initial-population-placement.mjs
@@ -52,7 +53,6 @@ jobs:
       - run: node tests/route-semantics.mjs
       - run: node tests/locomotion-execution-posture.mjs
       - run: node tests/locomotion-traversal-cost.mjs
-      - run: node tests/dynamic-congestion.mjs
       - run: node tests/action-terminology.mjs
       - run: node tests/action-construction.mjs
       - run: node tests/active-intent-foundation.mjs
