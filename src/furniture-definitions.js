@@ -260,6 +260,108 @@
     return ORIENTATIONS[(ORIENTATION_INDEX[direction]+turns)%4];
   }
 
+  const EPS=1e-9;
+  function mergeIntervals(intervals){
+    const sorted=(intervals||[]).filter(x=>x&&x.end-x.start>EPS).map(x=>({start:Math.max(0,x.start),end:Math.min(1,x.end)})).filter(x=>x.end-x.start>EPS).sort((a,b)=>a.start-b.start||a.end-b.end);
+    const out=[];
+    for(const item of sorted){
+      const last=out[out.length-1];
+      if(last&&item.start<=last.end+EPS)last.end=Math.max(last.end,item.end);
+      else out.push({...item});
+    }
+    return out;
+  }
+  function intersectIntervals(a,b){
+    const out=[];
+    for(const x of a||[])for(const y of b||[]){const start=Math.max(x.start,y.start),end=Math.min(x.end,y.end);if(end-start>EPS)out.push({start,end});}
+    return mergeIntervals(out);
+  }
+  function resolvedSolidsForLayer(solids,layerZ){
+    return (solids||[]).filter(solid=>solid?.layerZ===layerZ&&isRecord(solid.bounds));
+  }
+  function clippedRect(bounds,x,y){
+    const left=Math.max(x,bounds.x),right=Math.min(x+1,bounds.x+bounds.width),top=Math.max(y,bounds.y),bottom=Math.min(y+1,bounds.y+bounds.depth);
+    return right-left>EPS&&bottom-top>EPS?{left,right,top,bottom}:null;
+  }
+  function floorRects(solids,x,y,layerZ,height=EPS){
+    const out=[];
+    for(const solid of resolvedSolidsForLayer(solids,layerZ)){
+      const b=solid.bounds;
+      if(b.z>=height-EPS||b.z+b.height<=0)continue;
+      const rect=clippedRect(b,x,y);if(rect)out.push({...rect,solidKey:solid.key});
+    }
+    return out;
+  }
+  function analyzeFloorTile(solids,x,y,layerZ){
+    const rects=floorRects(solids,x,y,layerZ,EPS);
+    const xs=[x,x+1],ys=[y,y+1];
+    for(const r of rects){xs.push(r.left,r.right);ys.push(r.top,r.bottom);}
+    const X=[...new Set(xs.map(v=>Number(v.toFixed(9))))].sort((a,b)=>a-b),Y=[...new Set(ys.map(v=>Number(v.toFixed(9))))].sort((a,b)=>a-b);
+    const cells=[];
+    for(let iy=0;iy<Y.length-1;iy++)for(let ix=0;ix<X.length-1;ix++){
+      const left=X[ix],right=X[ix+1],top=Y[iy],bottom=Y[iy+1];if(right-left<=EPS||bottom-top<=EPS)continue;
+      const cx=(left+right)/2,cy=(top+bottom)/2,blocked=rects.some(r=>cx>r.left-EPS&&cx<r.right+EPS&&cy>r.top-EPS&&cy<r.bottom+EPS);
+      if(!blocked)cells.push({ix,iy,left,right,top,bottom});
+    }
+    if(!cells.length)return {blocked:true,regionCount:0,edgeIntervals:{north:[],east:[],south:[],west:[]}};
+    const byKey=new Map(cells.map(c=>[c.ix+','+c.iy,c])),seen=new Set();let regionCount=0;
+    for(const cell of cells){
+      const key=cell.ix+','+cell.iy;if(seen.has(key))continue;regionCount++;const queue=[cell];seen.add(key);
+      while(queue.length){const cur=queue.shift();for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nk=(cur.ix+dx)+','+(cur.iy+dy),next=byKey.get(nk);if(next&&!seen.has(nk)){seen.add(nk);queue.push(next);}}}
+    }
+    const edgeIntervals={north:[],east:[],south:[],west:[]};
+    for(const c of cells){
+      if(Math.abs(c.top-y)<=EPS)edgeIntervals.north.push({start:c.left-x,end:c.right-x});
+      if(Math.abs(c.bottom-(y+1))<=EPS)edgeIntervals.south.push({start:c.left-x,end:c.right-x});
+      if(Math.abs(c.left-x)<=EPS)edgeIntervals.west.push({start:c.top-y,end:c.bottom-y});
+      if(Math.abs(c.right-(x+1))<=EPS)edgeIntervals.east.push({start:c.top-y,end:c.bottom-y});
+    }
+    for(const key of Object.keys(edgeIntervals))edgeIntervals[key]=mergeIntervals(edgeIntervals[key]);
+    return {blocked:false,regionCount,edgeIntervals};
+  }
+  function envelopeFitsTile(solids,x,y,layerZ,clearanceHeight,clearanceWidth){
+    if(!finite(clearanceHeight)||!finite(clearanceWidth)||clearanceHeight<=0||clearanceWidth<=0||clearanceWidth>1+EPS)return false;
+    const rects=floorRects(solids,x,y,layerZ,clearanceHeight);
+    const size=Number(clearanceWidth),xs=[x,x+1-size],ys=[y,y+1-size];
+    for(const r of rects){xs.push(r.right,r.left-size);ys.push(r.bottom,r.top-size);}
+    for(const left of xs)for(const top of ys){
+      if(left<x-EPS||top<y-EPS||left+size>x+1+EPS||top+size>y+1+EPS)continue;
+      const overlap=rects.some(r=>Math.min(left+size,r.right)-Math.max(left,r.left)>EPS&&Math.min(top+size,r.bottom)-Math.max(top,r.top)>EPS);
+      if(!overlap)return true;
+    }
+    return false;
+  }
+  function edgeDirection(from,to){
+    if(!from||!to||from.z!==to.z)return null;
+    if(to.x===from.x+1&&to.y===from.y)return'east';
+    if(to.x===from.x-1&&to.y===from.y)return'west';
+    if(to.y===from.y+1&&to.x===from.x)return'south';
+    if(to.y===from.y-1&&to.x===from.x)return'north';
+    return null;
+  }
+  function edgeClearanceOptions(solids,from,to,layerZ){
+    const direction=edgeDirection(from,to);if(!direction)return[];
+    const vertical=direction==='east'||direction==='west',edge=vertical?(direction==='east'?from.x+1:from.x):(direction==='south'?from.y+1:from.y);
+    const base=vertical?Math.min(from.y,to.y):Math.min(from.x,to.x),breaks=[0,1],relevant=[];
+    for(const solid of resolvedSolidsForLayer(solids,layerZ)){
+      const b=solid.bounds;
+      const crosses=vertical?(b.x<=edge+EPS&&b.x+b.width>=edge-EPS):(b.y<=edge+EPS&&b.y+b.depth>=edge-EPS);
+      if(!crosses)continue;
+      const start=(vertical?b.y:b.x)-base,end=start+(vertical?b.depth:b.width);
+      const a=Math.max(0,start),z=Math.min(1,end);if(z-a<=EPS)continue;
+      relevant.push({start:a,end:z,bottom:b.z,key:solid.key});breaks.push(a,z);
+    }
+    const points=[...new Set(breaks.map(v=>Number(v.toFixed(9))))].sort((a,b)=>a-b),options=[];
+    for(let i=0;i<points.length-1;i++){
+      const start=points[i],end=points[i+1];if(end-start<=EPS)continue;const mid=(start+end)/2;
+      const hits=relevant.filter(r=>mid>r.start-EPS&&mid<r.end+EPS),bottoms=hits.map(r=>r.bottom).filter(v=>v>=0);
+      const clearanceHeight=bottoms.length?Math.min(...bottoms):null;
+      if(clearanceHeight!==null&&clearanceHeight<=EPS)continue;
+      options.push({interval:{start,end},clearanceWidth:end-start,clearanceHeight,constrainedBy:{solids:hits.map(r=>r.key).sort()}});
+    }
+    return options;
+  }
+
   function getDefinition(definitionId){
     return DEFINITIONS[definitionId]||null;
   }
@@ -347,6 +449,11 @@
     transformLocalBounds,
     metricBoundsToWorld,
     surfaceCellsForBounds,
+    mergeIntervals,
+    intersectIntervals,
+    analyzeFloorTile,
+    envelopeFitsTile,
+    edgeClearanceOptions,
     localToWorld,
     worldToLocal,
     reorientCardinalDirection,
