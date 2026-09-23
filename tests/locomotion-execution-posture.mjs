@@ -45,11 +45,15 @@ function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
     testPassageCover:{
       id:'testPassageCover',name:'測試通道上蓋',
       footprint:[{x:2,y:1}],displayAt:{x:2,y:1},slots:[],
-      spatial:{floor:{mode:'under'},under:{clearance:height,clearanceWidth:width,cover:'overhead'}}
+      spatial:{solids:[{key:'roof',layerZ:0,bounds:{x:2,y:1,z:height,width:1,depth:1,height:.05}}]}
     }
   };
   st.map.passageConstraints={};
   const start=floor(st,1,1),mid=floor(st,2,1),goal=floor(st,3,1);
+  if(width!=null){
+    st.map.passageConstraints[SP.passageConstraintKey(st,start,mid)]={clearanceWidth:width};
+    st.map.passageConstraints[SP.passageConstraintKey(st,mid,goal)]={clearanceWidth:width};
+  }
   if(edgeWidth!=null)st.map.passageConstraints[SP.passageConstraintKey(st,start,mid)]={clearanceWidth:edgeWidth};
   return {st,human,water,start,mid,goal};
 }
