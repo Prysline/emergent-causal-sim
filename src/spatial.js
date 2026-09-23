@@ -172,43 +172,49 @@
     return positions.map(p=>runtime.pathDistance?.(st,a,p)??Infinity);
   }
   function restTargets(st,a){
-    const out=[],runtime=window.SimSpatial,pending=[];
-    for(const slot of allSlots(st)){
-      if(!slot.canRest||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
-      const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
-      if(!approach)continue;
-      pending.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.restQuality||0,posture:slot.restPosture||'sitting'});
-    }
-    if(a.kind==='cat')for(const t of Object.values(st.map.tiles)){
-      if(!(runtime.nodeWalkable?.(st,t,a)??walkable(st,t))||tileLiquidAmount(t)>.1)continue;
-      pending.push({kind:'floor',id:`floor:${t.id}`,position:clonePos(t),quality:.42,posture:'lying'});
-    }
-    const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);
-    for(let i=0;i<pending.length;i++){
-      const target=pending[i],d=distances[i];if(!Number.isFinite(d))continue;
-      const occupied=runtime.nodeOccupantsAt?.(st,target.position,a.id).length||0;
-      const score=target.kind==='slot'
-        ?d-target.quality*9+noiseAt(st,target.position)*.35+occupied*4
-        :d-target.quality*7+noiseAt(st,target.position)*.45+occupied*3;
-      out.push({...target,score});
-    }
-    out.sort((x,y)=>x.score-y.score);return out;
+    const runtime=window.SimSpatial,run=()=>{
+      const out=[],pending=[];
+      for(const slot of allSlots(st)){
+        if(!slot.canRest||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
+        const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
+        if(!approach)continue;
+        pending.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.restQuality||0,posture:slot.restPosture||'sitting'});
+      }
+      if(a.kind==='cat')for(const t of Object.values(st.map.tiles)){
+        if(!(runtime.nodeWalkable?.(st,t,a)??walkable(st,t))||tileLiquidAmount(t)>.1)continue;
+        pending.push({kind:'floor',id:`floor:${t.id}`,position:clonePos(t),quality:.42,posture:'lying'});
+      }
+      const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);
+      for(let i=0;i<pending.length;i++){
+        const target=pending[i],d=distances[i];if(!Number.isFinite(d))continue;
+        const occupied=runtime.nodeOccupantsAt?.(st,target.position,a.id).length||0;
+        const score=target.kind==='slot'
+          ?d-target.quality*9+noiseAt(st,target.position)*.35+occupied*4
+          :d-target.quality*7+noiseAt(st,target.position)*.45+occupied*3;
+        out.push({...target,score});
+      }
+      out.sort((x,y)=>x.score-y.score);return out;
+    };
+    return typeof runtime.withGeometrySnapshot==='function'?runtime.withGeometrySnapshot(st,run):run();
   }
   function sleepTargets(st,a){
-    const out=[],runtime=window.SimSpatial,pending=[];
-    for(const slot of allSlots(st)){
-      if(!slot.canSleep||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
-      const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
-      if(!approach)continue;
-      pending.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.sleepQuality??slot.restQuality??.35,posture:'lying'});
-    }
-    const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);
-    for(let i=0;i<pending.length;i++){
-      const target=pending[i],d=distances[i];if(!Number.isFinite(d))continue;
-      const occupied=runtime.nodeOccupantsAt?.(st,target.position,a.id).length||0;
-      out.push({...target,score:d-target.quality*18+noiseAt(st,target.position)*.55+occupied*4});
-    }
-    out.sort((x,y)=>x.score-y.score);return out;
+    const runtime=window.SimSpatial,run=()=>{
+      const out=[],pending=[];
+      for(const slot of allSlots(st)){
+        if(!slot.canSleep||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
+        const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
+        if(!approach)continue;
+        pending.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.sleepQuality??slot.restQuality??.35,posture:'lying'});
+      }
+      const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);
+      for(let i=0;i<pending.length;i++){
+        const target=pending[i],d=distances[i];if(!Number.isFinite(d))continue;
+        const occupied=runtime.nodeOccupantsAt?.(st,target.position,a.id).length||0;
+        out.push({...target,score:d-target.quality*18+noiseAt(st,target.position)*.55+occupied*4});
+      }
+      out.sort((x,y)=>x.score-y.score);return out;
+    };
+    return typeof runtime.withGeometrySnapshot==='function'?runtime.withGeometrySnapshot(st,run):run();
   }
 
   function nearestLabel(st,p){if(!p)return '未知位置';const candidates=[];for(const f of Object.values(st.furniture||{}))for(const fp of f.footprint||[]){const d=manhattan(p,fp);if(d<=1)candidates.push({d,name:d===0?f.name:`${f.name}旁`});}for(const o of [...Object.values(st.containers||{}),...Object.values(st.sources||{})]){const op=objectPosition(st,o.id);if(!op)continue;const d=manhattan(p,op);if(d<=1)candidates.push({d,name:d===0?o.name:`${o.name}旁`});}candidates.sort((a,b)=>a.d-b.d);if(candidates.length)return candidates[0].name;const rid=roomAt(st,p);return st.map.rooms?.[rid]?.name||`(${p.x}, ${p.y})`;}
