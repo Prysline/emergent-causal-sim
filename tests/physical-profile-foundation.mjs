@@ -41,19 +41,28 @@ assert.deepEqual(P.supportedLocomotionModes(orange),['walk'],'Cat Slice 2 must n
 
 assert.equal(P.requiredClearance(zhen,'walk'),1.65,'default Human walk clearance must preserve v11.11 standing behavior');
 assert.equal(P.requiredClearance(orange,'walk'),.32,'default Cat walk clearance must preserve v11.11 standing behavior');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'default Cat still fits below dining table');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),false,'default Human walk still does not fit below dining table');
+
+// Physical feasibility must use an independent full-cell low-roof fixture.
+// Production dining-table geometry now has real side free-space, so it is not a canonical whole-cell clearance test.
+const lowRoofNode=floor(st,2,4);
+st.furniture.testLowRoof={
+  id:'testLowRoof',name:'測試低頂空',footprint:[{x:2,y:4,z:0}],displayAt:{x:2,y:4,z:0},slots:[],
+  spatial:{solids:[{key:'roof',layerZ:0,bounds:{x:2,y:4,z:.72,width:1,depth:1,height:.05}}]}
+};
+assert.equal(SP.nodeWalkable(st,lowRoofNode,orange),true,'default Cat walk envelope fits below the synthetic 0.72m full-cell roof');
+assert.equal(SP.nodeWalkable(st,lowRoofNode,zhen),false,'default Human walk envelope does not fit below the synthetic 0.72m full-cell roof');
 
 const oldZhenHeight=zhen.physical.bodyGeometry.height;
 zhen.physical.bodyGeometry.height=.60;
 assert.equal(P.requiredClearance(zhen,'walk'),.60,'clearance must derive from the individual Agent physical profile');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),true,'a Human individual whose walk envelope fits must no longer be blocked by kind-level hardcoding');
+assert.equal(SP.nodeWalkable(st,lowRoofNode,zhen),true,'a Human individual whose walk envelope fits must no longer be blocked by kind-level hardcoding');
 zhen.physical.bodyGeometry.height=oldZhenHeight;
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),false,'restoring individual geometry restores default feasibility');
+assert.equal(SP.nodeWalkable(st,lowRoofNode,zhen),false,'restoring individual geometry restores default feasibility');
 
 zhou.physical.locomotionProfiles.walk={...zhou.physical.locomotionProfiles.walk,clearanceHeight:.68};
 assert.equal(P.requiredClearance(zhou,'walk'),.68,'locomotion profile may provide an explicit absolute envelope override');
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhou),true,'Spatial must consume the canonical walk MovementEnvelope override');
+assert.equal(SP.nodeWalkable(st,lowRoofNode,zhou),true,'Spatial must consume the canonical walk MovementEnvelope override');
+delete st.furniture.testLowRoof;
 
 const obs=SP.agentObservation(st,'orange');
 assert.equal(obs.requiredClearance,.32,'Spatial observability must report canonical Physical clearance');
