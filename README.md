@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.28.0・Furniture Local Geometry**（`11.28.0-furniture-local-geometry`）。
+目前 runtime marker：**v11.28.1・Furniture Facing Semantics**（`11.28.1-furniture-facing-semantics`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -11,12 +11,12 @@
 ### 一個事實只保留一份 authoritative truth
 
 - World Event 只有一份 canonical event，保存在 `state.events / state.causes`。
-- Current default world 的 authored truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 維持 `world-authoring-v6`，並以 `furnitureCatalogVersion: "furniture-definitions-v6"` pin 住 system-owned `SimFurnitureDefinitions` Catalog。Map 明確保存 `cellSizeMeters: 1`、每層 floor Cell 與格線 `boundaries`；Door、off-map Exit 與 vertical `structures` 都是獨立 root entity。Container / Source、Resident opening state 與 compact Furniture Instance 仍由同一 authoring package 持有，`SimWorldInitializer` 將它編譯成 runtime state。
-- `world-authoring-v6` 的 Furniture Instance 仍只保存 `id / definitionId / origin / orientation / optional name`。`furniture-definitions-v6` 以公尺制 Furniture-local 3D AABB `spatial.solids` 作為實體 obstruction 的唯一 authored truth；Surface 以 `onSolid:{key,face:'top'}` 引用 solid top face，Slot 另以 stable `<instanceId>:<slotKey>` + rotated `approachEdges` 表達使用位置與進出候選。shared resolver 統一旋轉 footprint、slot 與 metric bounds；legacy `spatial.floor.mode / spatial.under` 已退出 current Catalog contract。
+- Current default world 的 authored truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有，schema generation 為 `world-authoring-v7`，並以 `furnitureCatalogVersion: "furniture-definitions-v7"` pin 住 system-owned `SimFurnitureDefinitions` Catalog。Map 明確保存 `cellSizeMeters: 1`、每層 floor Cell 與格線 `boundaries`；Door、off-map Exit 與 vertical `structures` 都是獨立 root entity。Container / Source、Resident opening state 與 compact Furniture Instance 仍由同一 authoring package 持有，`SimWorldInitializer` 將它編譯成 runtime state。
+- `world-authoring-v7` 的 Furniture Instance 仍只保存 `id / definitionId / origin / orientation / optional name`。`furniture-definitions-v7` 以 south 作 Definition canonical frame；directional Furniture 的 `orientation` 表示正面／主要 facing，床使用 head → foot，無自然正面的 Furniture 以 `orientationSemantics:"frame"` 保留 quarter-turn local-frame transform 而不假裝存在 facing。公尺制 Furniture-local 3D AABB `spatial.solids` 仍是實體 obstruction 的唯一 authored truth；Surface 以 `onSolid:{key,face:'top'}` 引用 solid top face，Slot 另以 stable `<instanceId>:<slotKey>` + rotated `approachEdges` 表達使用位置與進出候選。
 - Resident opening placement 支援 `exact` 與 explicit `furnitureSlot` anchor。`SimWorldInitializer.analyzeInitialPlacements(...)` 分開回傳 hard errors 與 diagnostic-only 問題：missing/conflicting/blocked slot 或 position 會拒絕初始化；密室、無出口、資源不可達與非 exclusive node overlap 只提示，不自動搬人或修改世界。
 - Agent 的位置、Action、posture、held container、Needs 等各有自己的正式欄位，不建立可失同步的 mirror state。
 - Agent 的 `physical.mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles` 是 Physical Foundation 的 authoritative state；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(agent, mode)` 即時計算，不保存第二份 envelope cache。
-- **Furniture Orientation**：旋轉家具只改 Instance `orientation`，`origin` 保持目前 resolved footprint 的 NW／左上 placement anchor；explicit `supportId` Container follower 會用同一 local↔world transform 跟隨旋轉，slot-bound Resident 保留 `<instanceId>:<slotKey>` reference。Editor 方向箭頭只在家具被選取或新增／放置／拖曳預覽時顯示，未選取時不常駐。Current Source interaction ports 仍是 Source 自己的 authored world facts，不納入 Furniture rotation ownership。
+- **Furniture Orientation**：Definition canonical orientation 為 `south`。有 facing 語意的家具以 Instance `orientation` 表示正面方向；椅子／沙發由背向正面，床由床頭指向床尾。沒有自然正面的 Furniture 仍可用同一 `orientation` 做 local-frame quarter-turn，但 Editor 只顯示「局部框架旋轉」而不畫 facing arrow。`origin` 保持 resolved footprint 的 NW／左上 placement anchor；explicit `supportId` Container follower 與 slot-bound Resident 都沿用同一 shared local↔world transform 與 stable `<instanceId>:<slotKey>` reference。
 - authored passage geometry 由 canonical Furniture geometry、格線 boundary、vertical Structure 與低階 compatibility edge constraint 持有；`PassageProfile` 由 `SimSpatial.getPassageProfile(state, fromNode, toNode)` 即時計算，不建立第二份 passage cache。正常 Editor 不 author `walkable / crawlOnly / PassageProfile / manual traversal flags`。
 - Action type 的唯一正式欄位是 `action.kind`；舊 `action.intent` compatibility 已移除。
 - `Agent.activeIntent` 是 Agent-private 短期目的，與 `action.kind` 分工不同；`action.intentId` 只作 Action → Active Intent linkage。
