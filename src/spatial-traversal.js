@@ -126,7 +126,10 @@
     ranked.sort((x,y)=>x.value-y.value||x.pathDistance-y.pathDistance||nodeKey(st,x.node).localeCompare(nodeKey(st,y.node)));
     return ranked[0]?.node||null;
   }
-  function slotEgressNodes(st,slotOrId,aOrId=null,mode='walk'){return slotApproachNodes(st,slotOrId,aOrId,mode);}
+  function slotEgressNodes(st,slotOrId,aOrId=null,mode='walk'){
+    const a=agentFor(st,aOrId);
+    return slotApproachNodes(st,slotOrId,a,mode).filter(node=>nodeOccupantsAt(st,node,a?.id).length===0);
+  }
   function crowdingRuntime(){return window.SimCrowding||null;}
   function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t);let cost=1+wet*(a?.kind==='cat'?.015:.07);if(!crowdingRuntime()){const occupied=nodeOccupantsAt(st,node,a?.id).length;cost+=occupied*(a?.kind==='cat'?2.5:5);}return cost;}
   function surfaceStepCost(st,node,a){const entry=surfaceEntry(st,node.surfaceId),configured=entry?.surface?.moveCost?.[a?.kind];return configured??profile(a).surfaceMoveCost;}
