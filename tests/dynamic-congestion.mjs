@@ -152,6 +152,6 @@ const targetRouteMetrics=[
   measureTargetRouteWork('zhen','sleep'),
   measureTargetRouteWork('orange','rest')
 ];
-console.log('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
+assert.fail('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
 
 console.log('v11.20.0 Dynamic Congestion regression: ok');
