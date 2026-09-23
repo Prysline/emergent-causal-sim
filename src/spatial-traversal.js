@@ -40,7 +40,7 @@
   function geometrySnapshotFor(st){return activeGeometrySnapshot?.state===st?activeGeometrySnapshot:null;}
   function withGeometrySnapshot(st,fn){
     const current=geometrySnapshotFor(st);if(current)return fn(current);
-    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map()};
+    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),feasibilityByAgent:new Map()};
     activeGeometrySnapshot=snapshot;
     try{return fn(snapshot);}finally{activeGeometrySnapshot=previous;}
   }
@@ -63,6 +63,15 @@
     const fits=D.envelopeFitsTile(furnitureSolids(st,z),p.x,p.y,z,envelope.clearanceHeight,envelope.clearanceWidth);
     if(snapshot)snapshot.envelopeFits.set(key,fits);
     return fits;
+  }
+  function routeFeasibility(st,a,from,to){
+    const snapshot=geometrySnapshotFor(st);
+    if(!snapshot)return SP.traversalFeasibility?.(st,a,from,to)||null;
+    let byEdge=snapshot.feasibilityByAgent.get(a);
+    if(!byEdge){byEdge=new Map();snapshot.feasibilityByAgent.set(a,byEdge);}
+    const key=nodeKey(st,from)+'>'+nodeKey(st,to);
+    if(!byEdge.has(key))byEdge.set(key,SP.traversalFeasibility?.(st,a,from,to)||null);
+    return byEdge.get(key);
   }
   function overheadAt(st,p){
     const z=zOf(p);
@@ -269,7 +278,7 @@
       const cur=states[ck];open.delete(ck);
       if(onSettle?.(cur.node,cur.mode,best,ck)===true)return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:ck};
       for(const q of candidateTraversalNeighbors(st,cur.node,a)){
-        const feasibility=SP.traversalFeasibility?.(st,a,cur.node,q)||null;
+        const feasibility=routeFeasibility(st,a,cur.node,q);
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
           const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode,crowding),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding);
