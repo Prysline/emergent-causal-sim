@@ -13,30 +13,52 @@ function edgeKey(from,to){
 function nodeKey(p){
   return p?[(p.spaceId??''),(p.surfaceId??'floor'),(p.z??0),p.x,p.y].join('|'):'?';
 }
-const store=new Map();
+const store=new Map(),scopedStore=new Map();
+let currentScope='unscoped';
+function bump(map,name,key){
+  let row=map.get(name);
+  if(!row){row={calls:0,keys:new Map()};map.set(name,row);}
+  row.calls++;
+  row.keys.set(String(key),(row.keys.get(String(key))||0)+1);
+}
+function summarize(map){
+  const out={};
+  for(const [name,row] of map){
+    const top=[...row.keys.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([key,count])=>({key,count}));
+    out[name]={
+      calls:row.calls,
+      uniqueKeys:row.keys.size,
+      repeatedCalls:row.calls-row.keys.size,
+      repeatRatio:row.calls?Number((row.calls/Math.max(1,row.keys.size)).toFixed(2)):0,
+      maxPerKey:top[0]?.count||0,
+      top
+    };
+  }
+  return out;
+}
 globalThis.__geometryPerf={
   track(name,key){
-    let row=store.get(name);
-    if(!row){row={calls:0,keys:new Map()};store.set(name,row);}
-    row.calls++;
-    row.keys.set(String(key),(row.keys.get(String(key))||0)+1);
+    bump(store,name,key);
+    const scopeKey=currentScope+'::'+name;
+    bump(scopedStore,scopeKey,key);
+  },
+  scope(label,fn){
+    const previous=currentScope;
+    currentScope=label;
+    try{return fn();}finally{currentScope=previous;}
   },
   nodeKey,
   edgeKey,
-  reset(){store.clear();},
+  reset(){store.clear();scopedStore.clear();currentScope='unscoped';},
   snapshot(){
-    const out={};
-    for(const [name,row] of store){
-      const top=[...row.keys.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([key,count])=>({key,count}));
-      out[name]={
-        calls:row.calls,
-        uniqueKeys:row.keys.size,
-        repeatedCalls:row.calls-row.keys.size,
-        repeatRatio:row.calls?Number((row.calls/Math.max(1,row.keys.size)).toFixed(2)):0,
-        maxPerKey:top[0]?.count||0,
-        top
-      };
+    const out=summarize(store),scoped=summarize(scopedStore);
+    const byScope={};
+    for(const [compound,row] of Object.entries(scoped)){
+      const split=compound.indexOf('::'),scope=compound.slice(0,split),name=compound.slice(split+2);
+      if(!byScope[scope])byScope[scope]={};
+      byScope[scope][name]=row;
     }
+    out._scopes=byScope;
     return out;
   }
 };
@@ -49,9 +71,19 @@ const paths=runtimeProfilePaths([
 ]);
 
 const patches={
+  'src/spatial.js':[
+    ["const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;","const approach=globalThis.__geometryPerf.scope('slotApproach',()=>runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null);"],
+    ["const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;","const approach=globalThis.__geometryPerf.scope('slotApproach',()=>runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null);"],
+    ["const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);","const distances=globalThis.__geometryPerf.scope('pathDistances',()=>targetPathDistances(st,a,pending.map(target=>target.position),runtime));"],
+    ["const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);","const distances=globalThis.__geometryPerf.scope('pathDistances',()=>targetPathDistances(st,a,pending.map(target=>target.position),runtime));"]
+  ],
   'src/spatial-traversal.js':[
     ['function furnitureSolids(st,z){',"function furnitureSolids(st,z){globalThis.__geometryPerf.track('furnitureSolids',String(z));"],
-    ['function floorGeometry(st,p){',"function floorGeometry(st,p){globalThis.__geometryPerf.track('floorGeometry',globalThis.__geometryPerf.nodeKey(p));"]
+    ['function floorGeometry(st,p){',"function floorGeometry(st,p){globalThis.__geometryPerf.track('floorGeometry',globalThis.__geometryPerf.nodeKey(p));"],
+    ["function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){","function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){globalThis.__geometryPerf.track('bestSlotApproachCall',typeof slotOrId==='string'?slotOrId:(slotOrId?.id||'?'));"],
+    ["function routeStateSearch(st,start,aOrId=null,options={}){","function routeStateSearch(st,start,aOrId=null,options={}){globalThis.__geometryPerf.track('routeStateSearchCall',(options.objective||'traversalCost')+'|'+(options.trackPath?'trackPath':'batch'));"],
+    ["function pathDistances(st,aOrId,targets,{mode=null}={}){","function pathDistances(st,aOrId,targets,{mode=null}={}){globalThis.__geometryPerf.track('pathDistancesCall',Array.isArray(targets)?targets.length:0);"],
+    ["function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost'}={}){","function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost'}={}){globalThis.__geometryPerf.track('planRouteCall',objective+'|'+globalThis.__geometryPerf.nodeKey(goal));"]
   ],
   'src/furniture-definitions.js':[
     ['function analyzeFloorTile(solids,x,y,layerZ){',"function analyzeFloorTile(solids,x,y,layerZ){globalThis.__geometryPerf.track('analyzeFloorTile',[layerZ,x,y].join('|'));"],
@@ -97,6 +129,15 @@ function measureHumanRest(){
   assert.ok(targets.length>0,'Human rest diagnostic fixture must produce targets');
   return {targetCount:targets.length,metrics:globalThis.__geometryPerf.snapshot()};
 }
+function measureHumanSleep(){
+  E.reset(20260911);
+  const st=E.getState(),agent=st.agents.zhen;
+  isolate(st,agent);
+  globalThis.__geometryPerf.reset();
+  const targets=SP.sleepTargets(st,agent);
+  assert.ok(targets.length>0,'Human sleep diagnostic fixture must produce targets');
+  return {targetCount:targets.length,metrics:globalThis.__geometryPerf.snapshot()};
+}
 function measureCatRest(){
   E.reset(20260911);
   const st=E.getState(),agent=st.agents.orange;
@@ -110,6 +151,7 @@ function measureCatRest(){
 const report={
   humanRoute:measureHumanRoute(),
   humanRest:measureHumanRest(),
+  humanSleep:measureHumanSleep(),
   catRest:measureCatRest()
 };
 
@@ -131,4 +173,8 @@ assert.ok(catRestAnalyze.calls<=360,`Cat rest floor analysis regressed to ${catR
 assert.ok(catRestFit.calls<=280,`Cat rest envelope fit regressed to ${catRestFit.calls} calls`);
 
 console.log('GEOMETRY_QUERY_METRICS '+JSON.stringify(report));
-console.log('Furniture geometry query performance regression: ok');
+assert.fail('TARGET_SELECTION_SCOPE_METRICS '+JSON.stringify({
+  humanRest:report.humanRest.metrics._scopes,
+  humanSleep:report.humanSleep.metrics._scopes,
+  catRest:report.catRest.metrics._scopes
+}));
