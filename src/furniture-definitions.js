@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v5';
+  const VERSION='furniture-definitions-v6';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -24,9 +24,14 @@
       displayOffset:local(0,0),
       slots:[],
       spatial:{
-        floor:{mode:'under'},
-        under:{clearance:.72,cover:'overhead'},
-        surface:{key:'surface',label:'餐桌桌面',coverage:'footprint',traversable:true,allowKinds:['human','cat']}
+        solids:[
+          {key:'tabletop',bounds:{x:.30,y:.61,z:.72,width:1.40,depth:.78,height:.02}},
+          {key:'legNW',bounds:{x:.38,y:.69,z:0,width:.06,depth:.06,height:.72}},
+          {key:'legNE',bounds:{x:1.56,y:.69,z:0,width:.06,depth:.06,height:.72}},
+          {key:'legSW',bounds:{x:.38,y:1.25,z:0,width:.06,depth:.06,height:.72}},
+          {key:'legSE',bounds:{x:1.56,y:1.25,z:0,width:.06,depth:.06,height:.72}}
+        ],
+        surface:{key:'surface',label:'餐桌桌面',onSolid:{key:'tabletop',face:'top'},traversable:true,allowKinds:['human','cat']}
       }
     },
     'chair-basic':{
@@ -37,9 +42,18 @@
       footprint:[local(0,0)],
       displayOffset:local(0,0),
       slots:[
-        {key:'seat',label:'座位',offset:local(0,0),canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
+        {key:'seat',label:'座位',offset:local(0,0),approachEdges:['north','east','west'],canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
       ],
-      spatial:{floor:{mode:'open'}}
+      spatial:{
+        solids:[
+          {key:'seat',bounds:{x:.29,y:.255,z:.43,width:.42,depth:.44,height:.04}},
+          {key:'back',bounds:{x:.29,y:.695,z:.43,width:.42,depth:.05,height:.47}},
+          {key:'frontLeftLeg',bounds:{x:.31,y:.275,z:0,width:.04,depth:.04,height:.43}},
+          {key:'frontRightLeg',bounds:{x:.65,y:.275,z:0,width:.04,depth:.04,height:.43}},
+          {key:'rearLeftLeg',bounds:{x:.31,y:.635,z:0,width:.04,depth:.04,height:.43}},
+          {key:'rearRightLeg',bounds:{x:.65,y:.635,z:0,width:.04,depth:.04,height:.43}}
+        ]
+      }
     },
     'sofa-basic':{
       id:'sofa-basic',
@@ -49,23 +63,32 @@
       footprint:[local(0,0),local(1,0)],
       displayOffset:local(0,0),
       slots:[
-        {key:'left',label:'左側',offset:local(0,0),canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}},
-        {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}}
+        {key:'left',label:'左側',offset:local(0,0),approachEdges:['south'],canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}},
+        {key:'right',label:'右側',offset:local(1,0),approachEdges:['south'],canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}}
       ],
-      spatial:{floor:{mode:'open'}}
+      spatial:{
+        solids:[
+          {key:'base',bounds:{x:.10,y:0,z:0,width:1.80,depth:.88,height:.42}},
+          {key:'back',bounds:{x:.10,y:0,z:.42,width:1.80,depth:.18,height:.38}}
+        ]
+      }
     },
     'double-bed':{
       id:'double-bed',
       name:'雙人床',
       icon:'🛏️',
       kind:'bed',
-      footprint:[local(0,0),local(1,0)],
+      footprint:[local(0,0),local(1,0),local(0,1),local(1,1)],
       displayOffset:local(0,0),
       slots:[
-        {key:'left',label:'左側',offset:local(0,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}},
-        {key:'right',label:'右側',offset:local(1,0),canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}}
+        {key:'left',label:'左側',offset:local(0,0),approachEdges:['west'],canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}},
+        {key:'right',label:'右側',offset:local(1,0),approachEdges:['east'],canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}}
       ],
-      spatial:{floor:{mode:'open'}}
+      spatial:{
+        solids:[
+          {key:'body',bounds:{x:.30,y:0,z:0,width:1.40,depth:2.00,height:.55}}
+        ]
+      }
     }
   };
 
@@ -75,8 +98,6 @@
     }
   }
 
-  const FLOOR_MODES=new Set(['open','solid','under']);
-
   function assertCostMap(costs,path){
     if(costs===undefined)return;
     if(!isRecord(costs))throw new Error(path+' must be an object keyed by agent kind.');
@@ -85,38 +106,35 @@
     }
   }
 
+  const CARDINAL_DIRECTIONS=new Set(ORIENTATIONS);
+  const finite=value=>Number.isFinite(Number(value));
+  function assertBounds(bounds,path,frame){
+    if(!isRecord(bounds))throw new Error(path+' must be a bounds object.');
+    for(const field of ['x','y','z','width','depth','height'])if(!finite(bounds[field]))throw new Error(path+'.'+field+' must be finite.');
+    if(bounds.width<=0||bounds.depth<=0||bounds.height<=0)throw new Error(path+' width / depth / height must be positive.');
+    if(bounds.x<0||bounds.y<0||bounds.z<0)throw new Error(path+' x / y / z must be non-negative.');
+    if(bounds.x+bounds.width>frame.width+1e-9||bounds.y+bounds.depth>frame.height+1e-9)throw new Error(path+' horizontal projection must stay inside the footprint frame.');
+  }
+
   function assertSpatialGeometry(definition,key){
-    const spatial=definition.spatial;
-    if(!isRecord(spatial)||!isRecord(spatial.floor)||!FLOOR_MODES.has(spatial.floor.mode)){
-      throw new Error('Furniture Definition '+key+' requires spatial.floor.mode = open / solid / under.');
-    }
-    if(spatial.floor.mode==='under'){
-      if(!isRecord(spatial.under)||!Number.isFinite(spatial.under.clearance)||spatial.under.clearance<=0){
-        throw new Error('Furniture Definition '+key+' under floor mode requires positive spatial.under.clearance.');
-      }
-    }else if(spatial.under!==undefined){
-      throw new Error('Furniture Definition '+key+' may only define spatial.under when floor mode is under.');
-    }
-    if(spatial.under?.clearanceWidth!==undefined&&(!Number.isFinite(spatial.under.clearanceWidth)||spatial.under.clearanceWidth<=0)){
-      throw new Error('Furniture Definition '+key+' has invalid spatial.under.clearanceWidth.');
-    }
-    if(spatial.under?.cover!==undefined&&(typeof spatial.under.cover!=='string'||!spatial.under.cover)){
-      throw new Error('Furniture Definition '+key+' has invalid spatial.under.cover.');
+    const spatial=definition.spatial,frame=definitionFrame(definition);
+    if(!isRecord(spatial)||!Array.isArray(spatial.solids)||!spatial.solids.length)throw new Error('Furniture Definition '+key+' requires non-empty spatial.solids.');
+    if(spatial.floor!==undefined||spatial.under!==undefined)throw new Error('Furniture Definition '+key+' must use spatial.solids instead of spatial.floor / spatial.under.');
+    const solidKeys=new Set();
+    for(let index=0;index<spatial.solids.length;index++){
+      const solid=spatial.solids[index],path=key+'.spatial.solids['+index+']';
+      if(!isRecord(solid)||typeof solid.key!=='string'||!solid.key||solid.key.includes(':'))throw new Error(path+' requires a stable key.');
+      if(solidKeys.has(solid.key))throw new Error('Furniture Definition '+key+' duplicates solid key '+solid.key+'.');
+      solidKeys.add(solid.key);assertBounds(solid.bounds,path+'.bounds',frame);
     }
     const surface=spatial.surface;
     if(surface===undefined)return;
-    if(isRecord(surface)&&(Object.prototype.hasOwnProperty.call(surface,'id')||Object.prototype.hasOwnProperty.call(surface,'cells'))){
-      throw new Error('Furniture Definition '+key+' spatial.surface must not persist runtime id / cells.');
-    }
-    if(!isRecord(surface)||typeof surface.key!=='string'||!surface.key||surface.key.includes(':')){
-      throw new Error('Furniture Definition '+key+' has invalid spatial.surface.key.');
-    }
+    if(isRecord(surface)&&(Object.prototype.hasOwnProperty.call(surface,'id')||Object.prototype.hasOwnProperty.call(surface,'cells')))throw new Error('Furniture Definition '+key+' spatial.surface must not persist runtime id / cells.');
+    if(!isRecord(surface)||typeof surface.key!=='string'||!surface.key||surface.key.includes(':'))throw new Error('Furniture Definition '+key+' has invalid spatial.surface.key.');
     if(typeof surface.label!=='string'||!surface.label)throw new Error('Furniture Definition '+key+' spatial.surface requires label.');
-    if(surface.coverage!=='footprint')throw new Error('Furniture Definition '+key+' spatial.surface.coverage must be footprint.');
+    if(!isRecord(surface.onSolid)||typeof surface.onSolid.key!=='string'||surface.onSolid.face!=='top'||!solidKeys.has(surface.onSolid.key))throw new Error('Furniture Definition '+key+' spatial.surface.onSolid must reference an existing solid top face.');
     if(typeof surface.traversable!=='boolean')throw new Error('Furniture Definition '+key+' spatial.surface.traversable must be boolean.');
-    if(surface.allowKinds!==undefined&&(!Array.isArray(surface.allowKinds)||surface.allowKinds.some(kind=>typeof kind!=='string'||!kind))){
-      throw new Error('Furniture Definition '+key+' spatial.surface.allowKinds must contain non-empty strings.');
-    }
+    if(surface.allowKinds!==undefined&&(!Array.isArray(surface.allowKinds)||surface.allowKinds.some(kind=>typeof kind!=='string'||!kind)))throw new Error('Furniture Definition '+key+' spatial.surface.allowKinds must contain non-empty strings.');
     assertCostMap(surface.moveCost,key+'.spatial.surface.moveCost');
     assertCostMap(surface.transitionCost,key+'.spatial.surface.transitionCost');
   }
@@ -140,6 +158,7 @@
       if(keys.has(slot.key))throw new Error('Furniture Definition '+key+' duplicates slot key '+slot.key+'.');
       keys.add(slot.key);
       assertLocalPosition(slot.offset,key+'.slots['+index+'].offset');
+      if(!Array.isArray(slot.approachEdges)||!slot.approachEdges.length||new Set(slot.approachEdges).size!==slot.approachEdges.length||slot.approachEdges.some(edge=>!CARDINAL_DIRECTIONS.has(edge)))throw new Error('Furniture Definition '+key+' slot '+slot.key+' requires unique cardinal approachEdges.');
       for(const activity of ['rest','sleep']){
         const value=slot.activitySuitability?.[activity];
         if(value!==undefined&&(!Number.isFinite(value)||value<0))throw new Error('Furniture Definition '+key+' has invalid '+activity+' suitability.');
@@ -166,6 +185,30 @@
     const width=Math.max(...definition.footprint.map(position=>position.x))+1;
     const height=Math.max(...definition.footprint.map(position=>position.y))+1;
     return {width,height};
+  }
+
+  function transformLocalBounds(definition,bounds,orientation){
+    assertOrientation(orientation);
+    const {width:W,height:D}=definitionFrame(definition),b=clone(bounds);
+    if(orientation==='north')return b;
+    if(orientation==='east')return {x:D-(b.y+b.depth),y:b.x,z:b.z,width:b.depth,depth:b.width,height:b.height};
+    if(orientation==='south')return {x:W-(b.x+b.width),y:D-(b.y+b.depth),z:b.z,width:b.width,depth:b.depth,height:b.height};
+    return {x:b.y,y:W-(b.x+b.width),z:b.z,width:b.depth,depth:b.width,height:b.height};
+  }
+  function metricBoundsToWorld(definition,instance,bounds){
+    const oriented=transformLocalBounds(definition,bounds,instance.orientation);
+    return {x:instance.origin.x+oriented.x,y:instance.origin.y+oriented.y,z:instance.origin.z+oriented.z,width:oriented.width,depth:oriented.depth,height:oriented.height};
+  }
+  function surfaceCellsForBounds(bounds,layerZ){
+    const out=[];
+    const minX=Math.floor(bounds.x),maxX=Math.ceil(bounds.x+bounds.width-1e-9);
+    const minY=Math.floor(bounds.y),maxY=Math.ceil(bounds.y+bounds.depth-1e-9);
+    for(let y=minY;y<maxY;y++)for(let x=minX;x<maxX;x++){
+      const overlapX=Math.min(x+1,bounds.x+bounds.width)-Math.max(x,bounds.x);
+      const overlapY=Math.min(y+1,bounds.y+bounds.depth)-Math.max(y,bounds.y);
+      if(overlapX>1e-9&&overlapY>1e-9)out.push({x,y,z:layerZ});
+    }
+    return out;
   }
 
   function transformLocalPosition(definition,position,orientation){
@@ -247,7 +290,8 @@
         const out={
           id:instance.id+':'+slot.key,
           label:slot.label||slot.key,
-          position:localToWorld(definition,instance,slot.offset)
+          position:localToWorld(definition,instance,slot.offset),
+          approachEdges:slot.approachEdges.map(edge=>reorientCardinalDirection(edge,'north',instance.orientation))
         };
         if(slot.canRest===true)out.canRest=true;
         if(slot.canSleep===true)out.canSleep=true;
@@ -260,13 +304,15 @@
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
     if(definition.spatial){
-      resolved.spatial=clone(definition.spatial);
-      if(resolved.spatial.surface){
-        const key=resolved.spatial.surface.key;
-        resolved.spatial.surface.id=instance.id+':'+key;
-        resolved.spatial.surface.cells=footprint.map(position=>clone(position));
+      resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,bounds:metricBoundsToWorld(definition,instance,solid.bounds)}))};
+      if(definition.spatial.surface){
+        const source=resolved.spatial.solids.find(solid=>solid.key===definition.spatial.surface.onSolid.key);
+        resolved.spatial.surface=clone(definition.spatial.surface);
+        resolved.spatial.surface.id=instance.id+':'+resolved.spatial.surface.key;
+        resolved.spatial.surface.cells=surfaceCellsForBounds(source.bounds,instance.origin.z);
+        resolved.spatial.surface.sourceSolidKey=source.key;
         delete resolved.spatial.surface.key;
-        delete resolved.spatial.surface.coverage;
+        delete resolved.spatial.surface.onSolid;
       }
     }
     return resolved;
@@ -298,6 +344,9 @@
     definitionFrame,
     transformLocalPosition,
     inverseTransformLocalPosition,
+    transformLocalBounds,
+    metricBoundsToWorld,
+    surfaceCellsForBounds,
     localToWorld,
     worldToLocal,
     reorientCardinalDirection,
