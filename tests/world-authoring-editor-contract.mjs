@@ -29,7 +29,7 @@ assert.equal(imported.authoringSchema,'world-authoring-v6');
 assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v6');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
-assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},orientation:'north',name:'餐椅 A'});
+assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},orientation:'east',name:'餐椅 A'});
 assert.ok(!exported.includes('"footprint"')&&!exported.includes('"slots"')&&!exported.includes('"restQuality"'),'resolved furniture truth must not serialize into compact v6 instances');
 
 const topology=A.deriveHorizontalTopology(imported,{z:0});
