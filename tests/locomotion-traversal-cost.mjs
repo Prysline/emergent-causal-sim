@@ -60,6 +60,12 @@ assert.equal(shortest.pathDistance,2);
 assert.deepEqual(shortest.steps.map(step=>step.mode),['proneCrawl','proneCrawl']);
 assert.equal(shortest.traversalCost,7,'selected short crawl path still reports its full objective burden');
 assert.equal(shortest.travelTime,7,'pathDistance remains distinct from both cost and execution time');
+const batchTargets=[f.mid,f.goal,floor(f.st,1,4),floor(f.st,3,4)];
+assert.deepEqual(
+  SP.pathDistances(f.st,f.human,batchTargets,{mode:'auto'}),
+  batchTargets.map(target=>SP.pathDistance(f.st,f.human,target)),
+  'batch pathDistances must preserve auto-mode pathDistance across walk / crawl alternatives'
+);
 assert.equal(easiest.pathDistance,4);
 assert.deepEqual(easiest.steps.map(step=>step.mode),['walk','walk','walk','walk']);
 assert.equal(easiest.traversalCost,4,'four normal walk edges should beat the objectively harder prone shortcut');

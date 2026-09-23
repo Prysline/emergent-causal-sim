@@ -123,4 +123,41 @@ assert.equal(overlap.occupantCount,1);
 assert.equal(overlap.hardBlocked,false);
 assert.ok(overlap.congestionCost>0,'shared-node traffic should have a soft objective consequence');
 
+
+function measureTargetRouteWork(agentId,kind){
+  E.reset(20260911);
+  const st=E.getState(),agent=st.agents[agentId];
+  for(const other of Object.values(st.agents))if(other.id!==agent.id)other.offMap=true;
+  const originalFeasibility=SP.traversalFeasibility;
+  const originalPathDistance=SP.pathDistance;
+  const originalBestSlotApproach=SP.bestSlotApproachNode;
+  const metrics={agentId,kind,bestSlotApproachCalls:0,pathDistanceCalls:0,traversalFeasibilityCalls:0,targetCount:0,floorTargetCount:0};
+  SP.traversalFeasibility=(...args)=>{metrics.traversalFeasibilityCalls++;return originalFeasibility(...args);};
+  SP.pathDistance=(...args)=>{metrics.pathDistanceCalls++;return originalPathDistance(...args);};
+  SP.bestSlotApproachNode=(...args)=>{metrics.bestSlotApproachCalls++;return originalBestSlotApproach(...args);};
+  try{
+    const targets=kind==='sleep'?SP.sleepTargets(st,agent):SP.restTargets(st,agent);
+    metrics.targetCount=targets.length;
+    metrics.floorTargetCount=targets.filter(target=>target.kind==='floor').length;
+    return metrics;
+  }finally{
+    SP.traversalFeasibility=originalFeasibility;
+    SP.pathDistance=originalPathDistance;
+    SP.bestSlotApproachNode=originalBestSlotApproach;
+  }
+}
+
+const targetRouteMetrics=[
+  measureTargetRouteWork('zhen','rest'),
+  measureTargetRouteWork('zhen','sleep'),
+  measureTargetRouteWork('orange','rest')
+];
+const [humanRestMetrics,humanSleepMetrics,catRestMetrics]=targetRouteMetrics;
+for(const metrics of targetRouteMetrics)assert.equal(metrics.pathDistanceCalls,0,'rest / sleep target scoring must batch path-distance queries instead of calling standalone pathDistance per target');
+assert.ok(humanRestMetrics.traversalFeasibilityCalls<1800,`Human rest target scoring regressed to ${humanRestMetrics.traversalFeasibilityCalls} feasibility calls`);
+assert.ok(humanSleepMetrics.traversalFeasibilityCalls<380,`Human sleep target scoring regressed to ${humanSleepMetrics.traversalFeasibilityCalls} feasibility calls`);
+assert.ok(catRestMetrics.floorTargetCount>20,'Cat rest fixture must exercise a broad floor-candidate set');
+assert.ok(catRestMetrics.traversalFeasibilityCalls<1000,`Cat rest batch scoring regressed to ${catRestMetrics.traversalFeasibilityCalls} feasibility calls`);
+console.log('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
+
 console.log('v11.20.0 Dynamic Congestion regression: ok');

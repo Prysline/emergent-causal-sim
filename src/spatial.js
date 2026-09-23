@@ -165,31 +165,48 @@
   function bestInteractionPosition(st,a,target,affordance='default'){const list=interactionPositions(st,target,a,affordance).map(p=>({p,d:pathDistance(st,a,p),occ:occupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));list.sort((x,y)=>x.occ-y.occ||x.d-y.d||manhattan(a.position,x.p)-manhattan(a.position,y.p));return list[0]?.p||null;}
   function isAtInteraction(st,a,target,affordance='default'){return interactionPositions(st,target,a,affordance).some(p=>same(p,a.position));}
 
+  function targetPathDistances(st,a,positions,runtime){
+    if(!positions.length)return[];
+    const batch=runtime.pathDistances?.(st,a,positions);
+    if(Array.isArray(batch)&&batch.length===positions.length)return batch;
+    return positions.map(p=>runtime.pathDistance?.(st,a,p)??Infinity);
+  }
   function restTargets(st,a){
-    const out=[],runtime=window.SimSpatial;
+    const out=[],runtime=window.SimSpatial,pending=[];
     for(const slot of allSlots(st)){
       if(!slot.canRest||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
       const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
       if(!approach)continue;
-      const d=runtime.pathDistance?.(st,a,approach)??Infinity;if(!Number.isFinite(d))continue;
-      out.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.restQuality||0,posture:slot.restPosture||'sitting',score:d-(slot.restQuality||0)*9+noiseAt(st,approach)*.35+(runtime.nodeOccupantsAt?.(st,approach,a.id).length||0)*4});
+      pending.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.restQuality||0,posture:slot.restPosture||'sitting'});
     }
     if(a.kind==='cat')for(const t of Object.values(st.map.tiles)){
       if(!(runtime.nodeWalkable?.(st,t,a)??walkable(st,t))||tileLiquidAmount(t)>.1)continue;
-      const p=clonePos(t),d=runtime.pathDistance?.(st,a,p)??Infinity;if(!Number.isFinite(d))continue;
-      const q=.42;out.push({kind:'floor',id:`floor:${t.id}`,position:p,quality:q,posture:'lying',score:d-q*7+noiseAt(st,p)*.45+(runtime.nodeOccupantsAt?.(st,p,a.id).length||0)*3});
+      pending.push({kind:'floor',id:`floor:${t.id}`,position:clonePos(t),quality:.42,posture:'lying'});
+    }
+    const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);
+    for(let i=0;i<pending.length;i++){
+      const target=pending[i],d=distances[i];if(!Number.isFinite(d))continue;
+      const occupied=runtime.nodeOccupantsAt?.(st,target.position,a.id).length||0;
+      const score=target.kind==='slot'
+        ?d-target.quality*9+noiseAt(st,target.position)*.35+occupied*4
+        :d-target.quality*7+noiseAt(st,target.position)*.45+occupied*3;
+      out.push({...target,score});
     }
     out.sort((x,y)=>x.score-y.score);return out;
   }
   function sleepTargets(st,a){
-    const out=[],runtime=window.SimSpatial;
+    const out=[],runtime=window.SimSpatial,pending=[];
     for(const slot of allSlots(st)){
       if(!slot.canSleep||!slotAllows(slot,a)||!slotAvailable(st,slot.id,a.id))continue;
       const approach=runtime.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
       if(!approach)continue;
-      const d=runtime.pathDistance?.(st,a,approach)??Infinity;if(!Number.isFinite(d))continue;
-      const quality=slot.sleepQuality??slot.restQuality??.35;
-      out.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality,posture:'lying',score:d-quality*18+noiseAt(st,approach)*.55+(runtime.nodeOccupantsAt?.(st,approach,a.id).length||0)*4});
+      pending.push({kind:'slot',id:slot.id,position:clonePos(approach),slotPosition:clonePos(slot.position),quality:slot.sleepQuality??slot.restQuality??.35,posture:'lying'});
+    }
+    const distances=targetPathDistances(st,a,pending.map(target=>target.position),runtime);
+    for(let i=0;i<pending.length;i++){
+      const target=pending[i],d=distances[i];if(!Number.isFinite(d))continue;
+      const occupied=runtime.nodeOccupantsAt?.(st,target.position,a.id).length||0;
+      out.push({...target,score:d-target.quality*18+noiseAt(st,target.position)*.55+occupied*4});
     }
     out.sort((x,y)=>x.score-y.score);return out;
   }

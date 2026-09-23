@@ -50,4 +50,15 @@ assert.equal(SP.travelTime(st,actor,goal),6,'standalone travelTime follows the d
 assert.deepEqual(SP.astar(st,actor.position,goal,actor.id),easiest.path,'existing A* compatibility surface must retain traversal-cost route choice');
 assert.throws(()=>SP.planRoute(st,actor,goal,{mode:'proneCrawl'}),/supports walk only/,'Slice 3 must not silently turn crawl feasibility into execution');
 
+const batchGoals=[
+  goal,
+  SP.normalizeNode(st,{x:5,y:4},'floor'),
+  SP.normalizeNode(st,{x:10,y:7},'floor')
+];
+assert.deepEqual(
+  SP.pathDistances(st,actor,batchGoals,{mode:'walk'}),
+  batchGoals.map(target=>SP.pathDistance(st,actor,target)),
+  'batch pathDistances must preserve standalone pathDistance results for reachable and unreachable goals'
+);
+
 console.log('v11.24.0 route locomotion cost regression: ok');
