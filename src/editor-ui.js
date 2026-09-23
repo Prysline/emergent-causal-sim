@@ -138,7 +138,7 @@
     if(targetCell){
       targetCell.classList.add('drag-drop-target',validity);
       const orientation=authored.furniture?.[dragState.furnitureId]?.orientation;
-      if(orientation)targetCell.insertAdjacentHTML('beforeend',`<span class="furniture-orientation-marker drag-orientation-marker" data-orientation="${esc(orientation)}">${esc(orientationGlyph(orientation))}</span>`);
+      if(orientation&&furnitureHasFacing(dragState.furnitureId))targetCell.insertAdjacentHTML('beforeend',`<span class="furniture-orientation-marker drag-orientation-marker" data-orientation="${esc(orientation)}">${esc(orientationGlyph(orientation))}</span>`);
     }
     for(const position of dragState.preview?.footprint||[]){
       const cell=dragCellAt(position);
@@ -380,11 +380,17 @@
   }
   const ORIENTATION_GLYPHS=Object.freeze({north:'↑',east:'→',south:'↓',west:'←'});
   const ORIENTATION_LABELS=Object.freeze({north:'北',east:'東',south:'南',west:'西'});
+  const FRAME_ROTATION_LABELS=Object.freeze({south:'0°',west:'90°',north:'180°',east:'270°'});
   function orientationGlyph(orientation){return ORIENTATION_GLYPHS[orientation]||'◇';}
+  function furnitureHasFacing(id){return resolvedFurniture(id)?.orientationSemantics==='facing';}
+  function definitionHasFacing(definitionId){
+    const definition=A.listFurnitureDefinitions().find(item=>item.id===definitionId);
+    return (definition?.orientationSemantics||'facing')==='facing';
+  }
   function contextualFurnitureOrientationIds(){
     const ids=new Set();
-    if(selection?.kind==='entity'&&selection.type==='furniture')ids.add(selection.id);
-    if(selectedTool==='furniture'&&selectedFurnitureId)ids.add(selectedFurnitureId);
+    if(selection?.kind==='entity'&&selection.type==='furniture'&&furnitureHasFacing(selection.id))ids.add(selection.id);
+    if(selectedTool==='furniture'&&selectedFurnitureId&&furnitureHasFacing(selectedFurnitureId))ids.add(selectedFurnitureId);
     return ids;
   }
   function furnitureOrientationMarkersAtCell(x,y,z){
@@ -403,11 +409,18 @@
     if(dragState?.active)return;
     const target=dragTargetFromPoint(event.clientX,event.clientY);
     if(!target)return;
-    let orientation=null;
-    if(pendingOperation?.kind==='create-furniture')orientation='north';
-    else if(pendingOperation?.kind==='duplicate-furniture')orientation=authored.furniture?.[pendingOperation.furnitureId]?.orientation||null;
-    else if(selectedTool==='furniture'&&selectedFurnitureId)orientation=authored.furniture?.[selectedFurnitureId]?.orientation||null;
-    if(!orientation)return;
+    let orientation=null,hasFacing=false;
+    if(pendingOperation?.kind==='create-furniture'){
+      orientation='south';
+      hasFacing=definitionHasFacing(pendingOperation.definitionId);
+    }else if(pendingOperation?.kind==='duplicate-furniture'){
+      orientation=authored.furniture?.[pendingOperation.furnitureId]?.orientation||null;
+      hasFacing=furnitureHasFacing(pendingOperation.furnitureId);
+    }else if(selectedTool==='furniture'&&selectedFurnitureId){
+      orientation=authored.furniture?.[selectedFurnitureId]?.orientation||null;
+      hasFacing=furnitureHasFacing(selectedFurnitureId);
+    }
+    if(!orientation||!hasFacing)return;
     const cell=dragCellAt(target);
     if(cell)cell.insertAdjacentHTML('beforeend',`<span class="furniture-orientation-marker placement-orientation-marker" data-orientation="${esc(orientation)}">${esc(orientationGlyph(orientation))}</span>`);
   }
@@ -763,7 +776,7 @@
       if(entry){
         heading=`${esc(entry.icon)} ${esc(entry.entity.name||entry.id)}`;
         details=`<br>${esc(entry.label)} · ID：<code>${esc(entry.id)}</code>`;
-        if(entry.type==='furniture')details+=`<br>占地：${(entry.entity.footprint||[]).length} 格<br>方向：${esc(orientationGlyph(entry.entity.orientation))} <code>${esc(entry.entity.orientation)}</code>`;
+        if(entry.type==='furniture'){const orientationText=entry.entity.orientationSemantics==='facing'?`方向：${esc(orientationGlyph(entry.entity.orientation))} <code>${esc(entry.entity.orientation)}</code>`:`局部框架旋轉：${esc(FRAME_ROTATION_LABELS[entry.entity.orientation]||entry.entity.orientation)} <code>${esc(entry.entity.orientation)}</code>`;details+=`<br>占地：${(entry.entity.footprint||[]).length} 格<br>${orientationText}`;}
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
         if(entry.type==='structure')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>下端：<code>(${esc(entry.entity.lower?.x)}, ${esc(entry.entity.lower?.y)}, ${esc(entry.entity.lower?.z)})</code><br>上端：<code>(${esc(entry.entity.upper?.x)}, ${esc(entry.entity.upper?.y)}, ${esc(entry.entity.upper?.z)})</code>${entry.entity.clearanceWidth!==undefined?`<br>淨寬：${esc(entry.entity.clearanceWidth)}m`:''}${entry.entity.clearanceHeight!==undefined?`<br>淨高：${esc(entry.entity.clearanceHeight)}m`:''}`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
@@ -867,8 +880,14 @@
     if(entry?.type==='furniture'){
       const placementActive=selectedTool==='furniture'&&selectedFurnitureId===entry.id;
       const orientation=authored.furniture?.[entry.id]?.orientation||entry.entity.orientation;
-      const orientationButtons=A.FURNITURE_ORIENTATIONS.map(value=>`<button type="button" class="${orientation===value?'active-orientation':''}" data-editor-action="rotate-furniture" data-orientation="${esc(value)}" title="${esc(ORIENTATION_LABELS[value]||value)}">${esc(orientationGlyph(value))}</button>`).join('');
-      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">複製家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><div class="orientation-control"><span>方向：<b>${esc(orientationGlyph(orientation))}</b> <code>${esc(orientation)}</code></span><div class="action-row">${orientationButtons}</div></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · 實例 ID：<code>${esc(entry.id)}</code></small>`;
+      const hasFacing=entry.entity.orientationSemantics==='facing';
+      const orientationButtons=A.FURNITURE_ORIENTATIONS.map(value=>{
+        const label=hasFacing?orientationGlyph(value):(FRAME_ROTATION_LABELS[value]||value);
+        const title=hasFacing?(ORIENTATION_LABELS[value]||value):`局部框架旋轉 ${FRAME_ROTATION_LABELS[value]||value}（${value}）`;
+        return `<button type="button" class="${orientation===value?'active-orientation':''}" data-editor-action="rotate-furniture" data-orientation="${esc(value)}" title="${esc(title)}">${esc(label)}</button>`;
+      }).join('');
+      const orientationSummary=hasFacing?`方向：<b>${esc(orientationGlyph(orientation))}</b> <code>${esc(orientation)}</code>`:`局部框架旋轉：<b>${esc(FRAME_ROTATION_LABELS[orientation]||orientation)}</b> <code>${esc(orientation)}</code>`;
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">複製家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><div class="orientation-control"><span>${orientationSummary}</span><div class="action-row">${orientationButtons}</div></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · 實例 ID：<code>${esc(entry.id)}</code></small>`;
     }else if(entry?.type==='container'||entry?.type==='source'){
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
     }else if(entry?.type==='resident'){

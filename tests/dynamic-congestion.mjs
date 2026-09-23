@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.28.0-furniture-local-geometry';
+const CURRENT_VERSION='11.28.1-furniture-facing-semantics';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

@@ -2,9 +2,9 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.28.0-furniture-local-geometry`。
+目前 runtime marker：`11.28.1-furniture-facing-semantics`。
 
-> `11.28.0-furniture-local-geometry` 改變 Furniture geometry、Passage options、Slot approach / settle / egress 與 floor-occupancy interpretation，但**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；hook registry / phase ordering維持不變。
+> `11.28.1-furniture-facing-semantics` 修正 Furniture orientation 的 canonical facing / frame semantics 與 Editor observability，但**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；hook registry / phase ordering維持不變。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >

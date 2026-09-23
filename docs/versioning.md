@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.28.0-furniture-local-geometry`
+`11.28.1-furniture-facing-semantics`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.28.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.28.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Furniture Local Geometry release
+### Current Furniture Facing Semantics release
+
+`11.28.1-furniture-facing-semantics` 修正 Furniture orientation contract 的語意不一致。Furniture Catalog 升為 `furniture-definitions-v7`：Definition canonical orientation 改為 `south`；directional Furniture 以 `orientationSemantics:"facing"` 表示 Instance `orientation` 是正面／主要 facing，床的 facing 定義為 head → foot；沒有自然正面的 Furniture 以 `orientationSemantics:"frame"` 保留 quarter-turn local-frame transform，但 Editor 不顯示 facing arrow。
+
+World Authoring 升為 `world-authoring-v7`。Furniture Instance shape 仍是 `id / definitionId / origin / orientation / optional name`，但同一個 orientation value 的 compatibility semantics 已改變，因此不能沿用 v6 generation。Default world 為保留既有實際擺法，dining table / sofa 改為 `south`、bed 改為 `north`，四張餐椅維持既有 east / west facing。New Furniture Instance 預設 explicit `south`。
+
+Editor 的 `↑ → ↓ ←` 只代表 directional Furniture 的 facing；frame-only Furniture 顯示 0° / 90° / 180° / 270° local-frame rotation。這次不新增 45° Furniture orientation，也不改 Spatial Traversal / Passage、Route、Locomotion、Physical、Spatial Identity 或 Dynamic Congestion generation。產品尚未正式公開，因此不建立 v6 → v7 migration；unsupported generation 仍由 current import boundary 拒絕。
+
+### Previous Furniture Local Geometry release
 
 `11.28.0-furniture-local-geometry` 將 Furniture physical obstruction 從 whole-tile `spatial.floor.mode / spatial.under` 收斂為 Furniture-local 公尺制 3D AABB `spatial.solids`。Furniture Catalog 升為 `furniture-definitions-v6`；Surface 以 `onSolid:{key,face:'top'}` 派生 coarse cells，Slot 保留 stable `<instanceId>:<slotKey>` 並新增 rotated `approachEdges`。World Authoring Instance shape 未改，因此維持 `world-authoring-v6`。
 
@@ -90,9 +98,9 @@ Default dining table 的 `.72m` under-clearance、`diningTable:surface` identity
 `11.21.4-editor-playtest-bridge` 新增玩家可見的 Editor→Simulator playtest flow，但不改 `world-authoring-v2` shape，也不改 Physical / Passage / Route / Locomotion / Crowding / Relationship / Memory subsystem generation。Editor 在 launch 前用 current authoring validation + runtime compatibility preflight 拒絕 invalid schema、broken references、multi-layer / non-zero Z；成功 handoff 只存在同 origin `sessionStorage`，並且只有 explicit `?preview=editor` simulator load 會消費。`SimWorld.createInitialStateFromAuthoring(...)` 與 default `createInitialState(...)` 共用同一 named initial-state pipeline，Preview Reset 重建同一 snapshot；normal simulator load 不受先前 preview 影響。因此這是 current product / presentation + bootstrap contract 的 patch-level 更新，使用 `11.21.4-editor-playtest-bridge`，authoring generation 維持 `world-authoring-v2`。
 ### World authoring contract version
 
-World authoring 另有獨立 contract generation：current `SimWorldAuthoring.VERSION = "world-authoring-v6"`，canonical package 保存 `authoringSchema: "world-authoring-v6"`、`furnitureCatalogVersion: "furniture-definitions-v6"`、`map.cellSizeMeters = 1`、root `structures` 與 Furniture Instance required `orientation`。Furniture Catalog generation由 `SimFurnitureDefinitions.VERSION` 獨立持有。
+World authoring 另有獨立 contract generation：current `SimWorldAuthoring.VERSION = "world-authoring-v7"`，canonical package 保存 `authoringSchema: "world-authoring-v7"`、`furnitureCatalogVersion: "furniture-definitions-v7"`、`map.cellSizeMeters = 1`、root `structures` 與 Furniture Instance required `orientation`。Furniture Catalog generation由 `SimFurnitureDefinitions.VERSION` 獨立持有。
 
-只有 authoring package shape / compatibility需要新 generation時才升 `world-authoring-vN`；本 release 未改 Furniture Instance shape，因此 World Authoring 維持 v6。Furniture Catalog 因 `spatial.solids / Surface.onSolid / Slot approachEdges / metric resolver` contract 升為 current `furniture-definitions-v6`。Current Spatial Traversal / Passage / Crowding 分別為 `11.28.0-furniture-local-geometry`、`11.28.0-positioned-passage-options`、`11.28.0-effective-passage-width`；Physical、Route、Locomotion、Spatial Identity維持原 generation。
+只有 authoring package shape / compatibility需要新 generation時才升 `world-authoring-vN`；本 release 雖未改 Furniture Instance 欄位 shape，但改變了 `orientation` 的 compatibility semantics，所以 World Authoring 換代為 v7。Furniture Catalog 同步以 south-canonical local frame、`orientationSemantics` 與 shared resolver contract 換代為 current `furniture-definitions-v7`。Current Spatial Traversal / Passage / Crowding 分別維持 `11.28.0-furniture-local-geometry`、`11.28.0-positioned-passage-options`、`11.28.0-effective-passage-width`；Physical、Route、Locomotion、Spatial Identity也維持原 generation。
 
 ## 何時必須升版
 

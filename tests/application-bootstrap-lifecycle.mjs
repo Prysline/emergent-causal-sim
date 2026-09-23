@@ -96,7 +96,7 @@ for(const [scenario,kind] of [
   assert.deepEqual(gate.petScenarios(),kind==='pet'?[scenario]:[],scenario+' must dispatch only the matching pet scenario helper');
 }
 
-const previewAuthoring={authoringSchema:'world-authoring-v6',furnitureCatalogVersion:'furniture-definitions-v6',map:{width:1,height:1,cellSizeMeters:1,layers:[{z:0,cells:{},boundaries:{}}]},doors:{},exits:{}};
+const previewAuthoring={authoringSchema:'world-authoring-v7',furnitureCatalogVersion:'furniture-definitions-v7',map:{width:1,height:1,cellSizeMeters:1,layers:[{z:0,cells:{},boundaries:{}}]},doors:{},exits:{}};
 const previewGate=gateContext({preview:{requested:true,ok:true,authoring:previewAuthoring,fingerprint:'preview-fp',issues:[]}});
 vm.runInNewContext(bootstrapSource,previewGate.context,{filename:'src/app/bootstrap.js'});
 assert.equal(previewGate.resetStateSource()?.id,'editor-preview','Composition Root must translate Preview into the generic Engine reset-state source');

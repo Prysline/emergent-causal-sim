@@ -1,10 +1,11 @@
 (() => {
-  const VERSION='furniture-definitions-v6';
+  const VERSION='furniture-definitions-v7';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
   const ORIENTATIONS=Object.freeze(['north','east','south','west']);
   const ORIENTATION_INDEX=Object.freeze({north:0,east:1,south:2,west:3});
+  const CANONICAL_ORIENTATION='south';
 
   function deepFreeze(value){
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
@@ -19,6 +20,7 @@
       name:'餐桌',
       icon:'▰',
       kind:'table',
+      orientationSemantics:'frame',
       supportsObjects:true,
       footprint:[local(0,0),local(1,0),local(0,1),local(1,1)],
       displayOffset:local(0,0),
@@ -39,19 +41,20 @@
       name:'餐椅',
       icon:'🪑',
       kind:'chair',
+      orientationSemantics:'facing',
       footprint:[local(0,0)],
       displayOffset:local(0,0),
       slots:[
-        {key:'seat',label:'座位',offset:local(0,0),approachEdges:['north','east','west'],canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
+        {key:'seat',label:'座位',offset:local(0,0),approachEdges:['south','west','east'],canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
       ],
       spatial:{
         solids:[
-          {key:'seat',bounds:{x:.29,y:.255,z:.43,width:.42,depth:.44,height:.04}},
-          {key:'back',bounds:{x:.29,y:.695,z:.43,width:.42,depth:.05,height:.47}},
-          {key:'frontLeftLeg',bounds:{x:.31,y:.275,z:0,width:.04,depth:.04,height:.43}},
-          {key:'frontRightLeg',bounds:{x:.65,y:.275,z:0,width:.04,depth:.04,height:.43}},
-          {key:'rearLeftLeg',bounds:{x:.31,y:.635,z:0,width:.04,depth:.04,height:.43}},
-          {key:'rearRightLeg',bounds:{x:.65,y:.635,z:0,width:.04,depth:.04,height:.43}}
+          {key:'seat',bounds:{x:.29,y:.305,z:.43,width:.42,depth:.44,height:.04}},
+          {key:'back',bounds:{x:.29,y:.255,z:.43,width:.42,depth:.05,height:.47}},
+          {key:'frontLeftLeg',bounds:{x:.31,y:.685,z:0,width:.04,depth:.04,height:.43}},
+          {key:'frontRightLeg',bounds:{x:.65,y:.685,z:0,width:.04,depth:.04,height:.43}},
+          {key:'rearLeftLeg',bounds:{x:.31,y:.325,z:0,width:.04,depth:.04,height:.43}},
+          {key:'rearRightLeg',bounds:{x:.65,y:.325,z:0,width:.04,depth:.04,height:.43}}
         ]
       }
     },
@@ -60,6 +63,7 @@
       name:'沙發',
       icon:'🛋️',
       kind:'sofa',
+      orientationSemantics:'facing',
       footprint:[local(0,0),local(1,0)],
       displayOffset:local(0,0),
       slots:[
@@ -78,6 +82,7 @@
       name:'雙人床',
       icon:'🛏️',
       kind:'bed',
+      orientationSemantics:'facing',
       footprint:[local(0,0),local(1,0),local(0,1),local(1,1)],
       displayOffset:local(0,0),
       slots:[
@@ -144,11 +149,12 @@
     if(Object.prototype.hasOwnProperty.call(definition,'blocksMovement'))throw new Error('Furniture Definition '+key+' must use spatial.solids instead of blocksMovement.');
     if(typeof definition.name!=='string'||!definition.name)throw new Error('Furniture Definition '+key+' requires name.');
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
+    if(definition.orientationSemantics!==undefined&&!['facing','frame'].includes(definition.orientationSemantics))throw new Error('Furniture Definition '+key+' orientationSemantics must be facing / frame.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
     definition.footprint.forEach((position,index)=>assertLocalPosition(position,key+'.footprint['+index+']'));
     const minX=Math.min(...definition.footprint.map(position=>position.x));
     const minY=Math.min(...definition.footprint.map(position=>position.y));
-    if(minX!==0||minY!==0)throw new Error('Furniture Definition '+key+' footprint must use canonical north local frame with minX = 0 and minY = 0.');
+    if(minX!==0||minY!==0)throw new Error('Furniture Definition '+key+' footprint must use canonical south local frame with minX = 0 and minY = 0.');
     assertLocalPosition(definition.displayOffset,key+'.displayOffset');
     if(definition.slots!==undefined&&!Array.isArray(definition.slots))throw new Error('Furniture Definition '+key+' slots must be an array.');
     const keys=new Set();
@@ -187,12 +193,17 @@
     return {width,height};
   }
 
-  function transformLocalBounds(definition,bounds,orientation){
+  function canonicalQuarterTurns(orientation){
     assertOrientation(orientation);
+    return (ORIENTATION_INDEX[orientation]-ORIENTATION_INDEX[CANONICAL_ORIENTATION]+4)%4;
+  }
+
+  function transformLocalBounds(definition,bounds,orientation){
+    const turns=canonicalQuarterTurns(orientation);
     const {width:W,height:D}=definitionFrame(definition),b=clone(bounds);
-    if(orientation==='north')return b;
-    if(orientation==='east')return {x:D-(b.y+b.depth),y:b.x,z:b.z,width:b.depth,depth:b.width,height:b.height};
-    if(orientation==='south')return {x:W-(b.x+b.width),y:D-(b.y+b.depth),z:b.z,width:b.width,depth:b.depth,height:b.height};
+    if(turns===0)return b;
+    if(turns===1)return {x:D-(b.y+b.depth),y:b.x,z:b.z,width:b.depth,depth:b.width,height:b.height};
+    if(turns===2)return {x:W-(b.x+b.width),y:D-(b.y+b.depth),z:b.z,width:b.width,depth:b.depth,height:b.height};
     return {x:b.y,y:W-(b.x+b.width),z:b.z,width:b.depth,depth:b.width,height:b.height};
   }
   function metricBoundsToWorld(definition,instance,bounds){
@@ -213,21 +224,21 @@
 
   function transformLocalPosition(definition,position,orientation){
     assertLocalPosition(position,'Furniture local position');
-    assertOrientation(orientation);
+    const turns=canonicalQuarterTurns(orientation);
     const {width,height}=definitionFrame(definition);
-    if(orientation==='north')return {x:position.x,y:position.y,z:position.z};
-    if(orientation==='east')return {x:height-1-position.y,y:position.x,z:position.z};
-    if(orientation==='south')return {x:width-1-position.x,y:height-1-position.y,z:position.z};
+    if(turns===0)return {x:position.x,y:position.y,z:position.z};
+    if(turns===1)return {x:height-1-position.y,y:position.x,z:position.z};
+    if(turns===2)return {x:width-1-position.x,y:height-1-position.y,z:position.z};
     return {x:position.y,y:width-1-position.x,z:position.z};
   }
 
   function inverseTransformLocalPosition(definition,position,orientation){
     assertLocalPosition(position,'Furniture oriented local position');
-    assertOrientation(orientation);
+    const turns=canonicalQuarterTurns(orientation);
     const {width,height}=definitionFrame(definition);
-    if(orientation==='north')return {x:position.x,y:position.y,z:position.z};
-    if(orientation==='east')return {x:position.y,y:height-1-position.x,z:position.z};
-    if(orientation==='south')return {x:width-1-position.x,y:height-1-position.y,z:position.z};
+    if(turns===0)return {x:position.x,y:position.y,z:position.z};
+    if(turns===1)return {x:position.y,y:height-1-position.x,z:position.z};
+    if(turns===2)return {x:width-1-position.x,y:height-1-position.y,z:position.z};
     return {x:width-1-position.y,y:position.x,z:position.z};
   }
 
@@ -395,6 +406,7 @@
       icon:definition.icon,
       kind:definition.kind,
       orientation:instance.orientation,
+      orientationSemantics:definition.orientationSemantics||'facing',
       footprint,
       displayAt:localToWorld(definition,instance,definition.displayOffset),
       slots:(definition.slots||[]).map(slot=>{
@@ -402,7 +414,7 @@
           id:instance.id+':'+slot.key,
           label:slot.label||slot.key,
           position:localToWorld(definition,instance,slot.offset),
-          approachEdges:slot.approachEdges.map(edge=>reorientCardinalDirection(edge,'north',instance.orientation))
+          approachEdges:slot.approachEdges.map(edge=>reorientCardinalDirection(edge,CANONICAL_ORIENTATION,instance.orientation))
         };
         if(slot.canRest===true)out.canRest=true;
         if(slot.canSleep===true)out.canSleep=true;
@@ -452,6 +464,7 @@
     VERSION,
     DEFINITIONS,
     ORIENTATIONS,
+    CANONICAL_ORIENTATION,
     definitionFrame,
     transformLocalPosition,
     inverseTransformLocalPosition,

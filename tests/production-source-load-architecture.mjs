@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.28.0-furniture-local-geometry';
+const CURRENT_VERSION='11.28.1-furniture-facing-semantics';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -184,8 +184,8 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v6');
-assert.equal(A.VERSION,'world-authoring-v6');
+assert.equal(FD.VERSION,'furniture-definitions-v7');
+assert.equal(A.VERSION,'world-authoring-v7');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v1');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);

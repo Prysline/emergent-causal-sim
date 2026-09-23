@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.28.0-furniture-local-geometry`。
+目前 runtime marker：`11.28.1-furniture-facing-semantics`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -27,9 +27,9 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v6"`，並以 `furnitureCatalogVersion:"furniture-definitions-v6"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v7"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
-Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges` 與 activity suitability由 `SimFurnitureDefinitions` 持有。canonical World v6 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
 Room derivation 現只負責拓樸／identity／membership 與結構集合；`room.value`、Furniture legacy `value` 與 Door Room-value parity metadata 均已移除。`comfortAt()` 等環境／行為 metric 仍是獨立模型，不由 Room aggregate 代替。
 
@@ -47,7 +47,7 @@ Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time valid
 
 Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})`。它從 authored terrain/opening、Furniture footprint / under-clearance、fixed Container / Source blocker 派生 structural openness、static blocker、furniture membership、cardinal adjacency、connected components與 under-clearance diagnostics；結果只存在 query/preview/compiler 邊界，不 serialize 成第二份 world truth。`doorway` 是 authored opening：本身提供 floor-level structural openness；blocking door / Furniture / fixed entity 可再依 concrete geometry 關閉通行。Runtime compatibility `tile.walkable / tile.furnitureIds` 仍可存在，但只能由 compiler 產生，Editor 不直接 author。Initializer placement diagnostics與 Editor derived preview共用同一 geometry interpretation。
 
-歷史 Slice D 的 `world-authoring-v1 → v2` migration 曾是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，當時 migration 會一次性寫入 v2 Furniture geometry。Editor-2 的 v3 改由 Furniture Definition 持有該 intrinsic geometry；v4 再把 wall / opening、Door 與 world Exit 從 Cell terrain / Furniture compatibility 分離；v5 新增獨立 vertical Structure root；current v6 新增 Furniture Instance required `orientation`。因產品尚未正式公開，舊 generation 不提供 production migration machinery，unsupported schema / catalog generation 直接由 current import boundary 拒絕。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
+歷史 Slice D 的 `world-authoring-v1 → v2` migration 曾是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，當時 migration 會一次性寫入 v2 Furniture geometry。Editor-2 的 v3 改由 Furniture Definition 持有該 intrinsic geometry；v4 再把 wall / opening、Door 與 world Exit 從 Cell terrain / Furniture compatibility 分離；v5 新增獨立 vertical Structure root；v6 新增 Furniture Instance required `orientation`；current v7 再把 orientation compatibility semantics 統一為 south-canonical facing/frame contract。因產品尚未正式公開，舊 generation 不提供 production migration machinery，unsupported schema / catalog generation 直接由 current import boundary 拒絕。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
 
 Slice D.1C 起，`editor.html` 除 authoring helper / mutation / presentation code外，會載入 pure `world-initializer.js` 與 `editor-preview-bridge.js`，只用於 runtime compatibility preflight與同 origin browser-session handoff；它仍不載入 `world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，也可用 `SimWorldInitializer.analyzeRuntimeCompatibility(...)` 驗證 current runtime 是否可接受同一 canonical document，但不得複製 runtime traversal owner。這讓 multi-layer authoring可合法 import / export / round-trip；Slice E 起 runtime compatibility preflight也接受可編譯的 multi-layer document，Simulator則以 z-aware identity與 layer filter呈現。Editor presentation可投影 canonical Structure scene item與 lower / upper endpoint marker，但仍不能直接 author adjacency / Route / PassageProfile truth；第一版也不提供完整 Structure 建立／拖曳工具。
 
@@ -67,11 +67,11 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 ### Furniture Orientation / Shared Local Transform
 
-v11.27 將 Furniture 朝向收斂成 Instance authored fact。Definition 的 canonical local orientation 固定為 north；shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 orientation 旋轉 local footprint、display offset、slot offset 與 surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 必須以 `minX = 0 / minY = 0` 建立 canonical NW local frame；rotated footprint / slot / surface cells 不 persistent 回 Instance。
+Current `furniture-definitions-v7` 將 Definition canonical local orientation 固定為 `south`。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
 
-`origin` 是 placement anchor，不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 會先透過 shared world→local transform 反解，再依新 orientation local→world 投影；沒有 explicit support relation 的 same-cell entity 不跟隨。slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference，由 resolver 取得新 slot world position。Current Source interaction ports 仍屬 Source 自己的 authored world facts，不納入此 ownership。
+Definition 的 `orientationSemantics` 分為 `facing` 與 `frame`。Directional Furniture 的 `orientation` 表示正面／主要 facing：椅子與沙發是 back → front，床是 head → foot；沒有自然正面的 Furniture 仍保留 quarter-turn frame orientation，但不宣稱有正面。`origin` 不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 透過同一 world→local→world transform 跟隨；slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference。
 
-Editor 只在 Furniture 被選取或新增／放置／拖曳預覽時顯示 `↑ → ↓ ←` orientation marker；未選取時不常駐。Spatial Traversal、Passage、Route、Locomotion 與 Crowding 只消費 resolved world geometry，因此 v11.27 不改它們既有 subsystem generation。
+Editor 的 `↑ → ↓ ←` 只在 directional Furniture 被選取或新增／放置／拖曳預覽時顯示，代表真正 facing；frame-only Furniture 改以 0° / 90° / 180° / 270° 顯示 local-frame rotation，不畫 facing arrow。Spatial Traversal、Passage、Route、Locomotion 與 Crowding 仍只消費 resolved world geometry，因此本 correctness release 不改它們既有 subsystem generation。
 
 Slice E 建立 **Runtime Spatial Z Identity**：base `SP.key / same / manhattan / clonePos`、`normalizeNode / nodeKey / nodeSame / routeStateKey`、Tile storage、Room derivation、Surface Environment endpoint、Memory spatial refs與 simulator map presentation共用同一 z semantics。Simulator `currentZ` / layer selector是 ephemeral presentation state；切層不得改 pathfinding或simulation truth。`SimSpatial.SPATIAL_IDENTITY_VERSION = 11.22.0-spatial-z-identity`；既有 Passage / Route / Locomotion / Crowding generation只有消費新的 node identity，未各自換代。
 

@@ -13,7 +13,7 @@ const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
 const C=globalThis.SimCrowding;
 
-assert.equal(A.VERSION,'world-authoring-v6','vertical Structure proof requires a new canonical authoring generation');
+assert.equal(A.VERSION,'world-authoring-v7','vertical Structure proof requires a new canonical authoring generation');
 
 function authoredFixture({withStair=true}={}){
   const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);

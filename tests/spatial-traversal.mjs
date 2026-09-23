@@ -12,7 +12,7 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen,zhou=st.agents.zhou;
-assert.equal(st.version,'11.28.0-furniture-local-geometry');
+assert.equal(st.version,'11.28.1-furniture-facing-semantics');
 assert.equal(SP.VERSION,'11.28.0-furniture-local-geometry');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
