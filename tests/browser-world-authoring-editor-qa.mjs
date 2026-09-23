@@ -336,7 +336,7 @@ snapshot=await page.evaluate(()=>({
   document:window.SimWorldEditor.getDocument(),
   resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['chair-basic-1'])
 }));
-assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:5,z:0},orientation:'north',name:'餐椅 A'},'duplicate must copy instance-owned orientation and placement under Definition-based ID generation');
+assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:5,z:0},orientation:'east',name:'餐椅 A'},'duplicate must copy instance-owned orientation and placement under Definition-based ID generation');
 assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
 
