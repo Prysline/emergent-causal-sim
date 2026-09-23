@@ -590,22 +590,33 @@ SimPhysical.getMovementEnvelope(agent, mode)
 → { clearanceHeight, clearanceWidth, clearanceLength, speedFactor, sourceMode }
 
 SimSpatial.getPassageProfile(state, fromNode, toNode)
-→ { clearanceHeight, clearanceWidth, ... }
+→ {
+    edgeKind,
+    options: [
+      { interval, clearanceHeight, clearanceWidth, constrainedBy }
+    ],
+    ...
+  }
 
 SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
-→ { passage, modes: { [mode]: { feasible, failedAxes } } }
+→ {
+    passage,
+    modes: {
+      [mode]: { feasible, failedAxes, effectiveOption, effectiveClearanceWidth }
+    }
+  }
 ```
 
 正式邊界：
 
 - mass、volume、body geometry 分開保存，不用單一 `bodySize` 取代；default Human / Cat profile 是 coarse MVP template，clone 成每個 Agent 自己的 state，個體可 override；
-- **canonical unit contract**：`mass` 使用 kg、`volume` 使用 m³；所有 Physical / MovementEnvelope / Passage 的絕對長度（`bodyGeometry.{height,width,length}`、`clearanceHeight / clearanceWidth / clearanceLength`、Furniture `spatial.under.clearance / clearanceWidth`、`map.passageConstraints` 的 clearance）使用 m。locomotion geometry factors、`speedFactor`、Crowding width ratio / direction weights 等為無量綱。這是 schema-level meaning，不在每個 persistent value 上重複保存 `unit` 欄位；若未來外部 protocol 需要自描述 payload，再在 protocol boundary 做明確 unit/version envelope，而不是污染 Agent state；
+- **canonical unit contract**：`mass` 使用 kg、`volume` 使用 m³；所有 Physical / MovementEnvelope / Passage 的絕對長度（`bodyGeometry.{height,width,length}`、MovementEnvelope `clearanceHeight / clearanceWidth / clearanceLength`、Furniture `spatial.solids.bounds`、Boundary / Structure / Passage option / `map.passageConstraints` 的 clearance）使用 m。locomotion geometry factors、`speedFactor`、Crowding width ratio / direction weights 等為無量綱。這是 schema-level meaning，不在每個 persistent value 上重複保存 `unit` 欄位；若未來外部 protocol 需要自描述 payload，再在 protocol boundary 做明確 unit/version envelope，而不是污染 Agent state；
 - `MovementEnvelope` 與 `PassageProfile` 都是 derived output，不保存 persistent cache；
 - Physical locomotion baseline 由舊 `standing` 正名為 `walk`，與 Agent `posture.kind='standing'` 分離；Validator 會拒絕 legacy standing locomotion alias；
 - Human 第一批 supported modes 為 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不假定所有 body plan 共享 Human mode 名稱；
 - locomotion profile 可用各軸 factor 或 absolute clearance override；Spatial 不自行推導 torso thickness / Anatomy；
-- PassageProfile 第一版只正式比較 `clearanceHeight / clearanceWidth`。某軸沒有明確限制時為 `null = unconstrained`；不發明每格固定公尺數，也不把 body length 誤當成直線 passage length requirement；
-- passage geometry 可來自 `world-authoring-v4` layer boundary 的 metric `clearanceWidth / clearanceHeight`、resolved Furniture Definition `spatial.under.clearance / clearanceWidth` 與可選 edge-local `map.passageConstraints`；Furniture intrinsic traversal geometry 由 `furniture-definitions-v3` Definition 持有，boundary 則由 world authoring 持有，後者 compatibility constraint只保留 low-level regression override；Spatial 將這些 world facts 收斂成 canonical edge query；
+- Current PassageProfile 使用位置化 `options[]`；每個 option 自己保存 `interval / clearanceHeight / clearanceWidth`，某軸 `null` 仍表示該 option 在該軸沒有已知上限。Physical feasibility 必須由**同一個 option**同時容納 MovementEnvelope width / height，不能把不同位置的最大寬度與高度拼成虛構 passage；`clearanceLength` 目前仍不作直線 passage length requirement；
+- current passage geometry 可來自 layer Boundary / Door 的 metric opening、resolved Furniture `spatial.solids` 派生的 directional free intervals / overhead clearance、root Structure clearance，以及可選 edge-local `map.passageConstraints`；Furniture intrinsic obstruction 由 current `furniture-definitions-v6` Definition 持有，Boundary / Structure 由 world authoring 持有，edge constraint只保留 low-level regression override；Spatial 將這些 world facts收斂成 positioned Passage options；
 - `traversalFeasibility` 只回答 physical feasibility，不回傳 `bestMode / recommendedMode / utility`，不讀 Relationship、Memory、traits、goal pressure，也不修改 posture；
 - **v11.17 當時**的 production A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此該 slice 的 crawl-query 可行不代表 routing 會自動 crawl；v11.19+ current production 已由後述 Locomotion Execution contract 接上 mode-aware routing / execution；
 - v11.17 isolated single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；在該 focused harness 的 walk-only execution boundary 下，low/lower 情況的另一側水源仍不可達；
