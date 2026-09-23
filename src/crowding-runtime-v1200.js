@@ -1,6 +1,6 @@
 (() => {
   const SP=window.SimSpatial,P=window.SimPhysical,L=window.SimLocomotion;if(!SP||!P)return;
-  const VERSION='11.26.0-vertical-flow-congestion';
+  const VERSION='11.28.0-effective-passage-width';
   const CONFIG=Object.freeze({
     baseOccupantPressure:.35,
     maneuveringOtherWidthFactor:.65,
@@ -55,7 +55,7 @@
   function getCrowdingProfile(st,aOrId,from,to,mode='walk'){
     const a=agentFor(st,aOrId),f=SP.normalizeNode(st,from),t=SP.normalizeNode(st,to);
     if(!a||!f||!t)return null;
-    const passage=SP.getPassageProfile?.(st,f,t)||null,passageWidth=Number.isFinite(passage?.clearanceWidth)?passage.clearanceWidth:null,moverWidth=effectiveWidth(a,mode);
+    const feasibility=SP.traversalFeasibility?.(st,a,f,t)||null,modeFact=feasibility?.modes?.[mode]||null,passageWidth=Number.isFinite(modeFact?.effectiveClearanceWidth)?modeFact.effectiveClearanceWidth:null,moverWidth=effectiveWidth(a,mode);
     const occupants=nearbyAgents(st,a,f,t).map(other=>{
       const relation=directionRelation(st,f,t,other),otherWidth=effectiveWidth(other),directionWeight=CONFIG.directionWeight[relation]??1;
       let widthRatio=null,widthPressure=0;
