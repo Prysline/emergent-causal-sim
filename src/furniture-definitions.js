@@ -197,7 +197,7 @@
   }
   function metricBoundsToWorld(definition,instance,bounds){
     const oriented=transformLocalBounds(definition,bounds,instance.orientation);
-    return {x:instance.origin.x+oriented.x,y:instance.origin.y+oriented.y,z:instance.origin.z+oriented.z,width:oriented.width,depth:oriented.depth,height:oriented.height};
+    return {x:instance.origin.x+oriented.x,y:instance.origin.y+oriented.y,z:oriented.z,width:oriented.width,depth:oriented.depth,height:oriented.height};
   }
   function surfaceCellsForBounds(bounds,layerZ){
     const out=[];
@@ -304,7 +304,7 @@
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
     if(definition.spatial){
-      resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,bounds:metricBoundsToWorld(definition,instance,solid.bounds)}))};
+      resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,layerZ:instance.origin.z,bounds:metricBoundsToWorld(definition,instance,solid.bounds)}))};
       if(definition.spatial.surface){
         const source=resolved.spatial.solids.find(solid=>solid.key===definition.spatial.surface.onSolid.key);
         resolved.spatial.surface=clone(definition.spatial.surface);
