@@ -776,7 +776,7 @@
       if(entry){
         heading=`${esc(entry.icon)} ${esc(entry.entity.name||entry.id)}`;
         details=`<br>${esc(entry.label)} · ID：<code>${esc(entry.id)}</code>`;
-        if(entry.type==='furniture')details+=`<br>占地：${(entry.entity.footprint||[]).length} 格<br>方向：${esc(orientationGlyph(entry.entity.orientation))} <code>${esc(entry.entity.orientation)}</code>`;
+        if(entry.type==='furniture'){const orientationText=entry.entity.orientationSemantics==='facing'?`方向：${esc(orientationGlyph(entry.entity.orientation))} <code>${esc(entry.entity.orientation)}</code>`:`局部框架旋轉：${esc(FRAME_ROTATION_LABELS[entry.entity.orientation]||entry.entity.orientation)} <code>${esc(entry.entity.orientation)}</code>`;details+=`<br>占地：${(entry.entity.footprint||[]).length} 格<br>${orientationText}`;}
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
         if(entry.type==='structure')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>下端：<code>(${esc(entry.entity.lower?.x)}, ${esc(entry.entity.lower?.y)}, ${esc(entry.entity.lower?.z)})</code><br>上端：<code>(${esc(entry.entity.upper?.x)}, ${esc(entry.entity.upper?.y)}, ${esc(entry.entity.upper?.z)})</code>${entry.entity.clearanceWidth!==undefined?`<br>淨寬：${esc(entry.entity.clearanceWidth)}m`:''}${entry.entity.clearanceHeight!==undefined?`<br>淨高：${esc(entry.entity.clearanceHeight)}m`:''}`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
