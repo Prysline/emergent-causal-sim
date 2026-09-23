@@ -12,7 +12,7 @@ const D=globalThis.SimFurnitureDefinitions,E=globalThis.SimEngine,SP=globalThis.
 const local=(x,y,z=0)=>({x,y,z});
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
-assert.equal(D.VERSION,'furniture-definitions-v5');
+assert.equal(D.VERSION,'furniture-definitions-v6');
 
 const invalidLegacyDefinition={
   id:'invalid-legacy',
@@ -30,6 +30,16 @@ assert.throws(
   /blocksMovement/,
   'legacy blocksMovement must be rejected rather than interpreted as traversal truth'
 );
+const invalidLegacyGeometry={
+  id:'invalid-floor-mode',name:'舊 floor mode',icon:'?',kind:'test',
+  footprint:[local(0,0)],displayOffset:local(0,0),slots:[],
+  spatial:{solids:[{key:'body',bounds:{x:0,y:0,z:0,width:1,depth:1,height:1}}],floor:{mode:'solid'}}
+};
+assert.throws(
+  ()=>D.resolveDefinitionInstance(invalidLegacyGeometry,{id:'invalidFloor',definitionId:'invalid-floor-mode',origin:local(0,0),orientation:'north'}),
+  /spatial\.solids instead of spatial\.floor \/ spatial\.under/,
+  'Furniture v6 must reject legacy Definition-authored floor/under geometry'
+);
 
 const platformDefinition={
   id:'test-low-platform',
@@ -40,11 +50,11 @@ const platformDefinition={
   displayOffset:local(0,0),
   slots:[],
   spatial:{
-    floor:{mode:'solid'},
+    solids:[{key:'body',bounds:{x:0,y:0,z:0,width:2,depth:1,height:.25}}],
     surface:{
       key:'top',
       label:'測試平台頂面',
-      coverage:'footprint',
+      onSolid:{key:'body',face:'top'},
       traversable:true,
       allowKinds:['cat'],
       moveCost:{cat:2.25},
@@ -60,7 +70,8 @@ const resolved=D.resolveDefinitionInstance(platformDefinition,{
   orientation:'north'
 });
 assert.deepEqual(resolved.footprint,[local(3,4),local(4,4)]);
-assert.equal(resolved.spatial.floor.mode,'solid');
+assert.equal(resolved.spatial.solids.length,1);
+assert.deepEqual(resolved.spatial.solids[0],{key:'body',layerZ:0,bounds:{x:3,y:4,z:0,width:2,depth:1,height:.25}});
 assert.equal(resolved.spatial.surface.id,'testPlatform:top');
 assert.deepEqual(resolved.spatial.surface.cells,[local(3,4),local(4,4)]);
 assert.equal(resolved.blocksMovement,undefined,'resolved traversal truth must come from spatial geometry, not blocksMovement');
@@ -97,7 +108,10 @@ const traversalSource=fs.readFileSync(new URL('../src/spatial-traversal.js',impo
 const authoringSource=fs.readFileSync(new URL('../src/world-authoring.js',import.meta.url),'utf8');
 const definitionSource=fs.readFileSync(new URL('../src/furniture-definitions.js',import.meta.url),'utf8');
 assert.doesNotMatch(traversalSource,/st\.furniture\?\.diningTable|diningTable:surface/,'Spatial traversal must not special-case the default dining table');
-assert.doesNotMatch(authoringSource,/furniture\.blocksMovement/,'authoring topology must consume Definition-owned floor geometry');
+assert.doesNotMatch(authoringSource,/furniture\.blocksMovement/,'authoring topology must consume Definition-owned metric geometry');
 assert.doesNotMatch(definitionSource,/blocksMovement:/,'Furniture Definitions must not persist blocksMovement as traversal truth');
+assert.doesNotMatch(definitionSource,/floor:\{mode:/,'production Furniture Definitions must not author legacy floor modes');
+assert.equal(D.getDefinition('dining-table').spatial.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
+assert.deepEqual(D.getDefinition('double-bed').footprint,[local(0,0),local(1,0),local(0,1),local(1,1)]);
 
 console.log('furniture traversal geometry regression: ok');
