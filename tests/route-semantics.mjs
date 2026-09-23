@@ -61,4 +61,16 @@ assert.deepEqual(
   'batch pathDistances must preserve standalone pathDistance results for reachable and unreachable goals'
 );
 
+assert.equal(SP.pathDistance(st,actor,goal),4,'pre-mutation route must still use the four-edge direct corridor');
+st.furniture.runtimeBlocker={
+  id:'runtimeBlocker',
+  spatial:{solids:[{key:'body',layerZ:0,bounds:{x:3,y:3,z:0,width:1,depth:1,height:2}}]}
+};
+assert.equal(
+  SP.pathDistance(st,actor,goal),
+  6,
+  'route-scope geometry memoization must expire between searches so in-place Furniture mutation is visible immediately'
+);
+delete st.furniture.runtimeBlocker;
+
 console.log('v11.24.0 route locomotion cost regression: ok');
