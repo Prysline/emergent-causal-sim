@@ -91,6 +91,19 @@ assert.ok(crowdedPlan.traversalCost>2,'crowding should raise objective route bur
 assert.ok(crowdedPlan.travelTime>2,'crowding should raise estimated executable travel time');
 assert.ok(crowdedPlan.steps.some(step=>step.congestion?.occupantCount===1),'route steps should expose the planning-time crowding snapshot');
 
+// C2: one route edge must reuse one physical feasibility snapshot across all candidate locomotion modes and crowding consumers.
+f=resetFixture({knownWidth:true});setOtherDirection(f,'stationary');
+const originalTraversalFeasibility=SP.traversalFeasibility;
+let feasibilityCalls=0;
+SP.traversalFeasibility=(...args)=>{feasibilityCalls++;return originalTraversalFeasibility(...args);};
+try{
+  const oneEdgePlan=SP.planRoute(f.st,f.mover,f.mid,{mode:'auto',objective:'traversalCost'});
+  assert.equal(oneEdgePlan.pathDistance,1);
+  assert.equal(feasibilityCalls,1,'one route edge should compute traversal feasibility once, then reuse the snapshot for all modes / crowding cost / timing');
+}finally{
+  SP.traversalFeasibility=originalTraversalFeasibility;
+}
+
 // D: execution replans from current congestion, so clearing the crowd can beat the earlier estimate.
 const estimated=crowdedPlan.travelTime;
 f.other.offMap=true;

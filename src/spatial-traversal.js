@@ -145,11 +145,12 @@
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
   }
   function traversalEdgeCost(st,from,to,a,mode=null,fromMode=mode){
+    const crowdingSnapshot=arguments[6]||null;
     const base=baseTraversalEdgeCost(st,from,to,a);if(!Number.isFinite(base))return base;
     const resolvedMode=mode||a?.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk';
     const locomotion=locomotionRuntime(),modeBurden=locomotion?.modeTraversalBurden?.(a,resolvedMode)??0,transitionBurden=locomotion?.modeTransitionBurden?.(a,fromMode,resolvedMode)??0;
     if(!Number.isFinite(modeBurden)||!Number.isFinite(transitionBurden))return Infinity;
-    const crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,from,to,resolvedMode)||null;
+    const crowding=crowdingSnapshot||crowdingRuntime()?.getCrowdingProfile?.(st,a,from,to,resolvedMode)||null;
     return base+modeBurden+transitionBurden+(crowding?.congestionCost||0);
   }
   function walkEdgeFeasible(st,a,from,to){
@@ -215,15 +216,15 @@
     }
     return [...out.values()];
   }
-  function modeEdgeFeasible(st,a,from,to,mode){
+  function modeEdgeFeasible(st,a,from,to,mode,feasibilitySnapshot=null){
     if(!a)return nodeLocomotionAccessible(st,to,null);
-    const check=SP.traversalFeasibility?.(st,a,from,to),result=check?.modes?.[mode];
+    const check=feasibilitySnapshot||SP.traversalFeasibility?.(st,a,from,to),result=check?.modes?.[mode];
     if(result)return result.feasible===true;
     return mode==='walk'&&nodeWalkable(st,to,a)&&walkEdgeFeasible(st,a,from,to);
   }
   function modeRank(mode){return mode==='walk'?0:mode==='kneelCrawl'?1:mode==='proneCrawl'?2:9;}
   function currentLocomotionMode(a){return locomotionRuntime()?.modeFromPosture?.(a)||null;}
-  function edgeMoveTicks(st,a,from,to,mode){const C=crowdingRuntime(),ticks=C?.edgeMoveTicks?.(st,a,from,to,mode)??locomotionRuntime()?.edgeMoveTicks?.(a,mode);return Number.isFinite(ticks)&&ticks>0?ticks:1;}
+  function edgeMoveTicks(st,a,from,to,mode,crowdingSnapshot=null){const C=crowdingRuntime(),ticks=C?.edgeMoveTicks?.(st,a,from,to,mode,crowdingSnapshot)??locomotionRuntime()?.edgeMoveTicks?.(a,mode);return Number.isFinite(ticks)&&ticks>0?ticks:1;}
   function transitionTicks(fromMode,toMode){const ticks=locomotionRuntime()?.transitionTicks?.(fromMode,toMode);return Number.isFinite(ticks)&&ticks>=0?ticks:(fromMode===toMode?0:0);}
   function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
   function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank);}
@@ -244,9 +245,10 @@
         return {path:[cloneNode(s),...steps.map(step=>cloneNode(step.to))],steps,startMode,requestedMode:requested};
       }
       for(const q of candidateTraversalNeighbors(st,cur.node,a)){
+        const feasibility=SP.traversalFeasibility?.(st,a,cur.node,q)||null;
         for(const nextMode of modes){
-          if(!modeEdgeFeasible(st,a,cur.node,q,nextMode))continue;
-          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode);
+          if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
+          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode,crowding),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks))continue;
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?1:edgeCost),

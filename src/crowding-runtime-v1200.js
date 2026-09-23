@@ -53,9 +53,10 @@
     return [...out.values()];
   }
   function getCrowdingProfile(st,aOrId,from,to,mode='walk'){
+    const feasibilitySnapshot=arguments[5]||null;
     const a=agentFor(st,aOrId),f=SP.normalizeNode(st,from),t=SP.normalizeNode(st,to);
     if(!a||!f||!t)return null;
-    const feasibility=SP.traversalFeasibility?.(st,a,f,t)||null,modeFact=feasibility?.modes?.[mode]||null,passageWidth=Number.isFinite(modeFact?.effectiveClearanceWidth)?modeFact.effectiveClearanceWidth:null,moverWidth=effectiveWidth(a,mode);
+    const feasibility=feasibilitySnapshot||SP.traversalFeasibility?.(st,a,f,t)||null,modeFact=feasibility?.modes?.[mode]||null,passageWidth=Number.isFinite(modeFact?.effectiveClearanceWidth)?modeFact.effectiveClearanceWidth:null,moverWidth=effectiveWidth(a,mode);
     const occupants=nearbyAgents(st,a,f,t).map(other=>{
       const relation=directionRelation(st,f,t,other),otherWidth=effectiveWidth(other),directionWeight=CONFIG.directionWeight[relation]??1;
       let widthRatio=null,widthPressure=0;
@@ -94,7 +95,8 @@
     };
   }
   function edgeMoveTicks(st,aOrId,from,to,mode='walk'){
-    const a=agentFor(st,aOrId),base=L?.edgeMoveTicks?.(a,mode)??1,profile=getCrowdingProfile(st,a,from,to,mode);
+    const crowdingSnapshot=arguments[5]||null;
+    const a=agentFor(st,aOrId),base=L?.edgeMoveTicks?.(a,mode)??1,profile=crowdingSnapshot||getCrowdingProfile(st,a,from,to,mode);
     return Number.isFinite(base)?base+(profile?.delayTicks||0):Infinity;
   }
 
