@@ -36,36 +36,36 @@
   function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.surface?[{furniture:f,surface:f.spatial.surface}]:[]);}
   function surfaceEntry(st,surfaceId){return surfaceEntries(st).find(x=>x.surface.id===surfaceId)||null;}
   function surfaceAt(st,p){return surfaceEntries(st).find(({surface})=>(surface.cells||[]).some(c=>localSame(c,p)))||null;}
-  let activeGeometrySnapshot=null;
-  function geometrySnapshotFor(st){return activeGeometrySnapshot?.state===st?activeGeometrySnapshot:null;}
-  function withGeometrySnapshot(st,fn){
-    const current=geometrySnapshotFor(st);if(current)return fn(current);
-    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),feasibilityByAgent:new Map()};
-    activeGeometrySnapshot=snapshot;
-    try{return fn(snapshot);}finally{activeGeometrySnapshot=previous;}
+  let activeTraversalQuerySnapshot=null;
+  function traversalQuerySnapshotFor(st){return activeTraversalQuerySnapshot?.state===st?activeTraversalQuerySnapshot:null;}
+  function withTraversalQuerySnapshot(st,fn){
+    const current=traversalQuerySnapshotFor(st);if(current)return fn(current);
+    const previous=activeTraversalQuerySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),feasibilityByAgent:new Map()};
+    activeTraversalQuerySnapshot=snapshot;
+    try{return fn(snapshot);}finally{activeTraversalQuerySnapshot=previous;}
   }
   function rawFurnitureSolids(st,z){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.solids||[]).filter(solid=>solid.layerZ===z);}
   function furnitureSolids(st,z){
-    const snapshot=geometrySnapshotFor(st);if(!snapshot)return rawFurnitureSolids(st,z);
+    const snapshot=traversalQuerySnapshotFor(st);if(!snapshot)return rawFurnitureSolids(st,z);
     if(!snapshot.solidsByLayer.has(z))snapshot.solidsByLayer.set(z,rawFurnitureSolids(st,z));
     return snapshot.solidsByLayer.get(z);
   }
   function floorGeometry(st,p){
-    const z=zOf(p),snapshot=geometrySnapshotFor(st),key=z+'|'+p.x+'|'+p.y;
+    const z=zOf(p),snapshot=traversalQuerySnapshotFor(st),key=z+'|'+p.x+'|'+p.y;
     if(snapshot?.floorByTile.has(key))return snapshot.floorByTile.get(key);
     const geometry=D.analyzeFloorTile(furnitureSolids(st,z),p.x,p.y,z);
     if(snapshot)snapshot.floorByTile.set(key,geometry);
     return geometry;
   }
   function floorEnvelopeFits(st,p,envelope){
-    const z=zOf(p),snapshot=geometrySnapshotFor(st),key=z+'|'+p.x+'|'+p.y+'|'+envelope.clearanceHeight+'|'+envelope.clearanceWidth;
+    const z=zOf(p),snapshot=traversalQuerySnapshotFor(st),key=z+'|'+p.x+'|'+p.y+'|'+envelope.clearanceHeight+'|'+envelope.clearanceWidth;
     if(snapshot?.envelopeFits.has(key))return snapshot.envelopeFits.get(key);
     const fits=D.envelopeFitsTile(furnitureSolids(st,z),p.x,p.y,z,envelope.clearanceHeight,envelope.clearanceWidth);
     if(snapshot)snapshot.envelopeFits.set(key,fits);
     return fits;
   }
   function routeFeasibility(st,a,from,to){
-    const snapshot=geometrySnapshotFor(st);
+    const snapshot=traversalQuerySnapshotFor(st);
     if(!snapshot)return SP.traversalFeasibility?.(st,a,from,to)||null;
     let byEdge=snapshot.feasibilityByAgent.get(a);
     if(!byEdge){byEdge=new Map();snapshot.feasibilityByAgent.set(a,byEdge);}
@@ -264,7 +264,7 @@
   function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
   function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank);}
   function routeStateSearch(st,start,aOrId=null,options={}){
-    return withGeometrySnapshot(st,()=>routeStateSearchWithin(st,start,aOrId,options));
+    return withTraversalQuerySnapshot(st,()=>routeStateSearchWithin(st,start,aOrId,options));
   }
   function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,trackPath=false,onSettle=null}={}){
     if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
@@ -433,5 +433,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,withGeometrySnapshot});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,withTraversalQuerySnapshot});
 })();

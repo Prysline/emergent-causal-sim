@@ -172,9 +172,35 @@ assert.ok(humanRestFit.calls<=1400,`Human rest envelope fit regressed to ${human
 assert.ok(catRestAnalyze.calls<=360,`Cat rest floor analysis regressed to ${catRestAnalyze.calls} calls`);
 assert.ok(catRestFit.calls<=280,`Cat rest envelope fit regressed to ${catRestFit.calls} calls`);
 
-console.log('GEOMETRY_QUERY_METRICS '+JSON.stringify(report));
-assert.fail('TARGET_SELECTION_SCOPE_METRICS '+JSON.stringify({
-  humanRest:report.humanRest.metrics._scopes,
-  humanSleep:report.humanSleep.metrics._scopes,
-  catRest:report.catRest.metrics._scopes
+const humanRestScopes=report.humanRest.metrics._scopes;
+const humanSleepScopes=report.humanSleep.metrics._scopes;
+const catRestScopes=report.catRest.metrics._scopes;
+
+assert.ok(humanRestScopes.slotApproach.analyzeFloorTile.calls<=60,`Human rest slot-approach floor analysis regressed to ${humanRestScopes.slotApproach.analyzeFloorTile.calls}`);
+assert.ok(humanRestScopes.slotApproach.envelopeFitsTile.calls<=170,`Human rest slot-approach envelope fit regressed to ${humanRestScopes.slotApproach.envelopeFitsTile.calls}`);
+assert.ok(humanRestScopes.slotApproach.traversalFeasibility.calls<=130,`Human rest slot-approach feasibility regressed to ${humanRestScopes.slotApproach.traversalFeasibility.calls}`);
+assert.ok(humanRestScopes.slotApproach.edgeClearanceOptions.calls<=120,`Human rest slot-approach edge clearance regressed to ${humanRestScopes.slotApproach.edgeClearanceOptions.calls}`);
+assert.ok(humanRestScopes.pathDistances.traversalFeasibility.calls<=30,`Human rest batch distance feasibility regressed to ${humanRestScopes.pathDistances.traversalFeasibility.calls}`);
+
+assert.ok(humanSleepScopes.slotApproach.traversalFeasibility.calls<=80,`Human sleep slot-approach feasibility regressed to ${humanSleepScopes.slotApproach.traversalFeasibility.calls}`);
+assert.ok(humanSleepScopes.pathDistances.traversalFeasibility.calls<=12,`Human sleep batch distance feasibility regressed to ${humanSleepScopes.pathDistances.traversalFeasibility.calls}`);
+
+assert.ok(catRestScopes.slotApproach.traversalFeasibility.calls<=220,`Cat rest slot-approach feasibility regressed to ${catRestScopes.slotApproach.traversalFeasibility.calls}`);
+assert.ok(catRestScopes.pathDistances.traversalFeasibility.calls<=30,`Cat rest batch distance feasibility regressed to ${catRestScopes.pathDistances.traversalFeasibility.calls}`);
+
+console.log('TARGET_SELECTION_SCOPE_METRICS '+JSON.stringify({
+  humanRest:{
+    slotApproachFeasibility:humanRestScopes.slotApproach.traversalFeasibility.calls,
+    slotApproachEdgeClearance:humanRestScopes.slotApproach.edgeClearanceOptions.calls,
+    pathDistanceFeasibility:humanRestScopes.pathDistances.traversalFeasibility.calls
+  },
+  humanSleep:{
+    slotApproachFeasibility:humanSleepScopes.slotApproach.traversalFeasibility.calls,
+    pathDistanceFeasibility:humanSleepScopes.pathDistances.traversalFeasibility.calls
+  },
+  catRest:{
+    slotApproachFeasibility:catRestScopes.slotApproach.traversalFeasibility.calls,
+    pathDistanceFeasibility:catRestScopes.pathDistances.traversalFeasibility.calls
+  }
 }));
+console.log('Furniture geometry / target-selection query performance regression: ok');

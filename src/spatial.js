@@ -195,7 +195,7 @@
       }
       out.sort((x,y)=>x.score-y.score);return out;
     };
-    return typeof runtime.withGeometrySnapshot==='function'?runtime.withGeometrySnapshot(st,run):run();
+    return typeof runtime.withTraversalQuerySnapshot==='function'?runtime.withTraversalQuerySnapshot(st,run):run();
   }
   function sleepTargets(st,a){
     const runtime=window.SimSpatial,run=()=>{
@@ -214,7 +214,7 @@
       }
       out.sort((x,y)=>x.score-y.score);return out;
     };
-    return typeof runtime.withGeometrySnapshot==='function'?runtime.withGeometrySnapshot(st,run):run();
+    return typeof runtime.withTraversalQuerySnapshot==='function'?runtime.withTraversalQuerySnapshot(st,run):run();
   }
 
   function nearestLabel(st,p){if(!p)return '未知位置';const candidates=[];for(const f of Object.values(st.furniture||{}))for(const fp of f.footprint||[]){const d=manhattan(p,fp);if(d<=1)candidates.push({d,name:d===0?f.name:`${f.name}旁`});}for(const o of [...Object.values(st.containers||{}),...Object.values(st.sources||{})]){const op=objectPosition(st,o.id);if(!op)continue;const d=manhattan(p,op);if(d<=1)candidates.push({d,name:d===0?o.name:`${o.name}旁`});}candidates.sort((a,b)=>a.d-b.d);if(candidates.length)return candidates[0].name;const rid=roomAt(st,p);return st.map.rooms?.[rid]?.name||`(${p.x}, ${p.y})`;}
