@@ -105,7 +105,7 @@ fixture=resetFixture({height:2,edgeWidth:.44});
 result=SP.traversalFeasibility(fixture.st,fixture.human,fixture.start,fixture.mid);
 assert.equal(result.passage.options.length,1);
 assert.ok(Math.abs(result.passage.options[0].clearanceWidth-.44)<1e-9);
-assert.deepEqual(result.passage.options[0].interval,{start:.28,end:.72});
+assert.ok(Math.abs(result.passage.options[0].interval.start-.28)<1e-9&&Math.abs(result.passage.options[0].interval.end-.72)<1e-9);
 assert.equal(result.passage.options[0].constrainedBy.explicitEdge,true);
 for(const mode of ['walk','kneelCrawl','proneCrawl']){
   assert.equal(result.modes[mode].feasible,false,`${mode} should fail the width-only fixture`);
