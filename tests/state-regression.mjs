@@ -63,7 +63,7 @@ E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:7,y:5};b.position={x:10,y:5};a.needs.sleepNeed=90;b.needs.sleepNeed=90;
   for(const x of [a,b])x.action={kind:'sleep',phase:'chooseSurface',sleepTicks:0,started:st.tick,wait:0};
-  for(let i=0;i<20&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);assert.ok(['bed:left','bed:right'].includes(a.posture.slotId));assert.ok(['bed:left','bed:right'].includes(b.posture.slotId));
+  for(let i=0;i<20&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}if(a.posture.furnitureId!=='bed'||b.posture.furnitureId!=='bed'){console.log('sleep-debug',JSON.stringify({a:{position:a.position,posture:a.posture,action:a.action},b:{position:b.position,posture:b.posture,action:b.action},slots:SP.allSlots(st).filter(slot=>slot.furnitureId==='bed').map(slot=>({id:slot.id,position:slot.position,approachEdges:slot.approachEdges})),aTargets:SP.sleepTargets(st,a),bTargets:SP.sleepTargets(st,b)},null,2));}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);assert.ok(['bed:left','bed:right'].includes(a.posture.slotId));assert.ok(['bed:left','bed:right'].includes(b.posture.slotId));
 }
 
 E.reset(20260911);
