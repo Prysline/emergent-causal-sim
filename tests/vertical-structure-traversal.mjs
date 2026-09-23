@@ -98,10 +98,14 @@ assert.equal(down.travelTime,1);
 const passage=SP.getPassageProfile(st,lower,upper);
 assert.equal(passage.edgeKind,'structure');
 assert.equal(passage.structureId,'stairA');
-assert.equal(passage.clearanceWidth,.8);
-assert.equal(passage.clearanceHeight,2);
+assert.equal(passage.options.length,1,'Structure edge must expose one positioned-Passage option record');
+assert.equal(passage.options[0].interval,null,'abstract stair clearance is not a horizontal edge interval');
+assert.equal(passage.options[0].clearanceWidth,.8);
+assert.equal(passage.options[0].clearanceHeight,2);
 const feasibility=SP.traversalFeasibility(st,zhen,lower,upper);
 assert.equal(feasibility.modes.walk.feasible,true,'first stair proof must use existing walk feasibility');
+assert.equal(feasibility.modes.walk.effectiveOption.clearanceWidth,.8,'feasible stair mode must expose the option actually used by Crowding');
+assert.equal(feasibility.modes.walk.effectiveOption.clearanceHeight,2);
 assert.equal(feasibility.modes.kneelCrawl.feasible,false,'stair proof must not silently create crawl traversal semantics');
 
 const flatCost=SP.traversalEdgeCost(st,upper,upperEast,zhen,'walk','walk');
