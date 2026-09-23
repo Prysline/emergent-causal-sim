@@ -17,7 +17,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(D.VERSION,'furniture-definitions-v5');
+assert.equal(D.VERSION,'furniture-definitions-v6');
 assert.equal(A.VERSION,'world-authoring-v6');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
@@ -31,11 +31,10 @@ const asymmetricDefinition={
   supportsObjects:true,
   footprint:[local(0,0),local(1,0),local(2,0),local(0,1)],
   displayOffset:local(2,1),
-  slots:[{key:'off-center',label:'偏心槽位',offset:local(0,1),allowKinds:['human']}],
+  slots:[{key:'off-center',label:'偏心槽位',offset:local(0,1),approachEdges:['north','east'],allowKinds:['human']}],
   spatial:{
-    floor:{mode:'under'},
-    under:{clearance:.7,cover:'probe'},
-    surface:{key:'top',label:'測試頂面',coverage:'footprint',traversable:true,allowKinds:['human']}
+    solids:[{key:'body',bounds:{x:.2,y:.3,z:.4,width:1.1,depth:.6,height:.5}}],
+    surface:{key:'top',label:'測試頂面',onSolid:{key:'body',face:'top'},traversable:true,allowKinds:['human']}
   }
 };
 const origin=local(4,3);
@@ -43,22 +42,34 @@ const expected={
   north:{
     footprint:[local(4,3),local(5,3),local(6,3),local(4,4)],
     displayAt:local(6,4),
-    slot:local(4,4)
+    slot:local(4,4),
+    approachEdges:['north','east'],
+    bounds:{x:4.2,y:3.3,z:.4,width:1.1,depth:.6,height:.5},
+    surfaceCells:[local(4,3),local(5,3)]
   },
   east:{
     footprint:[local(5,3),local(5,4),local(5,5),local(4,3)],
     displayAt:local(4,5),
-    slot:local(4,3)
+    slot:local(4,3),
+    approachEdges:['east','south'],
+    bounds:{x:5.1,y:3.2,z:.4,width:.6,depth:1.1,height:.5},
+    surfaceCells:[local(5,3),local(5,4)]
   },
   south:{
     footprint:[local(6,4),local(5,4),local(4,4),local(6,3)],
     displayAt:local(4,3),
-    slot:local(6,3)
+    slot:local(6,3),
+    approachEdges:['south','west'],
+    bounds:{x:5.7,y:4.1,z:.4,width:1.1,depth:.6,height:.5},
+    surfaceCells:[local(5,4),local(6,4)]
   },
   west:{
     footprint:[local(4,5),local(4,4),local(4,3),local(5,5)],
     displayAt:local(5,3),
-    slot:local(5,5)
+    slot:local(5,5),
+    approachEdges:['west','north'],
+    bounds:{x:4.3,y:4.7,z:.4,width:.6,depth:1.1,height:.5},
+    surfaceCells:[local(4,4),local(4,5)]
   }
 };
 for(const orientation of D.ORIENTATIONS){
@@ -68,8 +79,9 @@ for(const orientation of D.ORIENTATIONS){
   assert.deepEqual(resolved.displayAt,expected[orientation].displayAt,orientation+' display offset');
   assert.deepEqual(resolved.slots[0].position,expected[orientation].slot,orientation+' slot position');
   assert.equal(resolved.slots[0].id,'probe-'+orientation+':off-center','slot identity must stay instanceId:key');
-  assert.deepEqual(resolved.spatial.surface.cells,resolved.footprint,orientation+' surface cells must follow rotated footprint');
-  assert.equal(resolved.spatial.under.clearance,.7,'under clearance semantics must not change with orientation');
+  assert.deepEqual(resolved.slots[0].approachEdges,expected[orientation].approachEdges,orientation+' slot approach edges');
+  assert.deepEqual(resolved.spatial.solids[0].bounds,expected[orientation].bounds,orientation+' metric AABB must use the shared quarter-turn transform');
+  assert.deepEqual(resolved.spatial.surface.cells,expected[orientation].surfaceCells,orientation+' surface cells must derive from rotated solid top-face overlap');
   for(const point of asymmetricDefinition.footprint){
     const world=D.localToWorld(asymmetricDefinition,instance,point);
     assert.deepEqual(D.worldToLocal(asymmetricDefinition,instance,world),point,orientation+' local/world inverse');
@@ -89,7 +101,11 @@ assert.throws(
 // world-authoring-v6 requires orientation and round-trips it.
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  assert.ok(Object.values(doc.furniture).every(instance=>instance.orientation==='north'));
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(doc.furniture).map(([id,instance])=>[id,instance.orientation])),
+    {diningTable:'north',chairNW:'east',chairNE:'west',chairSW:'east',chairSE:'west',sofa:'north',bed:'south'},
+    'default world must author the agreed physical-facing directions'
+  );
   let invalid=clone(doc);
   delete invalid.furniture.sofa.orientation;
   let report=A.validateAuthoring(invalid);
@@ -112,6 +128,7 @@ assert.throws(
   const resolved=A.resolveFurnitureInstance(doc.furniture.sofa);
   assert.deepEqual(resolved.footprint,[local(9,2),local(9,3)]);
   assert.deepEqual(resolved.slots.map(slot=>slot.position),[local(9,2),local(9,3)]);
+  assert.deepEqual(resolved.slots.map(slot=>slot.approachEdges),[['west'],['west']]);
   const topology=A.deriveHorizontalTopology(doc,{z:0});
   assert.ok(topology.cells['9,2'].furnitureIds.includes('sofa'));
   assert.ok(topology.cells['9,3'].furnitureIds.includes('sofa'));
