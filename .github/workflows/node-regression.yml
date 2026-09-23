@@ -26,6 +26,7 @@ jobs:
       - run: node tests/application-bootstrap-lifecycle.mjs
       - run: node tests/test-profile-composition.mjs
       - run: node tests/embodiment-capabilities.mjs
+      - run: node tests/geometry-query-performance.mjs
       - run: node tests/state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/initial-population-placement.mjs
