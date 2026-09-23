@@ -265,6 +265,52 @@
     }
     return {path:[],steps:[],startMode,requestedMode:requested};
   }
+  function pathDistances(st,aOrId,targets,{mode=null}={}){
+    const list=Array.isArray(targets)?targets:[],out=list.map(()=>Infinity),a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
+    if(!a||!list.length)return out;
+    const s=normalizeNode(st,a.position),modes=availableModes(a,requested);
+    if(!s||!nodeLocomotionAccessible(st,s,a))return out;
+    const goals=new Map();
+    for(let i=0;i<list.length;i++){
+      const g=normalizeNode(st,list[i]);
+      if(!g||!nodeLocomotionAccessible(st,g,a))continue;
+      if(nodeSame(st,s,g)){out[i]=0;continue;}
+      const gk=nodeKey(st,g),indices=goals.get(gk)||[];
+      indices.push(i);goals.set(gk,indices);
+    }
+    if(!goals.size)return out;
+    const startMode=currentLocomotionMode(a),sk=routeStateKey(st,s,startMode),open=new Set([sk]),score={[sk]:{primary:0,time:0,transitions:0,modeRank:0}},states={[sk]:{node:s,mode:startMode}};
+    while(open.size&&goals.size){
+      let ck=null,best=null;
+      for(const k of open){const value=score[k];if(!best||compareRouteScore(value,best)<0){best=value;ck=k;}}
+      const cur=states[ck];open.delete(ck);
+      const goalIndices=goals.get(nodeKey(st,cur.node));
+      if(goalIndices){
+        for(const i of goalIndices)out[i]=best.primary;
+        goals.delete(nodeKey(st,cur.node));
+        if(!goals.size)break;
+      }
+      for(const q of candidateTraversalNeighbors(st,cur.node,a)){
+        const feasibility=SP.traversalFeasibility?.(st,a,cur.node,q)||null;
+        for(const nextMode of modes){
+          if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
+          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode,crowding),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding);
+          if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks))continue;
+          const nextScore={
+            primary:best.primary+1,
+            time:best.time+transition+moveTicks,
+            transitions:best.transitions+(transition>0?1:0),
+            modeRank:best.modeRank+modeRank(nextMode)
+          };
+          const qk=routeStateKey(st,q,nextMode);
+          if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
+          score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
+        }
+      }
+    }
+    return out;
+  }
+
   function routeMetrics(st,a,route){
     if(!route?.path?.length)return {pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
     let traversalCost=0,travelTime=0,transitions=0;
@@ -352,6 +398,7 @@
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
   SP.pathDistance=pathDistance;
+  SP.pathDistances=pathDistances;
   SP.traversalCost=traversalCost;
   SP.travelTime=travelTime;
   SP.planRoute=planRoute;
@@ -360,5 +407,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
 })();
