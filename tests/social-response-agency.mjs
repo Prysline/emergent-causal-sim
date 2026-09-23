@@ -45,7 +45,7 @@ noIssues('deterministic response bands');
 
 // High social need: human intent becomes an observable petOffer, animal accepts, then and only then petAnimal succeeds.
 st=armDirectPet(90,21321);E.tick();st=E.getState();
-assert.equal(st.version,'11.27.2-room-value-legacy-removal');
+assert.equal(st.version,'11.28.0-furniture-local-geometry');
 const acceptOffer=latestAction('petOffer'),acceptResponse=latestAction('acceptPet');
 assert.ok(acceptOffer?.data?.socialBid,'high-social case must create observable petOffer');
 assert.equal(acceptOffer.data.bidKind,'petOffer');
@@ -130,7 +130,9 @@ E.reset(51321);st=E.getState();
 {
   const human=st.agents.zhou,sleepingCat=st.agents.orange,slot=SP.getSlot(st,'sofa:left');
   st.agents.zhen.offMap=true;
-  human.position={...slot.position};
+  const approach=SP.slotApproachNodes(st,slot,human,'walk')[0];
+  assert.ok(approach,'sleeping animal touch fixture requires a legal sofa Slot approach');
+  human.position={...approach};
   sleepingCat.position={...slot.position};sleepingCat.needs.sleepNeed=100;
   sleepingCat.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
   sleepingCat.action={kind:'sleep',phase:'sleeping',sleepTicks:0,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};

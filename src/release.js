@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.27.2-room-value-legacy-removal';
+  const VERSION='11.28.0-furniture-local-geometry';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{

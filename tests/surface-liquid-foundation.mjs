@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.27.2-room-value-legacy-removal');
-assert.equal(E.VERSION,'11.27.2-room-value-legacy-removal');
+assert.equal(st.version,'11.28.0-furniture-local-geometry');
+assert.equal(E.VERSION,'11.28.0-furniture-local-geometry');
 assert.equal(SP.SPATIAL_ENVIRONMENT_VERSION,'11.11.4-surface-liquid-foundation');
 
 // B architecture: one API, existing floor storage remains the actual source of truth.
@@ -37,7 +37,7 @@ assert.equal(SP.environmentFromEndpointId(st,ep).contents,envA.contents,'environ
 
 // effectNode is derived, not persistent: cross-Surface object interaction resolves to the target Surface.
 const zhen=st.agents.zhen;
-zhen.position={...floor(st,4,3)};
+zhen.position={...floor(st,5,4)};
 let effect=SP.resolveEffectNode(st,{actor:zhen,target:{kind:'object',id:'alcoholBottle'},affordance:'fill'});
 assert.ok(SP.nodeSame(st,effect,table(st,5,3)),'tabletop bottle fill should resolve effect to its tabletop node');
 zhen.position={...floor(st,5,5)};
@@ -50,7 +50,7 @@ let spillEvent=null,spillState=null;
 for(let seed=1;seed<=200&&!spillEvent;seed++){
   E.reset(seed);st=E.getState();
   const a=st.agents.zhen,cup=st.containers.cupA;
-  a.position={...floor(st,4,3)};a.status.intoxication=100;a.needs.fatigue=100;a.traits.careful=0;
+  a.position={...floor(st,5,4)};a.status.intoxication=100;a.needs.fatigue=100;a.traits.careful=0;
   a.held='cupA';delete cup.supportId;cup.position={...a.position};cup.contents={};
   a.action={kind:'drinkAlcohol',phase:'fill',started:st.tick,wait:0,container:'cupA',sourceObject:'alcoholBottle',sourceKind:'object',resource:'alcohol'};
   E.tick();
@@ -62,7 +62,7 @@ st=spillState;
 assert.equal(spillEvent.data.effectNode,'room1|diningTable:surface|5,3');
 assert.equal(spillEvent.data.position,spillEvent.data.effectNode,'structured spill position should be the derived effectNode');
 assert.ok(SP.environmentResourceAmount(st,table(st,5,3),'alcohol')>0,'failed tabletop pour should create tabletop liquid');
-assert.equal(SP.environmentResourceAmount(st,floor(st,4,3),'alcohol'),0,'legacy actor-floor spill must be removed after routing');
+assert.equal(SP.environmentResourceAmount(st,floor(st,5,4),'alcohol'),0,'legacy actor-floor spill must be removed after routing');
 assert.equal(SP.environmentFromEndpointId(st,spillEvent.data.spillEndpoint).node.surfaceId,'diningTable:surface');
 
 // Entering the same wet tabletop node causes real Surface contact; floor below remains unrelated.

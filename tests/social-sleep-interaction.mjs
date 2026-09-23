@@ -48,7 +48,7 @@ E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   st.agents.zhou.offMap=true;
-  human.position={x:9,y:2};
+  human.position={x:9,y:3};
   cat.needs.sleepNeed=100;
   putToSleep(st,cat,'sofa:left',0);
   assert.equal(E.interactionWakeChance(cat,18),0,'高 sleepNeed 且剛入睡時，輕摸可以完全不足以喚醒');
@@ -71,7 +71,7 @@ E.reset(20260911);
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   st.agents.zhou.offMap=true;
   human.position={x:9,y:2};
-  cat.position={x:9,y:2};
+  cat.position={x:9,y:3};
   cat.action={kind:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
   human.needs.sleepNeed=70;
   human.traits.sleepRecoveryRate=0; // 凍結本測試的 sleepNeed，避免同 tick 的正常睡眠恢復改變 wakeChance 基準。

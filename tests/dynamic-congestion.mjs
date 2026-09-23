@@ -12,8 +12,8 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.27.2-room-value-legacy-removal';
-const CROWDING_VERSION='11.26.0-vertical-flow-congestion';
+const CURRENT_VERSION='11.28.0-furniture-local-geometry';
+const CROWDING_VERSION='11.28.0-effective-passage-width';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({knownWidth=true}={}){
@@ -70,16 +70,16 @@ assert.equal(stationary.delayTicks,1,'narrow stationary encounter should cost on
 assert.equal(opposite.delayTicks,2,'narrow opposite flow should cost more adjustment time');
 for(const profile of [same,stationary,opposite])assert.equal(profile.hardBlocked,false,'Slice 5 congestion must remain soft');
 
-// B: a known narrow passage amplifies crowding, but unknown width never invents a hard capacity.
+// B: metric geometry makes an unobstructed floor edge a known 1m opening; an authored .8m edge is narrower and adds more pressure.
 f=resetFixture({knownWidth:true});setOtherDirection(f,'stationary');
 const narrow=C.getCrowdingProfile(f.st,f.mover,f.start,f.mid,'walk');
 const narrowEdge=SP.traversalEdgeCost(f.st,f.start,f.mid,f.mover,'walk');
-const unknownFixture=resetFixture({knownWidth:false});setOtherDirection(unknownFixture,'stationary');
-const unknown=C.getCrowdingProfile(unknownFixture.st,unknownFixture.mover,unknownFixture.start,unknownFixture.mid,'walk');
-assert.equal(unknown.widthKnown,false);
-assert.equal(unknown.passageWidth,null);
-assert.ok(narrow.congestionPressure>unknown.congestionPressure,'known narrow geometry should add maneuvering pressure');
-assert.equal(unknown.hardBlocked,false);
+const fullFixture=resetFixture({knownWidth:false});setOtherDirection(fullFixture,'stationary');
+const full=C.getCrowdingProfile(fullFixture.st,fullFixture.mover,fullFixture.start,fullFixture.mid,'walk');
+assert.equal(full.widthKnown,true);
+assert.equal(full.passageWidth,1,'unobstructed 1m authored grid edge should expose its real metric width');
+assert.ok(narrow.congestionPressure>full.congestionPressure,'narrower geometry should add maneuvering pressure');
+assert.equal(full.hardBlocked,false);
 assert.ok(Math.abs(narrowEdge-(1+narrow.congestionCost))<1e-9,'old occupiedCount fixed penalty must be replaced by canonical congestion cost');
 
 // C: route planning reads a crowding snapshot and still finds a route through overlap.

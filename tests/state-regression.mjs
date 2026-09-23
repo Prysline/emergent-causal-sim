@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','engine.js','validation/registry.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','engine.js','validation/registry.js']);
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 
 function noIssues(label){const v=V.validateState(E.getState());if(v.issueCount)console.error('STATE_DEBUG',label,JSON.stringify(v,null,2));assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
@@ -14,7 +14,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.27.2-room-value-legacy-removal');
+  assert.equal(st.version,'11.28.0-furniture-local-geometry');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
@@ -61,9 +61,31 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:8,y:5};b.position={x:8,y:4};a.needs.sleepNeed=90;b.needs.sleepNeed=90;
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;a.position={x:7,y:5};b.position={x:10,y:5};a.needs.sleepNeed=90;b.needs.sleepNeed=90;
   for(const x of [a,b])x.action={kind:'sleep',phase:'chooseSurface',sleepTicks:0,started:st.tick,wait:0};
-  for(let i=0;i<12&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);
+  for(let i=0;i<20&&!(a.action?.phase==='sleeping'&&b.action?.phase==='sleeping');i++){E.tick();noIssues(`sleep ${i}`);}assert.equal(a.posture.furnitureId,'bed');assert.equal(b.posture.furnitureId,'bed');assert.notEqual(a.posture.slotId,b.posture.slotId);assert.ok(['bed:left','bed:right'].includes(a.posture.slotId));assert.ok(['bed:left','bed:right'].includes(b.posture.slotId));
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;
+  const slot=SP.getSlot(st,'bed:left'),freeEgress=SP.slotEgressNodes(st,slot,a,'walk')[0];
+  assert.ok(freeEgress,'bed:left must have an egress candidate in the default world');
+  a.position={...slot.position};
+  a.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
+  a.action={kind:'wander',phase:'start',targetTile:{x:2,y:2,z:0},started:st.tick,wait:0};
+  b.position={...freeEgress};
+  b.posture={kind:'standing',slotId:null,furnitureId:null};
+  E.tick();
+  assert.equal(a.posture.slotId,slot.id,'blocked egress must keep the Agent slot-bound');
+  assert.ok(SP.nodeSame(st,a.position,slot.position),'blocked egress must not teleport the Agent onto the occupied floor node');
+  noIssues('blocked slot egress');
+  b.position={x:7,y:4,z:0};
+  E.tick();
+  assert.equal(a.posture.slotId,null,'once egress is free, movement must release slot occupancy before routing');
+  assert.equal(a.posture.kind,'standing');
+  assert.ok(SP.nodeSame(st,a.position,freeEgress),'first movement transition out of a Slot must land on the legal egress node');
+  noIssues('slot egress released');
 }
 
 E.reset(20260911);
@@ -78,7 +100,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={kind:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.deepEqual(bucket.position,{x:5,y:5});noIssues('portable restock');
+  const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;bucket.contents.water=0;a.position={x:4,y:5};a.action={kind:'restockContainer',phase:'toContainer',destinationId:bucket.id,sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer',started:st.tick,wait:0};for(let i=0;i<25&&a.action;i++)E.tick();assert.equal(a.action,null);assert.ok(bucket.contents.water>0);assert.ok(SP.same(bucket.position,{x:5,y:5}),'portable restock must leave the bucket at the intended Spatial position regardless of node metadata');noIssues('portable restock');
 }
 
 E.reset(20260911);

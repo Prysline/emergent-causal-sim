@@ -64,7 +64,7 @@ for(let seed=1;seed<=200&&!found;seed++){
   const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
   st.agents.zhou.offMap=true;
   st.agents.orange.offMap=true;
-  a.position={...floor(st,4,3)};
+  a.position={...floor(st,5,4)};
   a.status.intoxication=100;
   a.needs.fatigue=100;
   a.traits.careful=0;

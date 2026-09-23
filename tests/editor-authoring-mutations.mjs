@@ -133,7 +133,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v1');
   let result=M.duplicateFurniture(doc,{sourceId:'chairNW',target:{x:3,y:4,z:0}});
   assert.equal(result.ok,true);
   assert.equal(result.meta.newId,'chair-basic-1');
-  assert.deepEqual(result.candidate.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0},orientation:'north',name:'餐椅 A'});
+  assert.deepEqual(result.candidate.furniture['chair-basic-1'],{id:'chair-basic-1',definitionId:'chair-basic',origin:{x:3,y:4,z:0},orientation:'east',name:'餐椅 A'});
   assert.equal(A.resolveFurnitureInstance(result.candidate.furniture['chair-basic-1']).slots[0].id,'chair-basic-1:seat');
   assert.equal(result.candidate.residents.zhen.initial.placement.anchor.id,'chairNW:seat','duplicate must not retarget external resident reference');
   doc=result.candidate;

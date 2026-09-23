@@ -1,6 +1,6 @@
 (() => {
-  const A=window.SimWorldAuthoring,C=window.SimEmbodimentCapabilities;
-  if(!A?.DEFAULT_WORLD_AUTHORING)throw new Error('SimWorldAuthoring must load before world-initializer.js.');
+  const A=window.SimWorldAuthoring,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;
+  if(!A?.DEFAULT_WORLD_AUTHORING||!D?.analyzeFloorTile||!D?.envelopeFitsTile)throw new Error('SimWorldAuthoring / SimFurnitureDefinitions must load before world-initializer.js.');
   if(!C?.ALL_POSTURES)throw new Error('SimEmbodimentCapabilities must load before world-initializer.js.');
   const clone=value=>JSON.parse(JSON.stringify(value));
   const POSTURES=new Set(C.ALL_POSTURES);
@@ -44,7 +44,7 @@
       for(let y=0;y<height;y++)for(let x=0;x<width;x++){
         const planarId=`${x},${y}`,cell=layer.cells?.[planarId]||{terrain:'void'},derived=topology.cells[planarId];
         const id=posKey({x,y,z:layer.z});
-        tiles[id]={id,x,y,z:layer.z,terrain:cell.terrain,material:cell.material??null,walkable:!!derived?.structuralOpen,surface:{contents:{}},roomId:null,furnitureIds:[...(derived?.furnitureIds||[])]};
+        tiles[id]={id,x,y,z:layer.z,terrain:cell.terrain,material:cell.material??null,walkable:!!derived?.structuralOpen,surface:{contents:{}},roomId:null,furnitureIds:[...(derived?.furnitureIds||[])],floorGeometry:clone(derived?.floorGeometry||null)};
       }
     }
     return tiles;
@@ -144,11 +144,46 @@
     const topology=A.deriveHorizontalTopology(authoring,{z:zOf(p)}),derived=topology.cells[cellKey(p)];
     if(!derived?.structuralOpen)return `terrain:${cell.terrain}`;
     if(derived.staticBlocked)return derived.blockedBy[0]||'static-blocker';
-    if(derived.under?.length)return `furniture:${derived.under[0].furnitureId}`;
     return null;
   }
 
   function issue(code,message,data={}){return {code,message,...data};}
+
+  function authoredFurnitureSolids(authoring,z){
+    return Object.values(authoring.furniture||{}).flatMap(instance=>A.resolveFurnitureInstance(instance).spatial?.solids||[]).filter(solid=>solid.layerZ===z);
+  }
+  function defaultWalkEnvelope(kind){
+    const physical=C.defaultPhysicalProfile(kind),profile=physical?.locomotionProfiles?.walk,body=physical?.bodyGeometry;
+    if(!physical||!profile||!body)return null;
+    const height=Number(profile.clearanceHeight??body.height*(profile.heightFactor??1));
+    const width=Number(profile.clearanceWidth??body.width*(profile.widthFactor??1));
+    return Number.isFinite(height)&&height>0&&Number.isFinite(width)&&width>0?{clearanceHeight:height,clearanceWidth:width}:null;
+  }
+  function authoredWalkFits(authoring,p,kind,cache=null){
+    if(!p)return false;
+    const topology=topologyFor(authoring,zOf(p),cache),cell=topology.cells[cellKey(p)];
+    if(!cell?.open)return false;
+    const envelope=defaultWalkEnvelope(kind);if(!envelope)return true;
+    return D.envelopeFitsTile(authoredFurnitureSolids(authoring,zOf(p)),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth);
+  }
+  const APPROACH_DELTA=Object.freeze({north:[0,-1],east:[1,0],south:[0,1],west:[-1,0]});
+  function slotApproachPositions(authoring,slot,kind,cache=null){
+    if(!slot?.position)return[];
+    const anchor={x:slot.position.x,y:slot.position.y,z:zOf(slot.position)},topology=topologyFor(authoring,anchor.z,cache),cell=topology.cells[cellKey(anchor)],out=new Map();
+    const envelope=defaultWalkEnvelope(kind);
+    if(cell?.open&&envelope&&D.envelopeFitsTile(authoredFurnitureSolids(authoring,anchor.z),anchor.x,anchor.y,anchor.z,envelope.clearanceHeight,envelope.clearanceWidth)){
+      for(const edge of slot.approachEdges||[])if((cell.floorGeometry?.edgeIntervals?.[edge]||[]).length){out.set(posKey(anchor),anchor);break;}
+    }
+    for(const edge of slot.approachEdges||[]){
+      const delta=APPROACH_DELTA[edge];if(!delta)continue;
+      const q={x:anchor.x+delta[0],y:anchor.y+delta[1],z:anchor.z};
+      if(!authoredWalkFits(authoring,q,kind,cache))continue;
+      const boundaryId=A.boundaryIdBetween(anchor,q);
+      if(boundaryId&&!A.boundaryPassable(authoring,anchor.z,boundaryId))continue;
+      out.set(posKey(q),q);
+    }
+    return [...out.values()];
+  }
 
   function validateAuthoredFloorNode(authoring,residentId,node,errors){
     if(!node||!Number.isInteger(node.x)||!Number.isInteger(node.y)){
@@ -222,8 +257,12 @@
     if(postureKind==='lying'&&!slot.canRest&&!slot.canSleep){
       errors.push(issue('initial_anchor_lying_unusable',`${residentId} 不能以 lying posture 使用 ${slotId}；該 slot 不支援 rest / sleep。`,{residentId,slotId}));
     }
-    const position=validateAuthoredFloorNode(authoring,residentId,slot.position,errors);
-    if(!position)return null;
+    const node=slot.position,z=zOf(node),cell=authoredCellAt(authoring,node);
+    if(!node||!Number.isInteger(node.x)||!Number.isInteger(node.y)||!Number.isInteger(z)||!cell||cell.terrain!=='floor'){
+      errors.push(issue('initial_anchor_position_invalid',`${residentId} 的 furnitureSlot ${slot.id} coarse anchor 不在 authored floor。`,{residentId,slotId:slot.id}));
+      return null;
+    }
+    const position={x:node.x,y:node.y,z};
     return {position,slot,posture:{kind:postureKind,slotId:slot.id,furnitureId:slot.furnitureId}};
   }
 
@@ -234,8 +273,11 @@
       return null;
     }
     if(placement.mode==='exact'){
-      const position=validateAuthoredFloorNode(authoring,residentId,placement.node,errors);
       const postureKind=validatePostureKind(residentId,posture,errors);
+      const position=validateAuthoredFloorNode(authoring,residentId,placement.node,errors);
+      if(position&&postureKind==='standing'&&!authoredWalkFits(authoring,position,entry.kind)){
+        errors.push(issue('initial_placement_metric_clearance',`${residentId} 的 standing initial placement ${posKey(position)} 沒有足夠 Furniture free-space 容納 ${entry.kind} walk envelope。`,{residentId,position:posKey(position),kind:entry.kind}));
+      }
       let slot=null;
       if(posture.slotId){
         const resolved=validateSlotUse(authoring,index,entry,residentId,posture.slotId,posture,errors);
@@ -354,7 +396,7 @@
       for(const c of Object.values(authoring.entities?.containers||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom',cache));
       for(const s of Object.values(authoring.entities?.sources||{}))if(s.resource==='water')out.push(...objectAccessPositions(authoring,s,'fill',cache));
     }else if(type==='sleep'){
-      for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind))&&slot.position&&baseWalkable(authoring,slot.position,cache))out.push(slot.position);
+      for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind)))out.push(...slotApproachPositions(authoring,slot,kind,cache));
     }
     return dedupePositions(authoring,out,cache);
   }
@@ -383,8 +425,8 @@
 
     const nodeUsers=new Map();
     for(const residentId of residentIds){
-      const p=resolvedPlacements[residentId]?.position;
-      if(!p)continue;
+      const resolved=resolvedPlacements[residentId],p=resolved?.position;
+      if(!p||resolved?.slotId)continue;
       const k=posKey(p),users=nodeUsers.get(k)||[];
       users.push(residentId);nodeUsers.set(k,users);
     }
@@ -395,7 +437,10 @@
     for(const residentId of residentIds){
       const resolved=resolvedPlacements[residentId];
       if(!resolved)continue;
-      const entry=authoring.residents[residentId],reachable=reachableKeys(authoring,resolved.position,topologyCache);
+      const entry=authoring.residents[residentId];
+      const starts=resolved.slotId?slotApproachPositions(authoring,index.get(resolved.slotId)?.[0],entry.kind,topologyCache):[resolved.position];
+      const reachable=new Set();
+      for(const start of starts)for(const key of reachableKeys(authoring,start,topologyCache))reachable.add(key);
       for(const [type,code,label] of [
         ['exit','initial_no_exit_route','出口'],
         ['food','initial_food_unreachable','食物'],

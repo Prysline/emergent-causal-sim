@@ -1,7 +1,7 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
+  const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.26.0-vertical-structure-traversal';
+  const VERSION='11.28.0-furniture-local-geometry';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -27,33 +27,61 @@
 
   function ensureSpatialDefs(st){
     for(const furniture of Object.values(st.furniture||{})){
-      const mode=furniture.spatial?.floor?.mode;
-      if(!['open','solid','under'].includes(mode))throw new Error('Furniture '+furniture.id+' has invalid runtime floor geometry.');
+      if(!Array.isArray(furniture.spatial?.solids)||!furniture.spatial.solids.length)throw new Error('Furniture '+furniture.id+' has invalid runtime metric solids.');
       const surface=furniture.spatial?.surface;
-      if(surface&&(!surface.id||!Array.isArray(surface.cells)))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
+      if(surface&&(!surface.id||!Array.isArray(surface.cells)||!surface.sourceSolidKey))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
     }
     return st;
   }
   function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.surface?[{furniture:f,surface:f.spatial.surface}]:[]);}
   function surfaceEntry(st,surfaceId){return surfaceEntries(st).find(x=>x.surface.id===surfaceId)||null;}
   function surfaceAt(st,p){return surfaceEntries(st).find(({surface})=>(surface.cells||[]).some(c=>localSame(c,p)))||null;}
-  function overheadAt(st,p){return Object.values(st.furniture||{}).filter(f=>f.spatial?.under&&(f.footprint||[]).some(fp=>localSame(fp,p)));}
+  function furnitureSolids(st,z){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.solids||[]).filter(solid=>solid.layerZ===z);}
+  function floorGeometry(st,p){return D.analyzeFloorTile(furnitureSolids(st,zOf(p)),p.x,p.y,zOf(p));}
+  function overheadAt(st,p){
+    const z=zOf(p);
+    return Object.values(st.furniture||{}).filter(f=>(f.spatial?.solids||[]).some(solid=>{
+      if(solid.layerZ!==z||solid.bounds?.z<=0)return false;
+      const b=solid.bounds;
+      return Math.min(p.x+1,b.x+b.width)-Math.max(p.x,b.x)>1e-9&&Math.min(p.y+1,b.y+b.depth)-Math.max(p.y,b.y)>1e-9;
+    }));
+  }
   function isSurfaceCell(entry,p){return !!entry&&(entry.surface.cells||[]).some(c=>localSame(c,p));}
   function isFootprintCell(entry,p){return !!entry&&(entry.furniture.footprint||[]).some(c=>localSame(c,p));}
   function agentFor(st,aOrId){if(typeof aOrId==='string')return st.agents?.[aOrId]||null;return aOrId||null;}
 
   function fixedFloorBlocker(st,p){
     const t=SP.tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
-    const furniture=(t.furnitureIds||[]).map(id=>st.furniture?.[id]).filter(Boolean);
-    const solid=furniture.find(f=>SP.furnitureFloorMode?.(f)==='solid');if(solid)return `furniture:${solid.id}`;
+    if(floorGeometry(st,p).blocked)return `furniture:${t.furnitureIds?.[0]||'geometry'}`;
     const fixedContainer=Object.values(st.containers||{}).find(c=>c.portable===false&&!c.supportId&&localSame(baseObjectPosition(st,c.id),p));if(fixedContainer)return `container:${fixedContainer.id}`;
     const source=Object.values(st.sources||{}).find(s=>s.blocksMovement!==false&&localSame(s.position,p));if(source)return `source:${source.id}`;
     return null;
   }
   function floorWalkable(st,p,agent=null){
     if(fixedFloorBlocker(st,p))return false;
-    if(agent){const needed=window.SimPhysical?.requiredClearance?.(agent,'walk')??profile(agent).requiredClearance;for(const f of overheadAt(st,p)){if((f.spatial?.under?.clearance??Infinity)<needed)return false;}}
+    if(agent){
+      const envelope=movementEnvelopeFor(agent,'walk');
+      if(!envelope||!D.envelopeFitsTile(furnitureSolids(st,zOf(p)),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth))return false;
+    }
     return true;
+  }
+  function movementEnvelopeFor(agent,mode='walk'){
+    const runtime=physicalRuntime()?.getMovementEnvelope?.(agent,mode);
+    if(runtime)return runtime;
+    const physical=C?.defaultPhysicalProfile?.(agent?.kind),body=physical?.bodyGeometry,profile=physical?.locomotionProfiles?.[mode];
+    if(!body||!profile||physical?.locomotionCapabilities?.[mode]!==true)return null;
+    return {
+      clearanceHeight:body.height*(profile.heightFactor??1),
+      clearanceWidth:body.width*(profile.widthFactor??1),
+      bodyLength:body.length*(profile.lengthFactor??1),
+      speedFactor:profile.speedFactor??1
+    };
+  }
+  function floorNodeFitsMode(st,p,agent,mode='walk'){
+    const n=normalizeNode(st,p,FLOOR);if(!n||fixedFloorBlocker(st,n))return false;
+    if(!agent)return true;
+    const envelope=movementEnvelopeFor(agent,mode);if(!envelope)return false;
+    return D.envelopeFitsTile(furnitureSolids(st,zOf(n)),n.x,n.y,zOf(n),envelope.clearanceHeight,envelope.clearanceWidth);
   }
   function surfaceWalkable(st,node,agent=null){
     const entry=surfaceEntry(st,node.surfaceId);if(!entry||!entry.surface.traversable||!isSurfaceCell(entry,node))return false;
@@ -69,8 +97,39 @@
     if(c?.supportId){const entry=st.furniture?.[c.supportId]?.spatial?.surface; if(entry)surfaceId=entry.id;}
     return normalizeNode(st,obj.position,surfaceId);
   }
-  function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&a.id!==except&&nodeSame(st,a.position,n));}
+  function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&!a.posture?.slotId&&a.id!==except&&nodeSame(st,a.position,n));}
 
+  const APPROACH_DELTA=Object.freeze({north:[0,-1],east:[1,0],south:[0,1],west:[-1,0]});
+  function slotApproachNodes(st,slotOrId,aOrId=null,mode='walk'){
+    const slot=typeof slotOrId==='string'?SP.getSlot?.(st,slotOrId):slotOrId,a=agentFor(st,aOrId),out=new Map();
+    if(!slot?.position)return[];
+    const anchor=normalizeNode(st,slot.position,FLOOR),geometry=floorGeometry(st,anchor);
+    if(floorNodeFitsMode(st,anchor,a,mode)){
+      for(const edge of slot.approachEdges||[])if((geometry.edgeIntervals?.[edge]||[]).length){out.set(nodeKey(st,anchor),anchor);break;}
+    }
+    for(const edge of slot.approachEdges||[]){
+      const delta=APPROACH_DELTA[edge];if(!delta)continue;
+      const q=normalizeNode(st,localPos(anchor.x+delta[0],anchor.y+delta[1],zOf(anchor)),FLOOR);
+      if(!floorNodeFitsMode(st,q,a,mode))continue;
+      if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,anchor,q))continue;
+      out.set(nodeKey(st,q),q);
+    }
+    return [...out.values()];
+  }
+  function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){
+    const a=agentFor(st,aOrId),candidates=slotApproachNodes(st,slotOrId,a,mode),ranked=[];
+    for(const node of candidates){
+      const route=a?planRoute(st,a,node,{mode:locomotionRuntime()?'auto':mode,objective}):null;
+      const value=route?.[objective]??(route?.pathDistance??Infinity);
+      if(!a||Number.isFinite(value))ranked.push({node,value,pathDistance:route?.pathDistance??0});
+    }
+    ranked.sort((x,y)=>x.value-y.value||x.pathDistance-y.pathDistance||nodeKey(st,x.node).localeCompare(nodeKey(st,y.node)));
+    return ranked[0]?.node||null;
+  }
+  function slotEgressNodes(st,slotOrId,aOrId=null,mode='walk'){
+    const a=agentFor(st,aOrId);
+    return slotApproachNodes(st,slotOrId,a,mode).filter(node=>nodeOccupantsAt(st,node,a?.id).length===0);
+  }
   function crowdingRuntime(){return window.SimCrowding||null;}
   function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t);let cost=1+wet*(a?.kind==='cat'?.015:.07);if(!crowdingRuntime()){const occupied=nodeOccupantsAt(st,node,a?.id).length;cost+=occupied*(a?.kind==='cat'?2.5:5);}return cost;}
   function surfaceStepCost(st,node,a){const entry=surfaceEntry(st,node.surfaceId),configured=entry?.surface?.moveCost?.[a?.kind];return configured??profile(a).surfaceMoveCost;}
@@ -241,12 +300,18 @@
   function dedupeNodes(st,list){const out=new Map();for(const p of list||[]){const n=normalizeNode(st,p);if(n)out.set(nodeKey(st,n),n);}return [...out.values()];}
 
   function agentContactNodes(st,targetAgent,agent){
+    const slotId=targetAgent?.posture?.slotId;
+    if(slotId)return slotApproachNodes(st,slotId,agent,'walk');
     const target=nodeForAgent(st,targetAgent);if(!target)return [];
     if(target.surfaceId===FLOOR)return floorReachNodes(st,target,agent);
     const sameSurface=surfaceLocalReachNodes(st,target,agent),cross=agent?.kind==='human'?crossSurfaceContactNodes(st,target,agent,'default'):[];return dedupeNodes(st,[...sameSurface,...cross]);
   }
   function interactionGeometry(st,target,agent=null,affordance='default'){
     if(!target)return {mode:'none',positions:[],target:null,affordance};
+    if(target.kind==='slot'){
+      const slot=SP.getSlot?.(st,target.id),positions=slotApproachNodes(st,slot,agent,'walk');
+      return {mode:'slotApproach',positions,target,affordance,slotId:slot?.id||null};
+    }
     if(target.kind==='agent'){
       const other=st.agents?.[target.id];if(!other||other.offMap)return {mode:'socialReach',positions:[],target,affordance};
       return {mode:'socialReach',positions:agentContactNodes(st,other,agent),target,affordance};
@@ -293,5 +358,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
 })();

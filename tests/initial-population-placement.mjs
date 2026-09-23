@@ -17,6 +17,7 @@ const base=A.DEFAULT_WORLD_AUTHORING;
   assert.deepEqual(report.diagnostics,[]);
   assert.deepEqual(report.resolvedPlacements.zhen.position,{x:9,y:3,z:0});
   assert.deepEqual(report.resolvedPlacements.zhen.posture,{kind:'standing',slotId:null,furnitureId:null});
+  assert.deepEqual(report.resolvedPlacements.zhou.position,{x:7,y:4,z:0},'default Zhou must no longer stand in chairSE metric geometry');
 }
 
 {
@@ -25,10 +26,10 @@ const base=A.DEFAULT_WORLD_AUTHORING;
   authored.residents.zhen.initial.posture={kind:'lying',slotId:'bed:left'};
   const report=I.analyzeInitialPlacements(authored);
   assert.equal(report.ok,true);
-  assert.deepEqual(report.resolvedPlacements.zhen.position,{x:9,y:5,z:0});
+  assert.deepEqual(report.resolvedPlacements.zhen.position,{x:9,y:6,z:0});
   assert.deepEqual(report.resolvedPlacements.zhen.posture,{kind:'lying',slotId:'bed:left',furnitureId:'bed'});
   const st=I.createInitialState(authored,{seed:1,version:'test'});
-  assert.deepEqual(st.agents.zhen.position,{x:9,y:5});
+  assert.deepEqual(st.agents.zhen.position,{x:9,y:6});
   assert.deepEqual(st.agents.zhen.posture,{kind:'lying',slotId:'bed:left',furnitureId:'bed'});
   assert.equal(Object.prototype.hasOwnProperty.call(st,'initializationDiagnostics'),false);
 }
@@ -84,9 +85,12 @@ const base=A.DEFAULT_WORLD_AUTHORING;
 {
   const authored=clone(base);
   authored.residents.zhen.initial.placement={mode:'exact',node:{x:5,y:2,z:0}};
-  const report=I.analyzeInitialPlacements(authored);
+  let report=I.analyzeInitialPlacements(authored);
+  assert.equal(report.ok,true,'partial dining-table tile must stay usable when Human walk envelope fits the real remaining floor');
+  authored.residents.zhen.initial.placement={mode:'exact',node:{x:7,y:3,z:0}};
+  report=I.analyzeInitialPlacements(authored);
   assert.equal(report.ok,false);
-  assert.ok(report.hardErrors.some(x=>x.code==='initial_placement_blocked'&&x.blocker==='furniture:diningTable'));
+  assert.ok(report.hardErrors.some(x=>x.code==='initial_placement_metric_clearance'&&x.residentId==='zhen'),'chair residual floor must reject Human standing when the walk envelope does not fit');
 }
 
 {

@@ -796,7 +796,11 @@
       if(derived){
         details+=`<br>推導狀態：<code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>${derived.componentId?` · ${esc(derived.componentId)}`:''}`;
         if(derived.blockedBy.length)details+=`<br>阻擋來源：${derived.blockedBy.map(esc).join('、')}`;
-        if(derived.under.length)details+=`<br>下方淨空：${derived.under.map(item=>`${esc(item.furnitureId)} ${item.clearanceHeight??'—'}m`).join('、')}`;
+        const floorGeometry=derived.floorGeometry;
+        if(floorGeometry){
+          const freeEdges=['north','east','south','west'].filter(edge=>(floorGeometry.edgeIntervals?.[edge]||[]).length);
+          details+=`<br>格內 free-space：<code>${floorGeometry.regionCount} region</code>${freeEdges.length?` · 可連通邊：${freeEdges.map(edge=>esc(EDGE_LABELS[edge]||edge)).join('、')}`:''}`;
+        }
       }
     }
     if(heading)$('selectionSummary').innerHTML=`<b>${heading}</b>${details}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;

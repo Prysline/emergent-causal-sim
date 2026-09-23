@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.27.2-room-value-legacy-removal');
-assert.equal(E.VERSION,'11.27.2-room-value-legacy-removal');
+assert.equal(st.version,'11.28.0-furniture-local-geometry');
+assert.equal(E.VERSION,'11.28.0-furniture-local-geometry');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
@@ -23,12 +23,12 @@ orange.position={...SP.normalizeNode(st,{x:5,y:2},'floor')};
 obs=SP.agentObservation(st,orange);
 assert.equal(obs.covered,true,'餐桌 footprint 下方應顯示 covered floor');
 assert.equal(obs.overhead[0].id,'diningTable');
-assert.equal(obs.clearance,.72);
+assert.equal(obs.clearanceSummary,.72,'node-level clearance is only an observability summary of elevated solids');
 assert.equal(obs.requiredClearance,.32);
 assert.equal(obs.walkable,true,'Cat 在餐桌下 floor 可通行');
 
 const humanUnder=SP.nodeObservation(st,{x:5,y:2,surfaceId:'floor'},zhen);
-assert.equal(humanUnder.walkable,false,'Standing human 在相同 covered floor 不可通行');
+assert.equal(humanUnder.walkable,true,'metric partial-tile geometry leaves enough standing space beside the tabletop projection');
 assert.equal(humanUnder.requiredClearance,1.65);
 
 orange.position={...SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')};
@@ -56,6 +56,7 @@ const table=SP.furnitureObservation(st,'diningTable');
 assert.equal(table.surfaceId,'diningTable:surface');
 assert.equal(table.traversable,true);
 assert.equal(table.cells.length,4);
-assert.equal(table.clearance,.72);
+assert.equal(table.solidCount,5);
+assert.equal(table.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
 
 console.log('spatial observability contract passed');
