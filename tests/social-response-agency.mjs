@@ -130,7 +130,9 @@ E.reset(51321);st=E.getState();
 {
   const human=st.agents.zhou,sleepingCat=st.agents.orange,slot=SP.getSlot(st,'sofa:left');
   st.agents.zhen.offMap=true;
-  human.position={...slot.position};
+  const approach=SP.slotApproachNodes(st,slot,human,'walk')[0];
+  assert.ok(approach,'sleeping animal touch fixture requires a legal sofa Slot approach');
+  human.position={...approach};
   sleepingCat.position={...slot.position};sleepingCat.needs.sleepNeed=100;
   sleepingCat.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
   sleepingCat.action={kind:'sleep',phase:'sleeping',sleepTicks:0,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};

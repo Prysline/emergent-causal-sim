@@ -2,9 +2,9 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.27.2-room-value-legacy-removal`。
+目前 runtime marker：`11.28.0-furniture-local-geometry`。
 
-> `11.27.2-room-value-legacy-removal` 只清理 initial-state derived Room / Furniture compatibility shape；simulation hook / Presentation observer 註冊與相對順序均未改。
+> `11.28.0-furniture-local-geometry` 改變 Furniture geometry、Passage options、Slot approach / settle / egress 與 floor-occupancy interpretation，但**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；hook registry / phase ordering維持不變。
 
 > 核心原則：hook order 只要會改變「同一 tick 內誰先看見什麼、誰先建立 Memory / Relationship / Intent / response、誰能影響後續 deliberation」，就屬於 simulation semantics，不應當成普通重構細節。
 >
@@ -152,7 +152,7 @@ flowchart LR
 | 400 | `affect.normalize-reset` | Affect | 正規化 current Affect |
 | 500 | `memoryRetention.normalize-reset` | Memory Retention | 套用 bounded retention / salience cap |
 
-Relationship persistent state 由 `src/systems/relationship/state.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `src/systems/physical.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20+ Crowding完全 derived / uncached；v11.26 Structure connection / Passage同樣從 canonical state同步派生；v11.27 Furniture orientation 則由 authoring-side shared resolver 在 compile / query boundary 產生 resolved geometry。三者都不建立 reset-normalized state，也不新增 afterReset hook。
+Relationship persistent state 由 `src/systems/relationship/state.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `src/systems/physical.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20+ Crowding完全 derived / uncached；v11.26 Structure connection / Passage從 canonical state同步派生；v11.27 Furniture orientation由 shared resolver產生 resolved geometry；v11.28 Furniture metric solids、positioned Passage options與 Slot approach/egress也沿用既有 authoring / Spatial / core Action owners。這些都不建立 reset-normalized mirror state，也不新增 afterReset hook。
 
 ## 7. Event-created / Memory observation lifecycle
 
