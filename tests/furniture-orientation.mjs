@@ -17,21 +17,22 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(D.VERSION,'furniture-definitions-v6');
-assert.equal(A.VERSION,'world-authoring-v6');
+assert.equal(D.VERSION,'furniture-definitions-v7');
+assert.equal(A.VERSION,'world-authoring-v7');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
 
-// The local frame is north-canonical and footprint-normalized; asymmetric geometry proves every quarter turn.
+// The local frame is south-canonical and footprint-normalized; asymmetric geometry proves every quarter turn.
 const asymmetricDefinition={
   id:'orientation-probe',
   name:'方向測試家具',
   icon:'⌁',
   kind:'probe',
+  orientationSemantics:'facing',
   supportsObjects:true,
   footprint:[local(0,0),local(1,0),local(2,0),local(0,1)],
   displayOffset:local(2,1),
-  slots:[{key:'off-center',label:'偏心槽位',offset:local(0,1),approachEdges:['north','east'],allowKinds:['human']}],
+  slots:[{key:'off-center',label:'偏心槽位',offset:local(0,1),approachEdges:['south','west'],allowKinds:['human']}],
   spatial:{
     solids:[{key:'body',bounds:{x:.2,y:.3,z:.4,width:1.1,depth:.6,height:.5}}],
     surface:{key:'top',label:'測試頂面',onSolid:{key:'body',face:'top'},traversable:true,allowKinds:['human']}
@@ -40,36 +41,36 @@ const asymmetricDefinition={
 const origin=local(4,3);
 const expected={
   north:{
-    footprint:[local(4,3),local(5,3),local(6,3),local(4,4)],
-    displayAt:local(6,4),
-    slot:local(4,4),
-    approachEdges:['north','east'],
-    bounds:{x:4.2,y:3.3,z:.4,width:1.1,depth:.6,height:.5},
-    surfaceCells:[local(4,3),local(5,3)]
-  },
-  east:{
-    footprint:[local(5,3),local(5,4),local(5,5),local(4,3)],
-    displayAt:local(4,5),
-    slot:local(4,3),
-    approachEdges:['east','south'],
-    bounds:{x:5.1,y:3.2,z:.4,width:.6,depth:1.1,height:.5},
-    surfaceCells:[local(5,3),local(5,4)]
-  },
-  south:{
     footprint:[local(6,4),local(5,4),local(4,4),local(6,3)],
     displayAt:local(4,3),
     slot:local(6,3),
-    approachEdges:['south','west'],
+    approachEdges:['north','east'],
     bounds:{x:5.7,y:4.1,z:.4,width:1.1,depth:.6,height:.5},
     surfaceCells:[local(5,4),local(6,4)]
   },
-  west:{
+  east:{
     footprint:[local(4,5),local(4,4),local(4,3),local(5,5)],
     displayAt:local(5,3),
     slot:local(5,5),
-    approachEdges:['west','north'],
+    approachEdges:['east','south'],
     bounds:{x:4.3,y:4.7,z:.4,width:.6,depth:1.1,height:.5},
     surfaceCells:[local(4,4),local(4,5)]
+  },
+  south:{
+    footprint:[local(4,3),local(5,3),local(6,3),local(4,4)],
+    displayAt:local(6,4),
+    slot:local(4,4),
+    approachEdges:['south','west'],
+    bounds:{x:4.2,y:3.3,z:.4,width:1.1,depth:.6,height:.5},
+    surfaceCells:[local(4,3),local(5,3)]
+  },
+  west:{
+    footprint:[local(5,3),local(5,4),local(5,5),local(4,3)],
+    displayAt:local(4,5),
+    slot:local(4,3),
+    approachEdges:['west','north'],
+    bounds:{x:5.1,y:3.2,z:.4,width:.6,depth:1.1,height:.5},
+    surfaceCells:[local(5,3),local(5,4)]
   }
 };
 for(const orientation of D.ORIENTATIONS){
@@ -90,7 +91,7 @@ for(const orientation of D.ORIENTATIONS){
 assert.throws(
   ()=>D.resolveDefinitionInstance({...asymmetricDefinition,id:'bad-frame',footprint:[local(1,0)]},{id:'bad',definitionId:'bad-frame',origin,orientation:'north'}),
   /minX = 0 and minY = 0/,
-  'Definition footprint must establish the canonical NW local anchor'
+  'Definition footprint must establish the canonical south local anchor'
 );
 assert.throws(
   ()=>D.resolveDefinitionInstance(asymmetricDefinition,{id:'missing-orientation',definitionId:asymmetricDefinition.id,origin}),
@@ -98,12 +99,12 @@ assert.throws(
   'resolver must reject missing orientation instead of silently assuming north'
 );
 
-// world-authoring-v6 requires orientation and round-trips it.
+// world-authoring-v7 requires orientation and round-trips its facing semantics.
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   assert.deepEqual(
     Object.fromEntries(Object.entries(doc.furniture).map(([id,instance])=>[id,instance.orientation])),
-    {diningTable:'north',chairNW:'east',chairNE:'west',chairSW:'east',chairSE:'west',sofa:'north',bed:'south'},
+    {diningTable:'south',chairNW:'east',chairNE:'west',chairSW:'east',chairSE:'west',sofa:'south',bed:'north'},
     'default world must author the agreed physical-facing directions'
   );
   let invalid=clone(doc);
@@ -126,9 +127,9 @@ assert.throws(
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.furniture.sofa.orientation='east';
   const resolved=A.resolveFurnitureInstance(doc.furniture.sofa);
-  assert.deepEqual(resolved.footprint,[local(9,2),local(9,3)]);
-  assert.deepEqual(resolved.slots.map(slot=>slot.position),[local(9,2),local(9,3)]);
-  assert.deepEqual(resolved.slots.map(slot=>slot.approachEdges),[['west'],['west']]);
+  assert.deepEqual(resolved.footprint,[local(9,3),local(9,2)]);
+  assert.deepEqual(resolved.slots.map(slot=>slot.position),[local(9,3),local(9,2)]);
+  assert.deepEqual(resolved.slots.map(slot=>slot.approachEdges),[['east'],['east']]);
   const topology=A.deriveHorizontalTopology(doc,{z:0});
   assert.ok(topology.cells['9,2'].furnitureIds.includes('sofa'));
   assert.ok(topology.cells['9,3'].furnitureIds.includes('sofa'));
@@ -138,7 +139,7 @@ assert.throws(
   doc.residents.zhen.initial.posture={kind:'sitting',slotId:'sofa:right',furnitureId:'sofa'};
   const placement=I.analyzeInitialPlacements(doc);
   assert.deepEqual(placement.hardErrors,[]);
-  assert.deepEqual(placement.resolvedPlacements.zhen.position,local(9,3));
+  assert.deepEqual(placement.resolvedPlacements.zhen.position,local(9,2));
   assert.equal(doc.residents.zhen.initial.placement.anchor.id,'sofa:right');
 
   const state=W.createInitialStateFromAuthoring(doc,20260911);
@@ -154,7 +155,7 @@ assert.throws(
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   let result=M.createFurnitureFromDefinition(doc,{definitionId:'chair-basic',target:local(3,4)});
   assert.equal(result.ok,true,result.issues.map(issue=>issue.code).join(','));
-  assert.equal(result.candidate.furniture['chair-basic-1'].orientation,'north','new furniture must explicitly author north');
+  assert.equal(result.candidate.furniture['chair-basic-1'].orientation,'south','new furniture must explicitly author the south canonical orientation');
 
   const source=clone(A.DEFAULT_WORLD_AUTHORING);
   source.furniture.sofa.orientation='east';
@@ -171,7 +172,7 @@ assert.throws(
   result=M.rotateFurniture(rotateSource,{furnitureId:'sofa',orientation:'east'});
   assert.equal(result.ok,true,result.issues.map(issue=>issue.code).join(','));
   assert.deepEqual(result.candidate.furniture.sofa.origin,originBefore,'rotation must preserve placement-anchor origin');
-  assert.deepEqual(result.meta.preview.footprint,[local(9,2),local(9,3)]);
+  assert.deepEqual(result.meta.preview.footprint,[local(9,3),local(9,2)]);
 }
 
 // Explicit support followers rotate; unrelated same-cell entities and Sources do not.
@@ -188,11 +189,11 @@ assert.throws(
   assert.equal(result.ok,true,result.issues.map(issue=>issue.code).join(','));
   const rotated=result.candidate;
   assert.deepEqual(rotated.furniture.diningTable.origin,doc.furniture.diningTable.origin);
-  assert.deepEqual(rotated.entities.containers.mealTray.position,local(6,2));
-  assert.deepEqual(rotated.entities.containers.plateB.position,local(5,3));
-  assert.deepEqual(rotated.entities.containers.syntheticPort.position,local(6,2));
-  assert.deepEqual(rotated.entities.containers.syntheticPort.interactionPorts[0].position,local(5,2));
-  assert.equal(rotated.entities.containers.syntheticPort.interactionPorts[0].edge,'south');
+  assert.deepEqual(rotated.entities.containers.mealTray.position,local(5,3));
+  assert.deepEqual(rotated.entities.containers.plateB.position,local(6,2));
+  assert.deepEqual(rotated.entities.containers.syntheticPort.position,local(5,3));
+  assert.deepEqual(rotated.entities.containers.syntheticPort.interactionPorts[0].position,local(6,3));
+  assert.equal(rotated.entities.containers.syntheticPort.interactionPorts[0].edge,'north');
   assert.deepEqual(rotated.entities.containers.basket.position,local(5,2),'same-cell unrelated entity must not follow');
   assert.deepEqual(rotated.entities.sources.tap,sourceBefore,'current Source authored world facts must remain unchanged');
   assert.deepEqual(doc.entities.containers.mealTray.position,local(5,2),'rotation must not mutate source authoring');
@@ -209,7 +210,7 @@ assert.throws(
   assert.deepEqual(result.candidate.residents.zhen.initial.posture,doc.residents.zhen.initial.posture);
   const analysis=I.analyzeInitialPlacements(result.candidate);
   assert.deepEqual(analysis.hardErrors,[]);
-  assert.deepEqual(analysis.resolvedPlacements.zhen.position,local(9,3));
+  assert.deepEqual(analysis.resolvedPlacements.zhen.position,local(9,2));
 }
 
 // Invalid rotation is atomic.
