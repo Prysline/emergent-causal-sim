@@ -144,7 +144,8 @@
     const surfaceNode=from.surfaceId===FLOOR?to:from,entry=surfaceEntry(st,surfaceNode.surfaceId);if(!entry)return Infinity;
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
   }
-  function traversalEdgeCost(st,from,to,a,mode=null,fromMode=mode,crowdingSnapshot=null){
+  function traversalEdgeCost(st,from,to,a,mode=null,fromMode=mode){
+    const crowdingSnapshot=arguments[6]||null;
     const base=baseTraversalEdgeCost(st,from,to,a);if(!Number.isFinite(base))return base;
     const resolvedMode=mode||a?.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk';
     const locomotion=locomotionRuntime(),modeBurden=locomotion?.modeTraversalBurden?.(a,resolvedMode)??0,transitionBurden=locomotion?.modeTransitionBurden?.(a,fromMode,resolvedMode)??0;
