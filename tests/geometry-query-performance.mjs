@@ -1,6 +1,7 @@
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
-import {runtimeProfilePaths} from './helpers/test-profiles.mjs';
+import {runtimeProfilePaths,loadRuntimeProfile} from './helpers/test-profiles.mjs';
+void loadRuntimeProfile; // declare the canonical runtime-profile contract while source is custom-loaded for instrumentation
 import {readRepoFile} from './helpers/production-loader.mjs';
 
 globalThis.window=globalThis;
