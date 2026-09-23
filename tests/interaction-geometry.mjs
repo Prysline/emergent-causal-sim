@@ -14,6 +14,9 @@ const st=E.getState(),a=st.agents.zhen;
 assert.equal(st.version,'11.28.0-furniture-local-geometry');
 assert.equal(st.interactionModel,undefined);
 
+assert.equal(SP.nodeWalkable(st,floor(st,4,2),a),false,'reduced profile must still apply shared Human walk envelope to chair geometry');
+assert.equal(SP.nodeWalkable(st,floor(st,4,2),st.agents.orange),true,'smaller Cat walk envelope may still fit the chair tile geometry');
+
 const pickup=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'pickup');
 assert.equal(pickup.mode,'occupy');
 assert.equal(pickup.positions.length,1);
