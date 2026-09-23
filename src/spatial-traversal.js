@@ -60,8 +60,8 @@
   function floorWalkable(st,p,agent=null){
     if(fixedFloorBlocker(st,p))return false;
     if(agent){
-      const envelope=physicalRuntime()?.getMovementEnvelope?.(agent,'walk');
-      if(envelope&&!D.envelopeFitsTile(furnitureSolids(st,zOf(p)),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth))return false;
+      const envelope=movementEnvelopeFor(agent,'walk');
+      if(!envelope||!D.envelopeFitsTile(furnitureSolids(st,zOf(p)),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth))return false;
     }
     return true;
   }
