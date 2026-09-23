@@ -19,7 +19,9 @@ assert.equal(A.VERSION,'world-authoring-v6');
 assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v6');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v6');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v6');
-assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable).spatial.under.clearance,.72);
+const resolvedTable=A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable);
+assert.equal(resolvedTable.spatial.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
+assert.equal(resolvedTable.spatial.surface.cells.length,4);
 
 {
   const legacy=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -70,8 +72,9 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
   authored.furniture.testCover={id:'testCover',definitionId:'dining-table',origin:{x:3,y:4,z:0},orientation:'north'};
   const topology=A.deriveHorizontalTopology(authored,{z:0});
-  assert.equal(topology.cells['3,4'].open,true,'Definition-owned under-clearance geometry must remain generically connected');
-  assert.deepEqual(topology.cells['3,4'].under,[{furnitureId:'testCover',clearanceHeight:.72,clearanceWidth:null}]);
+  assert.equal(topology.cells['3,4'].open,true,'partial metric table geometry must remain generically connected');
+  assert.equal(topology.cells['3,4'].floorGeometry.regionCount,1);
+  assert.ok(topology.cells['3,4'].floorGeometry.edgeIntervals.north.length>0,'metric floor geometry must preserve directional free edge intervals');
 }
 
 {
@@ -85,12 +88,15 @@ assert.equal(A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.dini
   assert.ok(st.map.tiles['5,2'].furnitureIds.includes('diningTable'),'furniture membership must come from shared derivation');
   const from=SP.normalizeNode(st,{x:3,y:4},'floor'),to=SP.normalizeNode(st,{x:4,y:4},'floor');
   const boundaryProfile=SP.getPassageProfile(st,from,to);
-  assert.equal(boundaryProfile.clearanceWidth,.8,'PassageProfile must consume opening boundary metric clearance');
-  assert.equal(boundaryProfile.clearanceHeight,2);
+  assert.equal(boundaryProfile.options.length,1);
+  assert.deepEqual(boundaryProfile.options[0].interval,{start:.1,end:.9},'unpositioned 0.8m authored opening width must project to a deterministic centered interval');
+  assert.ok(Math.abs(boundaryProfile.options[0].clearanceWidth-.8)<1e-9);
+  assert.equal(boundaryProfile.options[0].clearanceHeight,2);
   assert.equal(boundaryProfile.constrainedBy.boundary,'v:4,4');
-  const underFrom=SP.normalizeNode(st,{x:4,y:2},'floor'),under=SP.normalizeNode(st,{x:5,y:2},'floor');
-  const underProfile=SP.getPassageProfile(st,underFrom,under);
-  assert.equal(underProfile.clearanceHeight,.72,'PassageProfile must still consume Definition-owned under-clearance geometry');
+  const tableLeft=SP.normalizeNode(st,{x:5,y:2},'floor'),tableRight=SP.normalizeNode(st,{x:6,y:2},'floor');
+  const tableProfile=SP.getPassageProfile(st,tableLeft,tableRight);
+  assert.ok(tableProfile.options.some(option=>option.clearanceHeight===null&&option.clearanceWidth>.6),'table edge must retain the high-clearance side opening');
+  assert.ok(tableProfile.options.some(option=>option.clearanceHeight===.72),'tabletop must derive a positioned 0.72m low-clearance option rather than a whole-tile scalar');
 }
 
 console.log('geometry-derived horizontal topology contract: ok');
