@@ -89,7 +89,7 @@ assert.equal(resolvedTable.spatial.surface.cells.length,4);
   const from=SP.normalizeNode(st,{x:3,y:4},'floor'),to=SP.normalizeNode(st,{x:4,y:4},'floor');
   const boundaryProfile=SP.getPassageProfile(st,from,to);
   assert.equal(boundaryProfile.options.length,1);
-  assert.deepEqual(boundaryProfile.options[0].interval,{start:.1,end:.9},'unpositioned 0.8m authored opening width must project to a deterministic centered interval');
+  assert.ok(Math.abs(boundaryProfile.options[0].interval.start-.1)<1e-9&&Math.abs(boundaryProfile.options[0].interval.end-.9)<1e-9,'unpositioned 0.8m authored opening width must project to a deterministic centered interval');
   assert.ok(Math.abs(boundaryProfile.options[0].clearanceWidth-.8)<1e-9);
   assert.equal(boundaryProfile.options[0].clearanceHeight,2);
   assert.equal(boundaryProfile.constrainedBy.boundary,'v:4,4');
