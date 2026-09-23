@@ -45,12 +45,12 @@
     structures:{},
     furniture:{
       diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2),orientation:'north'},
-      chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),orientation:'north',name:'餐椅 A'},
-      chairNE:{id:'chairNE',definitionId:'chair-basic',origin:pos(7,2),orientation:'north',name:'餐椅 B'},
-      chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),orientation:'north',name:'餐椅 C'},
-      chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),orientation:'north',name:'餐椅 D'},
+      chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),orientation:'east',name:'餐椅 A'},
+      chairNE:{id:'chairNE',definitionId:'chair-basic',origin:pos(7,2),orientation:'west',name:'餐椅 B'},
+      chairSW:{id:'chairSW',definitionId:'chair-basic',origin:pos(4,3),orientation:'east',name:'餐椅 C'},
+      chairSE:{id:'chairSE',definitionId:'chair-basic',origin:pos(7,3),orientation:'west',name:'餐椅 D'},
       sofa:{id:'sofa',definitionId:'sofa-basic',origin:pos(9,2),orientation:'north'},
-      bed:{id:'bed',definitionId:'double-bed',origin:pos(9,5),orientation:'north'}
+      bed:{id:'bed',definitionId:'double-bed',origin:pos(8,5),orientation:'south'}
     },
     doors:{
       frontDoor:{id:'frontDoor',name:'大門',boundary:boundaryRef(0,'v:1,6'),state:'open'}
@@ -76,7 +76,7 @@
     },
     residents:{
       zhen:{id:'zhen',name:'阿真',kind:'human',traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},initial:{needs:{hunger:34,thirst:29,fatigue:41,sleepNeed:34,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(9,3)},posture:{kind:'standing'}}},
-      zhou:{id:'zhou',name:'老周',kind:'human',traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},initial:{needs:{hunger:31,thirst:62,fatigue:46,sleepNeed:40,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(7,3)},posture:{kind:'standing'}}},
+      zhou:{id:'zhou',name:'老周',kind:'human',traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},initial:{needs:{hunger:31,thirst:62,fatigue:46,sleepNeed:40,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(7,4)},posture:{kind:'standing'}}},
       orange:{id:'orange',name:'橘子',kind:'cat',traits:{curious:.7,careful:.62,social:.78,exertionSensitivity:.90,recoveryRate:1.10},initial:{needs:{hunger:26,thirst:22,fatigue:30,sleepNeed:44,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},placement:{mode:'exact',node:pos(2,6)},posture:{kind:'standing'}}}
     }
   };
@@ -309,6 +309,18 @@
       errors.push(authoringIssue('authoring_slot_id_duplicate',paths[1],`Derived Furniture slot id ${slotId} is duplicated.`,{slotId,count:paths.length}));
     }
 
+    const resolvedSolids=Object.values(resolvedFurniture).flatMap(f=>f.spatial?.solids||[]);
+    for(const layer of authoring.map?.layers||[])for(const [cellId,authoredCell] of Object.entries(layer.cells||{})){
+      if(authoredCell?.terrain!=='floor')continue;
+      const [x,y]=cellId.split(',').map(Number),analysis=D.analyzeFloorTile(resolvedSolids,x,y,layer.z);
+      if(analysis.regionCount>1)errors.push(authoringIssue(
+        'authoring_furniture_floor_multiregion_unsupported',
+        `map.layers[z=${layer.z}].cells.${cellId}`,
+        `Furniture geometry splits floor cell ${cellId} at z=${layer.z} into ${analysis.regionCount} disconnected regions; current single-floor-node model cannot represent it.`,
+        {x,y,z:layer.z,regionCount:analysis.regionCount}
+      ));
+    }
+
     for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
       const basePath=`entities.containers.${key}`;
       if(!isRecord(container)){errors.push(authoringIssue('authoring_container_invalid',basePath,'Container entry must be an object.'));continue;}
@@ -416,30 +428,27 @@
       cells[id]={
         id,x,y,z,terrain,
         structuralOpen:STRUCTURALLY_OPEN_TERRAINS.has(terrain),
-        staticBlocked:false,blockedBy:[],furnitureIds:[],under:[],adjacent:[],componentId:null
+        staticBlocked:false,blockedBy:[],furnitureIds:[],
+        floorGeometry:{regionCount:1,edgeIntervals:{north:[{start:0,end:1}],east:[{start:0,end:1}],south:[{start:0,end:1}],west:[{start:0,end:1}]}},
+        adjacent:[],componentId:null
       };
     }
     const at=p=>p&&(p.z??0)===z?cells[p.x+','+p.y]||null:null;
-    for(const [key,instance] of Object.entries(authoring.furniture||{})){
-      const furniture=resolveFurnitureInstance(instance),id=furniture.id||key;
+    const resolvedFurniture=Object.entries(authoring.furniture||{}).map(([key,instance])=>({key,furniture:resolveFurnitureInstance(instance)}));
+    const solids=resolvedFurniture.flatMap(({furniture})=>furniture.spatial?.solids||[]);
+    for(const {key,furniture} of resolvedFurniture){
+      const id=furniture.id||key;
       for(const p of furniture.footprint||[]){
-        const cell=at(p);if(!cell)continue;
-        if(!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
-        const floorMode=furniture.spatial?.floor?.mode;
-        if(floorMode==='open')continue;
-        if(floorMode==='under'){
-          const under=furniture.spatial?.under;
-          cell.under.push({
-            furnitureId:id,
-            clearanceHeight:Number.isFinite(Number(under?.clearance))?Number(under.clearance):null,
-            clearanceWidth:Number.isFinite(Number(under?.clearanceWidth))?Number(under.clearanceWidth):null
-          });
-          continue;
-        }
-        if(floorMode==='solid'){
-          cell.staticBlocked=true;
-          cell.blockedBy.push('furniture:'+id);
-        }
+        const cell=at(p);if(cell&&!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
+      }
+    }
+    for(const cell of Object.values(cells)){
+      if(!cell.structuralOpen)continue;
+      const analysis=D.analyzeFloorTile(solids,cell.x,cell.y,z);
+      cell.floorGeometry={regionCount:analysis.regionCount,edgeIntervals:clone(analysis.edgeIntervals)};
+      if(analysis.blocked){
+        cell.staticBlocked=true;
+        for(const id of cell.furnitureIds)cell.blockedBy.push('furniture:'+id);
       }
     }
     for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
@@ -452,20 +461,26 @@
       const cell=at(source.position);if(!cell)continue;
       cell.staticBlocked=true;cell.blockedBy.push('source:'+(source.id||key));
     }
-    const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+    const dirs=[
+      {dx:1,dy:0,edge:'east',other:'west'},
+      {dx:-1,dy:0,edge:'west',other:'east'},
+      {dx:0,dy:1,edge:'south',other:'north'},
+      {dx:0,dy:-1,edge:'north',other:'south'}
+    ];
     for(const cell of Object.values(cells)){
       cell.open=cell.structuralOpen&&!cell.staticBlocked;
       cell.furnitureIds.sort();
       cell.blockedBy.sort();
-      cell.under.sort((a,b)=>a.furnitureId.localeCompare(b.furnitureId));
     }
     for(const cell of Object.values(cells)){
       if(!cell.open)continue;
-      for(const [dx,dy] of dirs){
-        const other=cells[(cell.x+dx)+','+(cell.y+dy)];
-        if(!other?.open)continue;
-        const boundaryId=boundaryIdBetween(cell,other);
-        if(boundaryId&&boundaryPassable(authoring,z,boundaryId))cell.adjacent.push(other.id);
+      for(const {dx,dy,edge,other} of dirs){
+        const neighbor=cells[(cell.x+dx)+','+(cell.y+dy)];
+        if(!neighbor?.open)continue;
+        const boundaryId=boundaryIdBetween(cell,neighbor);
+        if(!boundaryId||!boundaryPassable(authoring,z,boundaryId))continue;
+        const overlap=D.intersectIntervals(cell.floorGeometry.edgeIntervals[edge],neighbor.floorGeometry.edgeIntervals[other]);
+        if(overlap.length)cell.adjacent.push(neighbor.id);
       }
       cell.adjacent.sort();
     }
