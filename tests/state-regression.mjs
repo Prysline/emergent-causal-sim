@@ -68,6 +68,28 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
+  const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou;st.agents.orange.offMap=true;
+  const slot=SP.getSlot(st,'bed:left'),freeEgress=SP.slotEgressNodes(st,slot,a,'walk')[0];
+  assert.ok(freeEgress,'bed:left must have an egress candidate in the default world');
+  a.position={...slot.position};
+  a.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
+  a.action={kind:'wander',phase:'start',targetTile:{x:2,y:2,z:0},started:st.tick,wait:0};
+  b.position={...freeEgress};
+  b.posture={kind:'standing',slotId:null,furnitureId:null};
+  E.tick();
+  assert.equal(a.posture.slotId,slot.id,'blocked egress must keep the Agent slot-bound');
+  assert.ok(SP.nodeSame(st,a.position,slot.position),'blocked egress must not teleport the Agent onto the occupied floor node');
+  noIssues('blocked slot egress');
+  b.position={x:7,y:4,z:0};
+  E.tick();
+  assert.equal(a.posture.slotId,null,'once egress is free, movement must release slot occupancy before routing');
+  assert.equal(a.posture.kind,'standing');
+  assert.ok(SP.nodeSame(st,a.position,freeEgress),'first movement transition out of a Slot must land on the legal egress node');
+  noIssues('slot egress released');
+}
+
+E.reset(20260911);
+{
   const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.containers.mealTray.contents.food;a.needs.hunger=60;a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood');assert.ok(serve);assert.ok(st.containers.mealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
 }
 
