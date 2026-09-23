@@ -87,10 +87,12 @@
     const slotId=a.posture?.slotId;
     if(slotId){
       const egress=SP.slotEgressNodes?.(state,slotId,a,'walk')?.[0]||null;
-      if(egress)a.position={...egress};
+      if(!egress)return false;
+      a.position={...egress};
     }
     if(a.posture?.kind!=='standing'||slotId)a.posture={kind:'standing',slotId:null,furnitureId:null};
     clearLocomotionState(a);
+    return true;
   }
   function sitOn(a,slot){a.position={...slot.position};a.posture={kind:'sitting',slotId:slot.id,furnitureId:slot.furnitureId};clearLocomotionState(a);releaseReservation(`slot:${slot.id}`,a);}
   function lieDown(a,slot=null){if(slot)a.position={...slot.position};a.posture={kind:'lying',slotId:slot?.id||null,furnitureId:slot?.furnitureId||null};clearLocomotionState(a);if(slot)releaseReservation(`slot:${slot.id}`,a);}
@@ -103,10 +105,11 @@
   function targetLabel(t){if(!t)return'目標';if(t.kind==='agent')return state.agents[t.id]?.name||t.id;if(t.kind==='slot'){const s=SP.getSlot(state,t.id);return state.furniture[s?.furnitureId]?.name||'座位';}if(t.kind==='tile')return`(${t.position.x}, ${t.position.y}${(SP.zOf?.(t.position)??t.position.z??0)!==0?`, z=${SP.zOf?.(t.position)??t.position.z}`:''})`;return state.containers[t.id]?.name||state.sources[t.id]?.name||state.furniture[t.id]?.name||t.id;}
   function targetAvailability(target){if(!target)return {exists:false,available:false,reason:'missing',label:'目標'};if(target.kind==='agent'){const obj=state.agents[target.id];if(!obj)return {exists:false,available:false,reason:'missing',label:target.id};return {exists:true,available:!obj.offMap,reason:obj.offMap?'offMap':null,label:obj.name};}if(target.kind==='object'){const obj=state.containers[target.id];if(!obj)return {exists:false,available:false,reason:'missing',label:target.id};const holder=holderOf(target.id),pos=SP.objectPosition(state,target.id);if(holder?.offMap)return {exists:true,available:false,reason:'offMap',label:obj.name};return {exists:true,available:!!pos,reason:pos?null:'noPosition',label:obj.name};}if(target.kind==='source'){const obj=state.sources[target.id];return obj?{exists:true,available:!!obj.position,reason:obj.position?null:'noPosition',label:obj.name}:{exists:false,available:false,reason:'missing',label:target.id};}if(target.kind==='furniture'){const obj=state.furniture[target.id];return obj?{exists:true,available:true,reason:null,label:obj.name}:{exists:false,available:false,reason:'missing',label:target.id};}if(target.kind==='slot'){const slot=SP.getSlot(state,target.id);return slot?{exists:true,available:true,reason:null,label:targetLabel(target)}:{exists:false,available:false,reason:'missing',label:target.id};}if(target.kind==='tile'){const tile=SP.tileByPos(state,target.position);return tile?{exists:true,available:SP.walkable(state,target.position),reason:SP.walkable(state,target.position)?null:'blocked',label:targetLabel(target)}:{exists:false,available:false,reason:'missing',label:targetLabel(target)};}return {exists:false,available:false,reason:'missing',label:targetLabel(target)};}
   function interruptUnavailableTarget(a,target,status){const label=status.label||targetLabel(target);if(status.reason==='offMap')abortAction(a,`發現${label}已經離開可互動範圍`);else if(!status.exists)abortAction(a,`找不到原本的目標${label?`「${label}」`:''}`);else abortAction(a,`發現${label}目前無法互動`);}
-  function legacyMoveToward(a,goal,reason){if(!goal||a.offMap)return false;if(atSpatialPosition(a,goal))return true;const path=SP.astar(state,a.position,goal,a.id);if(path.length<2)return false;standUp(a);const next=path[1];a.position={...next};const load=effectiveCarryLoad(a),cost=movementExertion(load);applyExertion(a,cost,load>.01?'負重步行':'步行',{thirstFactor:.18,hungerFactor:.05,load});onEnterTile(a);a.action.lastMoveReason=reason;a.action.lastPath=path.map(p=>({...p}));return atSpatialPosition(a,goal);}
+  function legacyMoveToward(a,goal,reason){if(!goal||a.offMap)return false;if(a.posture?.slotId){if(!standUp(a))return false;return atSpatialPosition(a,goal);}if(atSpatialPosition(a,goal))return true;const path=SP.astar(state,a.position,goal,a.id);if(path.length<2)return false;const next=path[1];a.position={...next};const load=effectiveCarryLoad(a),cost=movementExertion(load);applyExertion(a,cost,load>.01?'負重步行':'步行',{thirstFactor:.18,hungerFactor:.05,load});onEnterTile(a);a.action.lastMoveReason=reason;a.action.lastPath=path.map(p=>({...p}));return atSpatialPosition(a,goal);}
   function moveToward(a,goal,reason){
     const L=locomotionRuntime();if(!L)return legacyMoveToward(a,goal,reason);
     if(!goal||a.offMap)return false;
+    if(a.posture?.slotId){if(!standUp(a))return false;return atSpatialPosition(a,goal);}
     if(atSpatialPosition(a,goal)){if(a.action)delete a.action.locomotionStep;clearLocomotionState(a);return true;}
     const plan=SP.planRoute?.(state,a,goal,{mode:'auto',objective:'traversalCost'}),step=plan?.steps?.[0];
     if(!step||!plan?.path?.length){if(a.action)delete a.action.locomotionStep;clearLocomotionState(a);return false;}
