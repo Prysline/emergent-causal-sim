@@ -95,7 +95,8 @@
       const structuralOpen=source.structuralOpen===true;
       let analysis=defaultFloorGeometry(),geometryBlocked=false;
       if(structuralOpen){
-        const result=D.analyzeFloorTile(snapshot.solids||[],source.x,source.y,zOf(source));
+        const cached=snapshot.floorGeometryByCell?.[id];
+        const result=cached||D.analyzeFloorTile(snapshot.solids||[],source.x,source.y,zOf(source));
         analysis={regionCount:result.regionCount,edgeIntervals:clone(result.edgeIntervals)};
         geometryBlocked=result.blocked===true;
       }
