@@ -102,7 +102,10 @@
     if(!a||!b||a.surfaceId!==FLOOR||b.surfaceId!==FLOOR||zOf(a)!==zOf(b))return null;
     const dx=Math.abs(a.x-b.x),dy=Math.abs(a.y-b.y);
     if(!((dx===1&&dy===0)||(dx===0&&dy===1)||(dx===1&&dy===1)))return null;
-    const geometry=H.deriveHorizontalGeometry(runtimeHorizontalSnapshot(st,zOf(a))),pair=H.pairKey(a,b);
+    const z=zOf(a),snapshot=SP.currentGeometryQuerySnapshot?.(st)||null;
+    let geometry=snapshot?.horizontalByLayer?.get(z)||null;
+    if(!geometry){geometry=H.deriveHorizontalGeometry(runtimeHorizontalSnapshot(st,z));if(snapshot?.horizontalByLayer)snapshot.horizontalByLayer.set(z,geometry);}
+    const pair=H.pairKey(a,b);
     return geometry.horizontalConnections.find(connection=>H.pairKey(connection.from,connection.to)===pair)||null;
   }
   function connectionOptions(connection){
