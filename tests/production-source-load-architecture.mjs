@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.28.2-preview-boundary-presentation';
+const CURRENT_VERSION='11.29.0-horizontal-geometry-foundation';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -24,6 +24,7 @@ for(const relativePath of scripts){
 }
 
 const furnitureDefinitionsIndex=indexOf('src/furniture-definitions.js');
+const horizontalGeometryIndex=indexOf('src/horizontal-geometry.js');
 const authoringIndex=indexOf('src/world-authoring.js');
 const capabilityIndex=indexOf('src/embodiment-capabilities.js');
 const initializerIndex=indexOf('src/world-initializer.js');
@@ -43,7 +44,9 @@ const uiIndex=indexOf('src/ui/core.js');
 const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
-assert.ok(furnitureDefinitionsIndex<authoringIndex,'Furniture Definitions must load before world-authoring.js');
+assert.ok(furnitureDefinitionsIndex<horizontalGeometryIndex&&horizontalGeometryIndex<authoringIndex,'pure horizontal geometry must load after Furniture geometry helpers and before world-authoring.js');
+const horizontalGeometrySource=readRepoFile('src/horizontal-geometry.js');
+assert.doesNotMatch(horizontalGeometrySource,/SimWorld|SimSpatial|SimEngine|SimLocomotion|SimCrowding|\\.agents\\b/,'shared horizontal geometry kernel must not depend on runtime mutable state or Agent state');
 assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<worldIndex,'shared embodiment capabilities must stay authoring-safe and load before initializer/runtime owners');
 const capabilitySource=readRepoFile('src/embodiment-capabilities.js');
 assert.doesNotMatch(capabilitySource,/SimEngine|SimSpatial|registerInitialStateInitializer/,'shared embodiment capability contract must stay pure and authoring-safe');

@@ -13,6 +13,7 @@ assert.doesNotMatch(browser,/feature\//,'Browser regression must not retain hist
 
 const semanticNodeTests=[
   'tests/state-regression.mjs',
+  'tests/horizontal-geometry-foundation.mjs',
   'tests/spatial-z-identity.mjs',
   'tests/physical-profile-foundation.mjs',
   'tests/passage-profile-multimode.mjs',

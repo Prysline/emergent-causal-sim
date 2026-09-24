@@ -10,12 +10,14 @@ import {
 
 assert.deepEqual(authoringProfilePaths(),[
   'src/furniture-definitions.js',
+  'src/horizontal-geometry.js',
   'src/world-authoring.js',
   'src/embodiment-capabilities.js',
   'src/world-initializer.js'
 ]);
 assert.deepEqual(spatialCoreProfilePaths(),[
   'src/furniture-definitions.js',
+  'src/horizontal-geometry.js',
   'src/world-authoring.js',
   'src/embodiment-capabilities.js',
   'src/world-initializer.js',
@@ -41,7 +43,7 @@ assert.throws(
   'runtime profiles must reject retired source names rather than silently alias them'
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
-  'furniture-definitions.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
+  'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
   'spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
@@ -60,7 +62,14 @@ for(const relativePath of stateTests){
   const handLoadsEngine=/['"]engine\.js['"]/.test(source);
   const productionDerived=/productionScriptPaths|loadProductionBefore|loadProductionThrough/.test(source);
   const profileComposed=/loadAuthoringProfile|loadSpatialCoreProfile|loadRuntimeProfile|loadInitialStateProfile/.test(source);
+  const handLoadsAuthoring=/['"](?:src\/)?world-authoring\.js['"]/.test(source);
   const handLoadsInitializer=/['"](?:src\/)?world-initializer\.js['"]/.test(source);
+  if(handLoadsAuthoring&&!productionDerived&&!profileComposed){
+    assert.ok(
+      /['"](?:src\/)?horizontal-geometry\.js['"]/.test(source),
+      relativePath+' must load horizontal-geometry.js before a direct world-authoring.js stack'
+    );
+  }
   if(handLoadsInitializer&&!productionDerived&&!profileComposed){
     assert.ok(
       /['"](?:src\/)?embodiment-capabilities\.js['"]/.test(source),

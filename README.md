@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.28.2・Preview Boundary Presentation**（`11.28.2-preview-boundary-presentation`）。
+目前 runtime marker：**v11.29.0・Shared Horizontal Geometry Foundation**（`11.29.0-horizontal-geometry-foundation`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。
 
@@ -28,7 +28,7 @@
 
 ### Spatial / Physical world
 
-- **Geometry-derived Horizontal Topology**：`SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})` 從 floor Cell、格線 `boundaries`、Door state、fixed entity blocker 與 resolved Furniture metric solids 即時計算 structural openness、static blocker、格內 floor region、四邊 free intervals、cardinal adjacency、connected components 與 diagnostics。floor-start solids 可阻斷實際占地；partial-tile Furniture 保留真正剩餘 free-space。第一版仍是一 tile 一 floor node；若同 tile 被切成多個 disconnected floor regions，authoring 直接拒絕而不假造 connectivity。
+- **Geometry-derived Horizontal Topology / HorizontalConnection**：`src/horizontal-geometry.js` 是不讀 Agent／Crowding／Route state 的 shared pure horizontal geometry owner。它從 floor Cell、格線 Boundary／Door、fixed blocker、resolved Furniture metric solids 與低階 Passage constraint snapshot 派生無向、Agent-independent 的 `HorizontalConnection`；cardinal distance 為 1m、diagonal distance 為 `sqrt(2)m`，斜向使用 B+ 保守局部幾何並區分 `candidate / blocked / unsupported`。`SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})` 會額外投影 ephemeral `horizontalConnections`，但既有 `cells[].adjacent / componentId / components` 仍維持 cardinal compatibility，不把 diagonal 塞進 legacy topology。Slice 1 尚未讓 production Route 枚舉斜向，因此目前 runtime 移動行為保持既有 cardinal／Structure semantics。
 - Room、Tile、Furniture Surface、Local Position 與 Spatial Node。Room 目前只保存由拓樸推導的 identity / membership / area 等結構資料，不再保存沒有 gameplay consumer 的 legacy `value` aggregate。
 - A* traversal、dynamic blocker、supported contact、surface environment / liquid。
 - Interaction Geometry 依 affordance + target data 決定合法接觸位置。
