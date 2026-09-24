@@ -1,8 +1,9 @@
 (() => {
-  const D=window.SimFurnitureDefinitions;
+  const D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;
   if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
+  if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
   const VERSION='world-authoring-v7';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
@@ -442,15 +443,6 @@
         const cell=at(p);if(cell&&!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
       }
     }
-    for(const cell of Object.values(cells)){
-      if(!cell.structuralOpen)continue;
-      const analysis=D.analyzeFloorTile(solids,cell.x,cell.y,z);
-      cell.floorGeometry={regionCount:analysis.regionCount,edgeIntervals:clone(analysis.edgeIntervals)};
-      if(analysis.blocked){
-        cell.staticBlocked=true;
-        for(const id of cell.furnitureIds)cell.blockedBy.push('furniture:'+id);
-      }
-    }
     for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
       if(container.portable!==false||container.supportId)continue;
       const cell=at(container.position);if(!cell)continue;
@@ -461,17 +453,46 @@
       const cell=at(source.position);if(!cell)continue;
       cell.staticBlocked=true;cell.blockedBy.push('source:'+(source.id||key));
     }
+    const boundaries={};
+    for(const [id,boundary] of Object.entries(layer.boundaries||{})){
+      const doors=doorsForBoundary(authoring,z,id);
+      boundaries[id]={
+        id,
+        kind:boundary.kind,
+        ...(Number.isFinite(Number(boundary.clearanceWidth))?{clearanceWidth:Number(boundary.clearanceWidth)}:{}),
+        ...(Number.isFinite(Number(boundary.clearanceHeight))?{clearanceHeight:Number(boundary.clearanceHeight)}:{}),
+        passable:boundaryPassable(authoring,z,id),
+        doorIds:doors.map(door=>door.id).sort()
+      };
+    }
+    const geometry=H.deriveHorizontalGeometry({
+      spaceId:'world',
+      surfaceId:'floor',
+      z,width,height,
+      cellSizeMeters:CELL_SIZE_METERS,
+      cells:Object.fromEntries(Object.entries(cells).map(([id,cell])=>[id,{id,x:cell.x,y:cell.y,z,structuralOpen:cell.structuralOpen,staticBlocked:cell.staticBlocked}])),
+      solids,
+      boundaries,
+      passageConstraints:authoring.compatibility?.passageConstraints||{}
+    });
+    for(const cell of Object.values(cells)){
+      const derived=geometry.cells[cell.id];
+      cell.floorGeometry=clone(derived?.floorGeometry||cell.floorGeometry);
+      if(derived?.geometryBlocked){
+        cell.staticBlocked=true;
+        for(const id of cell.furnitureIds)cell.blockedBy.push('furniture:'+id);
+      }
+      cell.open=cell.structuralOpen&&!cell.staticBlocked;
+      cell.furnitureIds.sort();
+      cell.blockedBy=[...new Set(cell.blockedBy)].sort();
+    }
+
     const dirs=[
       {dx:1,dy:0,edge:'east',other:'west'},
       {dx:-1,dy:0,edge:'west',other:'east'},
       {dx:0,dy:1,edge:'south',other:'north'},
       {dx:0,dy:-1,edge:'north',other:'south'}
     ];
-    for(const cell of Object.values(cells)){
-      cell.open=cell.structuralOpen&&!cell.staticBlocked;
-      cell.furnitureIds.sort();
-      cell.blockedBy.sort();
-    }
     for(const cell of Object.values(cells)){
       if(!cell.open)continue;
       for(const {dx,dy,edge,other} of dirs){
@@ -497,7 +518,7 @@
       }
       members.sort();components.push({id,cells:members});
     }
-    return {z,width,height,cells,components};
+    return {z,width,height,cells,components,horizontalConnections:clone(geometry.horizontalConnections)};
   }
 
   function deriveStructureConnections(authoring){

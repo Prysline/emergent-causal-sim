@@ -65,6 +65,7 @@ const RETIRED_SOURCES=Object.freeze({
 
 const AUTHORING_PROFILE=Object.freeze([
   'furniture-definitions.js',
+  'horizontal-geometry.js',
   'world-authoring.js',
   'embodiment-capabilities.js',
   'world-initializer.js'
