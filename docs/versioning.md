@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.28.2-preview-boundary-presentation`
+`11.29.0-horizontal-geometry-foundation`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.28.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.29.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Preview Boundary Presentation release
+### Current Shared Horizontal Geometry Foundation release
+
+`11.29.0-horizontal-geometry-foundation` 建立 8-direction implementation 的第一個可執行基礎，但**尚未啟用 production diagonal routing**。新增 `src/horizontal-geometry.js` 作為 Authoring／Runtime 未來共用的 pure geometry owner：它不讀 Agent、Crowding、Route cost 或 runtime global state，從 adapter snapshot 派生無向、Agent-independent `HorizontalConnection`。cardinal `distanceMeters = 1`；diagonal `distanceMeters = sqrt(2)`。斜向第一版採 B+ conservative local geometry，同時考慮相關 cardinal Boundary／Door、Furniture metric solids、fixed blocker、explicit Passage constraint 與 shared-corner free-space，並以 `candidate / blocked / unsupported` 區分可證明 passage、可證明阻斷與第一版無法安全證明的情況。
+
+`SimWorldAuthoring.deriveHorizontalTopology(...)` 現額外回傳 ephemeral `horizontalConnections`，但 serialized World Authoring shape 完全不變；`world-authoring-v7` 與 `furniture-definitions-v7` 因此維持原 generation。legacy `cells[].adjacent / componentId / components` 仍只表示 cardinal compatibility coarse topology，Initializer／Editor 舊 consumer 不會因 diagonal candidate 被污染。Agent-specific MovementEnvelope feasibility 不回寫 connection；focused regression 同時鎖住 open corner、wall／Door、單／雙 Furniture narrowing、complete cut、ambiguous `unsupported`、multi-region `unsupported`、canonical endpoint/resource 與 legacy cardinal parity。
+
+本 release 只落地 shared horizontal geometry foundation 與 Authoring projection；`SimSpatial.getPassageProfile`、Spatial Traversal neighbor generation、Route distance／step semantics、Locomotion execution timing、Dynamic Congestion、Contact 與 Slot corner semantics都尚未接 diagonal。因此 Spatial Traversal `11.28.0-furniture-local-geometry`、Spatial Passage `11.28.0-positioned-passage-options`、Route `11.24.0-route-locomotion-cost`、Locomotion `11.24.0-locomotion-objective-burden`、Dynamic Congestion `11.28.0-effective-passage-width`、Physical `11.17.0-passage-profile-multimode` 與 Spatial Identity `11.22.0-spatial-z-identity` 均不假升。
+
+### Previous Preview Boundary Presentation release
 
 `11.28.2-preview-boundary-presentation` 修正 Simulator / Editor Preview 對 World Boundary / Door canonical truth 的呈現落差。Runtime map 現直接從 `state.map.boundaries` 投影格線牆：`kind:"wall"` 顯示為 cell edge line，普通 `kind:"opening"` 不顯示實牆線；若 opening boundary 被 root `state.doors` 引用，則依 Door `open / closed` state 顯示不同的 Door edge 樣式。投影依目前 runtime Z layer 篩選，切換到沒有 boundaries 的 layer 不殘留其他層邊線。
 

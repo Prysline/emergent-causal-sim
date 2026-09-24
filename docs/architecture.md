@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.28.2-preview-boundary-presentation`。
+目前 runtime marker：`11.29.0-horizontal-geometry-foundation`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -30,6 +30,10 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v7"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
 Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+
+`src/horizontal-geometry.js` 現在是 Authoring／後續 Runtime 共同使用的 **pure horizontal geometry kernel**。它只消費 adapter 提供的 Cell、Boundary／Door、fixed blocker、Furniture metric solids 與低階 Passage constraint snapshot，不讀 `SimWorld / SimSpatial / Agent / Crowding / Route` mutable state。kernel 產生 canonical endpoint order 的無向 `HorizontalConnection`：`kind:'cardinal'|'diagonal'`、`distanceMeters`、`status:'candidate'|'blocked'|'unsupported'`、位置化 `options[]`、constraint provenance 與 stable edge／corner resource。第一版 diagonal 使用 B+ conservative local geometry；同 tile 多個 disconnected free-space regions或無法安全證明 corner-continuous corridor 時回 `unsupported`，而不是猜測可通。
+
+Slice 1 的 Authoring adapter 由 `SimWorldAuthoring.deriveHorizontalTopology(...)` 額外回傳 ephemeral `horizontalConnections`；既有 `cells[].adjacent / componentId / components` 明確保留為 **cardinal compatibility coarse topology**，不表示完整 horizontal geometry connectivity，也不表示任一 Agent 的 physical reachability。這個 slice **沒有**把 diagonal 接進 production `SimSpatial.getPassageProfile`、Route candidate generation 或 movement execution；那些仍由後續 slice 接線，因此 current Spatial Traversal／Spatial Passage／Route／Locomotion／Crowding generation 暫不換代。
 
 Room derivation 現只負責拓樸／identity／membership 與結構集合；`room.value`、Furniture legacy `value` 與 Door Room-value parity metadata 均已移除。`comfortAt()` 等環境／行為 metric 仍是獨立模型，不由 Room aggregate 代替。
 

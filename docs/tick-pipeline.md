@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.28.2-preview-boundary-presentation`。
+目前 runtime marker：`11.29.0-horizontal-geometry-foundation`。
 
+> `11.29.0-horizontal-geometry-foundation` 新增 pure horizontal geometry kernel 與 Authoring-side `HorizontalConnection` projection，**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；Slice 1 也尚未改 production route neighbor / movement execution，所以 hook registry / phase ordering維持不變。
+>
 > `11.28.2-preview-boundary-presentation` 只修正 Simulator map 對 canonical boundary / Door truth 的玩家可見投影，**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；hook registry / phase ordering維持不變。
 >
 > `11.28.1-furniture-facing-semantics` 修正 Furniture orientation 的 canonical facing / frame semantics 與 Editor observability，但**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；hook registry / phase ordering維持不變。
