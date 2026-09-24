@@ -103,8 +103,14 @@ function unique(paths){
 }
 
 function ensureAuthoringDependencies(paths){
-  const authoringIndex=paths.indexOf('world-authoring.js');
-  if(authoringIndex>=0&&!paths.includes('furniture-definitions.js'))paths.splice(authoringIndex,0,'furniture-definitions.js');
+  let authoringIndex=paths.indexOf('world-authoring.js');
+  if(authoringIndex>=0&&!paths.includes('furniture-definitions.js')){
+    paths.splice(authoringIndex,0,'furniture-definitions.js');
+    authoringIndex=paths.indexOf('world-authoring.js');
+  }
+  if(authoringIndex>=0&&!paths.includes('horizontal-geometry.js')){
+    paths.splice(authoringIndex,0,'horizontal-geometry.js');
+  }
   const initializerIndex=paths.indexOf('world-initializer.js');
   if(initializerIndex>=0&&!paths.includes('embodiment-capabilities.js'))paths.splice(initializerIndex,0,'embodiment-capabilities.js');
   return paths;
