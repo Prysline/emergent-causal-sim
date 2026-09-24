@@ -6,11 +6,17 @@
 
 目前 current runtime marker：
 
-`11.28.1-furniture-facing-semantics`
+`11.28.2-preview-boundary-presentation`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.28.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.28.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Furniture Facing Semantics release
+### Current Preview Boundary Presentation release
+
+`11.28.2-preview-boundary-presentation` 修正 Simulator / Editor Preview 對 World Boundary / Door canonical truth 的呈現落差。Runtime map 現直接從 `state.map.boundaries` 投影格線牆：`kind:"wall"` 顯示為 cell edge line，普通 `kind:"opening"` 不顯示實牆線；若 opening boundary 被 root `state.doors` 引用，則依 Door `open / closed` state 顯示不同的 Door edge 樣式。投影依目前 runtime Z layer 篩選，切換到沒有 boundaries 的 layer 不殘留其他層邊線。
+
+這是 Presentation-only contract 更新：不改 World Authoring `world-authoring-v7`、Furniture Catalog `furniture-definitions-v7`、runtime map / Door schema、Spatial topology / Passage / Route / Locomotion / Crowding semantics，也不新增第二份 wall truth。舊 `.sim-tile.terrain-wall / terrain-doorway` 樣式暫保留給低階 compatibility fixture，但 canonical Simulator wall presentation只讀 `state.map.boundaries / state.doors`。因正式玩家可見 Simulator surface 改變，overall current marker 升 patch；`SimUI.PRESENTATION_VERSION` 與 current-marker-owned UI version 依既有規則跟隨 release marker。
+
+### Previous Furniture Facing Semantics release
 
 `11.28.1-furniture-facing-semantics` 修正 Furniture orientation contract 的語意不一致。Furniture Catalog 升為 `furniture-definitions-v7`：Definition canonical orientation 改為 `south`；directional Furniture 以 `orientationSemantics:"facing"` 表示 Instance `orientation` 是正面／主要 facing，床的 facing 定義為 head → foot；沒有自然正面的 Furniture 以 `orientationSemantics:"frame"` 保留 quarter-turn local-frame transform，但 Editor 不顯示 facing arrow。
 
