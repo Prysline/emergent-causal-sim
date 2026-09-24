@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.28.1-furniture-facing-semantics');
-assert.equal(E.VERSION,'11.28.1-furniture-facing-semantics');
+assert.equal(st.version,'11.28.2-preview-boundary-presentation');
+assert.equal(E.VERSION,'11.28.2-preview-boundary-presentation');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
