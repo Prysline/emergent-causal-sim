@@ -95,7 +95,9 @@
       const explicit=explicitEdgeConstraint(st,a,b);
       if(explicit)passageConstraints[H.pairKey(a,b)]={...explicit};
     }
-    return {spaceId:'world',surfaceId:FLOOR,z,width,height,cellSizeMeters:1,cells,solids:SP.furnitureSolids?.(st,z)||[],boundaries,passageConstraints};
+    const snapshot={spaceId:'world',surfaceId:FLOOR,z,width,height,cellSizeMeters:1,cells,solids:SP.furnitureSolids?.(st,z)||[],boundaries,passageConstraints};
+    const active=SP.currentGeometryQuerySnapshot?.(st);if(active?.horizontalRuntimeSnapshots)active.horizontalRuntimeSnapshots.set(z,snapshot);
+    return snapshot;
   }
   function horizontalConnection(st,from,to){
     const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);
@@ -104,7 +106,7 @@
     if(!((dx===1&&dy===0)||(dx===0&&dy===1)||(dx===1&&dy===1)))return null;
     const z=zOf(a),snapshot=SP.currentGeometryQuerySnapshot?.(st)||null;
     let geometry=snapshot?.horizontalByLayer?.get(z)||null;
-    if(!geometry){geometry=H.deriveHorizontalGeometry(runtimeHorizontalSnapshot(st,z));if(snapshot?.horizontalByLayer)snapshot.horizontalByLayer.set(z,geometry);}
+    if(!geometry){const runtimeSnapshot=snapshot?.horizontalRuntimeSnapshots?.get(z)||runtimeHorizontalSnapshot(st,z);geometry=H.deriveHorizontalGeometry(runtimeSnapshot);if(snapshot?.horizontalByLayer)snapshot.horizontalByLayer.set(z,geometry);}
     const pair=H.pairKey(a,b);
     return geometry.horizontalConnections.find(connection=>H.pairKey(connection.from,connection.to)===pair)||null;
   }
