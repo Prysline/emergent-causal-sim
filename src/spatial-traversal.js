@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.28.0-furniture-local-geometry';
+  const VERSION='11.29.0-traversal-maneuver';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -202,6 +202,26 @@
       for(const q of outsidePerimeterFloorNodes(st,entry,a)){if(sameLayer(q,n)&&Math.abs(q.x-n.x)+Math.abs(q.y-n.y)===1&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
     }
     return [...out.values()];
+  }
+  function traversalManeuver(st,from,to){
+    const a=normalizeNode(st,from),b=normalizeNode(st,to);if(!a||!b)return null;
+    const passage=SP.getPassageProfile?.(st,a,b);if(!passage)return null;
+    const structure=passage.edgeKind==='structure';
+    const horizontal=passage.edgeKind==='horizontal';
+    if(!structure&&!horizontal)return null;
+    const dz=zOf(b)-zOf(a),dx=b.x-a.x,dy=b.y-a.y;
+    return {
+      from:cloneNode(a),to:cloneNode(b),
+      directionVector:{x:dx,y:dy,z:dz},
+      distanceMeters:passage.distanceMeters??(structure?(Math.abs(dz)||1):Math.hypot(dx,dy)),
+      primaryResource:passage.resource||(structure&&passage.structureId?'structure:'+passage.structureId:null),
+      influenceNodes:horizontal&&passage.horizontalKind==='diagonal'
+        ?[a,b,normalizeNode(st,localPos(a.x,b.y,zOf(a)),FLOOR),normalizeNode(st,localPos(b.x,a.y,zOf(a)),FLOOR)].filter(Boolean).map(cloneNode)
+        :[cloneNode(a),cloneNode(b)],
+      edgeKind:passage.edgeKind,
+      horizontalKind:passage.horizontalKind||null,
+      structureId:passage.structureId||null
+    };
   }
   function locomotionRuntime(){return window.SimLocomotion||null;}
   function physicalRuntime(){return window.SimPhysical||null;}
@@ -424,5 +444,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
 })();
