@@ -62,7 +62,14 @@ for(const relativePath of stateTests){
   const handLoadsEngine=/['"]engine\.js['"]/.test(source);
   const productionDerived=/productionScriptPaths|loadProductionBefore|loadProductionThrough/.test(source);
   const profileComposed=/loadAuthoringProfile|loadSpatialCoreProfile|loadRuntimeProfile|loadInitialStateProfile/.test(source);
+  const handLoadsAuthoring=/['"](?:src\/)?world-authoring\.js['"]/.test(source);
   const handLoadsInitializer=/['"](?:src\/)?world-initializer\.js['"]/.test(source);
+  if(handLoadsAuthoring&&!productionDerived&&!profileComposed){
+    assert.ok(
+      /['"](?:src\/)?horizontal-geometry\.js['"]/.test(source),
+      relativePath+' must load horizontal-geometry.js before a direct world-authoring.js stack'
+    );
+  }
   if(handLoadsInitializer&&!productionDerived&&!profileComposed){
     assert.ok(
       /['"](?:src\/)?embodiment-capabilities\.js['"]/.test(source),
