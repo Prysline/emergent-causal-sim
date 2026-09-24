@@ -95,7 +95,8 @@
       const explicit=explicitEdgeConstraint(st,a,b);
       if(explicit)passageConstraints[H.pairKey(a,b)]={...explicit};
     }
-    const snapshot={spaceId:'world',surfaceId:FLOOR,z,width,height,cellSizeMeters:1,cells,solids:SP.furnitureSolids?.(st,z)||[],boundaries,passageConstraints};
+    const floorGeometryByCell={};for(const [id,cell] of Object.entries(cells))if(cell.structuralOpen)floorGeometryByCell[id]=SP.floorGeometry(st,cell);
+    const snapshot={spaceId:'world',surfaceId:FLOOR,z,width,height,cellSizeMeters:1,cells,solids:SP.furnitureSolids?.(st,z)||[],floorGeometryByCell,boundaries,passageConstraints};
     const active=SP.currentGeometryQuerySnapshot?.(st);if(active?.horizontalRuntimeSnapshots)active.horizontalRuntimeSnapshots.set(z,snapshot);
     return snapshot;
   }
