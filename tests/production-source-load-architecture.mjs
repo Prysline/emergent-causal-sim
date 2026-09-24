@@ -200,7 +200,7 @@ assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must n
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.28.0-positioned-passage-options');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.24.0-route-locomotion-cost');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.24.0-locomotion-objective-burden');
 assert.equal(L.VERSION,'11.24.0-locomotion-objective-burden');
