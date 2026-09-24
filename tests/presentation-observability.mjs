@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.28.1-furniture-facing-semantics';
+const CURRENT_VERSION='11.28.2-preview-boundary-presentation';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';
@@ -165,6 +165,11 @@ assert.match(indexSource,/crowding-runtime-v1200\.js/,'app shell must load Dynam
 assert.match(indexSource,/validation\/rules\/locomotion-execution\.js/,'app shell must load Locomotion validator');
 assert.match(indexSource,/ui\/inspectors\/locomotion\.js/,'app shell must load Locomotion Debug projection');
 assert.match(indexSource,/ui\/entity-readable\.js/,'app shell must keep the non-agent readable entity layer');
+const coreUiSource=fs.readFileSync(new URL('../src/ui/core.js',import.meta.url),'utf8');
+assert.match(coreUiSource,/s\.map\.boundaries/,'Simulator map presentation must read canonical runtime boundary truth');
+assert.match(coreUiSource,/Object\.values\(s\.doors\|\|\{\}\)/,'Simulator map Door presentation must read root runtime Door truth');
+assert.match(coreUiSource,/boundary\.kind!==['"]wall['"]/,'ordinary openings must not be rendered as solid wall edges');
+
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
 assert.match(readmeSource,/Relationship Foundation/,'README must document the long-term dyadic state foundation');

@@ -34,7 +34,7 @@ function makeOutcome(st,requester,responder,{context='observedIdle',tick=st.tick
 }
 
 E.reset(11350);let st=E.getState();
-assert.equal(st.version,'11.28.1-furniture-facing-semantics');
+assert.equal(st.version,'11.28.2-preview-boundary-presentation');
 assert.equal(E.SOCIAL_OUTCOME_MEMORY_SCHEMA_VERSION,'11.13.5-requester-social-outcome-memory');
 assert.deepEqual(E.SOCIAL_OUTCOME_CONTEXT_CONGRUENCE,{unobserved:-.22,sleeping:-.05,highCommitment:-.12,observedAction:-.28,observedIdle:-.45});
 noIssues('reset');

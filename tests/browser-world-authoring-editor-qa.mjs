@@ -483,6 +483,7 @@ await page.waitForTimeout(50);
 const previewDocument=await page.evaluate(()=>window.SimWorldEditor.getDocument());
 const layeredPreviewDocument=structuredClone(previewDocument);
 layeredPreviewDocument.furniture.sofa.orientation='east';
+layeredPreviewDocument.doors.frontDoor.state='closed';
 layeredPreviewDocument.map.layers.push({z:1,cells:{
   '2,2':{terrain:'floor',material:'wood'},
   '3,2':{terrain:'floor',material:'wood'}
@@ -535,7 +536,7 @@ let runtimePreview=await page.evaluate(()=>{
     orange:{x:state.agents.orange.position.x,y:state.agents.orange.position.y,z:window.SimSpatial.zOf(state.agents.orange.position)},
     zLevels:[...(state.map.zLevels||[])],
     upperTile:state.map.tiles['2,2,1']?{terrain:state.map.tiles['2,2,1'].terrain,z:state.map.tiles['2,2,1'].z}:null,
-    ui:{currentZ:window.SimUI?.getCurrentZ?.(),options:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,mapZ:document.querySelector('#map')?.dataset.z||''},
+    ui:{currentZ:window.SimUI?.getCurrentZ?.(),options:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,mapZ:document.querySelector('#map')?.dataset.z||'',boundaryEdges:document.querySelectorAll('#map .runtime-boundary-edge').length,wallEdges:document.querySelectorAll('#map .runtime-boundary-wall').length,closedDoorEdges:document.querySelectorAll('#map [data-door-id="frontDoor"][data-door-state="closed"]').length,ordinaryOpeningEdges:document.querySelectorAll('#map [data-boundary-id="v:4,4"]').length},
     opening:{kind:state.map.boundaries['0|v:4,4']?.kind||null,derivedAdjacent:topology.cells['3,4'].adjacent.includes('4,4'),runtimeEdgeOpen:window.SimSpatial.edgeStructurallyOpen(state,{x:3,y:4,z:0},{x:4,y:4,z:0})},
     under:{authored:window.SimWorldAuthoring.resolveFurnitureInstance(active.authoring.furniture.diningTable).spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance},
     stair:{runtime:state.structures?.stairA||null,edge:window.SimSpatial.structureBetween(state,{x:8,y:4,z:0,surfaceId:'floor'},{x:2,y:2,z:1,surfaceId:'floor'})?.id||null,route:window.SimSpatial.planRoute(state,state.agents.zhen,{x:2,y:2,z:1},{mode:'walk',objective:'pathDistance'}).pathDistance}
@@ -561,6 +562,10 @@ assert.deepEqual(runtimePreview.ui.options,['0','1']);
 assert.equal(runtimePreview.ui.currentZ,0);
 assert.equal(runtimePreview.ui.mapZ,'0');
 assert.equal(runtimePreview.ui.orangeMarkers,0,'z=1 resident must not be overlaid on the z=0 presentation layer');
+assert.ok(runtimePreview.ui.boundaryEdges>0,'Simulator Preview must render canonical boundary presentation on the active layer');
+assert.ok(runtimePreview.ui.wallEdges>0,'canonical wall boundaries must render as grid-line walls instead of relying on wall terrain tiles');
+assert.ok(runtimePreview.ui.closedDoorEdges>0,'Door presentation must read the closed state from runtime state.doors');
+assert.equal(runtimePreview.ui.ordinaryOpeningEdges,0,'ordinary opening boundaries must not render a solid wall line');
 assert.equal(runtimePreview.opening.kind,'opening');
 assert.equal(runtimePreview.opening.derivedAdjacent,true);
 assert.equal(runtimePreview.opening.runtimeEdgeOpen,true,'runtime boundary interpretation must match the Editor derived preview');
@@ -576,9 +581,10 @@ const upperLayerUi=await page.evaluate(()=>({
   mapZ:document.querySelector('#map')?.dataset.z||'',
   orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,
   zhenMarkers:document.querySelectorAll('#map [data-entity="agent:zhen"]').length,
+  boundaryEdges:document.querySelectorAll('#map .runtime-boundary-edge').length,
   tile:document.querySelector('#map [data-tile="2,2,1"]')?.dataset.tile||null
 }));
-assert.deepEqual(upperLayerUi,{currentZ:1,mapZ:'1',orangeMarkers:1,zhenMarkers:0,tile:'2,2,1'},'runtime layer selector must filter presentation without merging z identities');
+assert.deepEqual(upperLayerUi,{currentZ:1,mapZ:'1',orangeMarkers:1,zhenMarkers:0,boundaryEdges:0,tile:'2,2,1'},'runtime layer selector must filter entities and boundary presentation without merging z identities');
 
 await page.click('#reset');
 await page.waitForTimeout(30);
@@ -638,13 +644,19 @@ const normalLoad=await page.evaluate(()=>({
   bannerHidden:document.querySelector('#editorPreviewBanner')?.hidden,
   chair:window.SimEngine.getState().furniture.chairNW.footprint,
   zLevels:[...(window.SimEngine.getState().map.zLevels||[])],
-  layerOptions:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value)
+  layerOptions:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),
+  wallEdges:document.querySelectorAll('#map .runtime-boundary-wall').length,
+  openDoorEdges:document.querySelectorAll('#map [data-door-id="frontDoor"][data-door-state="open"]').length,
+  closedDoorEdges:document.querySelectorAll('#map [data-door-id="frontDoor"][data-door-state="closed"]').length
 }));
 assert.equal(normalLoad.previewMode,false,'normal simulator load must ignore a stored Editor preview without the explicit query flag');
 assert.equal(normalLoad.bannerHidden,true);
 assert.notDeepEqual(normalLoad.chair,[{x:3,y:4}],'normal simulator load must still use DEFAULT_WORLD_AUTHORING');
 assert.deepEqual(normalLoad.zLevels,[0]);
 assert.deepEqual(normalLoad.layerOptions,['0']);
+assert.ok(normalLoad.wallEdges>0,'normal Simulator load must render canonical wall boundaries');
+assert.ok(normalLoad.openDoorEdges>0,'normal Simulator load must render the default open Door from state.doors');
+assert.equal(normalLoad.closedDoorEdges,0);
 
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
