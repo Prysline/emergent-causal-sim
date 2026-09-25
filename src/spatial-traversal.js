@@ -324,6 +324,9 @@
     return {path:[cloneNode(s),...steps.map(step=>cloneNode(step.to))],steps,startMode:search.startMode,requestedMode:search.requestedMode};
   }
   function pathDistances(st,aOrId,targets,{mode=null}={}){
+    return withGeometrySnapshot(st,()=>pathDistancesWithin(st,aOrId,targets,{mode}));
+  }
+  function pathDistancesWithin(st,aOrId,targets,{mode=null}={}){
     const list=Array.isArray(targets)?targets:[],out=list.map(()=>Infinity),a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
     if(!a||!list.length)return out;
     const s=normalizeNode(st,a.position);
