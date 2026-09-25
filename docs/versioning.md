@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.29.0-horizontal-geometry-foundation`
+`11.29.1-slot-interaction-egress`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.29.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.29.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Shared Horizontal Geometry Foundation release
+### Current Slot Interaction Egress Fix release
+
+`11.29.1-slot-interaction-egress` 修正家具 Slot 姿勢離開後再前往一般互動目標時的 action lifecycle 次序。若 Agent 已在目標的有效 interaction position，仍可直接維持坐姿／躺姿互動；只有在目前不能直接互動且仍綁定 Slot 時，`moveToInteraction()` 才先透過既有 `standUp() → slotEgressNodes()` 離開 Slot，下一 tick 再以合法 floor node 執行 `bestInteractionPosition()` 與 production Route 查詢。這避免把家具 Slot 的 coarse anchor 當成 Human 可站立 floor route 起點，進而把其實可達的 portable object 誤判成「找不到能接近的位置」。
+
+Focused regression 使用 default world seed `20260912`，重現 Human 從餐椅 Slot 嘗試拿取落在 `(4,5,0)` 的 `cupB`：修正前 route scoring 全部為不可達、Agent 留在 sitting；修正後先合法 egress，重新取得 pickup goal，並可繼續拿起杯子。問題在 PR #119 前的 baseline 已存在，因此不是 8-direction Slice 2 regression。
+
+本 patch 改變玩家可觀察到的 simulation semantics，因此依版本規範升 overall current marker；但 World Authoring、Furniture Catalog、Horizontal Geometry、Spatial Traversal、Spatial Passage、Route、Locomotion、Dynamic Congestion、Physical 與 Spatial Identity contract 均未改，各 subsystem generation 維持原值。
+
+### Previous Shared Horizontal Geometry Foundation release
 
 `11.29.0-horizontal-geometry-foundation` 建立 8-direction implementation 的第一個可執行基礎，但**尚未啟用 production diagonal routing**。新增 `src/horizontal-geometry.js` 作為 Authoring／Runtime 未來共用的 pure geometry owner：它不讀 Agent、Crowding、Route cost 或 runtime global state，從 adapter snapshot 派生無向、Agent-independent `HorizontalConnection`。cardinal `distanceMeters = 1`；diagonal `distanceMeters = sqrt(2)`。斜向第一版採 B+ conservative local geometry，同時考慮相關 cardinal Boundary／Door、Furniture metric solids、fixed blocker、explicit Passage constraint 與 shared-corner free-space，並以 `candidate / blocked / unsupported` 區分可證明 passage、可證明阻斷與第一版無法安全證明的情況。
 
