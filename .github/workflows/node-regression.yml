@@ -21,6 +21,7 @@ jobs:
         with:
           node-version: 22
       - run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: node tests/slot-interaction-egress.mjs
       - run: node tests/workflow-architecture.mjs
       - run: node tests/production-source-load-architecture.mjs
       - run: node tests/application-bootstrap-lifecycle.mjs
@@ -39,7 +40,6 @@ jobs:
       - run: node tests/social-sleep-interaction.mjs
       - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
-      - run: node tests/slot-interaction-egress.mjs
       - run: node tests/refill-water-geometry.mjs
       - run: node tests/spatial-z-identity.mjs
       - run: node tests/vertical-structure-traversal.mjs
