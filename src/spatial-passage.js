@@ -1,6 +1,6 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions;if(!W||!SP?.normalizeNode||!P?.getMovementEnvelope||!D?.edgeClearanceOptions)return;
-  const VERSION='11.28.0-positioned-passage-options';
+  const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getMovementEnvelope||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry)return;
+  const VERSION='11.29.0-horizontal-connection-passage';
   const FLOOR='floor',EPS=1e-9;
   const finitePositive=v=>Number.isFinite(Number(v))&&Number(v)>0;
   const constrained=v=>finitePositive(v)?Number(v):null;
@@ -65,31 +65,85 @@
     const interval=centeredInterval(width);
     return [{interval,clearanceWidth:interval?interval.end-interval.start:width,clearanceHeight:height,constrainedBy:{boundary:boundary?.id||null,explicitEdge:!!explicit}}];
   }
+  function runtimeHorizontalSnapshot(st,z){
+    const tiles=Object.values(st.map?.tiles||{}).filter(tile=>zOf(tile)===z);
+    const maxX=Math.max(-1,...tiles.map(tile=>tile.x)),maxY=Math.max(-1,...tiles.map(tile=>tile.y));
+    const width=Math.max(Number(W.WIDTH)||0,maxX+1),height=Math.max(Number(W.HEIGHT)||0,maxY+1),cells={};
+    for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+      const tile=SP.tileAt?.(st,x,y,z),id=x+','+y;
+      const fixedContainer=Object.values(st.containers||{}).some(c=>c.portable===false&&!c.supportId&&zOf(c.position)===z&&c.position?.x===x&&c.position?.y===y);
+      const fixedSource=Object.values(st.sources||{}).some(source=>source.blocksMovement!==false&&zOf(source.position)===z&&source.position?.x===x&&source.position?.y===y);
+      cells[id]={id,x,y,z,structuralOpen:tile?.walkable===true,staticBlocked:fixedContainer||fixedSource};
+    }
+    const boundaries={};
+    for(const [key,boundary] of Object.entries(st.map?.boundaries||{})){
+      if(!key.startsWith(z+'|'))continue;
+      const id=boundary.id||key.slice(key.indexOf('|')+1);
+      const doors=Object.values(st.doors||{}).filter(door=>door?.boundary?.z===z&&door?.boundary?.id===id);
+      boundaries[id]={
+        id,kind:boundary.kind,
+        ...(finitePositive(boundary.clearanceWidth)?{clearanceWidth:Number(boundary.clearanceWidth)}:{}),
+        ...(finitePositive(boundary.clearanceHeight)?{clearanceHeight:Number(boundary.clearanceHeight)}:{}),
+        passable:boundary.kind==='opening'&&doors.every(door=>door.state==='open'),
+        doorIds:doors.map(door=>door.id).sort()
+      };
+    }
+    const passageConstraints={};
+    for(let y=0;y<height;y++)for(let x=0;x<width;x++)for(const [dx,dy] of [[1,0],[0,1]]){
+      const a=SP.normalizeNode(st,{x,y,z},FLOOR),b=SP.normalizeNode(st,{x:x+dx,y:y+dy,z},FLOOR);
+      if(!a||!b||b.x>=width||b.y>=height)continue;
+      const explicit=explicitEdgeConstraint(st,a,b);
+      if(explicit)passageConstraints[H.pairKey(a,b)]={...explicit};
+    }
+    const floorGeometryByCell={};for(const [id,cell] of Object.entries(cells))if(cell.structuralOpen)floorGeometryByCell[id]=SP.floorGeometry(st,cell);
+    const snapshot={spaceId:'world',surfaceId:FLOOR,z,width,height,cellSizeMeters:1,cells,solids:SP.furnitureSolids?.(st,z)||[],floorGeometryByCell,boundaries,passageConstraints};
+    const active=SP.currentGeometryQuerySnapshot?.(st);if(active?.horizontalRuntimeSnapshots)active.horizontalRuntimeSnapshots.set(z,snapshot);
+    return snapshot;
+  }
+  function horizontalConnection(st,from,to){
+    const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);
+    if(!a||!b||a.surfaceId!==FLOOR||b.surfaceId!==FLOOR||zOf(a)!==zOf(b))return null;
+    const dx=Math.abs(a.x-b.x),dy=Math.abs(a.y-b.y);
+    if(!((dx===1&&dy===0)||(dx===0&&dy===1)||(dx===1&&dy===1)))return null;
+    const z=zOf(a),snapshot=SP.currentGeometryQuerySnapshot?.(st)||null;
+    let geometry=snapshot?.horizontalByLayer?.get(z)||null;
+    if(!geometry){const runtimeSnapshot=snapshot?.horizontalRuntimeSnapshots?.get(z)||runtimeHorizontalSnapshot(st,z);geometry=H.deriveHorizontalGeometry(runtimeSnapshot);if(snapshot?.horizontalByLayer)snapshot.horizontalByLayer.set(z,geometry);}
+    const pair=H.pairKey(a,b);
+    return geometry.horizontalConnections.find(connection=>H.pairKey(connection.from,connection.to)===pair)||null;
+  }
+  function connectionOptions(connection){
+    return (connection?.options||[]).map(option=>({
+      interval:option.interval?{...option.interval}:null,
+      clearanceWidth:option.clearanceWidth??null,
+      clearanceHeight:option.clearanceHeight??null,
+      constrainedBy:{...option.constrainedBy,explicitEdge:option.constrainedBy?.explicitPassage===true}
+    }));
+  }
   function getPassageProfile(st,from,to){
     const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b)return null;
-    const structure=structureConstraint(st,a,b),horizontal=edgeAdjacent(st,a,b);
-    if(!horizontal&&!structure)return null;
-    const explicit=explicitEdgeConstraint(st,a,b),boundary=horizontal?authoredBoundaryConstraint(st,a,b):null;
-    let options;
-    if(structure)options=structureOptions(structure,explicit);
-    else if(a.surfaceId===FLOOR&&b.surfaceId===FLOOR){
-      const geometry=D.edgeClearanceOptions(SP.furnitureSolids?.(st,zOf(a))||[],a,b,zOf(a));
-      options=constrainHorizontalOptions(geometry,{boundary,explicit});
-    }else options=genericOptions(boundary,explicit);
-    return {
-      from:a,to:b,
-      edgeKind:structure?'structure':'horizontal',
-      structureId:structure?.id||null,
-      structureKind:structure?.kind||null,
-      options,
-      constrainedBy:{structure:structure?.id||null,boundary:boundary?.id||null,explicitEdge:!!explicit}
-    };
+    const structure=structureConstraint(st,a,b);
+    if(structure){
+      const explicit=explicitEdgeConstraint(st,a,b);
+      return {from:a,to:b,edgeKind:'structure',structureId:structure.id,structureKind:structure.kind,options:structureOptions(structure,explicit),constrainedBy:{structure:structure.id,boundary:null,explicitEdge:!!explicit},resource:'structure:'+structure.id,distanceMeters:Math.abs(zOf(a)-zOf(b))||1,horizontalConnection:null};
+    }
+    if(a.surfaceId===FLOOR&&b.surfaceId===FLOOR){
+      const connection=horizontalConnection(st,a,b);if(!connection)return null;
+      return {
+        from:a,to:b,edgeKind:'horizontal',horizontalKind:connection.kind,status:connection.status,
+        structureId:null,structureKind:null,options:connectionOptions(connection),
+        constrainedBy:JSON.parse(JSON.stringify(connection.constrainedBy||{})),
+        resource:connection.resource,distanceMeters:connection.distanceMeters,
+        horizontalConnection:JSON.parse(JSON.stringify(connection))
+      };
+    }
+    if(!edgeAdjacent(st,a,b))return null;
+    const explicit=explicitEdgeConstraint(st,a,b),boundary=authoredBoundaryConstraint(st,a,b);
+    return {from:a,to:b,edgeKind:'horizontal',horizontalKind:'cardinal',status:'candidate',structureId:null,structureKind:null,options:genericOptions(boundary,explicit),constrainedBy:{structure:null,boundary:boundary?.id||null,explicitEdge:!!explicit},resource:null,distanceMeters:1,horizontalConnection:null};
   }
-  function physicallyOpen(st,from,to){
-    const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b)return false;
+  function physicallyOpen(st,passage){
+    const a=passage?.from,b=passage?.to;if(!a||!b)return false;
     if(!SP.nodeWalkable(st,a,null)||!SP.nodeWalkable(st,b,null))return false;
-    const structure=SP.structureBetween?.(st,a,b)||null;
-    if(a.surfaceId===FLOOR&&b.surfaceId===FLOOR&&!structure&&SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,a,b))return false;
+    if(passage.edgeKind==='horizontal'&&a.surfaceId===FLOOR&&b.surfaceId===FLOOR&&passage.horizontalConnection&&passage.status!=='candidate')return false;
     return true;
   }
   function optionFits(envelope,option){
@@ -125,7 +179,7 @@
   }
   function traversalFeasibility(st,agent,from,to){
     const passage=getPassageProfile(st,from,to);if(!passage)return {edgeValid:false,edgeOpen:false,passage:null,modes:{}};
-    const edgeOpen=physicallyOpen(st,passage.from,passage.to)&&(passage.options?.length??0)>0,modes={};
+    const edgeOpen=physicallyOpen(st,passage)&&(passage.options?.length??0)>0,modes={};
     for(const mode of P.supportedLocomotionModes?.(agent)||[])modes[mode]=modeFeasibility(st,agent,mode,passage,edgeOpen);
     return {edgeValid:true,edgeOpen,passage,modes};
   }

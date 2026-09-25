@@ -10,7 +10,7 @@ loadRuntimeProfile([
 
 const APP_VERSION='11.29.0-horizontal-geometry-foundation';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
-const PASSAGE_VERSION='11.28.0-positioned-passage-options';
+const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

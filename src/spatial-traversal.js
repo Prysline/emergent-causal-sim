@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.28.0-furniture-local-geometry';
+  const VERSION='11.29.0-traversal-maneuver';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -40,7 +40,7 @@
   function geometrySnapshotFor(st){return activeGeometrySnapshot?.state===st?activeGeometrySnapshot:null;}
   function withGeometrySnapshot(st,fn){
     const current=geometrySnapshotFor(st);if(current)return fn(current);
-    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map()};
+    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),horizontalByLayer:new Map(),horizontalRuntimeSnapshots:new Map()};
     activeGeometrySnapshot=snapshot;
     try{return fn(snapshot);}finally{activeGeometrySnapshot=previous;}
   }
@@ -143,11 +143,17 @@
     return [...out.values()];
   }
   function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){
-    const a=agentFor(st,aOrId),candidates=slotApproachNodes(st,slotOrId,a,mode),ranked=[];
-    for(const node of candidates){
-      const route=a?planRoute(st,a,node,{mode:locomotionRuntime()?'auto':mode,objective}):null;
-      const value=route?.[objective]??(route?.pathDistance??Infinity);
-      if(!a||Number.isFinite(value))ranked.push({node,value,pathDistance:route?.pathDistance??0});
+    const a=agentFor(st,aOrId);
+    return withGeometrySnapshot(st,()=>bestSlotApproachNodeWithin(st,slotOrId,a,{mode,objective}));
+  }
+  function bestSlotApproachNodeWithin(st,slotOrId,a,{mode='walk',objective='traversalCost'}={}){
+    const candidates=slotApproachNodes(st,slotOrId,a,mode);
+    if(!a)return candidates[0]||null;
+    const requested=locomotionRuntime()?'auto':mode,distances=objective==='pathDistance'?pathDistances(st,a,candidates,{mode:requested}):null,ranked=[];
+    for(let i=0;i<candidates.length;i++){
+      const node=candidates[i],route=distances?null:planRoute(st,a,node,{mode:requested,objective});
+      const value=distances?distances[i]:(route?.[objective]??route?.pathDistance??Infinity);
+      if(Number.isFinite(value))ranked.push({node,value,pathDistance:distances?value:(route?.pathDistance??0)});
     }
     ranked.sort((x,y)=>x.value-y.value||x.pathDistance-y.pathDistance||nodeKey(st,x.node).localeCompare(nodeKey(st,y.node)));
     return ranked[0]?.node||null;
@@ -202,6 +208,26 @@
       for(const q of outsidePerimeterFloorNodes(st,entry,a)){if(sameLayer(q,n)&&Math.abs(q.x-n.x)+Math.abs(q.y-n.y)===1&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
     }
     return [...out.values()];
+  }
+  function traversalManeuver(st,from,to){
+    const a=normalizeNode(st,from),b=normalizeNode(st,to);if(!a||!b)return null;
+    const passage=SP.getPassageProfile?.(st,a,b);if(!passage)return null;
+    const structure=passage.edgeKind==='structure';
+    const horizontal=passage.edgeKind==='horizontal';
+    if(!structure&&!horizontal)return null;
+    const dz=zOf(b)-zOf(a),dx=b.x-a.x,dy=b.y-a.y;
+    return {
+      from:cloneNode(a),to:cloneNode(b),
+      directionVector:{x:dx,y:dy,z:dz},
+      distanceMeters:passage.distanceMeters??(structure?(Math.abs(dz)||1):Math.hypot(dx,dy)),
+      primaryResource:passage.resource||(structure&&passage.structureId?'structure:'+passage.structureId:null),
+      influenceNodes:horizontal&&passage.horizontalKind==='diagonal'
+        ?[a,b,normalizeNode(st,localPos(a.x,b.y,zOf(a)),FLOOR),normalizeNode(st,localPos(b.x,a.y,zOf(a)),FLOOR)].filter(Boolean).map(cloneNode)
+        :[cloneNode(a),cloneNode(b)],
+      edgeKind:passage.edgeKind,
+      horizontalKind:passage.horizontalKind||null,
+      structureId:passage.structureId||null
+    };
   }
   function locomotionRuntime(){return window.SimLocomotion||null;}
   function physicalRuntime(){return window.SimPhysical||null;}
@@ -304,6 +330,9 @@
     return {path:[cloneNode(s),...steps.map(step=>cloneNode(step.to))],steps,startMode:search.startMode,requestedMode:search.requestedMode};
   }
   function pathDistances(st,aOrId,targets,{mode=null}={}){
+    return withGeometrySnapshot(st,()=>pathDistancesWithin(st,aOrId,targets,{mode}));
+  }
+  function pathDistancesWithin(st,aOrId,targets,{mode=null}={}){
     const list=Array.isArray(targets)?targets:[],out=list.map(()=>Infinity),a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
     if(!a||!list.length)return out;
     const s=normalizeNode(st,a.position);
@@ -424,5 +453,5 @@
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});
 })();

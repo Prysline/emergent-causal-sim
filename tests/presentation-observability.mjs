@@ -9,7 +9,7 @@ const CROWDING_VERSION='11.28.0-effective-passage-width';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
-const PASSAGE_VERSION='11.28.0-positioned-passage-options';
+const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
