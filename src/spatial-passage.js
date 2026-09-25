@@ -140,11 +140,10 @@
     const explicit=explicitEdgeConstraint(st,a,b),boundary=authoredBoundaryConstraint(st,a,b);
     return {from:a,to:b,edgeKind:'horizontal',horizontalKind:'cardinal',status:'candidate',structureId:null,structureKind:null,options:genericOptions(boundary,explicit),constrainedBy:{structure:null,boundary:boundary?.id||null,explicitEdge:!!explicit},resource:null,distanceMeters:1,horizontalConnection:null};
   }
-  function physicallyOpen(st,from,to){
-    const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b)return false;
+  function physicallyOpen(st,passage){
+    const a=passage?.from,b=passage?.to;if(!a||!b)return false;
     if(!SP.nodeWalkable(st,a,null)||!SP.nodeWalkable(st,b,null))return false;
-    const structure=SP.structureBetween?.(st,a,b)||null;
-    if(a.surfaceId===FLOOR&&b.surfaceId===FLOOR&&!structure){const connection=horizontalConnection(st,a,b);if(!connection||connection.status!=='candidate')return false;}
+    if(passage.edgeKind==='horizontal'&&a.surfaceId===FLOOR&&b.surfaceId===FLOOR&&passage.horizontalConnection&&passage.status!=='candidate')return false;
     return true;
   }
   function optionFits(envelope,option){
@@ -180,7 +179,7 @@
   }
   function traversalFeasibility(st,agent,from,to){
     const passage=getPassageProfile(st,from,to);if(!passage)return {edgeValid:false,edgeOpen:false,passage:null,modes:{}};
-    const edgeOpen=physicallyOpen(st,passage.from,passage.to)&&(passage.options?.length??0)>0,modes={};
+    const edgeOpen=physicallyOpen(st,passage)&&(passage.options?.length??0)>0,modes={};
     for(const mode of P.supportedLocomotionModes?.(agent)||[])modes[mode]=modeFeasibility(st,agent,mode,passage,edgeOpen);
     return {edgeValid:true,edgeOpen,passage,modes};
   }
