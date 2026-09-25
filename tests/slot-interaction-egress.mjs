@@ -45,4 +45,11 @@ assert.equal(human.action?.wait,0,'standing up for interaction must not be recor
 assert.equal(cup.supportId,undefined,'dropped portable cup must remain detached from its former support');
 assert.ok(SP.nodeSame(st,cup.position,SP.normalizeNode(st,{x:4,y:5,z:0},'floor')));
 
+const postEgressGoal=SP.bestInteractionPosition(st,human,{kind:'object',id:'cupB'},'pickup');
+assert.ok(postEgressGoal,'after slot egress the same production pickup query must recover a reachable goal');
+
+for(let i=0;i<20&&human.held!=='cupB';i++)E.tick();
+assert.equal(human.held,'cupB','the interaction lifecycle must continue from slot egress to actually picking up the dropped cup');
+assert.equal(human.action?.wait,0,'successful post-egress routing must not accumulate unreachable-target waits');
+
 console.log('slot posture -> general object interaction egress regression: ok');
