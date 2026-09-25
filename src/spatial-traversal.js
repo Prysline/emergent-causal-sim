@@ -143,11 +143,13 @@
     return [...out.values()];
   }
   function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){
-    const a=agentFor(st,aOrId),candidates=slotApproachNodes(st,slotOrId,a,mode),ranked=[];
-    for(const node of candidates){
-      const route=a?planRoute(st,a,node,{mode:locomotionRuntime()?'auto':mode,objective}):null;
-      const value=route?.[objective]??(route?.pathDistance??Infinity);
-      if(!a||Number.isFinite(value))ranked.push({node,value,pathDistance:route?.pathDistance??0});
+    const a=agentFor(st,aOrId),candidates=slotApproachNodes(st,slotOrId,a,mode);
+    if(!a)return candidates[0]||null;
+    const requested=locomotionRuntime()?'auto':mode,distances=objective==='pathDistance'?pathDistances(st,a,candidates,{mode:requested}):null,ranked=[];
+    for(let i=0;i<candidates.length;i++){
+      const node=candidates[i],route=distances?null:planRoute(st,a,node,{mode:requested,objective});
+      const value=distances?distances[i]:(route?.[objective]??route?.pathDistance??Infinity);
+      if(Number.isFinite(value))ranked.push({node,value,pathDistance:distances?value:(route?.pathDistance??0)});
     }
     ranked.sort((x,y)=>x.value-y.value||x.pathDistance-y.pathDistance||nodeKey(st,x.node).localeCompare(nodeKey(st,y.node)));
     return ranked[0]?.node||null;
