@@ -34,7 +34,20 @@ assert.equal(SP.VERSION,'11.29.0-traversal-maneuver');
   assert.ok(Math.abs(passage.distanceMeters-Math.SQRT2)<1e-9);
   assert.equal(passage.resource,'corner:world|floor|0|2,2');
   assert.equal(passage.horizontalConnection.kind,'diagonal');
-  assert.equal(SP.traversalFeasibility(st,human,a,b).modes.walk.feasible,true);
+  const connectionBefore=JSON.stringify(passage.horizontalConnection);
+  const feasibility=SP.traversalFeasibility(st,human,a,b);
+  assert.equal(feasibility.modes.walk.feasible,true);
+  assert.equal(JSON.stringify(passage.horizontalConnection),connectionBefore,'Agent feasibility must not mutate objective HorizontalConnection geometry');
+  assert.equal(Object.hasOwn(passage.horizontalConnection,'effectiveClearanceWidth'),false,'Agent-specific effective clearance must stay out of HorizontalConnection');
+
+  const cardinalPassage=SP.getPassageProfile(st,a,east);
+  assert.equal(cardinalPassage.horizontalKind,'cardinal');
+  assert.equal(cardinalPassage.status,'candidate');
+  assert.equal(cardinalPassage.distanceMeters,1);
+  const cardinalManeuver=SP.traversalManeuver(st,a,east);
+  assert.equal(cardinalManeuver.primaryResource,cardinalPassage.resource);
+  assert.equal(cardinalManeuver.primaryResource.startsWith('edge:'),true);
+  assert.equal(cardinalManeuver.influenceNodes.length,2);
 
   const maneuver=SP.traversalManeuver(st,a,b);
   assert.deepEqual(maneuver.directionVector,{x:1,y:1,z:0});
