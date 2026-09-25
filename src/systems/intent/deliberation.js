@@ -114,20 +114,22 @@
     const hook=window.SimMemoryDeliberation?.isDistinctTargetCandidate;
     return !(hook&&hook(st,a,intent,c));
   }
-  function reconsiderationSnapshot(st,a){
-    const intent=a.activeIntent,eligibility=softEligible(st,a),commitment=derivedCommitmentCost(st,a),baseCurrentUtility=intent?utilityForIntent(st,a,intent.kind,{intent}):0;
+  function buildReconsiderationSnapshot(st,a,eligibility){
+    const intent=a.activeIntent,commitment=derivedCommitmentCost(st,a),baseCurrentUtility=intent?utilityForIntent(st,a,intent.kind,{intent}):0;
     const adjustCurrent=window.SimMemoryDeliberation?.adjustCurrentIntentUtility;
     const currentUtility=adjustCurrent&&intent?adjustCurrent(st,a,intent,baseCurrentUtility):baseCurrentUtility;
     const candidates=candidateIntents(st,a).filter(c=>!sameCurrentCandidate(st,a,intent,c)),best=candidates[0]||null,threshold=currentUtility+SOFT_SWITCH_MARGIN+(Number.isFinite(commitment)?commitment:0);
     return {...eligibility,currentUtility,commitmentCost:commitment,switchMargin:SOFT_SWITCH_MARGIN,switchThreshold:threshold,bestChallenger:best};
   }
+  function reconsiderationSnapshot(st,a){return buildReconsiderationSnapshot(st,a,softEligible(st,a));}
   function freshIntent(st,a,c,priorIntent){
     const id=`intent:${a.id}:${st.tick}:${c.intentKind}:soft`;
     if(c.intentKind==='respondSocialBid')return {id,kind:c.intentKind,createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:c.bidId,observedTick:c.observedTick,reconsideration:{type:'soft',tick:st.tick,priorIntentId:priorIntent?.id||null}}};
     return {id,kind:c.intentKind,createdTick:st.tick,lifecycle:'actionBound',source:{type:'softReconsideration',tick:st.tick,priorIntentId:priorIntent?.id||null,priorIntentKind:priorIntent?.kind||null}};
   }
   function applySoftReconsideration(st,a){
-    const snap=reconsiderationSnapshot(st,a),c=snap.bestChallenger;if(!snap.ok||!c||!Number.isFinite(snap.commitmentCost)||c.utility<=snap.switchThreshold)return false;
+    const eligibility=softEligible(st,a);if(!eligibility.ok)return false;
+    const snap=buildReconsiderationSnapshot(st,a,eligibility),c=snap.bestChallenger;if(!c||!Number.isFinite(snap.commitmentCost)||c.utility<=snap.switchThreshold)return false;
     const nextAction=buildAction(st,a,c);if(!nextAction)return false;
     const priorIntent=a.activeIntent,priorActionKind=actionKind(a),priorIntentId=priorIntent?.id||null,priorIntentKind=priorIntent?.kind||null;
     clearAgentReservations(st,a);dropHeld(st,a);a.action=null;a.activeIntent=null;
