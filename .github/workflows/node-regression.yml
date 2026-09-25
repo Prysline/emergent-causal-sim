@@ -40,6 +40,7 @@ jobs:
       - run: node tests/social-sleep-interaction.mjs
       - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
+      - run: node tests/interaction-position-batching.mjs
       - run: node tests/refill-water-geometry.mjs
       - run: node tests/spatial-z-identity.mjs
       - run: node tests/vertical-structure-traversal.mjs
