@@ -57,6 +57,10 @@ jobs:
             test: tests/browser-coretick-traversal-attribution-probe.mjs
             extra_test: ''
             artifact: artifacts/browser-coretick-traversal-attribution-probe
+          - suite: interaction-position-batch-probe
+            test: tests/browser-interaction-position-batch-probe.mjs
+            extra_test: ''
+            artifact: artifacts/browser-interaction-position-batch-probe
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
