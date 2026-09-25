@@ -429,8 +429,32 @@
     const legacy=baseInteractionGeometry(st,target,agent,affordance);return {...legacy,positions:(legacy.positions||[]).map(p=>normalizeNode(st,p,FLOOR))};
   }
   function interactionPositions(st,target,agent,affordance='default'){return interactionGeometry(st,target,agent,affordance).positions;}
+  function interactionTraversalCosts(st,aOrId,targets,{mode=null}={}){
+    return withGeometrySnapshot(st,()=>{
+      const list=Array.isArray(targets)?targets:[],out=list.map(()=>Infinity),a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
+      if(!a||!list.length)return out;
+      const s=normalizeNode(st,a.position);availableModes(a,requested);
+      if(!s||!nodeLocomotionAccessible(st,s,a))return out;
+      const goals=new Map();
+      for(let i=0;i<list.length;i++){
+        const g=normalizeNode(st,list[i]);if(!g||!nodeLocomotionAccessible(st,g,a))continue;
+        if(nodeSame(st,s,g)){out[i]=0;continue;}
+        const key=nodeKey(st,g),indices=goals.get(key)||[];
+        indices.push(i);goals.set(key,indices);
+      }
+      if(!goals.size)return out;
+      routeStateSearch(st,s,a,{objective:'traversalCost',mode:requested,onSettle:(node,_mode,best)=>{
+        const key=nodeKey(st,node),indices=goals.get(key);if(!indices)return false;
+        for(const i of indices)out[i]=best.primary;
+        goals.delete(key);
+        return goals.size===0;
+      }});
+      return out;
+    });
+  }
   function bestInteractionPosition(st,a,target,affordance='default'){
-    const C=crowdingRuntime();let list=interactionPositions(st,target,a,affordance).map(p=>({p,d:pathCost(st,a,p),occ:nodeOccupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
+    const C=crowdingRuntime(),positions=interactionPositions(st,target,a,affordance),costs=interactionTraversalCosts(st,a,positions,{mode:locomotionRuntime()?'auto':'walk'});
+    let list=positions.map((p,i)=>({p,d:costs[i],occ:nodeOccupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
     const current=nodeForAgent(st,a),differentNodeSameXY=x=>localSame(current,x.p)&&!nodeSame(st,current,x.p);if(list.some(x=>!differentNodeSameXY(x)))list=list.filter(x=>!differentNodeSameXY(x));
     list.sort((x,y)=>(C?0:x.occ-y.occ)||x.d-y.d||SP.manhattan(a.position,x.p)-SP.manhattan(a.position,y.p));return list[0]?.p||null;
   }
