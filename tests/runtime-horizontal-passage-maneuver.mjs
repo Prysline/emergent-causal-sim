@@ -66,6 +66,21 @@ assert.equal(SP.VERSION,'11.29.0-traversal-maneuver');
 
 {
   const {st,human,a,b}=openSquare();
+  const cat=st.agents.orange;
+  cat.position=floor(st,1,1);
+  cat.posture={kind:'standing',slotId:null,furnitureId:null};
+  st.furniture.northEastStrip={id:'northEastStrip',footprint:[{x:1,y:1}],slots:[],spatial:{solids:[{key:'northEastStrip',layerZ:0,bounds:{x:1.9,y:1,z:0,width:.1,depth:.62,height:1}}]}};
+  st.furniture.southWestStrip={id:'southWestStrip',footprint:[{x:1,y:1}],slots:[],spatial:{solids:[{key:'southWestStrip',layerZ:0,bounds:{x:1,y:1.9,z:0,width:.64,depth:.1,height:1}}]}};
+  const passage=SP.getPassageProfile(st,a,b);
+  assert.equal(passage.status,'candidate','objective narrow diagonal must remain a candidate independent of Agent envelope');
+  const connectionBefore=JSON.stringify(passage.horizontalConnection);
+  assert.equal(SP.traversalFeasibility(st,cat,a,b).modes.walk.feasible,true,'small cat MovementEnvelope must fit the narrow diagonal candidate');
+  assert.equal(SP.traversalFeasibility(st,human,a,b).modes.walk.feasible,false,'larger Human MovementEnvelope must fail the same narrow diagonal candidate');
+  assert.equal(JSON.stringify(passage.horizontalConnection),connectionBefore,'Agent-specific narrow-corner feasibility must not rewrite objective HorizontalConnection');
+}
+
+{
+  const {st,human,a,b}=openSquare();
   st.map.boundaries['0|v:2,1']={id:'v:2,1',kind:'wall'};
   const passage=SP.getPassageProfile(st,a,b);
   assert.equal(passage.status,'blocked');
