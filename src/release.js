@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.29.0-horizontal-geometry-foundation';
+  const VERSION='11.29.1-slot-interaction-egress';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{

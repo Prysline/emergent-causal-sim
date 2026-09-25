@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.29.0-horizontal-geometry-foundation';
+const CURRENT_VERSION='11.29.1-slot-interaction-egress';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
