@@ -49,6 +49,10 @@ jobs:
             test: tests/browser-world-authoring-editor-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-world-authoring-editor-qa
+          - suite: step-batch-performance
+            test: tests/browser-step-batch-performance-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-step-batch-performance-qa
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
