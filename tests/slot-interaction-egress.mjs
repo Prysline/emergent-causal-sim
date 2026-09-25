@@ -52,4 +52,34 @@ for(let i=0;i<20&&human.held!=='cupB';i++)E.tick();
 assert.equal(human.held,'cupB','the interaction lifecycle must continue from slot egress to actually picking up the dropped cup');
 assert.equal(human.action?.wait,0,'successful post-egress routing must not accumulate unreachable-target waits');
 
+E.reset(20260913);
+{
+  const st2=E.getState(),human2=st2.agents.zhen,cup2=st2.containers.cupB,slot2=SP.getSlot(st2,'chairNW:seat');
+  st2.agents.zhou.offMap=true;
+  st2.agents.orange.offMap=true;
+
+  human2.position={...slot2.position};
+  human2.posture={kind:'sitting',slotId:slot2.id,furnitureId:slot2.furnitureId};
+  human2.locomotion={mode:null,phase:'idle'};
+  human2.held='cupB';
+  delete cup2.supportId;
+  cup2.position={...slot2.position};
+  cup2.contents={water:5};
+  human2.action={
+    kind:'drinkWater',
+    phase:'toVessel',
+    started:st2.tick,
+    wait:0,
+    resource:'water',
+    container:'cupB'
+  };
+
+  assert.equal(SP.isAtInteraction(st2,human2,{kind:'object',id:'cupB'},'pickup'),true,'a held target is already interactable from the current Slot posture');
+  E.tick();
+  assert.equal(human2.posture.kind,'sitting','already-valid interaction must not force Slot egress');
+  assert.equal(human2.posture.slotId,slot2.id);
+  assert.equal(human2.action?.phase,'take','the action should advance directly when interaction is already valid');
+  assert.equal(human2.action?.wait,0);
+}
+
 console.log('slot posture -> general object interaction egress regression: ok');
