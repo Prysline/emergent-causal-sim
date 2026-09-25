@@ -11,6 +11,55 @@ const pageErrors=[],consoleErrors=[];
 page.on('pageerror',error=>pageErrors.push(String(error)));
 page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
 
+await page.addInitScript(()=>{
+  const rows={};
+  let currentTick=null;
+  function row(kind,phase,id){
+    const key=[kind,phase,id].join(':');
+    return rows[key]||(rows[key]={kind,phase,id,calls:0,totalMs:0,maxMs:0,byTick:{}});
+  }
+  window.__stepBatchPipelineProbe={
+    beginTick(ordinal){currentTick=ordinal;},
+    endTick(){currentTick=null;},
+    record(kind,phase,id,duration){
+      const r=row(kind,phase,id);
+      r.calls++;
+      r.totalMs+=duration;
+      r.maxMs=Math.max(r.maxMs,duration);
+      if(currentTick!==null){
+        const t=r.byTick[currentTick]||(r.byTick[currentTick]={calls:0,totalMs:0,maxMs:0});
+        t.calls++;
+        t.totalMs+=duration;
+        t.maxMs=Math.max(t.maxMs,duration);
+      }
+    },
+    reset(){for(const key of Object.keys(rows))delete rows[key];currentTick=null;},
+    snapshot(){return structuredClone(rows);}
+  };
+});
+
+await page.route('**/src/runtime-hook-pipeline.js',async route=>{
+  const response=await route.fetch();
+  let body=await response.text();
+  const hookAnchor="for(const entry of hooks.get(phase)||[])entry.handler(ctx);";
+  const observerAnchor="for(const entry of observers.get(phase)||[])entry.handler(ctx);";
+  const coreAnchor="ctx.result=coreTick(...args);";
+  if(!body.includes(hookAnchor)||!body.includes(observerAnchor)||!body.includes(coreAnchor))throw new Error('runtime pipeline instrumentation anchor missing');
+  body=body.replace(
+    hookAnchor,
+    "for(const entry of hooks.get(phase)||[]){const __start=performance.now();try{entry.handler(ctx);}finally{globalThis.__stepBatchPipelineProbe?.record('hook',phase,entry.id,performance.now()-__start);}}"
+  );
+  body=body.replace(
+    observerAnchor,
+    "for(const entry of observers.get(phase)||[]){const __start=performance.now();try{entry.handler(ctx);}finally{globalThis.__stepBatchPipelineProbe?.record('observer',phase,entry.id,performance.now()-__start);}}"
+  );
+  body=body.replace(
+    coreAnchor,
+    "{const __start=performance.now();try{ctx.result=coreTick(...args);}finally{globalThis.__stepBatchPipelineProbe?.record('core','tick','engine.coreTick',performance.now()-__start);}}"
+  );
+  await route.fulfill({response,body});
+});
+
 function hashText(text){
   let h=2166136261;
   for(let i=0;i<text.length;i++){
@@ -32,7 +81,7 @@ async function installInstrumentation(){
     if(!E||!SP||!V)throw new Error('step batch perf instrumentation requires runtime globals');
     if(window.__stepBatchPerf)return;
 
-    let phase='outsideTick';
+    let phase='outsideTick',activeTickOrdinal=null;
     const data={
       ticks:[],
       queries:{},
@@ -52,6 +101,13 @@ async function installInstrumentation(){
       p.calls++;
       p.totalMs+=duration;
       p.maxMs=Math.max(p.maxMs,duration);
+      if(activeTickOrdinal!==null){
+        const t=r.byTick||(r.byTick={});
+        const tick=t[activeTickOrdinal]||(t[activeTickOrdinal]={calls:0,totalMs:0,maxMs:0});
+        tick.calls++;
+        tick.totalMs+=duration;
+        tick.maxMs=Math.max(tick.maxMs,duration);
+      }
     }
     function wrap(target,name,label){
       const original=target?.[name];
@@ -66,12 +122,16 @@ async function installInstrumentation(){
     const originalTick=E.tick;
     E.tick=function(...args){
       const previous=phase,before=E.getState()?.tick??null,start=performance.now();
+      activeTickOrdinal=data.ticks.length+1;
+      window.__stepBatchPipelineProbe?.beginTick(activeTickOrdinal);
       phase='insideTick';
       try{return originalTick.apply(this,args);}
       finally{
         const after=E.getState()?.tick??null;
         data.ticks.push({before,after,durationMs:performance.now()-start});
         phase=previous;
+        activeTickOrdinal=null;
+        window.__stepBatchPipelineProbe?.endTick();
       }
     };
 
@@ -115,6 +175,7 @@ async function installInstrumentation(){
         clearStore(data.queries);
         clearStore(data.domWrites);
         data.longTasks.length=0;
+        window.__stepBatchPipelineProbe?.reset();
       },
       snapshot(){
         return {
@@ -123,6 +184,7 @@ async function installInstrumentation(){
           domWrites:structuredClone(data.domWrites),
           longTasks:data.longTasks.map(x=>({...x})),
           longTaskSupported:data.longTaskSupported,
+          pipeline:window.__stepBatchPipelineProbe?.snapshot?.()||{},
           tick:E.getState()?.tick??null,
           stateJson:JSON.stringify(E.getState())
         };
