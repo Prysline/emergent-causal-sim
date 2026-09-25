@@ -143,7 +143,11 @@
     return [...out.values()];
   }
   function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){
-    const a=agentFor(st,aOrId),candidates=slotApproachNodes(st,slotOrId,a,mode);
+    const a=agentFor(st,aOrId);
+    return withGeometrySnapshot(st,()=>bestSlotApproachNodeWithin(st,slotOrId,a,{mode,objective}));
+  }
+  function bestSlotApproachNodeWithin(st,slotOrId,a,{mode='walk',objective='traversalCost'}={}){
+    const candidates=slotApproachNodes(st,slotOrId,a,mode);
     if(!a)return candidates[0]||null;
     const requested=locomotionRuntime()?'auto':mode,distances=objective==='pathDistance'?pathDistances(st,a,candidates,{mode:requested}):null,ranked=[];
     for(let i=0;i<candidates.length;i++){
