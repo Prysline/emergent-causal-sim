@@ -123,7 +123,8 @@ assert.doesNotMatch(physicalUiSource,/\.physical\s*=/,'Physical UI must remain a
 
 const locomotionSource=fs.readFileSync(new URL('../src/systems/locomotion.js',import.meta.url),'utf8');
 assert.match(locomotionSource,/function transitionTicks\(fromMode,toMode\)/,'Locomotion runtime must own posture-transition timing');
-assert.match(locomotionSource,/Math\.ceil\(1\/speed\)/,'Locomotion runtime must derive real edge timing from speedFactor');
+assert.match(locomotionSource,/const requiredTicks=distance\/speed/,'Locomotion runtime must derive metric movement timing from distanceMeters and speedFactor');
+assert.match(locomotionSource,/movementCreditAfter/,'Locomotion runtime must expose fractional movement credit for consecutive same-mode edges');
 const locomotionUiSource=fs.readFileSync(new URL('../src/ui/inspectors/locomotion.js',import.meta.url),'utf8');
 assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use explicit Inspector lifecycle');
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
