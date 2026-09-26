@@ -358,7 +358,7 @@ try{
     for(let i=1;i<result.metrics.stepOne.length;i++){
       const prior=result.metrics.stepOne[i-1],next=result.metrics.stepOne[i];
       assert.ok(next.startMs>=prior.endMs,'autoplay callbacks must never overlap');
-      assert.ok(prior.startMs+prior.firstFrameMs<=next.startMs,'each completed autoplay callback must expose a browser frame opportunity before the next callback starts');
+      assert.ok(prior.startMs+prior.usableFrameMs<=next.startMs,'each completed autoplay callback must expose a usable two-frame browser opportunity before the next callback starts');
     }
     assert.equal(result.metrics.stateJson,autoplayReference.stateJson,'autoplay must preserve canonical state parity with the same number of direct ticks');
   }
