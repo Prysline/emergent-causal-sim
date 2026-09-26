@@ -317,6 +317,7 @@ try{
   );
 
   const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
+  console.log('SLICE3_TRAVERSAL_FEASIBILITY_COUNTS '+JSON.stringify({singleInside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),step10Inside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),step10Outside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick')}));
   assert.equal(queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),5385,'winner-result production must retain the measured single-tick feasibility reduction');
   assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),16345,'winner-result production must retain the measured step(10) inside-tick feasibility reduction');
   assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick'),2682,'winner-result production must not shift traversal work into outside-tick Presentation');
