@@ -108,7 +108,7 @@ const spatialValidatorSource=fs.readFileSync(new URL('../src/validation/rules/sp
 assert.match(spatialValidatorSource,/SP\.nodeLocomotionAccessible\?\.\(st,node,a\)/,'Spatial validator must validate current occupancy without reusing walk-only node feasibility');
 const memoryDeliberationSource=fs.readFileSync(new URL('../src/systems/memory/deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');
-assert.match(memoryDeliberationSource,/SP\.planRoute\(st,a,target\.position,\{mode:'auto',objective:'traversalCost'\}\)/,'target ranking must read canonical traversal-cost route facts');
+assert.match(memoryDeliberationSource,/routeOverride\|\|SP\.planRoute\(st,a,target\.position,\{objective:'traversalCost'\}\)/,'target ranking must consume a canonical traversal-cost route or compute it on demand');
 assert.doesNotMatch(memoryDeliberationSource,/distancePenalty/,'current target-ranking decomposition must not retain the stale distancePenalty field');
 const memoryDeliberationUiSource=fs.readFileSync(new URL('../src/ui/inspectors/memory-deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationUiSource,/path distance/,'Debug target ranking must show real path distance');
