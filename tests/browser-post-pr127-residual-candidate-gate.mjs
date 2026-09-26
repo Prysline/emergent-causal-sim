@@ -105,28 +105,28 @@ async function preparePage({memoryReuse=false,winnerCostReuse=false,yieldedStep=
   return {page,errors};
 }
 
-async function runCase(name,options){
+async function runCase(name,options,stepCount=10){
   const {page,errors}=await preparePage(options);
-  const timing=await page.evaluate(async()=>{
-    const before=window.SimEngine.getState().tick,target=before+10,start=performance.now();
+  const timing=await page.evaluate(async stepCount=>{
+    const before=window.SimEngine.getState().tick,target=before+stepCount,start=performance.now();
     let timerOpportunityMs=null,firstFrameMs=null;
     const timerOpportunity=new Promise(resolve=>setTimeout(()=>{timerOpportunityMs=performance.now()-start;resolve();},0));
     const firstFrame=new Promise(resolve=>requestAnimationFrame(()=>{firstFrameMs=performance.now()-start;resolve();}));
-    document.getElementById('step10').click();
+    document.getElementById(stepCount===1?'step':'step10').click();
     const handlerMs=performance.now()-start;
     while(window.SimEngine.getState().tick<target)await new Promise(resolve=>setTimeout(resolve,0));
     const completionMs=performance.now()-start;
     await timerOpportunity;
     await firstFrame;
     await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
-    return {before,after:window.SimEngine.getState().tick,handlerMs,timerOpportunityMs,firstFrameMs,completionMs};
-  });
+    return {before,after:window.SimEngine.getState().tick,handlerMs,timerOpportunityMs,firstFrameMs,completionMs,stepCount};
+  },stepCount);
   const result=await page.evaluate(()=>({
     stateJson:JSON.stringify(window.SimEngine.getState()),
     queries:structuredClone(globalThis.__postPr127CandidateGate.queries)
   }));
   await page.close();
-  return {name,...errors,timing,...result};
+  return {name,stepCount,...errors,timing,...result};
 }
 
 function delta(candidate,baseline){
@@ -147,21 +147,29 @@ function delta(candidate,baseline){
 }
 
 try{
+  const singleBaseline=await runCase('single-baseline',{},1);
+  const singleMemory=await runCase('single-memory-route-reuse',{memoryReuse:true},1);
+  const singleWinner=await runCase('single-interaction-winner-cost-reuse',{winnerCostReuse:true},1);
+
   const baseline=await runCase('baseline',{});
   const memory=await runCase('memory-route-reuse',{memoryReuse:true});
   const winner=await runCase('interaction-winner-cost-reuse',{winnerCostReuse:true});
   const combined=await runCase('memory-plus-winner',{memoryReuse:true,winnerCostReuse:true});
   const yielded=await runCase('batch-yield-every-tick',{yieldedStep:true});
 
-  for(const result of [baseline,memory,winner,combined,yielded]){
-    assert.equal(result.timing.after,result.timing.before+10,result.name+' must advance exactly 10 ticks');
+  for(const result of [singleBaseline,singleMemory,singleWinner,baseline,memory,winner,combined,yielded]){
+    assert.equal(result.timing.after,result.timing.before+result.stepCount,result.name+' must advance exactly the requested tick count');
     assert.deepEqual(result.pageErrors,[],result.name+' must have no page errors');
     assert.deepEqual(result.consoleErrors,[],result.name+' must have no console errors');
   }
   for(const result of [memory,winner,combined,yielded]){
     assert.equal(result.stateJson,baseline.stateJson,result.name+' must preserve exact canonical simulation state');
   }
+  for(const result of [singleMemory,singleWinner]){
+    assert.equal(result.stateJson,singleBaseline.stateJson,result.name+' must preserve exact canonical single-tick simulation state');
+  }
 
+  assert.equal(singleBaseline.queries.traversalFeasibility.inside,7471,'post-PR127 single-tick baseline must remain 7,471 inside-tick feasibility calls');
   assert.equal(baseline.queries.traversalFeasibility.inside,20181,'post-PR127 baseline must remain 20,181 inside-tick feasibility calls');
   assert.equal(yielded.queries.traversalFeasibility.inside,baseline.queries.traversalFeasibility.inside,'yielding must not change inside-tick feasibility work');
   assert.equal(yielded.queries.sleepTargets.inside,baseline.queries.sleepTargets.inside,'yielding must not change sleep target query work');
@@ -169,6 +177,11 @@ try{
   const report={
     generatedAt:new Date().toISOString(),
     note:'Test-served post-PR127 candidate gate. No production source is committed; deterministic query delta + exact state parity are primary evidence.',
+    single:{
+      baseline:{timing:singleBaseline.timing,queries:singleBaseline.queries},
+      memory:{timing:singleMemory.timing,queries:singleMemory.queries,delta:delta(singleMemory,singleBaseline)},
+      winner:{timing:singleWinner.timing,queries:singleWinner.queries,delta:delta(singleWinner,singleBaseline)}
+    },
     baseline:{timing:baseline.timing,queries:baseline.queries},
     memory:{timing:memory.timing,queries:memory.queries,delta:delta(memory,baseline)},
     winner:{timing:winner.timing,queries:winner.queries,delta:delta(winner,baseline)},
