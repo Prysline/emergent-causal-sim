@@ -317,6 +317,9 @@ try{
   );
 
   const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
+  assert.equal(queryPhaseCalls(results.single_none,'SimValidator.validateState','outsideTick'),1,'one no-selection render must validate exactly once');
+  assert.equal(queryPhaseCalls(results.single_agent,'SimValidator.validateState','outsideTick'),1,'opening Agent Inspector must not add a second validation pass');
+  assert.equal(results.single_none.metrics.stateJson,results.single_agent.metrics.stateJson,'render-scoped validation reuse must remain simulation-state inert');
   const feasibilityCounts={
     singleInside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),
     batch10Inside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),
