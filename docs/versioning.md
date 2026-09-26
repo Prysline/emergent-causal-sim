@@ -6,11 +6,23 @@
 
 目前 current runtime marker：
 
-`11.29.3-interaction-winner-result-reuse`
+`11.30.0-metric-route-locomotion`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.29.3`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.29.3-interaction-winner-result`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.30.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.30.0-metric-route-locomotion`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.28.0-effective-passage-width`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Interaction Winner Result Reuse release
+### Current Metric Route + Locomotion release
+
+`11.30.0-metric-route-locomotion` 完成 8-direction implementation 的 **Slice 3｜Metric Route + Locomotion Execution**。Production floor Route 現正式枚舉 Slice 2 已建立、且 Passage status 為 `candidate` 的 cardinal / diagonal `TraversalManeuver`；blocked / unsupported diagonal仍保守拒絕。Surface traversal、Structure connection與 authored topology各自維持既有 ownership，不因 floor diagonal route偷改 schema。
+
+Route metric正式改為公尺制：`pathDistance` 累積每個 maneuver 的 `distanceMeters`，cardinal floor step為 `1m`、diagonal為 `sqrt(2)m`；`stepCount` 另保存 graph edge count。環境 movement burden與 Locomotion mode burden按公尺累積，mode transition burden仍按 transition計算；Dynamic Congestion的既有 `congestionCost` 本 slice保持獨立，不因 diagonal整段距離自動乘 `sqrt(2)`。
+
+Locomotion timing改由 `SimLocomotion.movementTiming(agent, mode, distanceMeters, movementCredit)` 提供共同 truth。Route planning與 Engine execution都依實際距離／`speedFactor` 計算 movement requirement；同一 locomotion mode 的連續 edge可以用 current Action內的 fractional movement credit承接前一 edge 的離散 tick餘量，mode/posture transition則清除 credit。因此兩段 walk diagonal總長 `2 × sqrt(2)m` 可在 3 movement ticks完成，而不是逐 edge各自 ceil成4 ticks。這個 credit只存在 current Action，不是 route cache，也不跨 action／tick snapshot保存 derived route result。
+
+本 release **不包含** Slice 4 的 8-direction Crowding resource / angle semantics、Slice 5 的 Contact / Slot corner semantics、Slice 6 的 Initializer / Editor / Preview diagonal reachability、persistent heading / turn clearance、45° Furniture orientation、World Authoring / Furniture Catalog schema change、Physical MovementEnvelope public contract change，亦沒有加入 persistent / cross-tick traversal cache或 action-execution route-result reuse。
+
+因此 overall runtime、Spatial Traversal、Route Semantics與 Locomotion generation正式推進到 11.30.0 line；Spatial Passage維持 `11.29.0-horizontal-connection-passage`，Physical維持 `11.17.0-passage-profile-multimode`，Dynamic Congestion維持 `11.28.0-effective-passage-width`，World Authoring / Furniture Catalog維持 v7。Presentation marker只因 canonical `SimRelease.VERSION` 跟隨 overall release，不代表本 slice新增 Presentation-owned simulation truth。
+
+### Previous Interaction Winner Result Reuse release
 
 `11.29.3-interaction-winner-result-reuse` 將 interaction-position winner scoring 已經算出的 canonical `traversalCost` 正式暴露為 additive Spatial result contract：新增 `bestInteractionPositionResult(...)`，回傳 `{ position, traversalCost }` 或 `null`；既有 `bestInteractionPosition(...)` 保持 position-only compatibility contract，winner identity、candidate order、same-XY cross-surface filtering、Crowding-aware 排序與 tie-break 全部不變。
 

@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.29.3-interaction-winner-result-reuse`。
+目前 runtime marker：`11.30.0-metric-route-locomotion`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -649,14 +649,14 @@ SimSpatial.planRoute(state, agent, goal, {
 
 正式邊界：
 
-- `pathDistance`＝所描述 path 的 topology edge count；standalone `SP.pathDistance(...)` 搜尋 physical-feasible shortest topology route。
+- `pathDistance`＝所描述 path 的實際公尺長度；floor cardinal maneuver 為 `1m`、floor diagonal maneuver 為 `sqrt(2)m`。`stepCount` 另保存 graph edge count；standalone `SP.pathDistance(...)` 搜尋 physical-feasible 最短 metric route。
 - `traversalCost`＝`traversalEdgeCost` 累積的客觀 route burden。Current edge composition 為 environmental / Surface base cost + Locomotion-owned mode burden + Locomotion-owned mode-transition burden + Crowding `congestionCost`；standalone `SP.traversalCost(...)` 搜尋最低 traversal-cost route。
-- `travelTime`＝current executable movement time。v11.18.0 仍是 walk-only、一 edge 一 movement tick，因此 selected route 的 `travelTime === pathDistance`；這是 execution contract，不代表兩者永久同義。
+- `travelTime`＝current executable movement time。v11.30.0 起 planning 依 `distanceMeters / speedFactor` 計算 movement requirement，並讓同一 locomotion mode 的連續 edge 共用 Action-scoped fractional movement credit；mode transition清除 credit。歷史 v11.18 的「walk-only、一 edge一 tick」只屬當時 contract，不再代表 current timing。
 - A* compatibility surface 仍以 `traversalCost` 作 route objective，既有 gameplay/resource/interaction/nearest target consumers 也遷移到 `traversalCost`，因此本 slice 不偷偷改 route preference / AI balance。
 - 舊 `SP.pathCost(...)` 暫時只作 traversal-cost compatibility alias；新 consumer 不應再把它當 distance。
 - v11.19.0 起 production `planRoute(...,{mode:'auto'})` 可在 supported + passage-feasible modes 間規劃；v11.24.0 起第一順位 objective 也正式包含 locomotion mode / transition burden。explicit `mode:'walk'` 仍可作 focused / compatibility query；mode choice只依客觀 route facts與 deterministic execution tie-break，不等於 behavioral willingness。
-- `speedFactor` 已接入 execution timing：edge movement ticks = `ceil(1 / speedFactor)`，posture/mode change另加 1 transition tick；Debug、route `travelTime`與 core movement共用同一 timing truth。`speedFactor` 不直接換算 objective burden。
-- **Locomotion objective burden**：`SimLocomotion.modeTraversalBurden(agent, mode)` current baseline 為 walk=0、kneelCrawl=1、proneCrawl=2（每 edge）；`modeTransitionBurden(agent, fromMode, toMode)` 在 mode 改變時為 1、同 mode 為 0。這是 coarse 客觀移動麻煩程度，不是人格／禮儀偏好，也不是 `travelTime` 的別名。
+- `speedFactor` 已接入 metric execution timing：`SimLocomotion.movementTiming(agent, mode, distanceMeters, movementCredit)` 是 Route 與 core movement共用的 timing truth；posture/mode change另加 1 transition tick並重置 movement credit。`speedFactor` 不直接換算 objective burden。
+- **Locomotion objective burden**：`SimLocomotion.modeTraversalBurden(agent, mode)` current baseline 為 walk=0、kneelCrawl=1、proneCrawl=2，作為 movement burden **每公尺**累積；`modeTransitionBurden(agent, fromMode, toMode)` 在 mode 改變時為 1、同 mode 為 0，仍是 per-transition。這是 coarse 客觀移動麻煩程度，不是人格／禮儀偏好，也不是 `travelTime` 的別名。
 - social target ranking 的舊 `distancePenalty` 已正名為 `accessPenalty`，source 改讀 `traversalCost`；公式尺度與 v11.17 保持 parity，Relationship / Memory target ordering 不因 semantic cleanup 偷換心理模型。
 - deterministic regression 必須能同時存在「4-edge 但 wet / cost 14.5」與「6-edge dry / cost 6」兩條 route：standalone `pathDistance=4`、`traversalCost=6`，default plan / A* 選 6-edge route，而 selected plan 回報 `pathDistance=6 / traversalCost=6 / travelTime=6`。
 
@@ -669,7 +669,7 @@ v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route met
 - **explicit transition**：locomotion mode要求的 posture 與目前 posture不同時，先消耗 1 tick transition；該 tick 不同時位移。不能在 route search或 edge traversal 中免費變形。
 - **mode-aware route graph**：production `planRoute(...,{mode:'auto'})` 的 search state 是 `Spatial Node + locomotion mode`；每條 candidate edge以 `traversalFeasibility(...).modes[mode]` 驗證。舊 focused harness若未載入 Locomotion subsystem，仍保留 walk-only compatibility。
 - **objective 與 tie-break**：route primary objective仍是 `traversalCost`；v11.24.0 起 primary cost 已包含 mode traversal burden 與 mode-transition burden。只有 primary cost 同分時，才以 executable `travelTime`、transition數、mode rank作 deterministic tie-break。這些都是客觀 execution facts，不是人格偏好。
-- **timing truth**：`edgeMoveTicks = ceil(1 / speedFactor)`；現行 Human default因此 walk=1、kneelCrawl=2、proneCrawl=3 ticks/edge。route `travelTime` 為所有 edge move ticks + posture-transition ticks之和，並由同一 execution state machine實際兌現。
+- **timing truth**：v11.30.0 起 movement timing 由實際 `distanceMeters / speedFactor` 推導；同 mode 連續 edge 的 fractional requirement以 Action-scoped `locomotionCredit` 延續，避免 diagonal 每 edge各自向上取整。route `travelTime` 與 core movement共用同一 timing facts，mode transition仍額外支付明確 tick並清除 credit。
 - **execution boundary**：core `moveToward()` 仍是單一 movement owner；所有既有 Action透過 `moveToExact / moveToInteraction` 共用同一 locomotion lifecycle，不建立 crawl-specific Action type。multi-tick edge進度暫存在 current Action 的 `locomotionStep`，不是 persistent route cache。
 - **occupancy vs walk feasibility**：`SP.nodeWalkable(...)` 保留「walk 是否可進入該 node」語意；`SP.nodeLocomotionAccessible(...)` 只判 node 結構上是否可被 locomotion state佔據。`spatial.node` Validator使用後者，避免低姿勢合法停留被 walk-only clearance誤判。這不是 PoseEnvelope/static-fit；current occupancy仍不宣稱有完整靜態 body bounds。
 - **arrival semantics**：crawl抵達後 posture不自動改回 standing；完成 Action只清除 active locomotion phase。下一次需要其他 mode時再支付 transition，避免在低矮幾何中出現免費站立。
