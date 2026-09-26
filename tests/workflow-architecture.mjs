@@ -21,6 +21,7 @@ const semanticNodeTests=[
   'tests/metric-route-locomotion.mjs',
   'tests/locomotion-execution-posture.mjs',
   'tests/dynamic-congestion.mjs',
+  'tests/crowding-8-direction.mjs',
   'tests/relationship-foundation.mjs',
   'tests/relationship-target-preference.mjs',
   'tests/relationship-responder-bias.mjs',
