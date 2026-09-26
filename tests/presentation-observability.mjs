@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.29.1-slot-interaction-egress';
+const CURRENT_VERSION='11.29.2-batch-step-yielding';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
 const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
 const ROUTE_VERSION='11.24.0-route-locomotion-cost';
