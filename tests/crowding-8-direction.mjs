@@ -99,16 +99,19 @@ assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 {
   const {st,mover,other,a,b}=openArea();
   moveAgent(st,other,floor(st,1,2),floor(st,2,1));
-  const original=SP.nodeOccupantsAt;
-  let queriedNodes=0;
+  const originalOccupants=SP.nodeOccupantsAt,originalManeuver=SP.traversalManeuver;
+  let queriedNodes=0,maneuverCalls=0;
   SP.nodeOccupantsAt=(...args)=>{queriedNodes++;return [other];};
+  SP.traversalManeuver=(...args)=>{maneuverCalls++;return originalManeuver(...args);};
   try{
     const profile=C.getCrowdingProfile(st,mover,a,b,'walk');
     assert.equal(queriedNodes,4,'diagonal candidate discovery must scan exactly the four maneuver influence nodes');
+    assert.equal(maneuverCalls,1,'one Crowding profile should derive the mover maneuver once; occupant traffic direction must not re-query Passage geometry');
     assert.equal(profile.occupantCount,1,'the same Agent returned from multiple influence nodes must only contribute pressure once');
     assert.equal(profile.occupants[0].agentId,other.id);
   }finally{
-    SP.nodeOccupantsAt=original;
+    SP.nodeOccupantsAt=originalOccupants;
+    SP.traversalManeuver=originalManeuver;
   }
 }
 
