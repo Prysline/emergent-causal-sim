@@ -41,7 +41,7 @@ function idleAgent(agent,node){
   agent.offMap=false;agent.position={...node};agent.action=null;agent.locomotion={mode:null,phase:'idle'};
 }
 
-assert.equal(C.VERSION,'11.28.0-effective-passage-width','focused Slice 4 test begins from the pre-Slice-4 Crowding generation');
+assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 
 {
   const {st,mover,other,a,b,c,d}=openArea();
