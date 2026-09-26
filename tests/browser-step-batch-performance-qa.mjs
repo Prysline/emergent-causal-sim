@@ -317,9 +317,15 @@ try{
   );
 
   const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
-  assert.equal(queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),8619,'8-direction Slice 3 must retain the measured single-tick feasibility baseline');
-  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),25193,'8-direction Slice 3 must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick'),6256,'8-direction Slice 3 must retain the measured outside-tick feasibility baseline');
+  const feasibilityCounts={
+    singleInside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),
+    batch10Inside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),
+    batch10Outside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick')
+  };
+  console.log('STEP_BATCH_FEASIBILITY_COUNTS '+JSON.stringify(feasibilityCounts));
+  assert.equal(feasibilityCounts.singleInside,8619,'8-direction Slice 3 must retain the measured single-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,25193,'8-direction Slice 3 must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,6256,'8-direction Slice 3 must retain the measured outside-tick feasibility baseline');
 
   assert.deepEqual(pageErrors,[],'step batch perf QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'step batch perf QA must have no console errors');
