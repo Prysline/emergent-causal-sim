@@ -116,6 +116,22 @@ assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 }
 
 {
+  const {st,mover,other,a,b}=openArea();
+  moveAgent(st,other,floor(st,1,2),floor(st,2,1));
+  const original=C.getCrowdingProfile;
+  const routeSnapshots=[];
+  C.getCrowdingProfile=function(...args){routeSnapshots.push(args[6]||null);return original.apply(this,args);};
+  try{
+    const plan=SP.planRoute(st,mover,b,{mode:'walk',objective:'traversalCost'});
+    assert.ok(plan.path.length>0,'focused route fixture must produce a path');
+    assert.ok(routeSnapshots.length>0,'route planning must consult Crowding');
+    assert.ok(routeSnapshots.every(snapshot=>snapshot?.directionVector&&Array.isArray(snapshot.influenceNodes)),'Route must pass its already-derived TraversalManeuver into Crowding instead of rebuilding Passage geometry');
+  }finally{
+    C.getCrowdingProfile=original;
+  }
+}
+
+{
   const {st,mover,other,a}=openArea();
   const east=floor(st,2,1);
   moveAgent(st,other,east,a);
