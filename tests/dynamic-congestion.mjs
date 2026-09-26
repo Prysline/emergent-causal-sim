@@ -160,4 +160,4 @@ assert.ok(catRestMetrics.floorTargetCount>20,'Cat rest fixture must exercise a b
 assert.ok(catRestMetrics.traversalFeasibilityCalls<1000,`Cat rest batch scoring regressed to ${catRestMetrics.traversalFeasibilityCalls} feasibility calls`);
 console.log('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
 
-console.log('v11.20.0 Dynamic Congestion regression: ok');
+console.log('Dynamic Congestion regression: ok');
