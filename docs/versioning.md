@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.29.1-slot-interaction-egress`
+`11.29.2-batch-step-yielding`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.29.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.29.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Slot Interaction Egress Fix release
+### Current Batch Step Yielding release
+
+`11.29.2-batch-step-yielding` 把「10 步」的排程責任正式收斂到 Presentation / UI layer。單步 `step(1)` 仍同步執行一個完整 `E.tick()` 後 render；manual `step(10)` 先建立 UI-only batch context與 busy state，在第一個 tick 前先讓出一次 browser event loop，之後每個**完整** tick 之間再讓出一次。單一 `E.tick()` 內沒有 `await`、partial render或 cancellation checkpoint，因此 runtime hook ordering、same-tick visibility、RNG與 canonical simulation semantics不變。
+
+Intermediate manual-batch tick 仍照既有 registry 順序呼叫 Presentation afterTick observers，但 `uiObservability.render-mobile-summary`、`residentView.schedule`、`relationshipView.schedule` 會 coalesce / defer真正 refresh；最後一個 tick才恢復正式 refresh，接著 `src/ui/core.js` 做一次 core full render。Manual batch期間 `step / step10 / play`、runtime layer、決策原因、scenario load與 simulation-dependent workspace互動會被 UI-only busy / inert policy阻擋；Reset保留可用，先 invalidates batch generation，再 reset回 canonical state，舊 continuation不得再執行 tick或 stale final render。Autoplay期間則停用 manual step controls，仍保留 play作pause與Reset。
+
+這是玩家可觀察的 Presentation / scheduling contract變更，因此 overall current marker與 `SimUI.PRESENTATION_VERSION` 跟隨 patch升版；World Authoring `world-authoring-v7`、Furniture Catalog `furniture-definitions-v7`、Horizontal Geometry、Spatial、Route、Locomotion、Dynamic Congestion、Physical與其他未改 subsystem generation均不假升。Interaction winner-result reuse仍是獨立延後候選，不屬本 release。
+
+### Previous Slot Interaction Egress Fix release
 
 `11.29.1-slot-interaction-egress` 修正家具 Slot 姿勢離開後再前往一般互動目標時的 action lifecycle 次序。若 Agent 已在目標的有效 interaction position，仍可直接維持坐姿／躺姿互動；只有在目前不能直接互動且仍綁定 Slot 時，`moveToInteraction()` 才先透過既有 `standUp() → slotEgressNodes()` 離開 Slot，下一 tick 再以合法 floor node 執行 `bestInteractionPosition()` 與 production Route 查詢。這避免把家具 Slot 的 coarse anchor 當成 Human 可站立 floor route 起點，進而把其實可達的 portable object 誤判成「找不到能接近的位置」。
 
