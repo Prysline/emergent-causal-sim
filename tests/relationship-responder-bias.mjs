@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.30.0-metric-route-locomotion';
+const APP_VERSION='11.31.0-crowding-8-direction';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const near=(actual,expected,eps=.001,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
