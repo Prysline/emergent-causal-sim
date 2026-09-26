@@ -55,7 +55,7 @@ assert.doesNotMatch(baseUiSource,/function worldOverview\(\)\{[^\n]*validation\(
 assert.match(baseUiSource,/validationSnapshot\?\?validation\(\)/,'direct no-selection Inspector refresh must fall back to exactly one validation pass when no full-render snapshot is supplied');
 assert.match(baseUiSource,/const AUTOPLAY_INTERVAL_MS=700;/,'autoplay must keep the current nominal 700ms start cadence');
 assert.match(baseUiSource,/function scheduleAutoplay\(context,delayMs\)/,'autoplay scheduling must have an explicit completion-aware owner');
-assert.match(baseUiSource,/requestAnimationFrame\(\(\)=>\{/,'completion-aware autoplay must request a browser frame opportunity before scheduling the next callback');
+assert.match(baseUiSource,/context\.frameId=requestAnimationFrame\(\(\)=>\{[\s\S]*context\.frameId=requestAnimationFrame\(\(\)=>\{/,'completion-aware autoplay must require two browser frame opportunities before scheduling the next callback');
 assert.match(baseUiSource,/remaining=Math\.max\(0,AUTOPLAY_INTERVAL_MS-elapsed\)/,'autoplay must preserve nominal start cadence without accumulating overdue callbacks');
 assert.match(baseUiSource,/function stopAutoplay\(\)/,'autoplay must expose a single cancellation owner for pause/reset');
 assert.doesNotMatch(baseUiSource,/setInterval\(stepOne,700\)/,'autoplay must not use an overdue fixed interval callback source');
