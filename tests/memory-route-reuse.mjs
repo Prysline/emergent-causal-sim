@@ -82,7 +82,6 @@ try{
   assert.deepEqual(legacy,actual,'focused legacy shape and production reuse must be semantically identical');
   assert.equal(traversalCostCalls,candidates.length,'legacy fixture must execute one reachability traversalCost per target');
   assert.equal(planRouteCalls,candidates.length,'legacy fixture must execute one evaluation planRoute per target');
-  assert.equal(traversalCostCalls,candidates.length,'legacy fixture must contain one additional reachability route query per target');
   assert.equal(JSON.stringify(st),beforeJson,'legacy comparison must also remain state-neutral');
   assert.equal(st.rngState,rngBefore,'legacy comparison must remain RNG-neutral');
 } finally {
