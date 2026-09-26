@@ -201,9 +201,9 @@ assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Ident
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.24.0-route-locomotion-cost');
-assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.24.0-locomotion-objective-burden');
-assert.equal(L.VERSION,'11.24.0-locomotion-objective-burden');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
+assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.30.0-distance-timing');
+assert.equal(L.VERSION,'11.30.0-distance-timing');
 assert.equal(C.VERSION,'11.28.0-effective-passage-width');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
