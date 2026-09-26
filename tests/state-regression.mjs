@@ -14,7 +14,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.30.0-metric-route-locomotion');
+  assert.equal(st.version,'11.31.0-crowding-8-direction');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
