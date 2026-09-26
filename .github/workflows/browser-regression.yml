@@ -53,6 +53,10 @@ jobs:
             test: tests/browser-step-batch-performance-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-step-batch-performance-qa
+          - suite: post-pr125-residual-attribution
+            test: tests/browser-post-pr125-residual-attribution-probe.mjs
+            extra_test: ''
+            artifact: artifacts/browser-post-pr125-residual-attribution-probe
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
