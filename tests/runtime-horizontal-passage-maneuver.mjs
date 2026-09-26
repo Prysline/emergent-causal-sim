@@ -85,6 +85,7 @@ assert.equal(SP.VERSION,'11.30.0-metric-route-locomotion');
   const passage=SP.getPassageProfile(st,a,b);
   assert.equal(passage.status,'blocked');
   assert.equal(passage.options.length,0);
+  assert.equal(SP.traversalManeuver(st,a,b),null,'objectively blocked horizontal connection must not become a traversal maneuver');
   const feasibility=SP.traversalFeasibility(st,human,a,b);
   assert.equal(feasibility.edgeValid,true);
   assert.equal(feasibility.edgeOpen,false);
@@ -96,6 +97,7 @@ assert.equal(SP.VERSION,'11.30.0-metric-route-locomotion');
   st.furniture.cornerNib={id:'cornerNib',footprint:[{x:1,y:1}],slots:[],spatial:{solids:[{key:'cornerNib',layerZ:0,bounds:{x:1.9,y:1.9,z:0,width:.1,depth:.1,height:1}}]}};
   const passage=SP.getPassageProfile(st,a,b);
   assert.equal(passage.status,'unsupported');
+  assert.equal(SP.traversalManeuver(st,a,b),null,'unsupported horizontal geometry must not become a production traversal maneuver');
   assert.equal(SP.traversalFeasibility(st,human,a,b).edgeOpen,false,'unsupported geometry must conservatively reject feasibility');
 }
 
