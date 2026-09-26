@@ -59,7 +59,7 @@ async function preparePage({memoryReuse=false,winnerCostReuse=false,yieldedStep=
       const response=await route.fetch();
       let body=await response.text();
       const oldLine="  function targetTraversalCost(a,target,affordance='default'){const p=SP.bestInteractionPosition(state,a,target,affordance);return p?routeBurden(a,p):Infinity;}";
-      const newLine="  function targetTraversalCost(a,target,affordance='default'){const result=SP.bestInteractionPositionResult?.(state,a,target,affordance);if(result)return result.traversalCost;const p=SP.bestInteractionPosition(state,a,target,affordance);return p?routeBurden(a,p):Infinity;}";
+      const newLine="  function targetTraversalCost(a,target,affordance='default'){if(typeof SP.bestInteractionPositionResult==='function'){const result=SP.bestInteractionPositionResult(state,a,target,affordance);return result?.traversalCost??Infinity;}const p=SP.bestInteractionPosition(state,a,target,affordance);return p?routeBurden(a,p):Infinity;}";
       if(!body.includes(oldLine))throw new Error('winner-cost engine candidate anchor missing');
       body=body.replace(oldLine,newLine);
       await route.fulfill({response,body});
