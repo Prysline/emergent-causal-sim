@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.30.0-metric-route-locomotion';
-const CROWDING_VERSION='11.28.0-effective-passage-width';
+const CURRENT_VERSION='11.31.0-crowding-8-direction';
+const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.30.0-distance-timing';
 const ROUTE_VERSION='11.30.0-metric-route';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
@@ -130,8 +130,10 @@ assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
 const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
 assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode='walk'\)/,'Crowding must expose a derived edge profile');
-assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 5');
-assert.match(crowdingSource,/directionWeight:Object\.freeze\(\{same:\.65,stationary:1,unknown:1,opposite:1\.7\}\)/,'Crowding direction severity must remain deterministic');
+assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 4');
+assert.match(crowdingSource,/angle45:interpolatedDirectionWeight\(45\)/,'Crowding must derive 45-degree severity from the existing same/opposite endpoints');
+assert.match(crowdingSource,/angle90:interpolatedDirectionWeight\(90\)/,'Crowding must derive 90-degree severity from the existing same/opposite endpoints');
+assert.match(crowdingSource,/angle135:interpolatedDirectionWeight\(135\)/,'Crowding must derive 135-degree severity from the existing same/opposite endpoints');
 assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
 const entityUiSource=fs.readFileSync(new URL('../src/ui/entity-readable.js',import.meta.url),'utf8');
 assert.match(entityUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Entity Readable View must inherit the canonical Presentation marker from SimUI');
@@ -150,7 +152,7 @@ assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.30\.0・Metric Route \+ Locomotion/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.31\.0・Crowding 8-direction/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
@@ -248,4 +250,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.20.0 presentation observability + Dynamic Congestion regression: ok');
+console.log('presentation observability + Dynamic Congestion regression: ok');

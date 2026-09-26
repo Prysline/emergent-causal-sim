@@ -12,8 +12,8 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.30.0-metric-route-locomotion';
-const CROWDING_VERSION='11.28.0-effective-passage-width';
+const CURRENT_VERSION='11.31.0-crowding-8-direction';
+const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({knownWidth=true}={}){
@@ -68,7 +68,7 @@ assert.ok(same.congestionCost<stationary.congestionCost&&stationary.congestionCo
 assert.equal(same.delayTicks,0,'same-direction passing may remain fluid');
 assert.equal(stationary.delayTicks,1,'narrow stationary encounter should cost one adjustment tick');
 assert.equal(opposite.delayTicks,2,'narrow opposite flow should cost more adjustment time');
-for(const profile of [same,stationary,opposite])assert.equal(profile.hardBlocked,false,'Slice 5 congestion must remain soft');
+for(const profile of [same,stationary,opposite])assert.equal(profile.hardBlocked,false,'Slice 4 congestion must remain soft');
 
 // B: metric geometry makes an unobstructed floor edge a known 1m opening; an authored .8m edge is narrower and adds more pressure.
 f=resetFixture({knownWidth:true});setOtherDirection(f,'stationary');
@@ -160,4 +160,4 @@ assert.ok(catRestMetrics.floorTargetCount>20,'Cat rest fixture must exercise a b
 assert.ok(catRestMetrics.traversalFeasibilityCalls<1000,`Cat rest batch scoring regressed to ${catRestMetrics.traversalFeasibilityCalls} feasibility calls`);
 console.log('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
 
-console.log('v11.20.0 Dynamic Congestion regression: ok');
+console.log('Dynamic Congestion regression: ok');

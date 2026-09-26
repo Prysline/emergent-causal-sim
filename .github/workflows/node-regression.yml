@@ -60,6 +60,7 @@ jobs:
       - run: node tests/locomotion-execution-posture.mjs
       - run: node tests/locomotion-traversal-cost.mjs
       - run: node tests/dynamic-congestion.mjs
+      - run: node tests/crowding-8-direction.mjs
       - run: node tests/action-terminology.mjs
       - run: node tests/action-construction.mjs
       - run: node tests/active-intent-foundation.mjs

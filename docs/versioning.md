@@ -6,11 +6,23 @@
 
 目前 current runtime marker：
 
-`11.30.0-metric-route-locomotion`
+`11.31.0-crowding-8-direction`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.30.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.30.0-metric-route-locomotion`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.28.0-effective-passage-width`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.31.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.30.0-metric-route-locomotion`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Metric Route + Locomotion release
+### Current Crowding 8-direction release
+
+`11.31.0-crowding-8-direction` 完成 8-direction implementation 的 **Slice 4｜Crowding 8-direction**。Crowding 不新增第二套 diagonal geometry truth，而是直接消費 Slice 2 已提供的 `TraversalManeuver.primaryResource / influenceNodes`：cardinal horizontal 與 Structure 使用兩個 endpoint，diagonal horizontal 使用共享 grid corner 周圍四個 floor nodes作 conservative broad phase；candidate 依 Agent ID 去重，不建立 persistent `resource -> agents` index或 cross-tick cache。
+
+標準水平 moving-vs-moving direction relation 正式擴充為 0° / 45° / 90° / 135° / 180°。既有 `same=.65` 與 `opposite=1.7` 保留為兩端，45° / 90° / 135° 以線性插值取得 `.9125 / 1.175 / 1.4375`；`stationary=1` 與 `unknown=1` 維持獨立語意。Structure / Z-aware movement保留原本 exact same / opposite / unknown 判定，不把垂直流量硬套水平角度分類。
+
+Passage × MovementEnvelope 仍是 physical feasibility與 mode-effective `effectiveClearanceWidth` 的唯一 truth；Crowding 沿用既有 width pressure、`congestionCost` 與 `delayTicks`。diagonal Crowding視為一次局部共享資源事件，不因 maneuver 全長是 `sqrt(2)` 就再乘距離倍率；Crowding `edgeMoveTicks` helper則改用 maneuver `distanceMeters` 取得 Locomotion metric base timing，再加 congestion delay，與 Slice 3 Route / execution timing保持一致。
+
+本 release仍是 **soft-only**：不 hard-block、不禁止 overlap、不加入 reservation / yielding / priority / deadlock / collision，也不加入 behavioral willingness。Slice 5 Contact / Slot corner、Slice 6 Initializer / Editor / Preview diagonal parity、Static Posture Fit / PoseEnvelope、persistent heading / turn clearance、45° Furniture orientation與 PR #116 類 query-scope optimization均不包含在本 release。
+
+因此 overall runtime 與 Dynamic Congestion generation推進到 `11.31.0-crowding-8-direction`；Spatial Traversal維持 `11.30.0-metric-route-locomotion`，Spatial Passage維持 `11.29.0-horizontal-connection-passage`，Route維持 `11.30.0-metric-route`，Locomotion維持 `11.30.0-distance-timing`，Physical維持 `11.17.0-passage-profile-multimode`，World Authoring / Furniture Catalog維持 v7。
+
+### Previous Metric Route + Locomotion release
 
 `11.30.0-metric-route-locomotion` 完成 8-direction implementation 的 **Slice 3｜Metric Route + Locomotion Execution**。Production floor Route 現正式枚舉 Slice 2 已建立、且 Passage status 為 `candidate` 的 cardinal / diagonal `TraversalManeuver`；blocked / unsupported diagonal仍保守拒絕。Surface traversal、Structure connection與 authored topology各自維持既有 ownership，不因 floor diagonal route偷改 schema。
 

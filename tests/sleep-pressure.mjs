@@ -36,7 +36,7 @@ function putToSleep(st,a,{slotId='bed:left',sleepTicks=0}={}){
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.30.0-metric-route-locomotion');
+  assert.equal(st.version,'11.31.0-crowding-8-direction');
   for(const a of Object.values(st.agents))assert.ok(Number.isFinite(a.needs.sleepNeed),'每個 Agent 都必須有正式 sleepNeed state');
   assert.equal(E.sleepProfile(st.agents.zhen).circadianPattern,'diurnal','人類預設應為日行性');
   assert.equal(E.sleepProfile(st.agents.orange).circadianPattern,'crepuscular','貓預設應為晨昏性');

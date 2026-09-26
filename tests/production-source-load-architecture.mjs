@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.30.0-metric-route-locomotion';
+const CURRENT_VERSION='11.31.0-crowding-8-direction';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -204,7 +204,7 @@ assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage')
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.30.0-distance-timing');
 assert.equal(L.VERSION,'11.30.0-distance-timing');
-assert.equal(C.VERSION,'11.28.0-effective-passage-width');
+assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
