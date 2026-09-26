@@ -13,6 +13,7 @@ page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());}
 let servedProbe='current';
 
 await page.addInitScript(()=>{
+  Error.stackTraceLimit=30;
   const rows={};
   let currentTick=null;
   function row(kind,phase,id){
@@ -145,7 +146,7 @@ async function installInstrumentation(){
       target[name]=function(...args){
         const start=performance.now(),resolvedLabel=label||name;
         if(resolvedLabel==='SP.traversalFeasibility'&&window.__perfCollectCallerStacks){
-          const stack=String(new Error().stack||'').split('\n').slice(2,14).join(' | ')
+          const stack=String(new Error().stack||'').split('\n').slice(2,22).join(' | ')
             .replace(/http:\/\/127\.0\.0\.1:4173\//g,'')
             .replace(/:\d+:\d+/g,':#:#');
           const key=phase+' | '+stack;
