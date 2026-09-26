@@ -250,4 +250,4 @@ for(let i=0;i<500;i++){
   if(i%25===0){const v=V.validateState(st);assert.equal(v.issueCount,0,`tick ${i+1}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
 }
 assert.equal(V.validateState(st).issueCount,0);
-console.log('v11.20.0 presentation observability + Dynamic Congestion regression: ok');
+console.log('presentation observability + Dynamic Congestion regression: ok');
