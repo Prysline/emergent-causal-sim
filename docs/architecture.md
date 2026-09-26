@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.30.0-metric-route-locomotion`。
+目前 runtime marker：`11.31.0-crowding-8-direction`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -45,7 +45,7 @@ v11.26.0 在這個 Z-aware identity 上加入第一個 **Vertical Structure Trav
 
 Structure edge 不借用 boundary。`SimSpatial.getPassageProfile(...)` 對 stair 產生 Structure Passage option；horizontal edge則由 Boundary / Door、Furniture solids-derived opening intervals與 edge constraint 派生位置化 options。current Spatial Traversal為 `11.28.0-furniture-local-geometry`，Spatial Passage為 `11.28.0-positioned-passage-options`；Route、Locomotion、Physical、Spatial Identity維持既有 generation。
 
-Dynamic Congestion 維持 XYZ direction，current generation為 `11.28.0-effective-passage-width`。Crowding 讀目前 locomotion mode feasibility 真正選中的 `effectiveClearanceWidth`；普通 1m edge、Furniture partial opening、Boundary opening與 stair Structure共用同一 width-pressure → congestion → `delayTicks` 模型。slot-bound Agent不算 ordinary floor occupant。
+Dynamic Congestion current generation為 `11.31.0-crowding-8-direction`；XYZ / Structure same-opposite 語意保留，水平 moving-vs-moving 已擴充八方向角度。Crowding 讀目前 locomotion mode feasibility 真正選中的 `effectiveClearanceWidth`；普通 1m edge、Furniture partial opening、Boundary opening與 stair Structure共用同一 width-pressure → congestion → `delayTicks` 模型。slot-bound Agent不算 ordinary floor occupant。
 
 Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time validation / canonical serialization與獨立 Editor surface，不建立新的 runtime schema generation。Canonical world truth仍是 authoring document本身；Editor session 的 `currentZ`、selected tool / furniture / cell、dirty baseline等只屬 ephemeral UI state，不可輸出到 authoring JSON。Z-level切換只改 presentation，不得改 canonical document fingerprint。
 
@@ -686,10 +686,10 @@ v11.20.0 將既有粗略的「目的 node occupancy 固定 penalty」收斂為 d
 - **soft consequence only**：第一版不產生 hard block。多 Agent 在狹窄處相遇時，側身、錯步、短暫停頓與調整移動方式被抽象為 `congestionCost` 與 movement delay，不建立 collision / reservation / yielding semantics。
 - **width approximation**：Crowding 使用 traversal feasibility 對目前 mode 選出的 `effectiveClearanceWidth`；普通無障礙 1m edge因此有已知 1m width，較窄 opening使用實際 option width。另一人的 effective width只作 crowding-specific approximation，不冒充 PoseEnvelope / Static fit。
 - **unknown width**：passage width 為 `null` 時，只依 occupant count、movement direction 等已知資訊形成 soft penalty，不推導「一格最多幾人」等虛假 physical capacity。
-- **direction severity**：deterministic weight 為 `same=.65 / stationary=1 / unknown=1 / opposite=1.7`，因此同向 < 靜止／未知 < 逆向。v11.26 起 movement vector 正式包含 X/Y/Z，所以上樓與下樓可被判為 opposite，而不是壓成相同 XY zero-vector。這是客觀交通阻力，不含 Relationship / personality / courtesy。
+- **candidate discovery / direction severity**：v11.31 起 Crowding 直接消費 `TraversalManeuver.influenceNodes`；cardinal / Structure 掃兩個 endpoint，diagonal corner 掃四個 local floor nodes，candidate 依 Agent ID 去重，不建立 persistent `resource -> agents` index。標準水平 moving-vs-moving weight 為 0°=`.65`、45°=`.9125`、90°=`1.175`、135°=`1.4375`、180°=`1.7`，由 same/opposite 兩端線性插值；`stationary=1 / unknown=1` 保留獨立語意。Structure / Z-aware movement仍保留 exact same / opposite / unknown。這是客觀交通阻力，不含 Relationship / personality / courtesy。
 - **first-pass pressure formula**：每名附近 Agent 先提供 base occupant pressure `.35`；若 width 已知，再加入 `max(0, widthRatio-.75) × 1.5` 的 narrowness pressure；最後乘 direction weight。這些都是 MVP approximation constants，不是人體工程學常數。
 - **route cost**：`congestionCost = congestionPressure × 2.5`，加入 objective `traversalCost`。舊 floor `occupiedCount × 5/2.5` 在 Crowding runtime 存在時停用。
-- **movement slowdown**：`delayTicks = floor(congestionPressure × 2)`；effective edge ticks = locomotion base edge ticks + delay ticks。Debug 的 `speedMultiplier` 由 base / effective ticks 派生。離散 tick 會量化小幅 slowdown，因此 direction severity即使已反映在 pressure / cost，也不保證每個單一 occupant情況都產生不同整數 tick。
+- **movement slowdown**：`delayTicks = floor(congestionPressure × 2)`；effective edge ticks = locomotion base metric movement ticks + delay ticks。diagonal base timing因此仍由 `distanceMeters / speedFactor` 決定，Crowding只加局部 delay，不把 `congestionCost / delayTicks` 再乘 `sqrt(2)`。Debug 的 `speedMultiplier` 由 base / effective ticks 派生。離散 tick會量化小幅 slowdown，因此 direction severity即使已反映在 pressure / cost，也不保證每個單一 occupant情況都產生不同整數 tick。
 - **planning vs execution**：route planning 讀當下 congestion snapshot；core `moveToward()` 每 tick 會重新 `planRoute(...)`，新 edge 開始時使用該次 step 的 crowding-adjusted `moveTicks`。因此較早的 estimated `travelTime` 與 actual travel time 可因人群移動不同；multi-tick edge開始後不在中途重算同一 edge。
 - **interaction target**：`bestInteractionPosition()` 在 Crowding runtime 存在時不再額外先按 raw occupancy 排序，而讓 canonical route/crowding cost負責 crowded position preference，避免 double count。
 - **deliberate non-goals**：第一版不禁止 Agent spatial overlap、不做 edge reservation、movement claim、誰先走、yielding、deadlock resolution、collision，也不加入 behavioral willingness / aversion。若後續實測「穿過彼此」本身成為產品問題，再另開 contention slice，不在本版預先引入 arbitration。
@@ -719,7 +719,7 @@ Regression 優先鎖：
 - Passage Profile height / width validity、`null = unconstrained`、explicit edge constraint 與 per-mode `failedAxes`；
 - Vertical Structure explicit-endpoint ownership、無 Structure 時 cross-Z unreachable、Structure Passage identity / clearance、`up > down >= flat` directional burden與實際跨 Z locomotion execution；
 - v11.17 isolated Passage focused harness仍不得因 feasibility query 自動 crawl；production v11.19+ mode-aware execution則由 Locomotion contract另行鎖定；
-- Dynamic Congestion direction severity、known-vs-unknown width、soft-no-block、planning snapshot vs execution refresh、legacy occupancy double-count removal；
+- Dynamic Congestion cardinal/diagonal candidate discovery、0°/45°/90°/135°/180° direction severity、Agent-ID de-duplication、known-vs-unknown width、soft-no-block、planning snapshot vs execution refresh、legacy occupancy double-count removal；
 - canonical Action terminology / construction；
 - Intent interruption semantics；
 - Social Bid requester / responder agency；
