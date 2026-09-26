@@ -161,7 +161,7 @@
   function activeSupplyActor(){return Object.values(state.agents).find(a=>a.action?.kind==='externalSupply')||null;}
   function worldExitFor(a){return (SP.allExits?.(state)||[]).filter(exit=>SP.exitStructurallyAvailable?.(state,exit)).map(exit=>({exit,d:routeBurden(a,exit.access)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d||x.exit.id.localeCompare(y.exit.id))[0]?.exit||null;}
   function externalSupplyDestination(){return containersByRole('externalSupplyDestination')[0]||null;}
-  function sleepChoice(a){const p=sleepProfile(a),bias=circadianSleepBias(a),propensity=sleepPropensity(a);if(!SP.sleepTargets(state,a).length||a.needs.sleepNeed<p.minimumSleepNeed||propensity<p.sleepOpportunityThreshold)return null;return {id:'sleep',score:42+a.needs.sleepNeed*.55+Math.max(-8,bias*.55)+Math.max(0,a.needs.fatigue-65)*.15,why:[`睡眠需求 ${Math.round(a.needs.sleepNeed)}`,`${circadianPatternName(p.circadianPattern)}節律與目前時段共同影響睡眠傾向`]};}
+  function sleepChoice(a){const p=sleepProfile(a),bias=circadianSleepBias(a),propensity=sleepPropensity(a);if(a.needs.sleepNeed<p.minimumSleepNeed||propensity<p.sleepOpportunityThreshold||!SP.sleepTargets(state,a).length)return null;return {id:'sleep',score:42+a.needs.sleepNeed*.55+Math.max(-8,bias*.55)+Math.max(0,a.needs.fatigue-65)*.15,why:[`睡眠需求 ${Math.round(a.needs.sleepNeed)}`,`${circadianPatternName(p.circadianPattern)}節律與目前時段共同影響睡眠傾向`]};}
 
   function baseUtilityForAction(a,id){
     const n=a?.needs||{},traits=a?.traits||{};
