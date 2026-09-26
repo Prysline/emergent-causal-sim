@@ -11,7 +11,7 @@ const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.30.0-metric-route-locomotion');
+assert.equal(st.version,'11.31.0-crowding-8-direction');
 assert.equal(st.interactionModel,undefined);
 
 assert.equal(SP.nodeWalkable(st,floor(st,4,2),a),false,'reduced profile must still apply shared Human walk envelope to chair geometry');
