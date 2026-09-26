@@ -154,6 +154,7 @@ const targetRouteMetrics=[
 ];
 const [humanRestMetrics,humanSleepMetrics,catRestMetrics]=targetRouteMetrics;
 for(const metrics of targetRouteMetrics)assert.equal(metrics.pathDistanceCalls,0,'rest / sleep target scoring must batch path-distance queries instead of calling standalone pathDistance per target');
+console.log('SLICE3_TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));
 assert.ok(humanRestMetrics.traversalFeasibilityCalls<1800,`Human rest target scoring regressed to ${humanRestMetrics.traversalFeasibilityCalls} feasibility calls`);
 assert.ok(humanSleepMetrics.traversalFeasibilityCalls<380,`Human sleep target scoring regressed to ${humanSleepMetrics.traversalFeasibilityCalls} feasibility calls`);
 assert.ok(catRestMetrics.floorTargetCount>20,'Cat rest fixture must exercise a broad floor-candidate set');
