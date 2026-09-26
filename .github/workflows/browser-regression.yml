@@ -53,6 +53,10 @@ jobs:
             test: tests/browser-step-batch-performance-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-step-batch-performance-qa
+          - suite: post-pr129-decision-gate
+            test: tests/browser-post-pr129-decision-gate.mjs
+            extra_test: ''
+            artifact: artifacts/browser-post-pr129-decision-gate
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
