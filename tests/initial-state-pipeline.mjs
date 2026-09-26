@@ -57,7 +57,7 @@ assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED_SCHEMA,finaliz
 assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.30.0-metric-route-locomotion','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.31.0-crowding-8-direction','full production schema set must preserve current release marker');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
