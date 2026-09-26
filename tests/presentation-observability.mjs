@@ -130,7 +130,7 @@ assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
 const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
 assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode='walk'\)/,'Crowding must expose a derived edge profile');
-assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 5');
+assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 4');
 assert.match(crowdingSource,/directionWeight:Object\.freeze\(\{same:\.65,stationary:1,unknown:1,opposite:1\.7\}\)/,'Crowding direction severity must remain deterministic');
 assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
 const entityUiSource=fs.readFileSync(new URL('../src/ui/entity-readable.js',import.meta.url),'utf8');
