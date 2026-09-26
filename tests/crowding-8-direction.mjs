@@ -41,7 +41,10 @@ function idleAgent(agent,node){
   agent.offMap=false;agent.position={...node};agent.action=null;agent.locomotion={mode:null,phase:'idle'};
 }
 
+E.reset(20260926);
+assert.equal(E.getState().version,'11.31.0-crowding-8-direction');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
+assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 
 {
   const {st,mover,other,a,b,c,d}=openArea();
