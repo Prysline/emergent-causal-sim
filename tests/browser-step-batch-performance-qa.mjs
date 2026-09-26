@@ -334,16 +334,16 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
-  assert.equal(feasibilityCounts.singleInside,8619,'8-direction Slice 3 must retain the measured single-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,25193,'8-direction Slice 3 must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,6256,'8-direction Slice 3 must retain the measured outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.singleInside,8621,'8-direction Slice 4 must retain the measured single-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,25253,'8-direction Slice 4 must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,6898,'8-direction Slice 4 must retain the measured outside-tick feasibility baseline');
 
   assert.deepEqual(pageErrors,[],'step batch perf QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'step batch perf QA must have no console errors');
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'8-direction Slice 3 metric-route profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; latency remains secondary and runner-dependent.',
+    note:'8-direction Slice 4 Crowding profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; planRoute call counts remain unchanged from Slice 3, while intended Crowding angle semantics may change route-search expansion; latency remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     pageErrors,
     consoleErrors
