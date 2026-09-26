@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.29.2-batch-step-yielding');
-assert.equal(E.VERSION,'11.29.2-batch-step-yielding');
+assert.equal(st.version,'11.29.3-interaction-winner-result-reuse');
+assert.equal(E.VERSION,'11.29.3-interaction-winner-result-reuse');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

@@ -12,7 +12,7 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1131);
 let st=E.getState();
-assert.equal(st.version,'11.29.2-batch-step-yielding');
+assert.equal(st.version,'11.29.3-interaction-winner-result-reuse');
 assert.equal(E.APPRAISAL_SCHEMA_VERSION,'11.13.1-event-appraisal');
 assert.equal(st.appraisals,undefined,'v11.13.1 must not add a global appraisal registry');
 noIssues('reset');

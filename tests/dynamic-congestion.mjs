@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.29.2-batch-step-yielding';
+const CURRENT_VERSION='11.29.3-interaction-winner-result-reuse';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
