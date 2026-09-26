@@ -57,6 +57,10 @@ jobs:
             test: tests/browser-post-pr125-residual-attribution-probe.mjs
             extra_test: ''
             artifact: artifacts/browser-post-pr125-residual-attribution-probe
+          - suite: post-pr125-candidate-probe
+            test: tests/browser-post-pr125-candidate-probe.mjs
+            extra_test: ''
+            artifact: artifacts/browser-post-pr125-candidate-probe
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
