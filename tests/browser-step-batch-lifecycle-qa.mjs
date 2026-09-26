@@ -293,7 +293,7 @@ try{
   assert.equal(autoplayCompleted.tick,2,'autoplay pause must stop at the observed target tick without an overdue catch-up tick');
   assert.equal(autoplayCompleted.probe.ticks.length,2,'autoplay must execute exactly two complete E.tick calls in the lifecycle probe');
   assert.ok(autoplayCompleted.probe.ticks[0].rafCount>=autoplayInitialRaf,'first autoplay tick may begin after the initial delay without requiring a new frame assertion');
-  assert.ok(autoplayCompleted.probe.ticks[1].rafCount>autoplayCompleted.probe.ticks[0].rafCount,'a browser animation-frame opportunity must occur between autoplay tick callbacks');
+  assert.ok(autoplayCompleted.probe.ticks[1].rafCount>=autoplayCompleted.probe.ticks[0].rafCount+2,'two browser animation-frame opportunities must occur between autoplay tick callbacks');
   assert.equal(autoplayCompleted.stateJson,autoplayReference.stateJson,'completion-aware autoplay must preserve canonical state parity for the same tick count');
   assert.equal(autoplayCompleted.rng,autoplayReference.rng,'completion-aware autoplay must preserve RNG parity for the same tick count');
   assert.match(autoplayCompleted.playText,/開始/);
