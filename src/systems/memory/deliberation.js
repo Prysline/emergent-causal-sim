@@ -25,7 +25,7 @@
       if(E.isAnimalAgent?.(a)!==true)return [];
       predicate=t=>t.kind==='human';
     }
-    return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,traversalCost:SP.traversalCost(st,a,target.position)})).filter(x=>Number.isFinite(x.traversalCost));
+    return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,route:SP.planRoute(st,a,target.position,{objective:'traversalCost'})})).filter(x=>Number.isFinite(x.route.traversalCost));
   }
   function memoryEvidence(st,a,m){
     const p=m?.appraisal||{},relevance=clamp(Number(p.relevance)||0,0,1),congruence=clamp(Number(p.goalCongruence)||0,-1,1),age=Math.max(0,(Number(st?.tick)||0)-(Number(m?.lastObservedTick)||Number(m?.observedTick)||0)),recency=1/(1+age/RECENCY_HALF_LIFE);
@@ -34,11 +34,11 @@
   function memoryAssociatedWithTarget(m,targetId){if(!m||!targetId)return false;if(m?.appraisal?.agency?.kind==='other'&&m.appraisal.agency.agentId===targetId)return true;return m.episodeKind==='privateSocialOutcome'&&m?.experienced?.kind==='socialNoResponse'&&m.experienced.counterpartId===targetId;}
   function targetMemoryContributions(st,a,targetId){return (a?.episodicMemories||[]).filter(m=>memoryAssociatedWithTarget(m,targetId)).map(m=>memoryEvidence(st,a,m)).sort((x,y)=>Math.abs(y.evidence)-Math.abs(x.evidence)||y.lastObservedTick-x.lastObservedTick||String(x.memoryId).localeCompare(String(y.memoryId))).slice(0,TOP_MEMORIES);}
   function targetAssociation(st,a,targetId){const contributions=targetMemoryContributions(st,a,targetId),signedEvidence=contributions.reduce((sum,c)=>sum+c.evidence,0),association=Math.tanh(signedEvidence),memoryUtilityDelta=clamp(association*MAX_DELTA,-MAX_DELTA,MAX_DELTA);return {targetId,contributions,signedEvidence:round(signedEvidence,4),association:round(association,4),memoryUtilityDelta:round(memoryUtilityDelta)};}
-  function targetEvaluation(st,a,target,intentKind,baseUtility){
-    const route=SP.planRoute(st,a,target.position,{mode:'auto',objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);
+  function targetEvaluation(st,a,target,intentKind,baseUtility,routeOverride=null){
+    const route=routeOverride||SP.planRoute(st,a,target.position,{objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);
     return {...assoc,intentKind,targetAgent:target.id,pathDistance:round(route.pathDistance),traversalCost:round(route.traversalCost),travelTime:round(route.travelTime),relationshipTargetDelta,accessPenalty:round(accessPenalty),targetPreference:round(assoc.memoryUtilityDelta+relationshipTargetDelta-accessPenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};
   }
-  function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target})=>targetEvaluation(st,a,target,intentKind,baseUtility)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}
+  function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target,route})=>targetEvaluation(st,a,target,intentKind,baseUtility,route)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}
 
   function bestTargetEvaluation(st,a,intentKind,baseUtility){return targetEvaluations(st,a,intentKind,baseUtility)[0]||null;}
   function adjustIntentCandidates(st,a,candidates){
