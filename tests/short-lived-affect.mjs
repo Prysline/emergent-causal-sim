@@ -12,7 +12,7 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1132);
 let st=E.getState();
-assert.equal(st.version,'11.29.3-interaction-winner-result-reuse');
+assert.equal(st.version,'11.30.0-metric-route-locomotion');
 assert.equal(E.AFFECT_SCHEMA_VERSION,'11.13.2-short-lived-affect');
 assert.equal(st.affects,undefined,'v11.13.2 must not add a global affect registry');
 for(const a of Object.values(st.agents))assert.deepEqual(a.affect,{valence:0,activation:0,frustration:0,lastUpdatedTick:0,lastDecayTick:0,source:null});

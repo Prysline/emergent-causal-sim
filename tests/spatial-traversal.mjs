@@ -12,7 +12,7 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen,zhou=st.agents.zhou;
-assert.equal(st.version,'11.29.3-interaction-winner-result-reuse');
+assert.equal(st.version,'11.30.0-metric-route-locomotion');
 assert.equal(SP.VERSION,'11.30.0-metric-route-locomotion');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
