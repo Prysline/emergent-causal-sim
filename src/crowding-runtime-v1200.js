@@ -83,10 +83,10 @@
     return [...out.values()];
   }
   function getCrowdingProfile(st,aOrId,from,to,mode='walk'){
-    const feasibilitySnapshot=arguments[5]||null;
+    const feasibilitySnapshot=arguments[5]||null,maneuverSnapshot=arguments[6]||null;
     const a=agentFor(st,aOrId),f=SP.normalizeNode(st,from),t=SP.normalizeNode(st,to);
     if(!a||!f||!t)return null;
-    const maneuver=SP.traversalManeuver?.(st,f,t)||null,distanceMeters=maneuver?.distanceMeters??1,moverDirection=maneuver?.directionVector||vec(f,t);
+    const maneuver=maneuverSnapshot||SP.traversalManeuver?.(st,f,t)||null,distanceMeters=maneuver?.distanceMeters??1,moverDirection=maneuver?.directionVector||vec(f,t);
     const feasibility=feasibilitySnapshot||SP.traversalFeasibility?.(st,a,f,t)||null,modeFact=feasibility?.modes?.[mode]||null,passageWidth=Number.isFinite(modeFact?.effectiveClearanceWidth)?modeFact.effectiveClearanceWidth:null,moverWidth=effectiveWidth(a,mode);
     const occupants=nearbyAgents(st,a,f,t,maneuver).map(other=>{
       const relation=directionRelationFromVector(st,moverDirection,other),otherWidth=effectiveWidth(other),directionWeight=CONFIG.directionWeight[relation]??1;
