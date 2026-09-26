@@ -166,10 +166,13 @@
       stepOne();
       if(autoplay!==context||context.token!==autoplayGeneration)return;
       context.frameId=requestAnimationFrame(()=>{
-        context.frameId=null;
         if(autoplay!==context||context.token!==autoplayGeneration)return;
-        const elapsed=performance.now()-startedAt,remaining=Math.max(0,AUTOPLAY_INTERVAL_MS-elapsed);
-        scheduleAutoplay(context,remaining);
+        context.frameId=requestAnimationFrame(()=>{
+          context.frameId=null;
+          if(autoplay!==context||context.token!==autoplayGeneration)return;
+          const elapsed=performance.now()-startedAt,remaining=Math.max(0,AUTOPLAY_INTERVAL_MS-elapsed);
+          scheduleAutoplay(context,remaining);
+        });
       });
     },Math.max(0,Number(delayMs)||0));
     return true;
