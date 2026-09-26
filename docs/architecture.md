@@ -682,7 +682,7 @@ v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route met
 v11.20.0 將既有粗略的「目的 node occupancy 固定 penalty」收斂為 derived Dynamic Congestion（動態擁擠）contract：
 
 - **ownership**：Crowding 不擁有 physical feasibility。MovementEnvelope vs PassageProfile 仍是個體能否通過某 edge 的唯一物理可行性 truth；其他 Agent 永遠不修改 PassageProfile。
-- **derived / uncached**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 只讀當下 world state，即時計算 next-edge congestion；不寫入 `state.crowding / state.congestion` 等 persistent mirror。
+- **derived / uncached**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 只讀當下 world state，即時計算 next-edge congestion；不寫入 `state.crowding / state.congestion` 等 persistent mirror。Route 在同一次 edge evaluation 已持有的 `traversalFeasibility` 與 `TraversalManeuver` 會直接作為 ephemeral snapshot 傳給 Crowding 重用，避免同一 edge / mode 重建 Passage 幾何；這不是 persistent / cross-tick cache。
 - **soft consequence only**：第一版不產生 hard block。多 Agent 在狹窄處相遇時，側身、錯步、短暫停頓與調整移動方式被抽象為 `congestionCost` 與 movement delay，不建立 collision / reservation / yielding semantics。
 - **width approximation**：Crowding 使用 traversal feasibility 對目前 mode 選出的 `effectiveClearanceWidth`；普通無障礙 1m edge因此有已知 1m width，較窄 opening使用實際 option width。另一人的 effective width只作 crowding-specific approximation，不冒充 PoseEnvelope / Static fit。
 - **unknown width**：passage width 為 `null` 時，只依 occupant count、movement direction 等已知資訊形成 soft penalty，不推導「一格最多幾人」等虛假 physical capacity。
