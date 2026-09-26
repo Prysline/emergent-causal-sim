@@ -13,7 +13,7 @@ loadRuntimeProfile([
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION='11.29.3-interaction-winner-result-reuse';
-const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
+const LOCOMOTION_VERSION='11.30.0-distance-timing';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 const verticalAuthoring=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
