@@ -37,7 +37,8 @@ const browserTests=[
   'tests/browser-resident-view-qa.mjs',
   'tests/browser-world-authoring-editor-qa.mjs',
   'tests/browser-runtime-hook-pipeline-qa.mjs',
-  'tests/browser-step-batch-performance-qa.mjs'
+  'tests/browser-step-batch-performance-qa.mjs',
+  'tests/browser-post-pr129-decision-gate.mjs'
 ];
 for(const path of browserTests)assert.ok(browser.includes(path),'Browser regression must cover '+path);
 
