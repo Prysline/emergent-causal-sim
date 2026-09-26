@@ -37,14 +37,19 @@ async function installProbe(){
     if(window.__batchLifecycleProbe)return;
     const E=window.SimEngine;
     const data={rafCount:0,ticks:[],mutations:{mobile:0,map:0,actions:0,timeline:0,inspector:0}};
-    let running=true;
+    let running=true,autoplayStopTick=null;
     function frame(){data.rafCount++;if(running)requestAnimationFrame(frame);}
     requestAnimationFrame(frame);
 
     const originalTick=E.tick;
     E.tick=function(...args){
       data.ticks.push({before:E.getState().tick,rafCount:data.rafCount});
-      return originalTick.apply(this,args);
+      const result=originalTick.apply(this,args);
+      if(autoplayStopTick!==null&&E.getState().tick>=autoplayStopTick){
+        autoplayStopTick=null;
+        queueMicrotask(()=>document.getElementById('play')?.click());
+      }
+      return result;
     };
 
     const observers=[];
@@ -57,8 +62,9 @@ async function installProbe(){
 
     window.__batchLifecycleProbe={
       snapshot:()=>structuredClone(data),
-      reset(){data.ticks.length=0;for(const key of Object.keys(data.mutations))data.mutations[key]=0;},
-      stop(){running=false;for(const observer of observers)observer.disconnect();E.tick=originalTick;}
+      reset(){data.ticks.length=0;autoplayStopTick=null;for(const key of Object.keys(data.mutations))data.mutations[key]=0;},
+      setAutoplayStopTick(tick){autoplayStopTick=Number(tick);},
+      stop(){running=false;autoplayStopTick=null;for(const observer of observers)observer.disconnect();E.tick=originalTick;}
     };
   });
 }
@@ -261,6 +267,7 @@ try{
   await resetThroughUi();
   await page.evaluate(()=>window.__batchLifecycleProbe.reset());
   const autoplayInitialRaf=await page.evaluate(()=>window.__batchLifecycleProbe.snapshot().rafCount);
+  await page.evaluate(()=>window.__batchLifecycleProbe.setAutoplayStopTick(2));
   await page.click('#play');
   const autoplay=await page.evaluate(()=>({
     step:document.getElementById('step').disabled,
@@ -274,8 +281,7 @@ try{
   assert.equal(autoplay.play,false,'play must remain available as pause during autoplay');
   assert.equal(autoplay.reset,false);
   assert.match(autoplay.playText,/暫停/);
-  await page.waitForFunction(()=>window.SimEngine.getState().tick>=2);
-  await page.click('#play');
+  await page.waitForFunction(()=>window.SimEngine.getState().tick===2&&document.getElementById('play').textContent.includes('開始'));
   await settleFrames(2);
   const autoplayCompleted=await page.evaluate(()=>({
     tick:window.SimEngine.getState().tick,
