@@ -177,7 +177,7 @@ assert.match(readmeSource,/Relationship Foundation/,'README must document the lo
 assert.match(readmeSource,/Responder Bias/,'README must retain current Relationship responder influence');
 assert.match(readmeSource,/Physical Profile Foundation/,'README must retain the Physical Foundation boundary');
 assert.match(readmeSource,/Passage Profile/,'README must retain the multi-mode traversal-feasibility boundary');
-assert.match(readmeSource,/Route Semantics Split/,'README must retain the Route Semantics contract');
+assert.match(readmeSource,/Metric Route/,'README must retain the current metric Route contract');
 assert.match(readmeSource,/Locomotion Execution/,'README must retain locomotion execution and posture transitions');
 assert.match(readmeSource,/Dynamic Congestion/,'README must document the current Dynamic Congestion contract');
 assert.match(readmeSource,/accessPenalty/,'README must document the target access-penalty migration');
