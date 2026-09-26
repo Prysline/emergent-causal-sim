@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.29.1-slot-interaction-egress`。
+目前 runtime marker：`11.29.2-batch-step-yielding`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -484,7 +484,7 @@ Presentation 不再參與 initial-state schema，也不再持有 `SimWorld.PRESE
 
 Resident View 的「最近發生的事」仍直接投影 bounded canonical events。對 `visibility: private` 且 `owner === residentId` 的事件，只在玩家可讀列項加上獨立「私人」badge；事件正文不加前綴，公開事件不加 badge。這個 badge 不建立新的 private-state truth，也不改 Memory / Relationship / event visibility 語意。
 
-Presentation refresh/reset 使用上節的 runtime observer boundary。現行 observer relative order保留：afterTick `uiObservability.render-mobile-summary` → `residentView.schedule` → `relationshipView.schedule`；afterReset `uiObservability.reset` → `residentView.reset` → `relationshipView.reset`。這些 observer 永遠在完整 simulation phase之後執行。
+Presentation refresh/reset 使用上節的 runtime observer boundary。現行 observer relative order保留：afterTick `uiObservability.render-mobile-summary` → `residentView.schedule` → `relationshipView.schedule`；afterReset `uiObservability.reset` → `residentView.reset` → `relationshipView.reset`。這些 observer 永遠在完整 simulation phase之後執行。\n\nManual batch scheduling 也屬 Presentation / UI ownership，而不是 Engine lifecycle。`step(1)` 保持同步 atomic tick；`step(10)` 的 UI batch在第一個 tick前與完整 tick之間讓出 browser event loop，但不切開 `E.tick()`。Intermediate manual-batch tick仍會到達上述 afterTick observer boundary，只是三個 observer handler在 UI batch context標示 intermediate時 defer真正 projection；final tick解除 intermediate flag後依原順序正常 refresh，再由 core做一次完整 render。這個 UI-only context、busy / inert state與 cancellation generation不得寫入 simulation state，也不得改 simulation hook manifest、same-tick visibility或 RNG semantics。Reset先 invalidates舊 batch continuation再走既有 `E.reset()` / afterReset lifecycle；autoplay與manual batch不得同時成為兩個 tick source。
 
 ### Canonical event text
 
