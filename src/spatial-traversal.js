@@ -217,6 +217,7 @@
     const structure=passage.edgeKind==='structure';
     const horizontal=passage.edgeKind==='horizontal';
     if(!structure&&!horizontal)return null;
+    if(horizontal&&passage.status&&passage.status!=='candidate')return null;
     const dz=zOf(b)-zOf(a),dx=b.x-a.x,dy=b.y-a.y;
     return {
       from:cloneNode(a),to:cloneNode(b),
