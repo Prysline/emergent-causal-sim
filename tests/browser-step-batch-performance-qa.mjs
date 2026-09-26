@@ -145,7 +145,7 @@ async function installInstrumentation(){
       target[name]=function(...args){
         const start=performance.now(),resolvedLabel=label||name;
         if(resolvedLabel==='SP.traversalFeasibility'&&window.__perfCollectCallerStacks){
-          const stack=String(new Error().stack||'').split('\n').slice(2,8).join(' | ')
+          const stack=String(new Error().stack||'').split('\n').slice(2,14).join(' | ')
             .replace(/http:\/\/127\.0\.0\.1:4173\//g,'')
             .replace(/:\d+:\d+/g,':#:#');
           const key=phase+' | '+stack;
