@@ -278,19 +278,21 @@
   }
   function modeRank(mode){return mode==='walk'?0:mode==='kneelCrawl'?1:mode==='proneCrawl'?2:9;}
   function currentLocomotionMode(a){return locomotionRuntime()?.modeFromPosture?.(a)||null;}
-  function edgeMoveTicks(st,a,from,to,mode,crowdingSnapshot=null){const C=crowdingRuntime(),ticks=C?.edgeMoveTicks?.(st,a,from,to,mode,crowdingSnapshot)??locomotionRuntime()?.edgeMoveTicks?.(a,mode);return Number.isFinite(ticks)&&ticks>0?ticks:1;}
+  function normalizedMovementCredit(value){const credit=Number(value);return Number.isFinite(credit)&&credit>0?Math.min(credit,1-1e-9):0;}
+  function fallbackMovementTiming(distanceMeters,movementCredit=0){const distance=Number(distanceMeters),credit=normalizedMovementCredit(movementCredit);if(!Number.isFinite(distance)||distance<=0)return {movementTicks:Infinity,movementCreditAfter:0,requiredTicks:Infinity};const requiredTicks=distance,effective=Math.max(0,requiredTicks-credit),movementTicks=Math.max(1,Math.ceil(effective-1e-12));return {movementTicks,movementCreditAfter:normalizedMovementCredit(credit+movementTicks-requiredTicks),requiredTicks};}
+  function edgeMoveTiming(st,a,from,to,mode,crowdingSnapshot=null,movementCredit=0){const distanceMeters=traversalManeuver(st,from,to)?.distanceMeters??1,L=locomotionRuntime(),base=L?.movementTiming?.(a,mode,distanceMeters,movementCredit)??fallbackMovementTiming(distanceMeters,movementCredit),delayTicks=Math.max(0,Number(crowdingSnapshot?.delayTicks)||0);return {distanceMeters,movementTicks:base.movementTicks,moveTicks:Number.isFinite(base.movementTicks)?base.movementTicks+delayTicks:Infinity,movementCreditAfter:normalizedMovementCredit(base.movementCreditAfter),delayTicks};}
   function transitionTicks(fromMode,toMode){const ticks=locomotionRuntime()?.transitionTicks?.(fromMode,toMode);return Number.isFinite(ticks)&&ticks>=0?ticks:(fromMode===toMode?0:0);}
   function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
-  function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank);}
+  function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank)||((b.movementCredit??0)-(a.movementCredit??0));}
   function routeStateSearch(st,start,aOrId=null,options={}){
     return withGeometrySnapshot(st,()=>routeStateSearchWithin(st,start,aOrId,options));
   }
-  function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,trackPath=false,onSettle=null}={}){
+  function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,trackPath=false,onSettle=null}={}){
     if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
     const a=agentFor(st,aOrId),s=normalizeNode(st,start),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={};
     if(!s||!nodeLocomotionAccessible(st,s,a))return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:null};
     const sk=routeStateKey(st,s,startMode),open=new Set([sk]);
-    score[sk]={primary:0,time:0,transitions:0,modeRank:0};states[sk]={node:s,mode:startMode};
+    score[sk]={primary:0,time:0,transitions:0,modeRank:0,movementCredit:normalizedMovementCredit(movementCredit)};states[sk]={node:s,mode:startMode};
     while(open.size){
       let ck=null,best=null;
       for(const k of open){const value=score[k];if(!best||compareRouteScore(value,best)<0){best=value;ck=k;}}
@@ -301,18 +303,19 @@
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
           const maneuver=traversalManeuver(st,cur.node,q),distanceMeters=maneuver?.distanceMeters??1;
-          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility)||null,moveTicks=edgeMoveTicks(st,a,cur.node,q,nextMode,crowding),edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding);
+          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,transition>0?0:best.movementCredit),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks)||!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?distanceMeters:edgeCost),
             time:best.time+transition+moveTicks,
             transitions:best.transitions+(transition>0?1:0),
-            modeRank:best.modeRank+modeRank(nextMode)
+            modeRank:best.modeRank+modeRank(nextMode),
+            movementCredit:timing.movementCreditAfter
           };
           const qk=routeStateKey(st,q,nextMode);
           if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
           if(trackPath){
-            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,moveTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,edgeTraversalCost:edgeCost,congestion:crowding};
+            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore:transition>0?0:best.movementCredit,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,edgeTraversalCost:edgeCost,congestion:crowding};
             came[qk]={prev:ck,step};
           }
           score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
@@ -321,12 +324,12 @@
     }
     return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:null};
   }
-  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost',mode=null}={}){
+  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0}={}){
     const a=agentFor(st,aOrId),s=normalizeNode(st,start),g=normalizeNode(st,goal),requested=resolvedRequestedMode(mode),startMode=currentLocomotionMode(a);
     availableModes(a,requested);
     if(!s||!g||!nodeLocomotionAccessible(st,s,a)||!nodeLocomotionAccessible(st,g,a))return {path:[],steps:[],startMode,requestedMode:requested};
     if(nodeSame(st,s,g))return {path:[cloneNode(s)],steps:[],startMode,requestedMode:requested};
-    const search=routeStateSearch(st,s,a,{objective,mode:requested,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
+    const search=routeStateSearch(st,s,a,{objective,mode:requested,movementCredit,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
     if(!search.settledKey)return {path:[],steps:[],startMode:search.startMode,requestedMode:search.requestedMode};
     const steps=[];let k=search.settledKey;
     while(search.came[k]){steps.unshift(search.came[k].step);k=search.came[k].prev;}
@@ -366,10 +369,10 @@
     for(const step of route.steps||[]){pathDistance+=Number.isFinite(step.distanceMeters)?step.distanceMeters:(traversalManeuver(st,step.from,step.to)?.distanceMeters??1);traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode,step.fromMode??step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
     return {pathDistance,stepCount:(route.steps||[]).length,traversalCost,travelTime,transitionTicks:transitions};
   }
-  function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost'}={}){
+  function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost',movementCredit=0}={}){
     const a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
     if(!a)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
-    const route=routeSearch(st,a.position,goal,a,{objective,mode:requested}),metrics=routeMetrics(st,a,route),used=[...new Set((route.steps||[]).map(step=>step.mode))];
+    const route=routeSearch(st,a.position,goal,a,{objective,mode:requested,movementCredit}),metrics=routeMetrics(st,a,route),used=[...new Set((route.steps||[]).map(step=>step.mode))];
     const selectedMode=used.length===1?used[0]:used.length>1?'mixed':route.startMode||requested;
     return {path:route.path,steps:route.steps,mode:selectedMode,requestedMode:requested,objective,startMode:route.startMode,...metrics};
   }
