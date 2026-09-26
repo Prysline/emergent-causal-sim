@@ -12,7 +12,7 @@
 
 ### Current Completion-Aware Autoplay release
 
-`11.31.1-autoplay-completion-aware` 將 simulator autoplay 的 tick-source scheduling 從固定 `setInterval(stepOne,700)` 改為 Presentation-owned completion-aware controller。名目 start-to-start cadence仍為約 700ms：若完整同步 `E.tick() → render()` 在週期內完成，下一 callback只等待剩餘時間；若工作本身已超過700ms，不補跑或追趕 overdue callback，而是在完整 callback 結束後先經過 browser `requestAnimationFrame` paint opportunity，再以零額外 cadence delay安排下一 tick。
+`11.31.1-autoplay-completion-aware` 將 simulator autoplay 的 tick-source scheduling 從固定 `setInterval(stepOne,700)` 改為 Presentation-owned completion-aware controller。名目 start-to-start cadence仍為約 700ms：若完整同步 `E.tick() → render()` 在週期內完成，下一 callback只等待剩餘時間；若工作本身已超過700ms，不補跑或追趕 overdue callback，而是在完整 callback 結束後先跨過兩個 browser `requestAnimationFrame` opportunities，再以零額外 cadence delay安排下一 tick。
 
 Pause / Reset共用單一 cancellation owner，會取消 pending timeout / animation-frame並使 generation token失效；manual `step` / `step10` 與 autoplay仍互斥，完整 simulation tick不被切開或 await。這只改玩家可觀察的 Presentation scheduling / responsiveness policy，不改 simulation state/schema、Route score、hook ordering、Crowding / Spatial / Locomotion semantics或 RNG。
 
