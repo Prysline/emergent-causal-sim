@@ -8,7 +8,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-assert.equal(SP.VERSION,'11.29.3-interaction-winner-result');
+assert.equal(SP.VERSION,'11.30.0-metric-route-locomotion');
 
 function zOf(p){return SP.zOf?SP.zOf(p):(p?.z??0);}
 function localSame(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y&&zOf(a)===zOf(b);}
