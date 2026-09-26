@@ -322,6 +322,7 @@ try{
   assert.equal(results.single_none.metrics.stateJson,results.single_agent.metrics.stateJson,'render-scoped validation reuse must remain simulation-state inert');
   const feasibilityCounts={
     singleInside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),
+    singleOutside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','outsideTick'),
     batch10Inside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),
     batch10Outside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick')
   };
@@ -337,16 +338,17 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
-  assert.equal(feasibilityCounts.singleInside,8621,'8-direction Slice 4 must retain the measured single-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,25253,'8-direction Slice 4 must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,6898,'8-direction Slice 4 must retain the measured outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.singleInside,8621,'render-scoped validation reuse must not change the measured single-tick simulation feasibility baseline');
+  assert.equal(feasibilityCounts.singleOutside,3802,'one no-selection render must retain the measured one-pass outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,25253,'render-scoped validation reuse must not change the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,3877,'render-scoped validation reuse must retain the measured step(10) outside-tick baseline');
 
   assert.deepEqual(pageErrors,[],'step batch perf QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'step batch perf QA must have no console errors');
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'8-direction Slice 4 Crowding profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; planRoute call counts remain unchanged from Slice 3, while intended Crowding angle semantics may change route-search expansion; latency remains secondary and runner-dependent.',
+    note:'11.31 render-scoped Validator reuse profile: inside-tick deterministic simulation workload remains unchanged; one full no-selection render performs one validation pass, reducing outside-tick Route/Passage work without changing exact canonical state. Latency remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     pageErrors,
     consoleErrors
