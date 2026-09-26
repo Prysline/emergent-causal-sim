@@ -10,6 +10,7 @@ const page=await browser.newPage({viewport:{width:1440,height:900}});
 const pageErrors=[],consoleErrors=[];
 page.on('pageerror',error=>pageErrors.push(String(error)));
 page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());});
+let servedProbe='current';
 
 await page.addInitScript(()=>{
   const rows={};
@@ -36,6 +37,32 @@ await page.addInitScript(()=>{
     reset(){for(const key of Object.keys(rows))delete rows[key];currentTick=null;},
     snapshot(){return structuredClone(rows);}
   };
+});
+
+await page.route('**/src/ui/core.js',async route=>{
+  const response=await route.fetch();
+  let body=await response.text();
+  const validationAnchor="function validation(){return V.validateState(st());}";
+  const renderAnchor="function render(){const s=st();normalizeCurrentZ();$('clock').textContent=`第 ${s.day} 天 ${E.timeStr()}`;$('tickLabel').textContent=`Tick ${s.tick}・Seed ${s.seed}`;renderLayerControl();renderBadges();renderMap();renderActions();renderTimeline();renderInspector();}";
+  const stepAnchor="function stepOne(){E.tick();render();}";
+  const toggleAnchor="  function togglePlay(){";
+  const intervalAnchor="    $('play').textContent='⏸ 暫停';timer=setInterval(stepOne,700);syncControlState();return true;";
+  if(!body.includes(validationAnchor)||!body.includes(renderAnchor)||!body.includes(stepAnchor)||!body.includes(toggleAnchor)||!body.includes(intervalAnchor))throw new Error('core performance diagnostic anchor missing');
+
+  if(servedProbe==='validatorReuse'||servedProbe==='combined'){
+    body=body.replace(validationAnchor,"let __renderValidationSnapshot=null;function validation(){return __renderValidationSnapshot??V.validateState(st());}");
+    body=body.replace(renderAnchor,"function render(){const __diagStart=performance.now();__renderValidationSnapshot=V.validateState(st());try{const s=st();normalizeCurrentZ();$('clock').textContent=`第 ${s.day} 天 ${E.timeStr()}`;$('tickLabel').textContent=`Tick ${s.tick}・Seed ${s.seed}`;renderLayerControl();renderBadges();renderMap();renderActions();renderTimeline();renderInspector();}finally{__renderValidationSnapshot=null;globalThis.__perfRenderRecord?.(__diagStart,performance.now(),E.getState()?.tick??null);}}");
+  }else{
+    body=body.replace(renderAnchor,"function render(){const __diagStart=performance.now();try{const s=st();normalizeCurrentZ();$('clock').textContent=`第 ${s.day} 天 ${E.timeStr()}`;$('tickLabel').textContent=`Tick ${s.tick}・Seed ${s.seed}`;renderLayerControl();renderBadges();renderMap();renderActions();renderTimeline();renderInspector();}finally{globalThis.__perfRenderRecord?.(__diagStart,performance.now(),E.getState()?.tick??null);}}");
+  }
+
+  body=body.replace(stepAnchor,"function stepOne(){const __diagStart=performance.now();try{E.tick();render();}finally{globalThis.__perfStepOneRecord?.(__diagStart,performance.now(),E.getState()?.tick??null);if(globalThis.__diagAutoTargetTick&&E.getState()?.tick>=globalThis.__diagAutoTargetTick&&timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';syncControlState();globalThis.__diagAutoStopReached=true;}}}");
+
+  if(servedProbe==='completionAware'||servedProbe==='combined'){
+    body=body.replace(toggleAnchor,"  function scheduleCompletionAwarePlay(){\n    timer=setTimeout(()=>{\n      if(!timer)return;\n      stepOne();\n      if(!timer)return;\n      requestAnimationFrame(()=>requestAnimationFrame(()=>{if(timer)scheduleCompletionAwarePlay();}));\n    },700);\n  }\n  function togglePlay(){");
+    body=body.replace(intervalAnchor,"    $('play').textContent='⏸ 暫停';scheduleCompletionAwarePlay();syncControlState();return true;");
+  }
+  await route.fulfill({response,body});
 });
 
 await page.route('**/src/runtime-hook-pipeline.js',async route=>{
@@ -87,7 +114,10 @@ async function installInstrumentation(){
       queries:{},
       domWrites:{},
       longTasks:[],
-      longTaskSupported:false
+      longTaskSupported:false,
+      stepOne:[],
+      renders:[],
+      callerStacks:{}
     };
 
     function row(store,name){
@@ -113,11 +143,29 @@ async function installInstrumentation(){
       const original=target?.[name];
       if(typeof original!=='function')return;
       target[name]=function(...args){
-        const start=performance.now();
+        const start=performance.now(),resolvedLabel=label||name;
+        if(resolvedLabel==='SP.traversalFeasibility'&&window.__perfCollectCallerStacks){
+          const stack=String(new Error().stack||'').split('\n').slice(2,8).join(' | ')
+            .replace(/http:\/\/127\.0\.0\.1:4173\//g,'')
+            .replace(/:\d+:\d+/g,':#:#');
+          const key=phase+' | '+stack;
+          data.callerStacks[key]=(data.callerStacks[key]||0)+1;
+        }
         try{return original.apply(this,args);}
-        finally{record(data.queries,label||name,performance.now()-start);}
+        finally{record(data.queries,resolvedLabel,performance.now()-start);}
       };
     }
+
+    window.__perfStepOneRecord=(start,end,tick)=>{
+      const rec={startMs:start,endMs:end,durationMs:end-start,tick,firstTimerOpportunityMs:null,firstFrameMs:null,usableFrameMs:null};
+      data.stepOne.push(rec);
+      setTimeout(()=>{rec.firstTimerOpportunityMs=performance.now()-start;},0);
+      requestAnimationFrame(()=>{
+        rec.firstFrameMs=performance.now()-start;
+        requestAnimationFrame(()=>{rec.usableFrameMs=performance.now()-start;});
+      });
+    };
+    window.__perfRenderRecord=(start,end,tick)=>data.renders.push({startMs:start,endMs:end,durationMs:end-start,tick});
 
     const originalTick=E.tick;
     E.tick=function(...args){
@@ -175,6 +223,12 @@ async function installInstrumentation(){
         clearStore(data.queries);
         clearStore(data.domWrites);
         data.longTasks.length=0;
+        data.stepOne.length=0;
+        data.renders.length=0;
+        for(const key of Object.keys(data.callerStacks))delete data.callerStacks[key];
+        window.__perfCollectCallerStacks=false;
+        window.__diagAutoTargetTick=null;
+        window.__diagAutoStopReached=false;
         window.__stepBatchPipelineProbe?.reset();
       },
       snapshot(){
@@ -184,8 +238,12 @@ async function installInstrumentation(){
           domWrites:structuredClone(data.domWrites),
           longTasks:data.longTasks.map(x=>({...x})),
           longTaskSupported:data.longTaskSupported,
+          stepOne:data.stepOne.map(x=>({...x})),
+          renders:data.renders.map(x=>({...x})),
+          callerStacks:structuredClone(data.callerStacks),
           pipeline:window.__stepBatchPipelineProbe?.snapshot?.()||{},
           tick:E.getState()?.tick??null,
+          presentationJson:JSON.stringify(Object.fromEntries(['worldBadges','map','actions','timeline','inspector','runtimeLayerSelect'].map(id=>[id,document.getElementById(id)?.innerHTML||'']))),
           stateJson:JSON.stringify(E.getState())
         };
       }
@@ -193,7 +251,8 @@ async function installInstrumentation(){
   });
 }
 
-async function openCase({selected=false}={}){
+async function openCase({selected=false,probe='current',collectCallers=false}={}){
+  servedProbe=probe;
   await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await page.waitForFunction(()=>window.SimEngine?.getState?.()&&window.SimUI?.isStarted?.());
   if(selected){
@@ -203,7 +262,7 @@ async function openCase({selected=false}={}){
     await settleFrames(2);
   }
   await installInstrumentation();
-  await page.evaluate(()=>window.__stepBatchPerf.reset());
+  await page.evaluate(({collectCallers})=>{window.__stepBatchPerf.reset();window.__perfCollectCallerStacks=collectCallers;},{collectCallers});
 }
 
 async function clickWithFrames(id,expectedTicks=1){
@@ -234,8 +293,8 @@ async function clickWithFrames(id,expectedTicks=1){
   },{id,expectedTicks});
 }
 
-async function runCase(mode,selected){
-  await openCase({selected});
+async function runCase(mode,selected,probe='current',collectCallers=false){
+  await openCase({selected,probe,collectCallers});
   const startTick=await page.evaluate(()=>window.SimEngine.getState().tick);
   const interactions=[];
   if(mode==='single'){
@@ -249,11 +308,51 @@ async function runCase(mode,selected){
   const snapshot=await page.evaluate(()=>window.__stepBatchPerf.snapshot());
   return {
     mode,
+    probe,
     selected,
     startTick,
     interactions,
     metrics:snapshot
   };
+}
+
+async function runAutoplayCase(probe,selected,ticks=3){
+  await openCase({selected,probe});
+  const startTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  const targetTick=startTick+ticks;
+  await page.evaluate(targetTick=>{window.__diagAutoTargetTick=targetTick;window.__diagAutoStopReached=false;},targetTick);
+  const start=performance.now();
+  const handlerMs=await page.evaluate(()=>{
+    const start=performance.now();
+    document.getElementById('play').click();
+    return performance.now()-start;
+  });
+  await page.waitForFunction(()=>window.__diagAutoStopReached===true,null,{timeout:60000});
+  const totalCompletionMs=performance.now()-start;
+  await settleFrames(3);
+  const snapshot=await page.evaluate(()=>window.__stepBatchPerf.snapshot());
+  return {mode:'autoplay',probe,selected,startTick,targetTick,handlerMs,totalCompletionMs,metrics:snapshot};
+}
+
+async function runAutoplayLifecycleProbe(probe){
+  await openCase({selected:false,probe});
+  const startTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  await page.locator('#play').click();
+  const active=await page.evaluate(()=>({
+    stepDisabled:document.getElementById('step').disabled,
+    step10Disabled:document.getElementById('step10').disabled,
+    playText:document.getElementById('play').textContent
+  }));
+  await page.locator('#play').click();
+  await page.waitForTimeout(850);
+  const pausedTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  await page.locator('#play').click();
+  await page.locator('#reset').click();
+  await page.waitForTimeout(850);
+  const resetTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  await page.locator('#step').click();
+  const manualTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  return {probe,startTick,active,pausedTick,resetTick,manualTick};
 }
 
 function assertCase(result,expectedTicks){
@@ -270,6 +369,7 @@ function reportCase(result){
   const tickDurations=metrics.ticks.map(x=>x.durationMs);
   return {
     mode:result.mode,
+    probe:result.probe,
     selected:result.selected,
     startTick:result.startTick,
     interactions:result.interactions,
@@ -279,6 +379,8 @@ function reportCase(result){
       tickMaxMs:Math.max(0,...tickDurations),
       tickMeanMs:tickDurations.length?tickDurations.reduce((sum,x)=>sum+x,0)/tickDurations.length:0,
       stateHash:hashText(stateJson),
+      validateCalls:metrics.queries?.['SimValidator.validateState']?.calls??0,
+      renderTotalMs:metrics.renders?.reduce((sum,x)=>sum+x.durationMs,0)??0,
       stateBytes:Buffer.byteLength(stateJson)
     }
   };
@@ -317,6 +419,80 @@ try{
   );
 
   const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
+
+  const validatorProbe={};
+  for(const selected of [false,true]){
+    const suffix=selected?'agent':'none';
+    validatorProbe['current_'+suffix]=results['single_'+suffix];
+    validatorProbe['reuse_'+suffix]=await runCase('single',selected,'validatorReuse');
+    assertCase(validatorProbe['reuse_'+suffix],1);
+  }
+  assert.equal(queryPhaseCalls(validatorProbe.current_none,'SimValidator.validateState','outsideTick'),2,'current no-selection render must show duplicate validation');
+  assert.equal(queryPhaseCalls(validatorProbe.reuse_none,'SimValidator.validateState','outsideTick'),1,'render-scoped snapshot must reduce no-selection validation to one call');
+  assert.equal(queryPhaseCalls(validatorProbe.current_agent,'SimValidator.validateState','outsideTick'),1,'current selected Agent render must validate once');
+  assert.equal(queryPhaseCalls(validatorProbe.reuse_agent,'SimValidator.validateState','outsideTick'),1,'render-scoped snapshot must not add selected-Agent validation calls');
+  for(const suffix of ['none','agent']){
+    assert.equal(validatorProbe['current_'+suffix].metrics.stateJson,validatorProbe['reuse_'+suffix].metrics.stateJson,'validator reuse must preserve canonical simulation state for '+suffix);
+    assert.equal(validatorProbe['current_'+suffix].metrics.presentationJson,validatorProbe['reuse_'+suffix].metrics.presentationJson,'validator reuse must preserve rendered content for '+suffix);
+  }
+
+  const autoplayProbe={};
+  for(const selected of [false,true]){
+    const suffix=selected?'agent':'none';
+    autoplayProbe['current_'+suffix]=await runAutoplayCase('current',selected,3);
+    autoplayProbe['completion_'+suffix]=await runAutoplayCase('completionAware',selected,3);
+    for(const key of ['current_'+suffix,'completion_'+suffix]){
+      const result=autoplayProbe[key];
+      assert.equal(result.metrics.tick,result.targetTick,key+' autoplay must advance exact target ticks');
+      assert.equal(result.metrics.ticks.length,3,key+' autoplay instrumentation must see exactly three ticks');
+      assert.equal(result.metrics.stepOne.length,3,key+' autoplay must record exactly three stepOne callbacks');
+      assert.ok(result.metrics.stepOne.every(x=>Number.isFinite(x.durationMs)&&Number.isFinite(x.firstFrameMs)&&Number.isFinite(x.usableFrameMs)&&Number.isFinite(x.firstTimerOpportunityMs)),key+' autoplay callback records must include callback + frame/timer timings');
+    }
+    assert.equal(autoplayProbe['current_'+suffix].metrics.stateJson,autoplayProbe['completion_'+suffix].metrics.stateJson,'completion-aware autoplay must preserve canonical state/RNG parity for '+suffix);
+  }
+  assert.equal(autoplayProbe.current_none.metrics.stateJson,autoplayProbe.current_agent.metrics.stateJson,'Inspector selection must remain simulation-state inert during current autoplay');
+  assert.equal(autoplayProbe.completion_none.metrics.stateJson,autoplayProbe.completion_agent.metrics.stateJson,'Inspector selection must remain simulation-state inert during completion-aware autoplay');
+
+  const lifecycleCurrent=await runAutoplayLifecycleProbe('current');
+  const lifecycleCompletion=await runAutoplayLifecycleProbe('completionAware');
+  for(const lifecycle of [lifecycleCurrent,lifecycleCompletion]){
+    assert.equal(lifecycle.active.stepDisabled,true,lifecycle.probe+' autoplay must disable manual step');
+    assert.equal(lifecycle.active.step10Disabled,true,lifecycle.probe+' autoplay must disable step10');
+    assert.ok(lifecycle.active.playText.includes('暫停'),lifecycle.probe+' autoplay play control must become pause');
+    assert.equal(lifecycle.pausedTick,lifecycle.startTick,lifecycle.probe+' pause-before-first-callback must prevent ticks');
+    assert.equal(lifecycle.resetTick,0,lifecycle.probe+' reset must cancel pending autoplay callback');
+    assert.equal(lifecycle.manualTick,1,lifecycle.probe+' manual step must work after reset cancellation');
+  }
+
+  const callerAttribution=await runCase('single',false,'current',true);
+  assertCase(callerAttribution,1);
+  assert.equal(queryPhaseCalls(callerAttribution,'SP.traversalFeasibility','insideTick'),8621,'caller-attribution single tick must preserve Slice 4 feasibility count');
+  const callerTop=Object.entries(callerAttribution.metrics.callerStacks)
+    .filter(([key])=>key.startsWith('insideTick | '))
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,30)
+    .map(([stack,calls])=>({calls,stack}));
+
+  console.log('PERF_REVALIDATION_VALIDATOR_PROBE '+JSON.stringify(Object.fromEntries(Object.entries(validatorProbe).map(([name,r])=>[name,{
+    validateOutside:queryPhaseCalls(r,'SimValidator.validateState','outsideTick'),
+    feasibilityOutside:queryPhaseCalls(r,'SP.traversalFeasibility','outsideTick'),
+    planRouteOutside:queryPhaseCalls(r,'SP.planRoute','outsideTick'),
+    handler:r.interactions[0]?.handlerMs,
+    usableFrame:r.interactions[0]?.usableFrameMs,
+    renderMs:r.metrics.renders.reduce((sum,x)=>sum+x.durationMs,0),
+    stateHash:hashText(r.metrics.stateJson)
+  }]))));
+  console.log('PERF_REVALIDATION_AUTOPLAY_PROBE '+JSON.stringify(Object.fromEntries(Object.entries(autoplayProbe).map(([name,r])=>[name,{
+    handlerMs:r.handlerMs,
+    totalCompletionMs:r.totalCompletionMs,
+    stepOne:r.metrics.stepOne,
+    longTasks:r.metrics.longTasks,
+    tickDurations:r.metrics.ticks.map(x=>x.durationMs),
+    validateCalls:r.metrics.queries?.['SimValidator.validateState']?.calls??0,
+    stateHash:hashText(r.metrics.stateJson)
+  }]))));
+  console.log('PERF_REVALIDATION_LIFECYCLE '+JSON.stringify({current:lifecycleCurrent,completionAware:lifecycleCompletion}));
+  console.log('PERF_REVALIDATION_CALLER_ATTRIBUTION '+JSON.stringify(callerTop));
   const feasibilityCounts={
     singleInside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),
     batch10Inside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),
@@ -343,8 +519,19 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'8-direction Slice 4 Crowding profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; planRoute call counts remain unchanged from Slice 3, while intended Crowding angle semantics may change route-search expansion; latency remains secondary and runner-dependent.',
+    note:'Post-Slice-4 performance revalidation diagnostic. Deterministic query counts + exact state/RNG parity remain correctness/workload evidence; latency, Long Task, callback-to-frame opportunity, render-scoped Validator reuse, and completion-aware autoplay are measured as responsiveness evidence without brittle CI timing thresholds.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
+    diagnostics:{
+      validatorProbe:Object.fromEntries(Object.entries(validatorProbe).map(([name,result])=>[name,reportCase(result)])),
+      autoplayProbe:Object.fromEntries(Object.entries(autoplayProbe).map(([name,result])=>[name,{
+        mode:result.mode,probe:result.probe,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
+        handlerMs:result.handlerMs,totalCompletionMs:result.totalCompletionMs,
+        metrics:{...result.metrics,stateJson:undefined},
+        summary:{stateHash:hashText(result.metrics.stateJson),stateBytes:Buffer.byteLength(result.metrics.stateJson)}
+      }])),
+      lifecycle:{current:lifecycleCurrent,completionAware:lifecycleCompletion},
+      callerAttributionTop:callerTop
+    },
     pageErrors,
     consoleErrors
   };
