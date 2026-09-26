@@ -32,13 +32,15 @@ const goal=SP.normalizeNode(st,{x:5,y:3},'floor');
 const shortest=SP.planRoute(st,actor,goal,{mode:'walk',objective:'pathDistance'});
 const easiest=SP.planRoute(st,actor,goal,{mode:'walk',objective:'traversalCost'});
 
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.24.0-route-locomotion-cost');
-assert.equal(shortest.pathDistance,4,'shortest feasible topology route should be four edges');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
+assert.equal(shortest.pathDistance,4,'cardinal-only compatibility profile should still report four meters');
+assert.equal(shortest.stepCount,4);
 assert.equal(shortest.travelTime,4,'current executable travel time is one tick per selected walk edge');
 assert.ok(Math.abs(shortest.traversalCost-14.5)<1e-9,`short route cost expected 14.5, got ${shortest.traversalCost}`);
 assert.ok(shortest.path.every(p=>p.y===3),'pathDistance objective should take the direct wet corridor');
 
-assert.equal(easiest.pathDistance,6,'lowest-burden route may be longer than the shortest route');
+assert.equal(easiest.pathDistance,6,'cardinal-only compatibility profile keeps six-meter dry detour');
+assert.equal(easiest.stepCount,6);
 assert.equal(easiest.traversalCost,6,'dry detour should cost six');
 assert.equal(easiest.travelTime,6,'current executable travel time should match six selected walk edges');
 assert.ok(easiest.path.some(p=>p.y===4),'traversalCost objective should use the longer dry detour');
@@ -73,4 +75,4 @@ assert.equal(
 );
 delete st.furniture.runtimeBlocker;
 
-console.log('v11.24.0 route locomotion cost regression: ok');
+console.log('metric route semantics regression: ok');

@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.29.3・Interaction Winner Reuse**（`11.29.3-interaction-winner-result-reuse`）。
+目前 runtime marker：**v11.30.0・Metric Route + Locomotion**（`11.30.0-metric-route-locomotion`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。
 
@@ -28,7 +28,7 @@
 
 ### Spatial / Physical world
 
-- **Geometry-derived Horizontal Topology / HorizontalConnection**：`src/horizontal-geometry.js` 是不讀 Agent／Crowding／Route state 的 shared pure horizontal geometry owner。它從 floor Cell、格線 Boundary／Door、fixed blocker、resolved Furniture metric solids 與低階 Passage constraint snapshot 派生無向、Agent-independent 的 `HorizontalConnection`；cardinal distance 為 1m、diagonal distance 為 `sqrt(2)m`，斜向使用 B+ 保守局部幾何並區分 `candidate / blocked / unsupported`。`SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})` 會額外投影 ephemeral `horizontalConnections`，但既有 `cells[].adjacent / componentId / components` 仍維持 cardinal compatibility，不把 diagonal 塞進 legacy topology。Slice 1 尚未讓 production Route 枚舉斜向，因此目前 runtime 移動行為保持既有 cardinal／Structure semantics。
+- **Geometry-derived Horizontal Topology / HorizontalConnection**：`src/horizontal-geometry.js` 是不讀 Agent／Crowding／Route state 的 shared pure horizontal geometry owner。它從 floor Cell、格線 Boundary／Door、fixed blocker、resolved Furniture metric solids 與低階 Passage constraint snapshot 派生無向、Agent-independent 的 `HorizontalConnection`；cardinal distance 為 1m、diagonal distance 為 `sqrt(2)m`，斜向使用 B+ 保守局部幾何並區分 `candidate / blocked / unsupported`。`SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})` 會額外投影 ephemeral `horizontalConnections`，但既有 `cells[].adjacent / componentId / components` 仍維持 cardinal compatibility，不把 diagonal 塞進 legacy topology。Slice 3 已讓 production floor Route 消費這些合法 cardinal／diagonal maneuver；legacy `cells[].adjacent / componentId / components` 仍維持 cardinal compatibility，Surface 與 Structure 既有語意不因 floor diagonal route 被改寫。
 - Room、Tile、Furniture Surface、Local Position 與 Spatial Node。Room 目前只保存由拓樸推導的 identity / membership / area 等結構資料，不再保存沒有 gameplay consumer 的 legacy `value` aggregate。
 - A* traversal、dynamic blocker、supported contact、surface environment / liquid。
 - Interaction Geometry 依 affordance + target data 決定合法接觸位置。
@@ -43,10 +43,10 @@
 - Route search state 現包含 **Spatial Node + locomotion mode**。`traversalCost` 第一順位會計入環境／Surface edge cost、Locomotion-owned mode burden、mode-transition burden 與 Crowding cost；只有第一順位相同時，才以 executable `travelTime`、transition 次數與 mode rank 作 deterministic tie-break。這不是 personality preference。
 - posture 與 locomotion mode 維持分離但正式接線：`walk → standing`、`kneelCrawl → kneeling`、`proneCrawl → prone`。mode 改變必須先消耗 **1 tick posture transition**，不能在 pathfinder 中免費瞬間變形。
 - current occupancy validity 與 walk-entry feasibility 正式分開：`nodeWalkable(...)` 仍回答 walk 能否進入 node；`nodeLocomotionAccessible(...)` 回答 node 結構上能否被目前 locomotion posture 佔據。Validator 使用後者，避免合法跪爬／匍匐停在低矮 passage 時被誤判為「站立不可通行」。
-- `speedFactor` 現真正影響 execution timing：每條 edge 的 movement ticks 為 `ceil(1 / speedFactor)`。現行預設因此為 walk 1 tick、kneelCrawl 2 ticks、proneCrawl 3 ticks；個體 profile override 會同步改變 route `travelTime` 與實際抵達時間。
-- `agent.locomotion = { mode, phase }` 保存 current execution state；`phase` 為 `idle / transition / moving`。多 tick edge 的剩餘進度只存在 current Action 的 `locomotionStep`，不建立 route cache。
+- `speedFactor` 與 `TraversalManeuver.distanceMeters` 現共同形成 execution timing truth：`SimLocomotion.movementTiming(...)` 依實際公尺距離／速度計算 movement requirement，同一 locomotion mode 的連續 edge 可用 Action-scoped fractional movement credit 抵銷逐 edge 取整；mode/posture transition 會清除該 credit。這使兩段 walk diagonal（總長 `2 × sqrt(2)m`）可在 3 movement ticks 完成，而不是每段各自 ceil 成 4 ticks。
+- `agent.locomotion = { mode, phase }` 保存 current execution state；`phase` 為 `idle / transition / moving`。多 tick edge 的剩餘進度與同 mode 的 fractional movement credit 都只存在 current Action，不建立 persistent / cross-tick route cache。
 - crawl 抵達後不會自動站起；posture 是 authoritative state，下一次需要不同 locomotion mode 時再支付 transition。這避免角色在仍可能低矮的空間裡被免費強制站立。
-- **Route Semantics Split** 仍維持：`pathDistance` 是 physical-feasible topology distance、`traversalCost` 是 objective burden、`travelTime` 是真實 current execution timing；`pathCost` 只保留 traversal-cost compatibility alias。Human current objective mode burden 為 walk `+0/edge`、kneelCrawl `+1/edge`、proneCrawl `+2/edge`，每次 locomotion mode 切換再 `+1`；這些 cost 常數不從 `speedFactor` 換算。
+- **Metric Route**：production floor Route 現會消費 Slice 2 已建立的 legal diagonal `TraversalManeuver`。`pathDistance` 是實際公尺路徑長度（cardinal `1m`、diagonal `sqrt(2)m`），`stepCount` 才是 graph edge count；`traversalCost` 仍是 objective burden、`travelTime` 是真實 execution timing，`pathCost` 只保留 traversal-cost compatibility alias。環境 movement burden與 Human locomotion mode burden（walk `+0/m`、kneelCrawl `+1/m`、proneCrawl `+2/m`）按公尺累積；mode transition仍每次 `+1`，Crowding extra cost本 slice維持既有獨立值，不因 diagonal 自動乘 `sqrt(2)`。
 - A* / resource / interaction / nearest target / social access consumer 現可認得 executable crawl route；`accessPenalty` 仍由 `traversalCost` 派生，沒有改 Memory / Relationship 心理公式尺度。
 - **Dynamic Congestion**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 由 ordinary floor occupancy、XYZ movement direction、MovementEnvelope width 與該 mode 真正選中的 Passage `effectiveClearanceWidth` 即時計算；不保存 persistent cache，也不修改 PassageProfile。slot-bound Agent 不算 ordinary floor occupant；其未來動態 body obstruction留給 PoseEnvelope。
 - Crowding 第一版只形成 **soft congestion cost + movement slowdown**，不 hard-block 通行。狹窄處錯身的額外時間代表側身、錯步、短暫停頓與調整移動方式，而不是宣稱兩個名義身寬相加超過通道寬度就物理上不能過。

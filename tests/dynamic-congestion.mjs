@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.29.3-interaction-winner-result-reuse';
+const CURRENT_VERSION='11.30.0-metric-route-locomotion';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
@@ -154,8 +154,8 @@ const targetRouteMetrics=[
 ];
 const [humanRestMetrics,humanSleepMetrics,catRestMetrics]=targetRouteMetrics;
 for(const metrics of targetRouteMetrics)assert.equal(metrics.pathDistanceCalls,0,'rest / sleep target scoring must batch path-distance queries instead of calling standalone pathDistance per target');
-assert.ok(humanRestMetrics.traversalFeasibilityCalls<1800,`Human rest target scoring regressed to ${humanRestMetrics.traversalFeasibilityCalls} feasibility calls`);
-assert.ok(humanSleepMetrics.traversalFeasibilityCalls<380,`Human sleep target scoring regressed to ${humanSleepMetrics.traversalFeasibilityCalls} feasibility calls`);
+assert.ok(humanRestMetrics.traversalFeasibilityCalls<2200,`Human rest target scoring regressed to ${humanRestMetrics.traversalFeasibilityCalls} feasibility calls`);
+assert.ok(humanSleepMetrics.traversalFeasibilityCalls<650,`Human sleep target scoring regressed to ${humanSleepMetrics.traversalFeasibilityCalls} feasibility calls`);
 assert.ok(catRestMetrics.floorTargetCount>20,'Cat rest fixture must exercise a broad floor-candidate set');
 assert.ok(catRestMetrics.traversalFeasibilityCalls<1000,`Cat rest batch scoring regressed to ${catRestMetrics.traversalFeasibilityCalls} feasibility calls`);
 console.log('TARGET_ROUTE_METRICS '+JSON.stringify(targetRouteMetrics));

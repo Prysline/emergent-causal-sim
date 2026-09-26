@@ -9,9 +9,9 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.29.3-interaction-winner-result-reuse';
-const ROUTE_VERSION='11.24.0-route-locomotion-cost';
-const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
+const APP_VERSION='11.30.0-metric-route-locomotion';
+const ROUTE_VERSION='11.30.0-metric-route';
+const LOCOMOTION_VERSION='11.30.0-distance-timing';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({detour='short',clearanceHeight=.70,posture='standing',kneelSpeed=null}={}){

@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.29.3-interaction-winner-result-reuse';
+const CURRENT_VERSION='11.30.0-metric-route-locomotion';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
-const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
-const ROUTE_VERSION='11.24.0-route-locomotion-cost';
+const LOCOMOTION_VERSION='11.30.0-distance-timing';
+const ROUTE_VERSION='11.30.0-metric-route';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const files=[
@@ -97,7 +97,7 @@ assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial m
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
 assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
 const routeSource=fs.readFileSync(new URL('../src/spatial-traversal.js',import.meta.url),'utf8');
-assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.24\.0-route-locomotion-cost'/,'Spatial must expose the Route Semantics contract marker');
+assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.30\.0-metric-route'/,'Spatial must expose the current metric Route Semantics contract marker');
 assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expose canonical planRoute');
 assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
 assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must keep pathDistance distinct from traversalCost');
@@ -123,7 +123,8 @@ assert.doesNotMatch(physicalUiSource,/\.physical\s*=/,'Physical UI must remain a
 
 const locomotionSource=fs.readFileSync(new URL('../src/systems/locomotion.js',import.meta.url),'utf8');
 assert.match(locomotionSource,/function transitionTicks\(fromMode,toMode\)/,'Locomotion runtime must own posture-transition timing');
-assert.match(locomotionSource,/Math\.ceil\(1\/speed\)/,'Locomotion runtime must derive real edge timing from speedFactor');
+assert.match(locomotionSource,/const requiredTicks=distance\/speed/,'Locomotion runtime must derive metric movement timing from distanceMeters and speedFactor');
+assert.match(locomotionSource,/movementCreditAfter/,'Locomotion runtime must expose fractional movement credit for consecutive same-mode edges');
 const locomotionUiSource=fs.readFileSync(new URL('../src/ui/inspectors/locomotion.js',import.meta.url),'utf8');
 assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use explicit Inspector lifecycle');
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
@@ -149,7 +150,7 @@ assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.29\.3・Interaction Winner Reuse/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/v11\.30\.0・Metric Route \+ Locomotion/,'app shell must expose the current short version and feature label');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');
@@ -176,7 +177,7 @@ assert.match(readmeSource,/Relationship Foundation/,'README must document the lo
 assert.match(readmeSource,/Responder Bias/,'README must retain current Relationship responder influence');
 assert.match(readmeSource,/Physical Profile Foundation/,'README must retain the Physical Foundation boundary');
 assert.match(readmeSource,/Passage Profile/,'README must retain the multi-mode traversal-feasibility boundary');
-assert.match(readmeSource,/Route Semantics Split/,'README must retain the Route Semantics contract');
+assert.match(readmeSource,/Metric Route/,'README must retain the current metric Route contract');
 assert.match(readmeSource,/Locomotion Execution/,'README must retain locomotion execution and posture transitions');
 assert.match(readmeSource,/Dynamic Congestion/,'README must document the current Dynamic Congestion contract');
 assert.match(readmeSource,/accessPenalty/,'README must document the target access-penalty migration');

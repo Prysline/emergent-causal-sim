@@ -23,7 +23,7 @@ function openSquare(){
 }
 
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
-assert.equal(SP.VERSION,'11.29.3-interaction-winner-result');
+assert.equal(SP.VERSION,'11.30.0-metric-route-locomotion');
 
 {
   const {st,human,a,b,east}=openSquare();
@@ -61,7 +61,7 @@ assert.equal(SP.VERSION,'11.29.3-interaction-winner-result');
 
   const productionNeighbors=SP.traversalNeighbors(st,a,human.id);
   assert.ok(productionNeighbors.some(node=>SP.nodeSame(st,node,east)),'existing cardinal production traversal remains active');
-  assert.equal(productionNeighbors.some(node=>SP.nodeSame(st,node,b)),false,'Slice 2 must not enable production diagonal routing');
+  assert.equal(productionNeighbors.some(node=>SP.nodeSame(st,node,b)),true,'Slice 3 must expose feasible diagonal floor traversal to production routing');
 }
 
 {
@@ -85,6 +85,7 @@ assert.equal(SP.VERSION,'11.29.3-interaction-winner-result');
   const passage=SP.getPassageProfile(st,a,b);
   assert.equal(passage.status,'blocked');
   assert.equal(passage.options.length,0);
+  assert.equal(SP.traversalManeuver(st,a,b),null,'objectively blocked horizontal connection must not become a traversal maneuver');
   const feasibility=SP.traversalFeasibility(st,human,a,b);
   assert.equal(feasibility.edgeValid,true);
   assert.equal(feasibility.edgeOpen,false);
@@ -96,7 +97,8 @@ assert.equal(SP.VERSION,'11.29.3-interaction-winner-result');
   st.furniture.cornerNib={id:'cornerNib',footprint:[{x:1,y:1}],slots:[],spatial:{solids:[{key:'cornerNib',layerZ:0,bounds:{x:1.9,y:1.9,z:0,width:.1,depth:.1,height:1}}]}};
   const passage=SP.getPassageProfile(st,a,b);
   assert.equal(passage.status,'unsupported');
+  assert.equal(SP.traversalManeuver(st,a,b),null,'unsupported horizontal geometry must not become a production traversal maneuver');
   assert.equal(SP.traversalFeasibility(st,human,a,b).edgeOpen,false,'unsupported geometry must conservatively reject feasibility');
 }
 
-console.log('8-direction Slice 2 runtime Passage + TraversalManeuver contract: ok');
+console.log('8-direction runtime Passage + TraversalManeuver production contract: ok');
