@@ -37,6 +37,7 @@ jobs:
       - run: node tests/horizontal-geometry-foundation.mjs
       - run: node tests/initial-state-pipeline.mjs
       - run: node tests/sleep-pressure.mjs
+      - run: node tests/sleep-eligibility-before-query.mjs
       - run: node tests/social-sleep-interaction.mjs
       - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
