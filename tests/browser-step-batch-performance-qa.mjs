@@ -343,6 +343,16 @@ try{
   assert.equal(feasibilityCounts.batch10Inside,25253,'render-scoped validation reuse must not change the measured step(10) inside-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Outside,3877,'render-scoped validation reuse must retain the measured step(10) outside-tick baseline');
 
+  await openCase({selected:false});
+  await page.locator('#showThoughts').click();
+  await settleFrames(2);
+  const directInspectorSnapshot=await page.evaluate(()=>window.__stepBatchPerf.snapshot());
+  assert.equal(
+    directInspectorSnapshot.queries?.['SimValidator.validateState']?.byPhase?.outsideTick?.calls??0,
+    1,
+    'direct no-selection Inspector refresh must perform one fallback validation instead of requiring a full-render snapshot'
+  );
+
   assert.deepEqual(pageErrors,[],'step batch perf QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'step batch perf QA must have no console errors');
 
