@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.30.0・Metric Route + Locomotion**（`11.30.0-metric-route-locomotion`）。
+目前 runtime marker：**v11.31.0・Crowding 8-direction**（`11.31.0-crowding-8-direction`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。
 
@@ -48,9 +48,9 @@
 - crawl 抵達後不會自動站起；posture 是 authoritative state，下一次需要不同 locomotion mode 時再支付 transition。這避免角色在仍可能低矮的空間裡被免費強制站立。
 - **Metric Route**：production floor Route 現會消費 Slice 2 已建立的 legal diagonal `TraversalManeuver`。`pathDistance` 是實際公尺路徑長度（cardinal `1m`、diagonal `sqrt(2)m`），`stepCount` 才是 graph edge count；`traversalCost` 仍是 objective burden、`travelTime` 是真實 execution timing，`pathCost` 只保留 traversal-cost compatibility alias。環境 movement burden與 Human locomotion mode burden（walk `+0/m`、kneelCrawl `+1/m`、proneCrawl `+2/m`）按公尺累積；mode transition仍每次 `+1`，Crowding extra cost本 slice維持既有獨立值，不因 diagonal 自動乘 `sqrt(2)`。
 - A* / resource / interaction / nearest target / social access consumer 現可認得 executable crawl route；`accessPenalty` 仍由 `traversalCost` 派生，沒有改 Memory / Relationship 心理公式尺度。
-- **Dynamic Congestion**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 由 ordinary floor occupancy、XYZ movement direction、MovementEnvelope width 與該 mode 真正選中的 Passage `effectiveClearanceWidth` 即時計算；不保存 persistent cache，也不修改 PassageProfile。slot-bound Agent 不算 ordinary floor occupant；其未來動態 body obstruction留給 PoseEnvelope。
+- **Dynamic Congestion**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 消費既有 `TraversalManeuver.influenceNodes` 做局部 candidate discovery：cardinal / Structure 掃兩個 endpoint，diagonal corner 掃共享 corner 周圍四個 floor nodes，並依 Agent ID 去重。Crowding 仍只讀 ordinary traversal occupancy、movement direction、MovementEnvelope width 與該 mode 真正選中的 Passage `effectiveClearanceWidth`；不保存 persistent resource index / congestion cache，也不修改 PassageProfile。slot-bound Agent 不算 ordinary floor occupant；其未來動態 body obstruction留給 PoseEnvelope。
 - Crowding 第一版只形成 **soft congestion cost + movement slowdown**，不 hard-block 通行。狹窄處錯身的額外時間代表側身、錯步、短暫停頓與調整移動方式，而不是宣稱兩個名義身寬相加超過通道寬度就物理上不能過。
-- 普通無障礙 1m grid edge 會形成真實 1m Passage option；較窄 Furniture / Boundary / Structure option 使用實際 width。Crowding 不再把「沒有舊 scalar clearanceWidth」解讀成 width unknown，也不由 tile 人數推導硬 capacity。方向 severity 仍為 `same < stationary/unknown < opposite`。
+- 普通無障礙 1m grid edge 會形成真實 1m Passage option；較窄 Furniture / Boundary / Structure option 使用實際 width。Crowding 不再把「沒有舊 scalar clearanceWidth」解讀成 width unknown，也不由 tile 人數推導硬 capacity。標準水平 moving-vs-moving 方向現為 0°=`.65`、45°=`.9125`、90°=`1.175`、135°=`1.4375`、180°=`1.7`；中間值由既有 same/opposite 兩端線性插值，`stationary=1`、`unknown=1` 維持獨立。diagonal Crowding 視為一次局部共享資源事件，不因整段長度 `sqrt(2)` 再乘距離倍率。
 - route planning 使用當下 congestion snapshot，`traversalCost` 加入 `congestionCost`，`travelTime` 加入 crowding delay；core movement 每次開始下一條 edge 前重新規劃，所以人群散開／聚集後的 actual travel time 可以不同於較早的 estimate。
 - 舊 floor `occupiedCount × 5/2.5` 固定 penalty 在 v11.20 production 停用；`bestInteractionPosition()` 也不再額外先按 occupancy 排序，避免同一擁擠被 double count。
 - Dynamic Congestion 仍**沒有加入 behavioral willingness / aversion**。因此目前擁擠只改變客觀 route burden / movement timing；Relationship、personality、courtesy、yielding 等主觀或社交規則不參與。第一版也不禁止 Agent spatial overlap、不做 edge reservation / 誰先走 / deadlock / collision；PoseEnvelope/static fit、turn clearance、Anatomy / Injury / Collision 仍未加入。
