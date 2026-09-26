@@ -317,17 +317,16 @@ try{
   );
 
   const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
-  console.log('SLICE3_TRAVERSAL_FEASIBILITY_COUNTS '+JSON.stringify({singleInside:queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),step10Inside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),step10Outside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick')}));
-  assert.equal(queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),5385,'winner-result production must retain the measured single-tick feasibility reduction');
-  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),16345,'winner-result production must retain the measured step(10) inside-tick feasibility reduction');
-  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick'),2682,'winner-result production must not shift traversal work into outside-tick Presentation');
+  assert.equal(queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),8619,'8-direction Slice 3 must retain the measured single-tick feasibility baseline');
+  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),25193,'8-direction Slice 3 must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick'),6256,'8-direction Slice 3 must retain the measured outside-tick feasibility baseline');
 
   assert.deepEqual(pageErrors,[],'step batch perf QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'step batch perf QA must have no console errors');
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'Post-Perf-4 winner-result production profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; latency remains secondary and runner-dependent.',
+    note:'8-direction Slice 3 metric-route profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; latency remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     pageErrors,
     consoleErrors
