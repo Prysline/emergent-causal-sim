@@ -6,8 +6,8 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 const CURRENT_VERSION='11.29.3-interaction-winner-result-reuse';
 const CROWDING_VERSION='11.28.0-effective-passage-width';
-const LOCOMOTION_VERSION='11.24.0-locomotion-objective-burden';
-const ROUTE_VERSION='11.24.0-route-locomotion-cost';
+const LOCOMOTION_VERSION='11.30.0-distance-timing';
+const ROUTE_VERSION='11.30.0-metric-route';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const files=[
