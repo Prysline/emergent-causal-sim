@@ -131,7 +131,9 @@ assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timin
 const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
 assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode='walk'\)/,'Crowding must expose a derived edge profile');
 assert.match(crowdingSource,/hardBlocked:false/,'Dynamic Congestion must remain soft in Slice 4');
-assert.match(crowdingSource,/directionWeight:Object\.freeze\(\{same:\.65,stationary:1,unknown:1,opposite:1\.7\}\)/,'Crowding direction severity must remain deterministic');
+assert.match(crowdingSource,/angle45:interpolatedDirectionWeight\(45\)/,'Crowding must derive 45-degree severity from the existing same/opposite endpoints');
+assert.match(crowdingSource,/angle90:interpolatedDirectionWeight\(90\)/,'Crowding must derive 90-degree severity from the existing same/opposite endpoints');
+assert.match(crowdingSource,/angle135:interpolatedDirectionWeight\(135\)/,'Crowding must derive 135-degree severity from the existing same/opposite endpoints');
 assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
 const entityUiSource=fs.readFileSync(new URL('../src/ui/entity-readable.js',import.meta.url),'utf8');
 assert.match(entityUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Entity Readable View must inherit the canonical Presentation marker from SimUI');
