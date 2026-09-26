@@ -47,6 +47,13 @@ assert.match(labelsSource,/PRESENTATION_VERSION:VERSION/,'Presentation version m
 assert.match(labelsSource,/INTERACTION_LABELS/,'interaction labels must move to the semantic UI owner');
 const baseUiSource=fs.readFileSync(new URL('../src/ui/core.js',import.meta.url),'utf8');
 assert.match(baseUiSource,/registerInspectorDecorator/,'base UI must own explicit Inspector decorator lifecycle');
+assert.match(baseUiSource,/function worldOverview\(validationSnapshot=null\)/,'world overview must consume a render-scoped validation snapshot while supporting direct-render fallback');
+assert.match(baseUiSource,/function renderBadges\(validationSnapshot\)/,'world badges must consume the render-scoped validation snapshot');
+assert.match(baseUiSource,/function renderInspector\(validationSnapshot\)/,'Inspector render must receive the render-scoped validation snapshot');
+assert.match(baseUiSource,/function render\(\)\{const s=st\(\),validationSnapshot=validation\(\);/,'one full render must compute validation once before presentation consumers');
+assert.doesNotMatch(baseUiSource,/function worldOverview\(\)\{[^\n]*validation\(\)/,'world overview must not re-run validation inside one render');
+assert.match(baseUiSource,/validationSnapshot\?\?validation\(\)/,'direct no-selection Inspector refresh must fall back to exactly one validation pass when no full-render snapshot is supplied');
+assert.doesNotMatch(baseUiSource,/function renderBadges\(\)\{[^\n]*validation\(\)/,'world badges must not re-run validation inside one render');
 assert.match(baseUiSource,/kneeling:'跪姿'/,'base UI must render kneeling posture explicitly instead of falling back to standing');
 assert.match(baseUiSource,/prone:'俯臥'/,'base UI must render prone posture explicitly instead of falling back to standing');
 const residentUiSource=fs.readFileSync(new URL('../src/ui/resident-view.js',import.meta.url),'utf8');
