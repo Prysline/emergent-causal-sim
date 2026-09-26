@@ -52,8 +52,7 @@
   }
   function movementDirection(st,a){
     const here=SP.nodeForAgent(st,a),next=plannedNextNode(st,a);
-    if(!here||!next)return null;
-    return SP.traversalManeuver?.(st,here,next)?.directionVector||vec(here,next);
+    return here&&next?vec(here,next):null;
   }
   function directionRelationFromVector(st,mover,other){
     const otherDir=movementDirection(st,other);
@@ -63,8 +62,7 @@
     return horizontalAngleRelation(mover,otherDir)||'unknown';
   }
   function directionRelation(st,moverFrom,moverTo,other){
-    const mover=SP.traversalManeuver?.(st,moverFrom,moverTo)?.directionVector||vec(moverFrom,moverTo);
-    return directionRelationFromVector(st,mover,other);
+    return directionRelationFromVector(st,vec(moverFrom,moverTo),other);
   }
   function effectiveWidth(a,mode=null){
     if(!a)return null;
