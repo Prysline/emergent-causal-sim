@@ -11,8 +11,8 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.31.0-crowding-8-direction');
-assert.equal(E.VERSION,'11.31.0-crowding-8-direction');
+assert.equal(st.version,'11.31.1-autoplay-completion-aware');
+assert.equal(E.VERSION,'11.31.1-autoplay-completion-aware');
 assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
 noIssues('reset');
 
