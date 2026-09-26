@@ -35,12 +35,14 @@ async function preparePage({sleepReorder=false,memoryReuse=false}={}){
       let body=await response.text();
       const eligibleOld="return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,traversalCost:SP.traversalCost(st,a,target.position)})).filter(x=>Number.isFinite(x.traversalCost));";
       const eligibleNew="return Object.values(st.agents||{}).filter(t=>t.id!==a.id&&!t.offMap&&predicate?.(t)&&(!awakeOnly||!E.isSleeping?.(t))).map(target=>({target,route:SP.planRoute(st,a,target.position,{mode:'auto',objective:'traversalCost'})})).filter(x=>Number.isFinite(x.route.traversalCost));";
-      const evaluationOld="function targetEvaluation(st,a,target,intentKind,baseUtility){\\n    const route=SP.planRoute(st,a,target.position,{mode:'auto',objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);";
-      const evaluationNew="function targetEvaluation(st,a,target,intentKind,baseUtility,routeOverride=null){\\n    const route=routeOverride||SP.planRoute(st,a,target.position,{mode:'auto',objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);";
+      const evaluationSignatureOld="function targetEvaluation(st,a,target,intentKind,baseUtility){";
+      const evaluationSignatureNew="function targetEvaluation(st,a,target,intentKind,baseUtility,routeOverride=null){";
+      const routeOld="const route=SP.planRoute(st,a,target.position,{mode:'auto',objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id)";
+      const routeNew="const route=routeOverride||SP.planRoute(st,a,target.position,{mode:'auto',objective:'traversalCost'}),assoc=targetAssociation(st,a,target.id)";
       const evaluationsOld="function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target})=>targetEvaluation(st,a,target,intentKind,baseUtility)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}";
       const evaluationsNew="function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target,route})=>targetEvaluation(st,a,target,intentKind,baseUtility,route)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}";
-      for(const anchor of [eligibleOld,evaluationOld,evaluationsOld])if(!body.includes(anchor))throw new Error('memory reuse candidate anchor missing');
-      body=body.replace(eligibleOld,eligibleNew).replace(evaluationOld,evaluationNew).replace(evaluationsOld,evaluationsNew);
+      for(const anchor of [eligibleOld,evaluationSignatureOld,routeOld,evaluationsOld])if(!body.includes(anchor))throw new Error('memory reuse candidate anchor missing: '+anchor.slice(0,80));
+      body=body.replace(eligibleOld,eligibleNew).replace(evaluationSignatureOld,evaluationSignatureNew).replace(routeOld,routeNew).replace(evaluationsOld,evaluationsNew);
       await route.fulfill({response,body});
     });
   }
