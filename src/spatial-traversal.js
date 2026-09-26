@@ -198,7 +198,7 @@
   function traversalNeighbors(st,p,aOrId=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeWalkable(st,n,a))return [];
     if(n.surfaceId===FLOOR){
-      for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeWalkable(st,q,a)&&traversalManeuver(st,n,q)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeWalkable(st,q,a)&&(maneuver||legacyCardinal)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
@@ -251,7 +251,7 @@
   function candidateTraversalNeighbors(st,p,aOrId=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeLocomotionAccessible(st,n,a))return [];
     if(n.surfaceId===FLOOR){
-      for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR);if(nodeLocomotionAccessible(st,q,a)&&traversalManeuver(st,n,q))out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeLocomotionAccessible(st,q,a)&&(maneuver||legacyCardinal))out.set(nodeKey(st,q),q);}
       for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
