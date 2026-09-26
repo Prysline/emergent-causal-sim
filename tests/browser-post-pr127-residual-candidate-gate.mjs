@@ -13,7 +13,7 @@ function attachErrors(page){
   return {pageErrors,consoleErrors};
 }
 
-async function preparePage({memoryReuse=false,winnerCostReuse=false}={}){
+async function preparePage({memoryReuse=false,winnerCostReuse=false,yieldedStep=false}={}){
   const page=await browser.newPage({viewport:{width:1440,height:900}});
   const errors=attachErrors(page);
 
@@ -66,6 +66,18 @@ async function preparePage({memoryReuse=false,winnerCostReuse=false}={}){
     });
   }
 
+  if(yieldedStep){
+    await page.route('**/src/ui/core.js',async route=>{
+      const response=await route.fetch();
+      let body=await response.text();
+      const oldStep="  function step(n=1){for(let i=0;i<n;i++)E.tick();render();}";
+      const newStep="  async function step(n=1){for(let i=0;i<n;i++){E.tick();if(i<n-1)await new Promise(resolve=>setTimeout(resolve,0));}render();}";
+      if(!body.includes(oldStep))throw new Error('yielded-step UI candidate anchor missing');
+      body=body.replace(oldStep,newStep);
+      await route.fulfill({response,body});
+    });
+  }
+
   await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await page.waitForFunction(()=>window.SimEngine?.getState?.()&&window.SimUI?.isStarted?.());
 
@@ -96,12 +108,18 @@ async function preparePage({memoryReuse=false,winnerCostReuse=false}={}){
 async function runCase(name,options){
   const {page,errors}=await preparePage(options);
   const timing=await page.evaluate(async()=>{
-    const before=window.SimEngine.getState().tick,start=performance.now();
+    const before=window.SimEngine.getState().tick,target=before+10,start=performance.now();
+    let timerOpportunityMs=null,firstFrameMs=null;
+    const timerOpportunity=new Promise(resolve=>setTimeout(()=>{timerOpportunityMs=performance.now()-start;resolve();},0));
+    const firstFrame=new Promise(resolve=>requestAnimationFrame(()=>{firstFrameMs=performance.now()-start;resolve();}));
     document.getElementById('step10').click();
     const handlerMs=performance.now()-start;
+    while(window.SimEngine.getState().tick<target)await new Promise(resolve=>setTimeout(resolve,0));
+    const completionMs=performance.now()-start;
+    await timerOpportunity;
+    await firstFrame;
     await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
-    await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
-    return {before,after:window.SimEngine.getState().tick,handlerMs};
+    return {before,after:window.SimEngine.getState().tick,handlerMs,timerOpportunityMs,firstFrameMs,completionMs};
   });
   const result=await page.evaluate(()=>({
     stateJson:JSON.stringify(window.SimEngine.getState()),
@@ -119,7 +137,13 @@ function delta(candidate,baseline){
     const b=candidate.queries[name]||{calls:0,inside:0,outside:0};
     queries[name]={inside:b.inside-a.inside,outside:b.outside-a.outside,total:b.calls-a.calls};
   }
-  return {handlerMs:candidate.timing.handlerMs-baseline.timing.handlerMs,queries};
+  return {
+    handlerMs:candidate.timing.handlerMs-baseline.timing.handlerMs,
+    timerOpportunityMs:candidate.timing.timerOpportunityMs-baseline.timing.timerOpportunityMs,
+    firstFrameMs:candidate.timing.firstFrameMs-baseline.timing.firstFrameMs,
+    completionMs:candidate.timing.completionMs-baseline.timing.completionMs,
+    queries
+  };
 }
 
 try{
@@ -127,17 +151,20 @@ try{
   const memory=await runCase('memory-route-reuse',{memoryReuse:true});
   const winner=await runCase('interaction-winner-cost-reuse',{winnerCostReuse:true});
   const combined=await runCase('memory-plus-winner',{memoryReuse:true,winnerCostReuse:true});
+  const yielded=await runCase('batch-yield-every-tick',{yieldedStep:true});
 
-  for(const result of [baseline,memory,winner,combined]){
+  for(const result of [baseline,memory,winner,combined,yielded]){
     assert.equal(result.timing.after,result.timing.before+10,result.name+' must advance exactly 10 ticks');
     assert.deepEqual(result.pageErrors,[],result.name+' must have no page errors');
     assert.deepEqual(result.consoleErrors,[],result.name+' must have no console errors');
   }
-  for(const result of [memory,winner,combined]){
+  for(const result of [memory,winner,combined,yielded]){
     assert.equal(result.stateJson,baseline.stateJson,result.name+' must preserve exact canonical simulation state');
   }
 
   assert.equal(baseline.queries.traversalFeasibility.inside,20181,'post-PR127 baseline must remain 20,181 inside-tick feasibility calls');
+  assert.equal(yielded.queries.traversalFeasibility.inside,baseline.queries.traversalFeasibility.inside,'yielding must not change inside-tick feasibility work');
+  assert.equal(yielded.queries.sleepTargets.inside,baseline.queries.sleepTargets.inside,'yielding must not change sleep target query work');
 
   const report={
     generatedAt:new Date().toISOString(),
@@ -145,7 +172,8 @@ try{
     baseline:{timing:baseline.timing,queries:baseline.queries},
     memory:{timing:memory.timing,queries:memory.queries,delta:delta(memory,baseline)},
     winner:{timing:winner.timing,queries:winner.queries,delta:delta(winner,baseline)},
-    combined:{timing:combined.timing,queries:combined.queries,delta:delta(combined,baseline)}
+    combined:{timing:combined.timing,queries:combined.queries,delta:delta(combined,baseline)},
+    yielded:{timing:yielded.timing,queries:yielded.queries,delta:delta(yielded,baseline)}
   };
   fs.writeFileSync(outDir+'/result.json',JSON.stringify(report,null,2));
   console.log('POST_PR127_RESIDUAL_CANDIDATE_GATE '+JSON.stringify(report));
