@@ -1,6 +1,6 @@
 (() => {
   const SP=window.SimSpatial,P=window.SimPhysical,L=window.SimLocomotion;if(!SP||!P)return;
-  const VERSION='11.28.0-effective-passage-width';
+  const VERSION='11.31.0-crowding-8-direction';
   const SAME_DIRECTION_WEIGHT=.65,OPPOSITE_DIRECTION_WEIGHT=1.7;
   const interpolatedDirectionWeight=angle=>SAME_DIRECTION_WEIGHT+(OPPOSITE_DIRECTION_WEIGHT-SAME_DIRECTION_WEIGHT)*(angle/180);
   const CONFIG=Object.freeze({
