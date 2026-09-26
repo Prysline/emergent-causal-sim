@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.31.1-autoplay-completion-aware`。
 
-> `11.31.1-autoplay-completion-aware` 只改 Presentation-owned autoplay callback scheduling：完整 `E.tick() → render()` 仍是同步原子；下一 autoplay tick只能在前一 callback 完成並取得 browser animation-frame opportunity後再排程。**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**。
+> `11.31.1-autoplay-completion-aware` 只改 Presentation-owned autoplay callback scheduling：完整 `E.tick() → render()` 仍是同步原子；下一 autoplay tick只能在前一 callback 完成並跨過兩個 browser animation-frame opportunities後再排程。**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**。
 >
 > `11.31.0-crowding-8-direction` 只改同步 Spatial/Crowding query 的 candidate discovery、水平角度權重與 metric edge timing helper，**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；hook registry / phase ordering維持不變。
 >
