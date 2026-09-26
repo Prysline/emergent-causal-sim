@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.31.0-crowding-8-direction`。
+目前 runtime marker：`11.31.1-autoplay-completion-aware`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -487,6 +487,8 @@ Resident View 的「最近發生的事」仍直接投影 bounded canonical event
 Presentation refresh/reset 使用上節的 runtime observer boundary。現行 observer relative order保留：afterTick `uiObservability.render-mobile-summary` → `residentView.schedule` → `relationshipView.schedule`；afterReset `uiObservability.reset` → `residentView.reset` → `relationshipView.reset`。這些 observer 永遠在完整 simulation phase之後執行。
 
 Core full render 只建立**一份 render-scoped Validator snapshot**：`src/ui/core.js` 在同一次 `render()` 內呼叫 `SimValidator.validateState(...)` 一次，並把結果傳給 world badges 與 no-selection Inspector overview。這份 snapshot 只活在該次同步 render call，不保存到 UI global、simulation state、下一次 render 或下一 tick；因此它是 Presentation 內部 derived-result reuse，不是 Validator cache，也不改 invariant semantics。
+
+Autoplay scheduling 同樣屬 Presentation / UI ownership。`src/ui/core.js` 使用單一 completion-aware context + generation token；名目 start cadence為700ms，但下一 callback不會以 fixed interval追趕逾期工作。每次完整 `stepOne = E.tick() → render()` 結束後必須先取得 browser animation-frame opportunity，再依 `max(0, 700ms - 本次callback已耗時)` 安排下一 callback。Pause / Reset會取消 pending timeout / frame並使舊 generation失效；autoplay state不得寫入 simulation state，也不得改 tick / hook ordering。
 
 Manual batch scheduling 也屬 Presentation / UI ownership，而不是 Engine lifecycle。`step(1)` 保持同步 atomic tick；`step(10)` 的 UI batch在第一個 tick前與完整 tick之間讓出 browser event loop，但不切開 `E.tick()`。Intermediate manual-batch tick仍會到達上述 afterTick observer boundary，只是三個 observer handler在 UI batch context標示 intermediate時 defer真正 projection；final tick解除 intermediate flag後依原順序正常 refresh，再由 core做一次完整 render。這個 UI-only context、busy / inert state與 cancellation generation不得寫入 simulation state，也不得改 simulation hook manifest、same-tick visibility或 RNG semantics。Reset先 invalidates舊 batch continuation再走既有 `E.reset()` / afterReset lifecycle；autoplay與manual batch不得同時成為兩個 tick source。
 

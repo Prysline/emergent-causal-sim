@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.31.0-crowding-8-direction`
+`11.31.1-autoplay-completion-aware`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.31.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.30.0-metric-route-locomotion`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.31.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.30.0-metric-route-locomotion`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Crowding 8-direction release
+### Current Completion-Aware Autoplay release
+
+`11.31.1-autoplay-completion-aware` 將 simulator autoplay 的 tick-source scheduling 從固定 `setInterval(stepOne,700)` 改為 Presentation-owned completion-aware controller。名目 start-to-start cadence仍為約 700ms：若完整同步 `E.tick() → render()` 在週期內完成，下一 callback只等待剩餘時間；若工作本身已超過700ms，不補跑或追趕 overdue callback，而是在完整 callback 結束後先經過 browser `requestAnimationFrame` paint opportunity，再以零額外 cadence delay安排下一 tick。
+
+Pause / Reset共用單一 cancellation owner，會取消 pending timeout / animation-frame並使 generation token失效；manual `step` / `step10` 與 autoplay仍互斥，完整 simulation tick不被切開或 await。這只改玩家可觀察的 Presentation scheduling / responsiveness policy，不改 simulation state/schema、Route score、hook ordering、Crowding / Spatial / Locomotion semantics或 RNG。
+
+因此 overall runtime與 Presentation marker推進到 `11.31.1-autoplay-completion-aware`。Dynamic Congestion generation仍為 `11.31.0-crowding-8-direction`；Spatial Traversal / Route / Locomotion / Passage / Physical、World Authoring與Furniture Catalog均維持既有 generation。
+
+### Previous Crowding 8-direction release
 
 `11.31.0-crowding-8-direction` 完成 8-direction implementation 的 **Slice 4｜Crowding 8-direction**。Crowding 不新增第二套 diagonal geometry truth，而是直接消費 Slice 2 已提供的 `TraversalManeuver.primaryResource / influenceNodes`：cardinal horizontal 與 Structure 使用兩個 endpoint，diagonal horizontal 使用共享 grid corner 周圍四個 floor nodes作 conservative broad phase；candidate 依 Agent ID 去重，不建立 persistent `resource -> agents` index或 cross-tick cache。
 

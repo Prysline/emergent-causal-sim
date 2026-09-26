@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.31.0-crowding-8-direction';
+const CURRENT_VERSION='11.31.1-autoplay-completion-aware';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.30.0-distance-timing';
 const ROUTE_VERSION='11.30.0-metric-route';
@@ -53,6 +53,12 @@ assert.match(baseUiSource,/function renderInspector\(validationSnapshot\)/,'Insp
 assert.match(baseUiSource,/function render\(\)\{const s=st\(\),validationSnapshot=validation\(\);/,'one full render must compute validation once before presentation consumers');
 assert.doesNotMatch(baseUiSource,/function worldOverview\(\)\{[^\n]*validation\(\)/,'world overview must not re-run validation inside one render');
 assert.match(baseUiSource,/validationSnapshot\?\?validation\(\)/,'direct no-selection Inspector refresh must fall back to exactly one validation pass when no full-render snapshot is supplied');
+assert.match(baseUiSource,/const AUTOPLAY_INTERVAL_MS=700;/,'autoplay must keep the current nominal 700ms start cadence');
+assert.match(baseUiSource,/function scheduleAutoplay\(context,delayMs\)/,'autoplay scheduling must have an explicit completion-aware owner');
+assert.match(baseUiSource,/requestAnimationFrame\(\(\)=>\{/,'completion-aware autoplay must request a browser frame opportunity before scheduling the next callback');
+assert.match(baseUiSource,/remaining=Math\.max\(0,AUTOPLAY_INTERVAL_MS-elapsed\)/,'autoplay must preserve nominal start cadence without accumulating overdue callbacks');
+assert.match(baseUiSource,/function stopAutoplay\(\)/,'autoplay must expose a single cancellation owner for pause/reset');
+assert.doesNotMatch(baseUiSource,/setInterval\(stepOne,700\)/,'autoplay must not use an overdue fixed interval callback source');
 assert.doesNotMatch(baseUiSource,/function renderBadges\(\)\{[^\n]*validation\(\)/,'world badges must not re-run validation inside one render');
 assert.match(baseUiSource,/kneeling:'跪姿'/,'base UI must render kneeling posture explicitly instead of falling back to standing');
 assert.match(baseUiSource,/prone:'俯臥'/,'base UI must render prone posture explicitly instead of falling back to standing');
