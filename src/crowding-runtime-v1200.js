@@ -1,6 +1,8 @@
 (() => {
   const SP=window.SimSpatial,P=window.SimPhysical,L=window.SimLocomotion;if(!SP||!P)return;
   const VERSION='11.28.0-effective-passage-width';
+  const SAME_DIRECTION_WEIGHT=.65,OPPOSITE_DIRECTION_WEIGHT=1.7;
+  const interpolatedDirectionWeight=angle=>SAME_DIRECTION_WEIGHT+(OPPOSITE_DIRECTION_WEIGHT-SAME_DIRECTION_WEIGHT)*(angle/180);
   const CONFIG=Object.freeze({
     baseOccupantPressure:.35,
     maneuveringOtherWidthFactor:.65,
@@ -9,7 +11,15 @@
     costPerPressure:2.5,
     delayTicksPerPressure:2,
     minSpeedMultiplier:.35,
-    directionWeight:Object.freeze({same:.65,stationary:1,unknown:1,opposite:1.7})
+    directionWeight:Object.freeze({
+      same:SAME_DIRECTION_WEIGHT,
+      angle45:interpolatedDirectionWeight(45),
+      angle90:interpolatedDirectionWeight(90),
+      angle135:interpolatedDirectionWeight(135),
+      stationary:1,
+      unknown:1,
+      opposite:OPPOSITE_DIRECTION_WEIGHT
+    })
   });
 
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -18,6 +28,18 @@
   function vec(a,b){return a&&b?{x:b.x-a.x,y:b.y-a.y,z:(SP.zOf?.(b)??b.z??0)-(SP.zOf?.(a)??a.z??0)}:null;}
   function sameVec(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y&&a.z===b.z;}
   function reverseVec(a,b){return !!a&&!!b&&a.x===-b.x&&a.y===-b.y&&a.z===-b.z;}
+  function standardHorizontalVec(v){return !!v&&v.z===0&&Number.isInteger(v.x)&&Number.isInteger(v.y)&&Math.abs(v.x)<=1&&Math.abs(v.y)<=1&&(v.x!==0||v.y!==0);}
+  function horizontalAngleRelation(a,b){
+    if(!standardHorizontalVec(a)||!standardHorizontalVec(b))return null;
+    const denom=Math.hypot(a.x,a.y)*Math.hypot(b.x,b.y);if(!(denom>0))return null;
+    const cosine=clamp((a.x*b.x+a.y*b.y)/denom,-1,1),angle=Math.round((Math.acos(cosine)*180/Math.PI)/45)*45;
+    if(angle===0)return'same';
+    if(angle===45)return'angle45';
+    if(angle===90)return'angle90';
+    if(angle===135)return'angle135';
+    if(angle===180)return'opposite';
+    return null;
+  }
 
   function plannedNextNode(st,a){
     if(!a||a.offMap)return null;
@@ -30,14 +52,15 @@
   }
   function movementDirection(st,a){
     const here=SP.nodeForAgent(st,a),next=plannedNextNode(st,a);
-    return here&&next?vec(here,next):null;
+    if(!here||!next)return null;
+    return SP.traversalManeuver?.(st,here,next)?.directionVector||vec(here,next);
   }
   function directionRelation(st,moverFrom,moverTo,other){
-    const mover=vec(moverFrom,moverTo),otherDir=movementDirection(st,other);
+    const mover=SP.traversalManeuver?.(st,moverFrom,moverTo)?.directionVector||vec(moverFrom,moverTo),otherDir=movementDirection(st,other);
     if(!otherDir)return other?.locomotion?.phase==='moving'?'unknown':'stationary';
     if(sameVec(mover,otherDir))return'same';
     if(reverseVec(mover,otherDir))return'opposite';
-    return'unknown';
+    return horizontalAngleRelation(mover,otherDir)||'unknown';
   }
   function effectiveWidth(a,mode=null){
     if(!a)return null;
@@ -47,15 +70,21 @@
     const body=Number(a.physical?.bodyGeometry?.width);
     return Number.isFinite(body)&&body>0?body:null;
   }
+  function maneuverInfluenceNodes(st,from,to){
+    const maneuver=SP.traversalManeuver?.(st,from,to)||null,nodes=maneuver?.influenceNodes?.length?maneuver.influenceNodes:[from,to],out=new Map();
+    for(const node of nodes){const normalized=SP.normalizeNode(st,node);if(normalized)out.set(SP.nodeKey(st,normalized),normalized);}
+    return [...out.values()];
+  }
   function nearbyAgents(st,a,from,to){
     const out=new Map();
-    for(const node of [from,to])for(const other of SP.nodeOccupantsAt?.(st,node,a?.id)||[])out.set(other.id,other);
+    for(const node of maneuverInfluenceNodes(st,from,to))for(const other of SP.nodeOccupantsAt?.(st,node,a?.id)||[])out.set(other.id,other);
     return [...out.values()];
   }
   function getCrowdingProfile(st,aOrId,from,to,mode='walk'){
     const feasibilitySnapshot=arguments[5]||null;
     const a=agentFor(st,aOrId),f=SP.normalizeNode(st,from),t=SP.normalizeNode(st,to);
     if(!a||!f||!t)return null;
+    const maneuver=SP.traversalManeuver?.(st,f,t)||null,distanceMeters=maneuver?.distanceMeters??1;
     const feasibility=feasibilitySnapshot||SP.traversalFeasibility?.(st,a,f,t)||null,modeFact=feasibility?.modes?.[mode]||null,passageWidth=Number.isFinite(modeFact?.effectiveClearanceWidth)?modeFact.effectiveClearanceWidth:null,moverWidth=effectiveWidth(a,mode);
     const occupants=nearbyAgents(st,a,f,t).map(other=>{
       const relation=directionRelation(st,f,t,other),otherWidth=effectiveWidth(other),directionWeight=CONFIG.directionWeight[relation]??1;
@@ -77,7 +106,7 @@
     });
     const congestionPressure=occupants.reduce((sum,x)=>sum+x.pressure,0),congestionCost=congestionPressure*CONFIG.costPerPressure;
     const delayTicks=Math.max(0,Math.floor(congestionPressure*CONFIG.delayTicksPerPressure+1e-9));
-    const baseTicks=L?.edgeMoveTicks?.(a,mode)??1,effectiveTicks=Number.isFinite(baseTicks)?baseTicks+delayTicks:Infinity;
+    const baseTicks=L?.edgeMoveTicks?.(a,mode,distanceMeters)??1,effectiveTicks=Number.isFinite(baseTicks)?baseTicks+delayTicks:Infinity;
     const speedMultiplier=Number.isFinite(effectiveTicks)&&effectiveTicks>0?clamp(baseTicks/effectiveTicks,CONFIG.minSpeedMultiplier,1):0;
     return {
       edgeKey:`${SP.nodeKey(st,f)}->${SP.nodeKey(st,t)}`,
@@ -96,7 +125,7 @@
   }
   function edgeMoveTicks(st,aOrId,from,to,mode='walk'){
     const crowdingSnapshot=arguments[5]||null;
-    const a=agentFor(st,aOrId),base=L?.edgeMoveTicks?.(a,mode)??1,profile=crowdingSnapshot||getCrowdingProfile(st,a,from,to,mode);
+    const a=agentFor(st,aOrId),distanceMeters=SP.traversalManeuver?.(st,from,to)?.distanceMeters??1,base=L?.edgeMoveTicks?.(a,mode,distanceMeters)??1,profile=crowdingSnapshot||getCrowdingProfile(st,a,from,to,mode);
     return Number.isFinite(base)?base+(profile?.delayTicks||0):Infinity;
   }
 
