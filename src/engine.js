@@ -110,23 +110,25 @@
     const L=locomotionRuntime();if(!L)return legacyMoveToward(a,goal,reason);
     if(!goal||a.offMap)return false;
     if(a.posture?.slotId){if(!standUp(a))return false;return atSpatialPosition(a,goal);}
-    if(atSpatialPosition(a,goal)){if(a.action)delete a.action.locomotionStep;clearLocomotionState(a);return true;}
-    const plan=SP.planRoute?.(state,a,goal,{mode:'auto',objective:'traversalCost'}),step=plan?.steps?.[0];
-    if(!step||!plan?.path?.length){if(a.action)delete a.action.locomotionStep;clearLocomotionState(a);return false;}
+    if(atSpatialPosition(a,goal)){if(a.action){delete a.action.locomotionStep;delete a.action.locomotionCredit;}clearLocomotionState(a);return true;}
+    const movementCredit=Number.isFinite(Number(a.action?.locomotionCredit))?Math.max(0,Math.min(Number(a.action.locomotionCredit),1-1e-9)):0;
+    const plan=SP.planRoute?.(state,a,goal,{mode:'auto',objective:'traversalCost',movementCredit}),step=plan?.steps?.[0];
+    if(!step||!plan?.path?.length){if(a.action){delete a.action.locomotionStep;delete a.action.locomotionCredit;}clearLocomotionState(a);return false;}
     a.action.lastMoveReason=reason;a.action.lastPath=plan.path.map(p=>({...p}));
-    if(adoptLocomotionPosture(a,step.mode)){delete a.action.locomotionStep;setLocomotionState(a,step.mode,'transition');return false;}
+    if(adoptLocomotionPosture(a,step.mode)){delete a.action.locomotionStep;delete a.action.locomotionCredit;setLocomotionState(a,step.mode,'transition');return false;}
     setLocomotionState(a,step.mode,'moving');
     const toKey=SP.nodeKey?SP.nodeKey(state,step.to):SP.key(step.to),pending=a.action.locomotionStep;
     if(!pending||pending.mode!==step.mode||pending.toKey!==toKey){
-      const ticks=Number(step.moveTicks);if(!Number.isFinite(ticks)||ticks<1){clearLocomotionState(a);return false;}
-      if(ticks>1){a.action.locomotionStep={mode:step.mode,to:{...step.to},toKey,ticksRemaining:ticks-1};return false;}
+      const ticks=Number(step.moveTicks),creditAfter=Number(step.movementCreditAfter)||0;if(!Number.isFinite(ticks)||ticks<1){clearLocomotionState(a);return false;}
+      if(ticks>1){a.action.locomotionStep={mode:step.mode,to:{...step.to},toKey,ticksRemaining:ticks-1,movementCreditAfter:creditAfter};return false;}
+      a.action.locomotionCredit=creditAfter;
     }else if(pending.ticksRemaining>1){pending.ticksRemaining--;return false;}
-    else delete a.action.locomotionStep;
+    else {a.action.locomotionCredit=Number(pending.movementCreditAfter)||0;delete a.action.locomotionStep;}
     a.position={...step.to};
     const load=effectiveCarryLoad(a),cost=movementExertion(load),moveLabel=L.modeLabel?.(step.mode)||step.mode||'移動';
     applyExertion(a,cost,load>.01?`負重${moveLabel}`:moveLabel,{thirstFactor:.18,hungerFactor:.05,load});
     onEnterTile(a);
-    return atSpatialPosition(a,goal);
+    const arrived=atSpatialPosition(a,goal);if(arrived)delete a.action.locomotionCredit;return arrived;
   }
   function moveToInteraction(a,target,reason,affordance='default'){const status=targetAvailability(target);if(!status.exists||!status.available){interruptUnavailableTarget(a,target,status);return false;}if(SP.isAtInteraction(state,a,target,affordance)){a.action.wait=0;return true;}if(a.posture?.slotId){if(!standUp(a))return false;a.action.wait=0;return false;}const goal=SP.bestInteractionPosition(state,a,target,affordance);if(!goal){a.action.wait=(a.action.wait||0)+1;if(a.action.wait===1||a.action.wait===4)addEvent(`${a.name}暫時找不到能接近${status.label}的位置。`,'normal',[],{actor:a.id,action:'wait',target:target.id});if(a.action.wait>=MAX_INTERACTION_WAIT)abortAction(a,`持續找不到能接近${status.label}的位置`);return false;}a.action.wait=0;a.action.spatialGoal={...goal};moveToward(a,goal,reason);return false;}
   function moveToExact(a,p,reason){if(atSpatialPosition(a,p))return true;a.action.spatialGoal={...p};moveToward(a,p,reason);return false;}
