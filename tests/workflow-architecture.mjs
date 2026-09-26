@@ -18,6 +18,7 @@ const semanticNodeTests=[
   'tests/physical-profile-foundation.mjs',
   'tests/passage-profile-multimode.mjs',
   'tests/route-semantics.mjs',
+  'tests/metric-route-locomotion.mjs',
   'tests/locomotion-execution-posture.mjs',
   'tests/dynamic-congestion.mjs',
   'tests/relationship-foundation.mjs',
