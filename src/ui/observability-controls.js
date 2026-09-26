@@ -68,6 +68,7 @@
     host=document.createElement('div');host.id='mobileAgentSummary';host.className='mobile-agent-summary';map.insertAdjacentElement('afterend',host);return host;
   }
   function renderMobileSummary(){
+    if(UI.isManualBatchIntermediate?.())return;
     const host=ensureMobileSummary(),st=E.getState();if(!host||!st)return;
     host.innerHTML=Object.values(st.agents||{}).map(a=>{
       const where=a.offMap?'門外':SP.describePlace(st,a),needs=['hunger','thirst','fatigue','sleepNeed','social'].map(k=>`${NEED_SHORT[k]} ${Math.round(clamp(Number(a.needs?.[k])||0,0,100))}`).join(' · ');

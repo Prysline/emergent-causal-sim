@@ -2,7 +2,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.29.1-slot-interaction-egress`。
+目前 runtime marker：`11.29.2-batch-step-yielding`。
 
 > `11.29.0-horizontal-geometry-foundation` 新增 pure horizontal geometry kernel 與 Authoring-side `HorizontalConnection` projection，**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；Slice 1 也尚未改 production route neighbor / movement execution，所以 hook registry / phase ordering維持不變。
 >
@@ -111,7 +111,7 @@ Presentation observer registry與 simulation runtime-hook manifest分離。Simul
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection |
 
-### afterReset observers
+Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。\n\n### afterReset observers
 
 | Order | Observer ID | Owner | 責任 |
 |---:|---|---|---|

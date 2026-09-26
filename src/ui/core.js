@@ -2,7 +2,7 @@
   const E=window.SimEngine,SP=window.SimSpatial,V=window.SimValidator;if(!E||!SP||!V)return;
   const UI=window.SimUI=window.SimUI||{};
   const inspectorDecorators=new Map(),startupExtensions=new Map();
-  let selected=null,timer=null,mobileView='map',logMode='summary',currentZ=0,started=false;
+  let selected=null,timer=null,manualBatch=null,batchGeneration=0,mobileView='map',logMode='summary',currentZ=0,started=false;
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const st=()=>E.getState(),zOf=p=>SP.zOf?.(p)??p?.z??0,posText=p=>p?`(${p.x}, ${p.y}, Z ${zOf(p)})`:'無',fmtLoad=v=>Math.round((v||0)*100)/100,isMobile=()=>matchMedia('(max-width:720px)').matches;
   const sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0),NEED_SHORT_ZH={hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',sleepNeed:'睡意',social:'社交'};
@@ -46,14 +46,16 @@
   UI.listStartupExtensions=listStartupExtensions;
   UI.runInspectorDecorators=runInspectorDecorators;
   UI.getInspectorSelection=currentInspectorSelection;
+  UI.isManualBatchActive=()=>!!manualBatch;
+  UI.isManualBatchIntermediate=()=>!!manualBatch?.intermediate;
   function runtimeZLevels(){const levels=st().map?.zLevels;return Array.isArray(levels)&&levels.length?[...levels].sort((a,b)=>a-b):[...new Set(Object.values(st().map?.tiles||{}).map(zOf))].sort((a,b)=>a-b);}
   function normalizeCurrentZ(){const levels=runtimeZLevels();if(!levels.includes(currentZ))currentZ=levels.includes(0)?0:(levels[0]??0);return currentZ;}
-  function renderLayerControl(){const select=$('runtimeLayerSelect');if(!select)return;normalizeCurrentZ();const levels=runtimeZLevels();select.innerHTML=levels.map(z=>`<option value="${z}" ${z===currentZ?'selected':''}>Z ${z>=0?'+':''}${z}</option>`).join('');select.disabled=levels.length<=1;}
+  function renderLayerControl(){const select=$('runtimeLayerSelect');if(!select)return;normalizeCurrentZ();const levels=runtimeZLevels();select.innerHTML=levels.map(z=>`<option value="${z}" ${z===currentZ?'selected':''}>Z ${z>=0?'+':''}${z}</option>`).join('');select.disabled=!!manualBatch||levels.length<=1;}
   UI.getCurrentZ=()=>currentZ;
-  UI.setCurrentZ=z=>{const n=Number(z);if(!runtimeZLevels().includes(n))return false;currentZ=n;render();return true;};
+  UI.setCurrentZ=z=>{if(manualBatch)return false;const n=Number(z);if(!runtimeZLevels().includes(n))return false;currentZ=n;render();return true;};
 
   function setMobileView(view){mobileView=view;document.querySelectorAll('.view-panel[data-view]').forEach(p=>p.classList.toggle('mobile-active',p.dataset.view===view));document.querySelectorAll('.mobile-nav [data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===view));if(isMobile())scrollTo({top:0,behavior:'auto'});}
-  function select(type,id,open=true){selected={type,id};if(open&&isMobile())setMobileView('inspector');renderMap();renderInspector();}
+  function select(type,id,open=true){if(manualBatch)return false;selected={type,id};if(open&&isMobile())setMobileView('inspector');renderMap();renderInspector();return true;}
   function needClass(v){return v>=78?'critical':v>=58?'high':'';}
   function wellbeingClass(v){return v<=30?'bad':v<=50?'warn':'good';}
   function propTag(label,cls=''){return `<span class="tag ${cls}">${esc(label)}</span>`;}
@@ -108,13 +110,59 @@
 
   function renderBadges(){const s=st(),wet=Object.values(s.map.tiles).filter(t=>zOf(t)===currentZ&&SP.tileLiquidAmount(t)>.1).length,held=Object.values(s.agents).filter(a=>a.held).length,intox=Math.max(...Object.values(s.agents).map(a=>a.status.intoxication||0)),val=validation();$('worldBadges').innerHTML=`<span>Z ${currentZ>=0?'+':''}${currentZ}</span><span>濕地 ${wet}</span><span>持有物 ${held}</span><span>醉酒 ${Math.round(intox)}</span><span>食物 ${Math.round(E.foodStock())}</span>${Object.values(s.map.rooms).filter(r=>(r.z??0)===currentZ).map(r=>`<button data-entity="room:${r.id}">🏠 ${r.name}</button>`).join('')}<span>格狀 ${s.map.width}×${s.map.height}</span><span class="${val.issueCount?'badge-bad':'badge-good'}">狀態${val.issueCount?'⚠':'✓'}</span>`;}
   function render(){const s=st();normalizeCurrentZ();$('clock').textContent=`第 ${s.day} 天 ${E.timeStr()}`;$('tickLabel').textContent=`Tick ${s.tick}・Seed ${s.seed}`;renderLayerControl();renderBadges();renderMap();renderActions();renderTimeline();renderInspector();}
-  function step(n=1){for(let i=0;i<n;i++)E.tick();render();}
-  function togglePlay(){if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';return;}$('play').textContent='⏸ 暫停';timer=setInterval(()=>step(1),700);}
-  function reset(){if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';}selected=null;E.reset(Number($('seedInput').value)||20260911);normalizeCurrentZ();render();}
+  function stepOne(){E.tick();render();}
+  function setDisabled(id,disabled){const control=$(id);if(control)control.disabled=!!disabled;}
+  function updateBatchProgress(){
+    const button=$('step10');if(!button)return;
+    button.textContent=manualBatch?`執行中 ${manualBatch.completed}/${manualBatch.total}`:'10 步';
+  }
+  function syncControlState(){
+    const batch=!!manualBatch,autoplay=!!timer,workspace=document.querySelector('.workspace');
+    setDisabled('step',batch||autoplay);setDisabled('step10',batch||autoplay);setDisabled('play',batch);setDisabled('reset',false);
+    setDisabled('runtimeLayerSelect',batch||runtimeZLevels().length<=1);setDisabled('showThoughts',batch);
+    setDisabled('loadSocialScenario',batch);setDisabled('socialScenario',batch);
+    if(workspace){workspace.inert=batch;if(batch)workspace.setAttribute('aria-busy','true');else workspace.removeAttribute('aria-busy');}
+    updateBatchProgress();
+  }
+  function manualStep(){if(manualBatch||timer)return false;stepOne();return true;}
+  function yieldToBrowser(){return new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));}
+  async function runManualBatch(total=10){
+    if(manualBatch||timer||!Number.isInteger(total)||total<1)return false;
+    const context={token:++batchGeneration,total,completed:0,intermediate:true};
+    manualBatch=context;syncControlState();
+    try{
+      await yieldToBrowser();
+      if(manualBatch!==context||context.token!==batchGeneration)return false;
+      for(let i=0;i<total;i++){
+        context.intermediate=i<total-1;
+        E.tick();
+        context.completed=i+1;updateBatchProgress();
+        if(i<total-1){
+          await yieldToBrowser();
+          if(manualBatch!==context||context.token!==batchGeneration)return false;
+        }
+      }
+      if(manualBatch!==context||context.token!==batchGeneration)return false;
+      manualBatch=null;syncControlState();render();return true;
+    }finally{
+      if(manualBatch===context){manualBatch=null;syncControlState();}
+    }
+  }
+  function invalidateManualBatch(){batchGeneration++;manualBatch=null;}
+  function togglePlay(){
+    if(manualBatch)return false;
+    if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';syncControlState();return false;}
+    $('play').textContent='⏸ 暫停';timer=setInterval(stepOne,700);syncControlState();return true;
+  }
+  function reset(){
+    invalidateManualBatch();
+    if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';}
+    selected=null;E.reset(Number($('seedInput').value)||20260911);normalizeCurrentZ();syncControlState();render();
+  }
   function bindEvents(){
     document.addEventListener('click',e=>{const ent=e.target.closest('[data-entity]');if(ent){e.stopPropagation();const raw=ent.dataset.entity,i=raw.indexOf(':');select(raw.slice(0,i),raw.slice(i+1));return;}const tile=e.target.closest('.sim-tile[data-tile]');if(tile){select('tile',tile.dataset.tile);return;}const log=e.target.closest('[data-logmode]');if(log){logMode=log.dataset.logmode;document.querySelectorAll('[data-logmode]').forEach(b=>b.classList.toggle('active',b===log));renderTimeline();}});
-    $('runtimeLayerSelect')?.addEventListener('change',event=>{currentZ=Number(event.target.value);render();});
-    $('play').addEventListener('click',togglePlay);$('step').addEventListener('click',()=>step(1));$('step10').addEventListener('click',()=>step(10));$('reset').addEventListener('click',reset);$('showThoughts').addEventListener('change',renderInspector);document.querySelectorAll('.mobile-nav [data-tab]').forEach(b=>b.addEventListener('click',()=>setMobileView(b.dataset.tab)));
+    $('runtimeLayerSelect')?.addEventListener('change',event=>{if(manualBatch)return;currentZ=Number(event.target.value);render();});
+    $('play').addEventListener('click',togglePlay);$('step').addEventListener('click',manualStep);$('step10').addEventListener('click',()=>{void runManualBatch(10).catch(error=>console.error(error));});$('reset').addEventListener('click',reset);$('showThoughts').addEventListener('change',()=>{if(!manualBatch)renderInspector();});document.querySelectorAll('.mobile-nav [data-tab]').forEach(b=>b.addEventListener('click',()=>setMobileView(b.dataset.tab)));
   }
   function start(){
     if(started)return false;
@@ -123,6 +171,7 @@
     started=true;
     try{
       runStartupExtensions();
+      syncControlState();
       render();
       return true;
     }catch(error){

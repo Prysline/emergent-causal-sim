@@ -222,13 +222,14 @@
   }
   function refreshResidentView(){
     scheduled=false;
+    if(UI.isManualBatchIntermediate?.())return;
     const selected=UI.getInspectorSelection?.(),shell=host.querySelector(':scope > [data-v1140-resident-root]');
     if(!shell||selected?.type!=='agent')return;
     if(selected.id!==currentAgentId){currentAgentId=selected.id;mode='resident';residentTab='overview';}
     renderResident(shell,selected.id);applyMode(shell);
   }
   function schedule(){
-    if(!UI.isStarted?.()||scheduled)return;scheduled=true;
+    if(!UI.isStarted?.()||scheduled||UI.isManualBatchIntermediate?.())return;scheduled=true;
     queueMicrotask(()=>requestAnimationFrame(refreshResidentView));
   }
   function resetResidentView(){currentAgentId=null;mode='resident';residentTab='overview';schedule();}

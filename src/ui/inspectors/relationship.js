@@ -58,8 +58,8 @@
     if(resident&&activeTab==='overview'){const body=resident.querySelector('.resident-tab-body');if(body)body.append(readableSection(st,a));}
     if(debug)debug.append(debugSection(st,a));
   }
-  function refresh(){scheduled=false;const selected=UI.getInspectorSelection?.();if(selected?.type!=='agent')return;decorateInspector({host,selected,state:E.getState()});}
-  function schedule(){if(!UI.isStarted?.()||scheduled)return;scheduled=true;queueMicrotask(()=>requestAnimationFrame(refresh));}
+  function refresh(){scheduled=false;if(UI.isManualBatchIntermediate?.())return;const selected=UI.getInspectorSelection?.();if(selected?.type!=='agent')return;decorateInspector({host,selected,state:E.getState()});}
+  function schedule(){if(!UI.isStarted?.()||scheduled||UI.isManualBatchIntermediate?.())return;scheduled=true;queueMicrotask(()=>requestAnimationFrame(refresh));}
 
   UI.registerInspectorDecorator('relationship.view',decorateInspector,1025);
   if(!UI.registerStartupExtension)throw new Error('Relationship View requires UI startup lifecycle');

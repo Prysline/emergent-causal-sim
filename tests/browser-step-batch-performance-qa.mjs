@@ -206,22 +206,32 @@ async function openCase({selected=false}={}){
   await page.evaluate(()=>window.__stepBatchPerf.reset());
 }
 
-async function clickWithFrames(id){
-  return page.evaluate(async id=>{
-    const start=performance.now();
+async function clickWithFrames(id,expectedTicks=1){
+  return page.evaluate(async ({id,expectedTicks})=>{
+    const E=window.SimEngine,start=performance.now(),startTick=E.getState().tick,targetTick=startTick+expectedTicks;
+    let firstTimerAt=null;
+    const firstTimerPromise=new Promise(resolve=>setTimeout(()=>{firstTimerAt=performance.now();resolve();},0));
     document.getElementById(id).click();
     const handlerReturn=performance.now();
+    const completed=()=>E.getState().tick===targetTick&&document.querySelector('.workspace')?.getAttribute('aria-busy')!=='true';
+    const completionPromise=new Promise(resolve=>{
+      const poll=()=>{if(completed())resolve(performance.now());else setTimeout(poll,0);};
+      poll();
+    });
     await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
     const firstFrame=performance.now();
     await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
     const secondFrame=performance.now();
-    await new Promise(resolve=>setTimeout(resolve,0));
+    const completionAt=await completionPromise;
+    await firstTimerPromise;
     return {
       handlerMs:handlerReturn-start,
+      firstTimerOpportunityMs:firstTimerAt-start,
       firstFrameMs:firstFrame-start,
-      usableFrameMs:secondFrame-start
+      usableFrameMs:secondFrame-start,
+      totalCompletionMs:completionAt-start
     };
-  },id);
+  },{id,expectedTicks});
 }
 
 async function runCase(mode,selected){
@@ -229,11 +239,11 @@ async function runCase(mode,selected){
   const startTick=await page.evaluate(()=>window.SimEngine.getState().tick);
   const interactions=[];
   if(mode==='single'){
-    interactions.push(await clickWithFrames('step'));
+    interactions.push(await clickWithFrames('step',1));
   }else if(mode==='tenSingles'){
-    for(let i=0;i<10;i++)interactions.push(await clickWithFrames('step'));
+    for(let i=0;i<10;i++)interactions.push(await clickWithFrames('step',1));
   }else if(mode==='batch10'){
-    interactions.push(await clickWithFrames('step10'));
+    interactions.push(await clickWithFrames('step10',10));
   }else throw new Error('unknown step performance mode: '+mode);
   await settleFrames(1);
   const snapshot=await page.evaluate(()=>window.__stepBatchPerf.snapshot());
@@ -250,7 +260,7 @@ function assertCase(result,expectedTicks){
   assert.equal(result.metrics.tick,result.startTick+expectedTicks,result.mode+' must advance exact tick count');
   assert.equal(result.metrics.ticks.length,expectedTicks,result.mode+' instrumentation must see every E.tick call');
   assert.ok(result.metrics.ticks.every(x=>Number.isFinite(x.durationMs)&&x.durationMs>=0),result.mode+' tick durations must be finite');
-  assert.ok(result.interactions.every(x=>Number.isFinite(x.handlerMs)&&Number.isFinite(x.usableFrameMs)),result.mode+' interaction timing must be finite');
+  assert.ok(result.interactions.every(x=>Number.isFinite(x.handlerMs)&&Number.isFinite(x.firstTimerOpportunityMs)&&Number.isFinite(x.firstFrameMs)&&Number.isFinite(x.usableFrameMs)&&Number.isFinite(x.totalCompletionMs)),result.mode+' interaction timing must include handler, first timer, first/usable frame, and total completion');
   assert.ok((result.metrics.domWrites.map?.calls??0)>=1,result.mode+' must include the final map render');
 }
 
@@ -311,7 +321,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'Diagnostic baseline only: no absolute latency threshold is enforced in Perf-1.',
+    note:'Perf-4 production profile: no absolute latency threshold is enforced; compare first timer/frame, total completion, long-task shape, inside-tick work, and outside-tick projection cost.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     pageErrors,
     consoleErrors

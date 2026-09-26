@@ -12,7 +12,7 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen,zhou=st.agents.zhou;
-assert.equal(st.version,'11.29.1-slot-interaction-egress');
+assert.equal(st.version,'11.29.2-batch-step-yielding');
 assert.equal(SP.VERSION,'11.29.0-traversal-maneuver');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
