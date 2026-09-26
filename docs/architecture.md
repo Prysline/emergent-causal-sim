@@ -751,7 +751,7 @@ Physical / Locomotion Current invariant：
 - locomotion baseline 是 `walk`，不得再把 Agent posture `standing` 當成同一個 locomotion mode；
 - Human 目前可查詢 `walk / kneelCrawl / proneCrawl` feasibility，Cat 目前只定義 `walk`；capability 只表示物理支援，不代表行為意願；
 - Spatial production route 已支援 `mode:'auto'` 的 walk / kneelCrawl / proneCrawl execution；explicit walk-only query仍可供 focused compatibility。physical feasibility、mode execution 與 behavioral willingness仍分層；
-- v11.18.0 建立 Route Semantics Split；v11.19.0 已把它接到 multi-mode execution：`pathDistance`＝physical-feasible shortest topology edge count、`traversalCost`＝最低客觀通行負擔、`travelTime`＝selected executable route 的真實 transition + movement ticks。A* primary objective仍為 traversal cost；
+- v11.18.0 建立 Route Semantics Split；v11.19.0 接上 multi-mode execution，Slice 3 再把 production floor Route 升為 metric diagonal semantics：`pathDistance`＝physical-feasible route 的實際公尺長度、`stepCount`＝graph edge count、`traversalCost`＝最低客觀通行負擔、`travelTime`＝selected executable route 的真實 transition + distance-based movement ticks。A* primary objective仍為 traversal cost；
 - mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
 - Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
 
