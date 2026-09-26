@@ -55,12 +55,16 @@
     if(!here||!next)return null;
     return SP.traversalManeuver?.(st,here,next)?.directionVector||vec(here,next);
   }
-  function directionRelation(st,moverFrom,moverTo,other){
-    const mover=SP.traversalManeuver?.(st,moverFrom,moverTo)?.directionVector||vec(moverFrom,moverTo),otherDir=movementDirection(st,other);
+  function directionRelationFromVector(st,mover,other){
+    const otherDir=movementDirection(st,other);
     if(!otherDir)return other?.locomotion?.phase==='moving'?'unknown':'stationary';
     if(sameVec(mover,otherDir))return'same';
     if(reverseVec(mover,otherDir))return'opposite';
     return horizontalAngleRelation(mover,otherDir)||'unknown';
+  }
+  function directionRelation(st,moverFrom,moverTo,other){
+    const mover=SP.traversalManeuver?.(st,moverFrom,moverTo)?.directionVector||vec(moverFrom,moverTo);
+    return directionRelationFromVector(st,mover,other);
   }
   function effectiveWidth(a,mode=null){
     if(!a)return null;
@@ -70,24 +74,24 @@
     const body=Number(a.physical?.bodyGeometry?.width);
     return Number.isFinite(body)&&body>0?body:null;
   }
-  function maneuverInfluenceNodes(st,from,to){
-    const maneuver=SP.traversalManeuver?.(st,from,to)||null,nodes=maneuver?.influenceNodes?.length?maneuver.influenceNodes:[from,to],out=new Map();
+  function maneuverInfluenceNodes(st,from,to,maneuver=null){
+    const resolved=maneuver||SP.traversalManeuver?.(st,from,to)||null,nodes=resolved?.influenceNodes?.length?resolved.influenceNodes:[from,to],out=new Map();
     for(const node of nodes){const normalized=SP.normalizeNode(st,node);if(normalized)out.set(SP.nodeKey(st,normalized),normalized);}
     return [...out.values()];
   }
-  function nearbyAgents(st,a,from,to){
+  function nearbyAgents(st,a,from,to,maneuver=null){
     const out=new Map();
-    for(const node of maneuverInfluenceNodes(st,from,to))for(const other of SP.nodeOccupantsAt?.(st,node,a?.id)||[])out.set(other.id,other);
+    for(const node of maneuverInfluenceNodes(st,from,to,maneuver))for(const other of SP.nodeOccupantsAt?.(st,node,a?.id)||[])out.set(other.id,other);
     return [...out.values()];
   }
   function getCrowdingProfile(st,aOrId,from,to,mode='walk'){
     const feasibilitySnapshot=arguments[5]||null;
     const a=agentFor(st,aOrId),f=SP.normalizeNode(st,from),t=SP.normalizeNode(st,to);
     if(!a||!f||!t)return null;
-    const maneuver=SP.traversalManeuver?.(st,f,t)||null,distanceMeters=maneuver?.distanceMeters??1;
+    const maneuver=SP.traversalManeuver?.(st,f,t)||null,distanceMeters=maneuver?.distanceMeters??1,moverDirection=maneuver?.directionVector||vec(f,t);
     const feasibility=feasibilitySnapshot||SP.traversalFeasibility?.(st,a,f,t)||null,modeFact=feasibility?.modes?.[mode]||null,passageWidth=Number.isFinite(modeFact?.effectiveClearanceWidth)?modeFact.effectiveClearanceWidth:null,moverWidth=effectiveWidth(a,mode);
-    const occupants=nearbyAgents(st,a,f,t).map(other=>{
-      const relation=directionRelation(st,f,t,other),otherWidth=effectiveWidth(other),directionWeight=CONFIG.directionWeight[relation]??1;
+    const occupants=nearbyAgents(st,a,f,t,maneuver).map(other=>{
+      const relation=directionRelationFromVector(st,moverDirection,other),otherWidth=effectiveWidth(other),directionWeight=CONFIG.directionWeight[relation]??1;
       let widthRatio=null,widthPressure=0;
       if(Number.isFinite(passageWidth)&&passageWidth>0&&Number.isFinite(moverWidth)&&Number.isFinite(otherWidth)){
         widthRatio=(moverWidth+otherWidth*CONFIG.maneuveringOtherWidthFactor)/passageWidth;
