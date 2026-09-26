@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.30.0-metric-route-locomotion';
-const CROWDING_VERSION='11.28.0-effective-passage-width';
+const CURRENT_VERSION='11.31.0-crowding-8-direction';
+const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.30.0-distance-timing';
 const ROUTE_VERSION='11.30.0-metric-route';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
