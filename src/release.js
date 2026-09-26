@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.30.0-metric-route-locomotion';
+  const VERSION='11.31.0-crowding-8-direction';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{
