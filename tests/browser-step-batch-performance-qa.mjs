@@ -316,12 +316,17 @@ try{
     'opening an Agent Inspector must remain simulation-state inert during one step'
   );
 
+  const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
+  assert.equal(queryPhaseCalls(results.single_none,'SP.traversalFeasibility','insideTick'),5385,'winner-result production must retain the measured single-tick feasibility reduction');
+  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','insideTick'),16345,'winner-result production must retain the measured step(10) inside-tick feasibility reduction');
+  assert.equal(queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick'),2682,'winner-result production must not shift traversal work into outside-tick Presentation');
+
   assert.deepEqual(pageErrors,[],'step batch perf QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'step batch perf QA must have no console errors');
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'Perf-4 production profile: no absolute latency threshold is enforced; compare first timer/frame, total completion, long-task shape, inside-tick work, and outside-tick projection cost.',
+    note:'Post-Perf-4 winner-result production profile: deterministic traversal-feasibility counts + exact state parity are acceptance evidence; latency remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     pageErrors,
     consoleErrors

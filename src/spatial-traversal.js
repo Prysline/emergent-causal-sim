@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.29.0-traversal-maneuver';
+  const VERSION='11.29.3-interaction-winner-result';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -452,12 +452,14 @@
       return out;
     });
   }
-  function bestInteractionPosition(st,a,target,affordance='default'){
+  function bestInteractionPositionResult(st,a,target,affordance='default'){
     const C=crowdingRuntime(),positions=interactionPositions(st,target,a,affordance),costs=interactionTraversalCosts(st,a,positions,{mode:locomotionRuntime()?'auto':'walk'});
     let list=positions.map((p,i)=>({p,d:costs[i],occ:nodeOccupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
     const current=nodeForAgent(st,a),differentNodeSameXY=x=>localSame(current,x.p)&&!nodeSame(st,current,x.p);if(list.some(x=>!differentNodeSameXY(x)))list=list.filter(x=>!differentNodeSameXY(x));
-    list.sort((x,y)=>(C?0:x.occ-y.occ)||x.d-y.d||SP.manhattan(a.position,x.p)-SP.manhattan(a.position,y.p));return list[0]?.p||null;
+    list.sort((x,y)=>(C?0:x.occ-y.occ)||x.d-y.d||SP.manhattan(a.position,x.p)-SP.manhattan(a.position,y.p));
+    const winner=list[0];return winner?{position:winner.p,traversalCost:winner.d}:null;
   }
+  function bestInteractionPosition(st,a,target,affordance='default'){return bestInteractionPositionResult(st,a,target,affordance)?.position||null;}
   function isAtInteraction(st,a,target,affordance='default'){const here=nodeForAgent(st,a);return interactionPositions(st,target,a,affordance).some(p=>nodeSame(st,here,p));}
   function canInteract(st,a,target,affordance='default'){return isAtInteraction(st,a,target,affordance);}
 
@@ -475,6 +477,7 @@
   SP.interactionGeometry=interactionGeometry;
   SP.interactionPositions=interactionPositions;
   SP.bestInteractionPosition=bestInteractionPosition;
+  SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
   Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.24.0-route-locomotion-cost',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes});

@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.29.2-batch-step-yielding`
+`11.29.3-interaction-winner-result-reuse`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.29.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.28.0-furniture-local-geometry`；Spatial Passage `11.28.0-positioned-passage-options`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.29.3`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.29.3-interaction-winner-result`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.24.0-route-locomotion-cost`；Locomotion `11.24.0-locomotion-objective-burden`；Dynamic Congestion `11.28.0-effective-passage-width`。未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Batch Step Yielding release
+### Current Interaction Winner Result Reuse release
+
+`11.29.3-interaction-winner-result-reuse` 將 interaction-position winner scoring 已經算出的 canonical `traversalCost` 正式暴露為 additive Spatial result contract：新增 `bestInteractionPositionResult(...)`，回傳 `{ position, traversalCost }` 或 `null`；既有 `bestInteractionPosition(...)` 保持 position-only compatibility contract，winner identity、candidate order、same-XY cross-surface filtering、Crowding-aware 排序與 tie-break 全部不變。
+
+Engine 的 target-selection `targetTraversalCost()` 在 richer API 可用時直接消費 winner result 的 `traversalCost`，不再對同一 winner 緊接著重跑一次 `SP.traversalCost(...)`。這只重用同一次同步 winner calculation 的 derived result；不建立 persistent / cross-tick cache，也不把 action-execution `moveToInteraction() → planRoute` 納入 reuse。Browser performance regression 鎖定 single tick inside-tick `traversalFeasibility = 5,385`、`step(10)` inside `16,345` / outside `2,682`，並保留 exact canonical state parity、page error = 0、console error = 0。
+
+因新增正式 public Spatial result API，本 release 推進 overall current marker，Spatial Traversal contract marker同步升為 `11.29.3-interaction-winner-result`。World Authoring `world-authoring-v7`、Furniture Catalog `furniture-definitions-v7`、Horizontal Geometry、Spatial Identity、Physical、Spatial Passage、Route、Locomotion、Dynamic Congestion與其他未改 subsystem generation均不假升。
+
+### Previous Batch Step Yielding release
 
 `11.29.2-batch-step-yielding` 把「10 步」的排程責任正式收斂到 Presentation / UI layer。單步 `step(1)` 仍同步執行一個完整 `E.tick()` 後 render；manual `step(10)` 先建立 UI-only batch context與 busy state，在第一個 tick 前先讓出一次 browser event loop，之後每個**完整** tick 之間再讓出一次。單一 `E.tick()` 內沒有 `await`、partial render或 cancellation checkpoint，因此 runtime hook ordering、same-tick visibility、RNG與 canonical simulation semantics不變。
 

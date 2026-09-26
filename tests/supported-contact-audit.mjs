@@ -15,8 +15,8 @@ const noIssues=(label)=>{const v=V.validateState(E.getState());assert.equal(v.is
 E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
-  assert.equal(st.version,'11.29.2-batch-step-yielding');
-  assert.equal(E.VERSION,'11.29.2-batch-step-yielding');
+  assert.equal(st.version,'11.29.3-interaction-winner-result-reuse');
+  assert.equal(E.VERSION,'11.29.3-interaction-winner-result-reuse');
   assert.equal(SP.CONTACT_VERSION,'11.11.2-supported-contact-audit');
 
   const tray=st.containers.mealTray,plateA=st.containers.plateA,plateB=st.containers.plateB,cupA=st.containers.cupA,cupB=st.containers.cupB,bottle=st.containers.alcoholBottle;

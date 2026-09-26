@@ -29,9 +29,14 @@ Affordance rule
 ```text
 interactionGeometry(state, target, agent, affordance)
 interactionPositions(state, target, agent, affordance)
+bestInteractionPositionResult(state, agent, target, affordance)
 bestInteractionPosition(state, agent, target, affordance)
 isAtInteraction(state, agent, target, affordance)
 ```
+
+`bestInteractionPositionResult(...)` 是 additive richer-result API，回傳 `{ position, traversalCost }` 或 `null`。其中 `position` 與既有 `bestInteractionPosition(...)` 的 winner 完全一致，`traversalCost` 是該 winner 在同一次 batched interaction-position scoring 已計算出的 canonical traversal cost。
+
+既有 `bestInteractionPosition(...)` 保持 **position-only** public contract，作為 compatibility wrapper；不得改成物件回傳。richer result 只重用同步 winner scoring 的已派生結果，不建立 persistent / cross-tick cache，也不代表 action execution 可以沿用完整 route plan。
 
 目前 mode：
 
