@@ -323,6 +323,17 @@ try{
     batch10Outside:queryPhaseCalls(results.batch10_none,'SP.traversalFeasibility','outsideTick')
   };
   console.log('STEP_BATCH_FEASIBILITY_COUNTS '+JSON.stringify(feasibilityCounts));
+  const compactQueryCounts=result=>Object.fromEntries(
+    ['SP.planRoute','SP.pathDistances','SP.traversalFeasibility','SP.getPassageProfile','SP.agentObservation']
+      .map(name=>[name,{
+        inside:queryPhaseCalls(result,name,'insideTick'),
+        outside:queryPhaseCalls(result,name,'outsideTick')
+      }])
+  );
+  console.log('STEP_BATCH_QUERY_COUNTS '+JSON.stringify({
+    singleNone:compactQueryCounts(results.single_none),
+    batch10None:compactQueryCounts(results.batch10_none)
+  }));
   assert.equal(feasibilityCounts.singleInside,8619,'8-direction Slice 3 must retain the measured single-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Inside,25193,'8-direction Slice 3 must retain the measured step(10) inside-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Outside,6256,'8-direction Slice 3 must retain the measured outside-tick feasibility baseline');
