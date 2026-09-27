@@ -31,7 +31,7 @@ function resetOpenGrid(){
 }
 
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
-assert.equal(SP.VERSION,'11.32.0-contact-slot-corner');
+assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
 assert.equal(L.VERSION,'11.30.0-distance-timing');
 
 {
