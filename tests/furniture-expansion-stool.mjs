@@ -68,8 +68,13 @@ const humanProfile=C.defaultPhysicalProfile('human');
 const catProfile=C.defaultPhysicalProfile('cat');
 const humanSitting=C.getPoseEnvelopeForKind('human',humanProfile.bodyGeometry,'sitting');
 const catSitting=C.getPoseEnvelopeForKind('cat',catProfile.bodyGeometry,'sitting');
-assert.deepEqual(humanSitting,{height:.9075,width:.45,length:.594});
-assert.deepEqual(catSitting,{height:.45,width:.18,length:.288});
+const approx=(actual,expected,label)=>assert.ok(Math.abs(actual-expected)<1e-12,`${label}: expected ${expected}, got ${actual}`);
+approx(humanSitting.height,.9075,'Human sitting height');
+approx(humanSitting.width,.45,'Human sitting width');
+approx(humanSitting.length,.594,'Human sitting length');
+approx(catSitting.height,.45,'Cat sitting height');
+approx(catSitting.width,.18,'Cat sitting width');
+approx(catSitting.length,.288,'Cat sitting length');
 assert.equal(C.poseEnvelopeFitsUsableSpace(humanSitting,seat.usableSpace),true,'default Human sitting PoseEnvelope must fit stool seat');
 assert.equal(C.poseEnvelopeFitsUsableSpace(catSitting,seat.usableSpace),true,'default Cat sitting PoseEnvelope must fit the same stool seat');
 
