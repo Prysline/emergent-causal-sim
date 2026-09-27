@@ -23,7 +23,7 @@ function openSquare(){
 }
 
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
-assert.equal(SP.VERSION,'11.32.0-contact-slot-corner');
+assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
 
 {
   const {st,human,a,b,east}=openSquare();
