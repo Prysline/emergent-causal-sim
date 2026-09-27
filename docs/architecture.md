@@ -29,7 +29,7 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v7"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v8"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
 Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
@@ -73,7 +73,7 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 ### Furniture Orientation / Shared Local Transform
 
-Current `furniture-definitions-v7` 將 Definition canonical local orientation 固定為 `south`。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
+Current `furniture-definitions-v8` 將 Definition canonical local orientation 固定為 `south`。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
 
 Definition 的 `orientationSemantics` 分為 `facing` 與 `frame`。Directional Furniture 的 `orientation` 表示正面／主要 facing：椅子與沙發是 back → front，床是 head → foot；沒有自然正面的 Furniture 仍保留 quarter-turn frame orientation，但不宣稱有正面。`origin` 不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 透過同一 world→local→world transform 跟隨；slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference。
 
@@ -89,7 +89,15 @@ Resident initial placement 在 current authoring contract內支援兩種 mode：
 
 Initializer 的 hard validation只判斷自己擁有的 authoring/reference/base-floor occupancy facts。Physical / locomotion / posture 的正式 runtime invariant仍由既有 Spatial / Physical / Validator owners負責，不在 initializer 複製第二套 subsystem rule。
 
-Physical / Passage contract 同樣遵守 single-source rule：Agent 保存 Physical facts；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(...)` derived。`PassageProfile`由 Spatial geometry即時計算為位置化 `options`，mode feasibility只在同一 option 同時容納 MovementEnvelope時成立；兩者都不保存 persistent cache。
+Physical / Passage contract 同樣遵守 single-source rule：Agent 保存 Physical facts；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(...)` derived。第一階段 `PoseEnvelope` 也由 Physical 依 current `bodyGeometry` + embodiment posture profile 即時計算 sitting / lying 尺寸，不保存 persistent mirror；Furniture Slot 只持有 `usableSpace`，Static fit 由共用 Physical query 比較，不能讓 Furniture 重新持有 species 尺寸規則。`PassageProfile`由 Spatial geometry即時計算為位置化 `options`，mode feasibility只在同一 option 同時容納 MovementEnvelope時成立。MovementEnvelope、PoseEnvelope 與 PassageProfile 都維持 derived truth。
+
+### PoseEnvelope / Furniture Slot static-fit ownership
+
+第一階段 **PoseEnvelope（靜態姿勢包絡）** 與 MovementEnvelope（移動包絡）是兩個不同 Physical query。MovementEnvelope 回答移動過程的空間需求；`SimPhysical.getPoseEnvelope(agent, posture)` 回答 Agent 以 sitting / lying 靜態姿勢需要的 `height / width / length`。姿勢推導模板位於 authoring-safe `SimEmbodimentCapabilities`，runtime Physical 只讀 Agent current `bodyGeometry` 即時計算，不把結果寫回 Agent state。
+
+Furniture Definition 的 Slot 持有 `usableSpace`，表示該使用位置可容納的靜態身體空間；它不是 Furniture solid、Surface、footprint 或 Contact geometry。Spatial / Engine consumer 透過 Physical-owned fit query 串接「activity affordance + static fit + `allowKinds` + Slot occupancy/reservation + approach/settle/egress」等獨立 gate。缺少必要 usable-space 資料不得默認 fit。第一版軸向直接對齊 Furniture local frame，不自動嘗試 90° 旋轉。
+
+Initializer 與 Validator 也消費同一 contract，避免 authored opening state 與 runtime state 使用兩套姿勢尺寸規則。Slot occupancy truth 仍只有 `agent.posture.slotId`；本 slice 不把 slot-bound Agent 重新算成 ordinary floor occupant，也不建立 multi-slot / usable-surface packing 或 dynamic body obstruction。
 
 ### Agent-private Truth
 
