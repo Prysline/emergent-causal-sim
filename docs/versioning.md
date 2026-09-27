@@ -10,7 +10,13 @@
 
 玩家可見的 app 頁首 current-version display 使用短版 `v11.33.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
 
-### Current Action spatial-target consumer correctness release
+### Current Coarse Place Description release
+
+`11.33.2-coarse-place-description` 修正 player-readable / observable place wording 的精度邊界，不改 Spatial traversal geometry。Current Furniture-local metric solids允許角色在同一 authored tile 內使用合法剩餘 floor free-space；但 floor Spatial Node仍只有 coarse `spaceId + surfaceId + x/y/z`，沒有 tile 內 local offset / region identity。因此 `describePlace()` 不再只因同一 coarse floor tile 存在 overhead Furniture就輸出「餐桌下」等精確局部關係，而改為「餐桌所在格的地面」。若 Agent 位於 explicit Furniture Surface，仍可依正式 Surface identity輸出「餐桌桌面」等精確 label。
+
+這個 patch **保留** Human / Cat 依 MovementEnvelope 使用 partial-tile floor free-space的既有 physical semantics，也保留 `diningTable:surface` 的 traversable Surface policy；沒有修改 Furniture solids、Surface allowKinds、Passage、Route、Locomotion、Spatial Identity schema或 World Authoring。因玩家可見描述改變，overall runtime / Presentation current marker升為 11.33.2；Spatial Traversal / Contact仍為 `11.32.0-contact-slot-corner`、Physical仍為 `11.33.0-pose-envelope-static-fit`、World Authoring / Furniture Catalog仍為 v7 / v11。
+
+### Previous Action spatial-target consumer correctness release
 
 `11.33.1-action-spatial-target-consumers` 修正 Slot / Interaction Geometry contract 升級後仍殘留在部分 Action / Deliberation consumer 的舊 route-target 假設。Furniture Definition、Slot geometry、PoseEnvelope、Passage、Route 與 Contact owner 都沒有改；改的是 downstream consumer 必須真正使用既有 canonical spatial target。
 
