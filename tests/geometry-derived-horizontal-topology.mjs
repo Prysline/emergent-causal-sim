@@ -16,9 +16,9 @@ const compile=authoring=>{
 };
 
 assert.equal(A.VERSION,'world-authoring-v7');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v10');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v11');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v7');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v10');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v11');
 const resolvedTable=A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable);
 assert.equal(resolvedTable.spatial.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
 assert.equal(resolvedTable.spatial.surface.cells.length,4);
