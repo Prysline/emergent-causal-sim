@@ -619,7 +619,7 @@
 
 
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos,n=normalizeNode(st,p);if(n.surfaceId!==FLOOR){const entry=surfaceEntry(st,n.surfaceId);if(entry)return entry.surface.label||`${entry.furniture.name}表面`;}
-    const overhead=overheadAt(st,n);if(overhead.length)return `${overhead[0].name}下`;return baseDescribePlace(st,aOrPos);}
+    const overhead=overheadAt(st,n);if(overhead.length){const names=[...new Set(overhead.map(f=>f?.name).filter(Boolean))];return names.length===1?`${names[0]}所在格的地面`:'家具所在格的地面';}return baseDescribePlace(st,aOrPos);}
   W.registerInitialStateInitializer('spatial.schema',(st)=>{ensureSpatialDefs(st);},10);
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
