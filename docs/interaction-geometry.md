@@ -1,4 +1,4 @@
-# Interaction Geometry — v11.7
+# Interaction Geometry — Current
 
 12×8 Tile grid 仍負責真正的移動與站位；Interaction Geometry 負責回答：**這個 Agent 要用某個 affordance 操作某個 target 時，哪些 Tile 是合法操作位置？**
 
@@ -40,14 +40,28 @@ isAtInteraction(state, agent, target, affordance)
 
 目前 mode：
 
-- `occupy`：必須與目標同 Tile。
-- `reach`：同 Tile或相鄰可走 Tile。
-- `supportReach`：承載家具 footprint 外圍與 slot。
+- `occupy`：必須占據指定位置；不因八方向 Contact 自動擴張。
+- `reach`：同 Node 或 local-neighbor Contact；floor / cross-surface local reach 現支援 cardinal + diagonal。
+- `supportReach`：承載家具的 local contact 外圍與合法 Surface node；沿用同一 Contact corner rule。
 - `port`：只允許資料指定的 interaction port。
-- `slot`：精確 Furniture slot。
-- `socialReach`：Agent 間同格／鄰格互動。
+- `slotApproach`：Furniture Slot 的 approach / settle / egress 候選；Slot 本身不是 ordinary floor traversal target。
+- `socialReach`：Agent 間同格／local-neighbor Contact；slot-bound target 由 Slot approach/contact geometry 派生。
 - `tileContact`：直接和 Tile 接觸。
 - `heldReach`：目標被 Agent 持有時依 holder 位置推導。
+
+## 8-direction local Contact 與 Slot corner
+
+Traversal 與 Contact 是不同問題。Diagonal floor traversal 的 B+ `HorizontalConnection / TraversalManeuver` 不得直接當成 `canContactDiagonal`。
+
+對原本允許 local-neighbor 的 Contact mode，兩個 diagonal cells 之間以 shared corner 的兩條 L 型局部接觸路徑判定：
+
+- 任一條路徑的兩段 cardinal side 都保有可確認 corner opening → diagonal Contact candidate。
+- 單側 solid Boundary / closed Door 或 Furniture occlusion 只封掉其中一條路徑時，另一條仍開放即可接觸。
+- 兩條路徑都被 Boundary / Door / Furniture 聯合封死 → blocked。
+- 第一版遇到無法安全確認 opening 的局部幾何 → conservative reject；不把模糊 geometry 當成可接觸。
+- `port / occupy / tileContact` 不因八方向 Contact 自動擴張；它們維持各自專屬 geometry contract。
+
+Slot 不新增 `approachCorners`。Definition / resolved Slot 仍只保存 cardinal `approachEdges`。Diagonal corner 由兩個 incident sides 推導，例如 northwest = north + west；兩側都 authored/legal，且 outside corner 對兩個 side approach floor nodes 的 Passage × current MovementEnvelope 都可行時，才加入 direct diagonal settle / egress candidate。只有一側合法時必須先 route 到該 cardinal side；approach 與 egress 使用完全相同的 corner candidate source。
 
 ## Affordance-specific geometry
 

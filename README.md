@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.31.1・Completion-aware autoplay**（`11.31.1-autoplay-completion-aware`）。
+目前 runtime marker：**v11.32.0・8-direction Contact + Slot corner**（`11.32.0-contact-slot-corner`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -31,7 +31,7 @@
 - **Geometry-derived Horizontal Topology / HorizontalConnection**：`src/horizontal-geometry.js` 是不讀 Agent／Crowding／Route state 的 shared pure horizontal geometry owner。它從 floor Cell、格線 Boundary／Door、fixed blocker、resolved Furniture metric solids 與低階 Passage constraint snapshot 派生無向、Agent-independent 的 `HorizontalConnection`；cardinal distance 為 1m、diagonal distance 為 `sqrt(2)m`，斜向使用 B+ 保守局部幾何並區分 `candidate / blocked / unsupported`。`SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})` 會額外投影 ephemeral `horizontalConnections`，但既有 `cells[].adjacent / componentId / components` 仍維持 cardinal compatibility，不把 diagonal 塞進 legacy topology。Slice 3 已讓 production floor Route 消費這些合法 cardinal／diagonal maneuver；legacy `cells[].adjacent / componentId / components` 仍維持 cardinal compatibility，Surface 與 Structure 既有語意不因 floor diagonal route 被改寫。
 - Room、Tile、Furniture Surface、Local Position 與 Spatial Node。Room 目前只保存由拓樸推導的 identity / membership / area 等結構資料，不再保存沒有 gameplay consumer 的 legacy `value` aggregate。
 - A* traversal、dynamic blocker、supported contact、surface environment / liquid。
-- Interaction Geometry 依 affordance + target data 決定合法接觸位置。
+- Interaction Geometry 依 affordance + target data 決定合法接觸位置；原本允許 local-neighbor 的 `reach / socialReach` 現支援 cardinal + diagonal，但 diagonal 由 Contact 自己的 corner-occlusion 規則判定，不把 Traversal 可行性當成接觸真相。Slot 仍只 author cardinal `approachEdges`，direct diagonal settle / egress 由兩個 incident sides + 當下 Passage / MovementEnvelope 派生，不新增 `approachCorners`。
 - Container / Source / Surface Environment 的實體資源 transfer、Serving、Carry Load、Restock、External Supply。
 - **Physical Profile Foundation**：每個 Agent 保存獨立 `mass / volume / bodyGeometry` 與 locomotion capability/profile；Human / Cat 現行模板只提供 coarse MVP default，不把物種名稱當作永久通行規則。
 - **Physical / Passage canonical units**：絕對 physical 數值統一採 SI contract：`mass`＝kg、`volume`＝m³；`bodyGeometry`、MovementEnvelope、Furniture `spatial.solids.bounds`、Structure / Boundary clearance、Passage option 的 `clearanceHeight / clearanceWidth` 均使用 m；locomotion factors、`speedFactor` 與 Crowding ratio/weights 保持無量綱。
