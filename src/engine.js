@@ -195,7 +195,7 @@
     const base={kind:choice.id,phase:'start',started:state.tick,wait:0};let action=null;
     switch(choice.id){
       case'eat':action=canSatisfyHunger(a)?{...base,phase:'prepare'}:null;break;
-      case'drinkWater':case'drinkAlcohol':{const resource=choice.id==='drinkWater'?'water':'alcohol';if(!canDrinkResource(a,resource)){action=null;break;}if(a.kind==='cat'){const src=choice.targetObject?state.containers[choice.targetObject]:directDrinkContainers(resource,a);action=src?{...base,phase:'move',targetObject:src.id,resource}:null;}else action={...base,phase:'chooseVessel',resource};break;}
+      case'drinkWater':case'drinkAlcohol':{const resource=choice.id==='drinkWater'?'water':'alcohol';if(!canDrinkResource(a,resource)){action=null;break;}if(a.kind==='cat'){const src=choice.targetObject?state.containers[choice.targetObject]:directDrinkContainers(resource,a),valid=!!src&&src.canDrinkFrom&&amountAt(src.id,resource)>.05&&(!holderOf(src.id)||holderOf(src.id)?.id===a.id)&&Number.isFinite(targetTraversalCost(a,{kind:'object',id:src.id},'drinkFrom'));action=valid?{...base,phase:'move',targetObject:src.id,resource}:null;}else action={...base,phase:'chooseVessel',resource};break;}
       case'rest':action={...base,phase:'chooseSurface',restTicks:0};break;
       case'sleep':action={...base,phase:'chooseSurface',sleepTicks:0};break;
       case'talk':{const other=choice.targetAgent?state.agents[choice.targetAgent]:nearestAgent(a,'human',{allowSleeping:false});action=other&&!other.offMap?{...base,phase:'move',targetAgent:other.id}:null;break;}
