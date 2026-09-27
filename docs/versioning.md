@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.33.2-coarse-place-description`
+`11.33.3-place-description-projection`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.3`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
 
-### Current Coarse Place Description release
+### Current Place Description Projection release
+
+`11.33.3-place-description-projection` 修正 11.33.2 後仍存在的 presentation drift。11.33.2 已讓 canonical `SimSpatial.describePlace()` 不再從 coarse floor + overhead Furniture 推論「餐桌下」，但 `src/ui/spatial/observability.js` 仍會直接讀 `agentObservation.covered / overhead`，在 Action Card / map title 再拼出「餐桌下／餐椅下」；同時 slot-bound Agent 雖然已有精確 `posture.slotId`，`describePlace()` 仍把其 coarse Slot anchor 當一般 floor node描述。
+
+本 patch 將 place projection 收斂為單一 owner：slot-bound Agent 優先用 Furniture + Slot label（例如 `餐椅 B・座位`）；ordinary coarse floor 仍使用「餐桌所在格的地面」等保守 wording；explicit Furniture Surface 仍使用「餐桌桌面」等 Surface label。UI spatial observability 不再自行附加「家具下」文案，map title 直接消費 canonical `describePlace()`；Debug 的 overhead wording改成「同格上方幾何／最低淨空」，只描述可觀測 geometry，不假裝知道 tile 內 exact occupant offset。
+
+這是 player-visible / observable wording correctness patch，因此 overall runtime / Presentation marker升為 11.33.3。Furniture solids、MovementEnvelope、partial-tile free-space、Surface traversability、Slot occupancy、Spatial Identity schema、Route / Passage / Locomotion、World Authoring與 Furniture Catalog均未改；Physical仍為 `11.33.0-pose-envelope-static-fit`、Spatial Traversal / Contact仍為 `11.32.0-contact-slot-corner`、World Authoring / Furniture Catalog仍為 v7 / v11。
+
+### Previous Coarse Place Description release
 
 `11.33.2-coarse-place-description` 修正 player-readable / observable place wording 的精度邊界，不改 Spatial traversal geometry。Current Furniture-local metric solids允許角色在同一 authored tile 內使用合法剩餘 floor free-space；但 floor Spatial Node仍只有 coarse `spaceId + surfaceId + x/y/z`，沒有 tile 內 local offset / region identity。因此 `describePlace()` 不再只因同一 coarse floor tile 存在 overhead Furniture就輸出「餐桌下」等精確局部關係，而改為「餐桌所在格的地面」。若 Agent 位於 explicit Furniture Surface，仍可依正式 Surface identity輸出「餐桌桌面」等精確 label。
 

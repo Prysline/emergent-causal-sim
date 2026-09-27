@@ -52,7 +52,7 @@
     return '平穩';
   }
   function postureText(st,a){
-    if(a?.posture?.kind==='sitting')return `坐著${a.posture.furnitureId?`・${st.furniture?.[a.posture.furnitureId]?.name||''}`:''}`;
+    if(a?.posture?.kind==='sitting')return '坐著';
     if(a?.posture?.kind==='lying')return '躺著／蜷著';
     return '站立';
   }
