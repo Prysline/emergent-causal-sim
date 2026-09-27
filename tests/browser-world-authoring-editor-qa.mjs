@@ -127,6 +127,27 @@ assert.equal(snapshot.resolved.spatial.surface,undefined,'stool seat remains a S
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
+assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id="pet-bed-small"]').count(),1,'Furniture Catalog must expose the small pet-bed Definition');
+await page.click('#furnitureCatalog [data-furniture-definition-id="pet-bed-small"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
+assert.equal(snapshot.pendingOperation?.definitionId,'pet-bed-small');
+await page.click('[data-cell="3,4"]');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['pet-bed-small-1'])
+}));
+assert.deepEqual(snapshot.document.furniture['pet-bed-small-1'],{id:'pet-bed-small-1',definitionId:'pet-bed-small',origin:{x:3,y:4,z:0},orientation:'south'},'small pet-bed creation must persist only compact Instance truth');
+assert.equal(snapshot.resolved.slots[0].id,'pet-bed-small-1:bed');
+assert.deepEqual(snapshot.resolved.slots[0].approachEdges,['north','east','south','west']);
+assert.equal(snapshot.resolved.slots[0].allowKinds,undefined,'small pet bed must not serialize or resolve a cat-only whitelist');
+assert.equal(snapshot.resolved.spatial.surface,undefined,'small pet bed remains Slot-based, not a traversable Surface');
+assert.equal(snapshot.resolved.slots[0].restQuality,.30);
+assert.equal(snapshot.resolved.slots[0].sleepQuality,.75);
+assert.equal(snapshot.session.validation.ok,true);
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
 await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
