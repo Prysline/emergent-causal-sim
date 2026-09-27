@@ -108,6 +108,25 @@ assert.deepEqual(snapshot.resolved.spatial.solids[0].bounds,{x:3.05,y:4.05,z:0,w
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
+assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id="stool-basic"]').count(),1,'Furniture Catalog must expose the new stool Definition');
+await page.click('#furnitureCatalog [data-furniture-definition-id="stool-basic"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
+assert.equal(snapshot.pendingOperation?.definitionId,'stool-basic');
+await page.click('[data-cell="3,4"]');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['stool-basic-1'])
+}));
+assert.deepEqual(snapshot.document.furniture['stool-basic-1'],{id:'stool-basic-1',definitionId:'stool-basic',origin:{x:3,y:4,z:0},orientation:'south'},'stool creation must persist only compact Instance truth');
+assert.equal(snapshot.resolved.slots[0].id,'stool-basic-1:seat');
+assert.deepEqual(snapshot.resolved.slots[0].approachEdges,['north','east','south','west']);
+assert.equal(snapshot.resolved.slots[0].allowKinds,undefined,'stool must not serialize or resolve a species whitelist');
+assert.equal(snapshot.resolved.spatial.surface,undefined,'stool seat remains a Slot, not a traversable Surface');
+assert.equal(snapshot.session.validation.ok,true);
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
 await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
