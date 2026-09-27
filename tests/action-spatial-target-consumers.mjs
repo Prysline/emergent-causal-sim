@@ -115,34 +115,41 @@ E.reset(20260911);
   assert.equal(E.intentStillValid(st,cat,{kind:'seekSocialContact'}),true,'hard-replan validity must retain the reachable slot-bound Human');
 }
 
-// Cat drink target selection must use canonical traversalCost after resolving each container's interaction position.
+// Cat drink target selection must consume the canonical traversalCost attached to the resolved interaction winner.
+// This focused consumer test overrides only the richer-result cost so the ordering differs deterministically
+// without inventing another world-geometry fixture.
 function prepareDrinkChoice(){
   E.reset(20260911);const st=E.getState(),cat=st.agents.orange,near=st.containers.cupA,far=st.containers.cupB;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;calm(cat,{social:8,thirst:85});cat.position={x:2,y:5};cat.posture={kind:'standing',slotId:null,furnitureId:null};
   st.containers.waterBucket.contents.water=0;
   for(const c of [near,far]){delete c.supportId;c.contents={water:18};c.canDrinkFrom=true;}
   near.position={x:4,y:5};far.position={x:10,y:6};
-  for(const p of SP.interactionPositions(st,{kind:'object',id:near.id},cat,'drinkFrom')){
-    const tile=SP.tileByPos(st,p);if(tile)tile.surface.contents.water=1000;
-  }
-  const nearResult=SP.bestInteractionPositionResult(st,cat,{kind:'object',id:near.id},'drinkFrom');
-  const farResult=SP.bestInteractionPositionResult(st,cat,{kind:'object',id:far.id},'drinkFrom');
-  assert.ok(nearResult&&farResult);
-  assert.ok(SP.pathDistance(st,cat,nearResult.position)<SP.pathDistance(st,cat,farResult.position),'fixture needs the wet target to be topologically nearer');
-  assert.ok(nearResult.traversalCost>farResult.traversalCost,'fixture needs the farther dry target to have lower canonical traversalCost');
-  return {st,cat,far};
+  const original=SP.bestInteractionPositionResult;
+  const baseNear=original(st,cat,{kind:'object',id:near.id},'drinkFrom'),baseFar=original(st,cat,{kind:'object',id:far.id},'drinkFrom');
+  assert.ok(baseNear&&baseFar,'both drink targets must expose canonical Interaction Geometry');
+  SP.bestInteractionPositionResult=function(stArg,aArg,target,affordance='default'){
+    const result=original.call(this,stArg,aArg,target,affordance);if(!result)return result;
+    if(affordance==='drinkFrom'&&target?.kind==='object'&&target.id===near.id)return {...result,traversalCost:50};
+    if(affordance==='drinkFrom'&&target?.kind==='object'&&target.id===far.id)return {...result,traversalCost:5};
+    return result;
+  };
+  return {st,cat,far,restore:()=>{SP.bestInteractionPositionResult=original;}};
 }
 {
-  const {st,cat,far}=prepareDrinkChoice();
-  st.tick=10;cat.action={kind:'wander',phase:'move',targetTile:{x:3,y:6},started:0,wait:0};cat.activeIntent={id:'intent:orange:0:explore:test',kind:'explore',createdTick:0,lifecycle:'actionBound',source:{type:'test'}};cat.action.intentId=cat.activeIntent.id;
-  assert.equal(E.applySoftReconsideration(st,cat),true,'drinkWater should challenge low-commitment wander');
-  assert.equal(cat.action?.kind,'drinkWater');assert.equal(cat.action?.targetObject,far.id,'soft reconsideration must choose by interaction traversalCost, not pathDistance');
+  const {st,cat,far,restore}=prepareDrinkChoice();
+  try{
+    st.tick=10;cat.action={kind:'wander',phase:'move',targetTile:{x:3,y:6},started:0,wait:0};cat.activeIntent={id:'intent:orange:0:explore:test',kind:'explore',createdTick:0,lifecycle:'actionBound',source:{type:'test'}};cat.action.intentId=cat.activeIntent.id;
+    assert.equal(E.applySoftReconsideration(st,cat),true,'drinkWater should challenge low-commitment wander');
+    assert.equal(cat.action?.kind,'drinkWater');assert.equal(cat.action?.targetObject,far.id,'soft reconsideration must choose by interaction traversalCost, not pathDistance');
+  } finally {restore();}
 }
 {
-  const {st,cat,far}=prepareDrinkChoice();
-  cat.activeIntent={id:'intent:orange:0:drinkWater:test',kind:'drinkWater',createdTick:0,lifecycle:'open',source:{type:'test'}};cat.action=null;
-  assert.equal(E.planOpenIntent(st,cat),true);
-  assert.equal(cat.action?.targetObject,far.id,'hard replanning must choose by interaction traversalCost, not pathDistance');
+  const {st,cat,far,restore}=prepareDrinkChoice();
+  try{
+    cat.activeIntent={id:'intent:orange:0:drinkWater:test',kind:'drinkWater',createdTick:0,lifecycle:'open',source:{type:'test'}};cat.action=null;
+    assert.equal(E.planOpenIntent(st,cat),true);
+    assert.equal(cat.action?.targetObject,far.id,'hard replanning must choose by interaction traversalCost, not pathDistance');
+  } finally {restore();}
 }
 
 console.log('Action spatial-target consumer correctness regression: ok');
