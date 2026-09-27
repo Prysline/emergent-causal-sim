@@ -94,6 +94,7 @@ async function installInstrumentation(){
     const data={
       ticks:[],
       queries:{},
+      routeEntries:[],
       domWrites:{},
       longTasks:[],
       longTaskSupported:false,
@@ -118,6 +119,31 @@ async function installInstrumentation(){
         tick.totalMs+=duration;
         tick.maxMs=Math.max(tick.maxMs,duration);
       }
+    }
+    function diagnosticHash(text){
+      let h=2166136261;
+      for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}
+      return (h>>>0).toString(16).padStart(8,'0');
+    }
+    function agentId(value){return value?.id??value??null;}
+    function nodeKey(st,value){return value?(SP.nodeKey?.(st,value)??JSON.stringify(value)):null;}
+    function routeCaller(){
+      return String(new Error().stack||'').split('\n').slice(3,8).map(x=>x.trim()).join(' <- ');
+    }
+    function wrapRouteEntry(name,signature){
+      const original=SP[name];if(typeof original!=='function')return;
+      SP[name]=function(...args){
+        const st=E.getState(),stateJson=JSON.stringify(st);
+        data.routeEntries.push({
+          name,
+          phase,
+          tickOrdinal:activeTickOrdinal,
+          stateHash:diagnosticHash(stateJson),
+          signature:signature(args,st),
+          caller:routeCaller()
+        });
+        return original.apply(this,args);
+      };
     }
     function wrap(target,name,label){
       const original=target?.[name];
@@ -156,13 +182,31 @@ async function installInstrumentation(){
     };
 
     wrap(SP,'planRoute','SP.planRoute');
+    wrap(SP,'pathDistance','SP.pathDistance');
     wrap(SP,'pathDistances','SP.pathDistances');
+    wrap(SP,'traversalCost','SP.traversalCost');
+    wrap(SP,'bestInteractionPositionResult','SP.bestInteractionPositionResult');
     wrap(SP,'traversalFeasibility','SP.traversalFeasibility');
     wrap(SP,'getPassageProfile','SP.getPassageProfile');
     wrap(SP,'restTargets','SP.restTargets');
     wrap(SP,'sleepTargets','SP.sleepTargets');
     wrap(SP,'agentObservation','SP.agentObservation');
     wrap(V,'validateState','SimValidator.validateState');
+
+    wrapRouteEntry('planRoute',(args,st)=>JSON.stringify({
+      agent:agentId(args[1]),goal:nodeKey(st,args[2]),objective:args[3]?.objective||'traversalCost',
+      mode:args[3]?.mode??null,movementCredit:args[3]?.movementCredit??0
+    }));
+    wrapRouteEntry('pathDistance',(args,st)=>JSON.stringify({agent:agentId(args[1]),goal:nodeKey(st,args[2])}));
+    wrapRouteEntry('pathDistances',(args,st)=>JSON.stringify({
+      agent:agentId(args[1]),goals:(args[2]||[]).map(x=>nodeKey(st,x)),mode:args[3]?.mode??null
+    }));
+    wrapRouteEntry('traversalCost',(args,st)=>JSON.stringify({agent:agentId(args[1]),goal:nodeKey(st,args[2])}));
+    wrapRouteEntry('bestInteractionPositionResult',(args)=>JSON.stringify({
+      agent:agentId(args[1]),targetKind:args[2]?.kind??null,targetId:args[2]?.id??null,affordance:args[3]||'default'
+    }));
+    wrapRouteEntry('restTargets',(args)=>JSON.stringify({agent:agentId(args[1])}));
+    wrapRouteEntry('sleepTargets',(args)=>JSON.stringify({agent:agentId(args[1])}));
 
     const domIds=new Set(['mobileAgentSummary','map','actions','timeline','inspector','worldBadges','runtimeLayerSelect']);
     const descriptor=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
@@ -193,6 +237,7 @@ async function installInstrumentation(){
       reset(){
         data.ticks.length=0;
         clearStore(data.queries);
+        data.routeEntries.length=0;
         clearStore(data.domWrites);
         data.longTasks.length=0;
         data.stepOne.length=0;
@@ -203,6 +248,7 @@ async function installInstrumentation(){
         return {
           ticks:data.ticks.map(x=>({...x})),
           queries:structuredClone(data.queries),
+          routeEntries:data.routeEntries.map(x=>({...x})),
           domWrites:structuredClone(data.domWrites),
           longTasks:data.longTasks.map(x=>({...x})),
           longTaskSupported:data.longTaskSupported,
@@ -314,6 +360,31 @@ function assertCase(result,expectedTicks){
   assert.ok((result.metrics.domWrites.map?.calls??0)>=1,result.mode+' must include the final map render');
 }
 
+function routeDuplicateSummary(result){
+  const entries=(result.metrics.routeEntries||[]).filter(x=>x.phase==='insideTick');
+  const groupBy=keyOf=>{
+    const groups=new Map();
+    for(const entry of entries){
+      const key=keyOf(entry),group=groups.get(key)||{count:0,entries:[]};
+      group.count++;group.entries.push(entry);groups.set(key,group);
+    }
+    return [...groups.entries()].filter(([,g])=>g.count>1).map(([key,g])=>({
+      key,count:g.count,duplicateCalls:g.count-1,
+      stateHashes:[...new Set(g.entries.map(x=>x.stateHash))],
+      callers:[...new Set(g.entries.map(x=>x.caller))]
+    })).sort((a,b)=>b.duplicateCalls-a.duplicateCalls||a.key.localeCompare(b.key));
+  };
+  const strict=groupBy(x=>[x.name,x.signature,x.stateHash].join('|'));
+  const signatureOnly=groupBy(x=>[x.name,x.signature].join('|'));
+  return {
+    insideEntryCount:entries.length,
+    strictDuplicateCalls:strict.reduce((sum,x)=>sum+x.duplicateCalls,0),
+    strictGroups:strict,
+    repeatedSignatureCalls:signatureOnly.reduce((sum,x)=>sum+x.duplicateCalls,0),
+    repeatedSignatureGroups:signatureOnly
+  };
+}
+
 function reportCase(result){
   const stateJson=result.metrics.stateJson;
   const {stateJson:_,...metrics}=result.metrics;
@@ -407,6 +478,10 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
+  console.log('ROUTE_DUPLICATE_DIAGNOSTIC '+JSON.stringify({
+    singleNone:routeDuplicateSummary(results.single_none),
+    singleAgent:routeDuplicateSummary(results.single_agent)
+  }));
   assert.equal(feasibilityCounts.singleInside,8621,'render-scoped validation reuse must not change the measured single-tick simulation feasibility baseline');
   assert.equal(feasibilityCounts.singleOutside,3802,'one no-selection render must retain the measured one-pass outside-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Inside,25253,'render-scoped validation reuse must not change the measured step(10) inside-tick feasibility baseline');
@@ -427,7 +502,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.31.1 completion-aware autoplay profile: single/step10 deterministic workload baselines remain unchanged; dedicated autoplay measures complete callbacks, Long Tasks, timer/frame opportunities, query composition, and exact canonical-state parity. Wall-clock remains secondary and runner-dependent.',
+    note:'11.31.1 residual-route diagnostic: production behavior is unchanged; high-level route entry calls now record caller, arguments, tick phase, and a strict full-state hash so same-state duplicate work can be separated from merely repeated signatures. Existing deterministic/autoplay gates remain authoritative. Wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
       mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
