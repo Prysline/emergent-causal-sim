@@ -204,7 +204,7 @@ Default dining table 的 `.72m` under-clearance、`diningTable:surface` identity
 
 World authoring 另有獨立 contract generation：current `SimWorldAuthoring.VERSION = "world-authoring-v7"`，canonical package 保存 `authoringSchema: "world-authoring-v7"`、`furnitureCatalogVersion: "furniture-definitions-v11"`、`map.cellSizeMeters = 1`、root `structures` 與 Furniture Instance required `orientation`。Furniture Catalog generation由 `SimFurnitureDefinitions.VERSION` 獨立持有；v8～v11 的 catalog-only expansion沒有改 Furniture Instance schema，因此 World Authoring仍維持 v7。
 
-只有 authoring package shape / compatibility需要新 generation時才升 `world-authoring-vN`；本 release 雖未改 Furniture Instance 欄位 shape，但改變了 `orientation` 的 compatibility semantics，所以 World Authoring 換代為 v7。Furniture Catalog 同步以 south-canonical local frame、`orientationSemantics` 與 shared resolver contract 換代為 current `furniture-definitions-v7`。Current Spatial Traversal / Passage / Crowding 分別維持 `11.28.0-furniture-local-geometry`、`11.28.0-positioned-passage-options`、`11.28.0-effective-passage-width`；Physical、Route、Locomotion、Spatial Identity也維持原 generation。
+只有 authoring package shape / compatibility需要新 generation時才升 `world-authoring-vN`。PR #112 當時因 `orientation` compatibility semantics 改為 south-canonical + `orientationSemantics`，將 World Authoring / Furniture Catalog 推進到 v7 / v7；之後 v8～v11 只擴充 system-owned Furniture Definition set，因此 **current** 仍是 World Authoring v7、Furniture Catalog v11。Current Spatial Traversal / Contact為 `11.32.0-contact-slot-corner`、Spatial Passage為 `11.29.0-horizontal-connection-passage`、Dynamic Congestion為 `11.31.0-crowding-8-direction`、Physical為 `11.33.0-pose-envelope-static-fit`、Route / Locomotion維持 11.30.0 line，Spatial Identity維持 `11.22.0-spatial-z-identity`。
 
 ## 何時必須升版
 
