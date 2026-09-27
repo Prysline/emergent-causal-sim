@@ -319,7 +319,9 @@
   }
   function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,trackPath=false,onSettle=null}={}){
     if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
-    const a=agentFor(st,aOrId),s=normalizeNode(st,start),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={},feasibilityByEdge=new Map(),maneuverByEdge=new Map();
+    const a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={},feasibilityByEdge=new Map(),maneuverByEdge=new Map();
+    const starts=[...(Array.isArray(start)?start:[start])].map(value=>normalizeNode(st,value)).filter(node=>node&&nodeLocomotionAccessible(st,node,a)).filter((node,index,list)=>list.findIndex(other=>nodeSame(st,node,other))===index).sort((x,y)=>nodeKey(st,x).localeCompare(nodeKey(st,y)));
+    const s=starts[0]||null;
     const directedEdgeKey=(from,to)=>`${nodeKey(st,from)}>${nodeKey(st,to)}`;
     const edgeFeasibility=(from,to)=>{
       const key=directedEdgeKey(from,to);
@@ -331,14 +333,18 @@
       if(!maneuverByEdge.has(key))maneuverByEdge.set(key,traversalManeuver(st,from,to));
       return maneuverByEdge.get(key);
     };
-    if(!s||!nodeLocomotionAccessible(st,s,a))return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:null};
-    const sk=routeStateKey(st,s,startMode),open=new Set([sk]);
-    score[sk]={primary:0,time:0,transitions:0,modeRank:0,movementCredit:normalizedMovementCredit(movementCredit)};states[sk]={node:s,mode:startMode};
+    if(!starts.length)return {a,start:s,starts,startMode,requestedMode:requested,came,score,states,settledKey:null};
+    const open=new Set();
+    for(const origin of starts){
+      const sk=routeStateKey(st,origin,startMode);open.add(sk);
+      score[sk]={primary:0,time:0,transitions:0,modeRank:0,movementCredit:normalizedMovementCredit(movementCredit)};
+      states[sk]={node:origin,mode:startMode};
+    }
     while(open.size){
       let ck=null,best=null;
       for(const k of open){const value=score[k];if(!best||compareRouteScore(value,best)<0){best=value;ck=k;}}
       const cur=states[ck];open.delete(ck);
-      if(onSettle?.(cur.node,cur.mode,best,ck)===true)return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:ck};
+      if(onSettle?.(cur.node,cur.mode,best,ck)===true)return {a,start:s,starts,startMode,requestedMode:requested,came,score,states,settledKey:ck};
       for(const q of candidateTraversalNeighbors(st,cur.node,a,edgeManeuver)){
         const feasibility=edgeFeasibility(cur.node,q);
         for(const nextMode of modes){
@@ -363,7 +369,7 @@
         }
       }
     }
-    return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:null};
+    return {a,start:s,starts,startMode,requestedMode:requested,came,score,states,settledKey:null};
   }
   function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0}={}){
     const a=agentFor(st,aOrId),s=normalizeNode(st,start),g=normalizeNode(st,goal),requested=resolvedRequestedMode(mode),startMode=currentLocomotionMode(a);
@@ -383,21 +389,17 @@
     const list=Array.isArray(targets)?targets:[],out=list.map(()=>Infinity),requested=resolvedRequestedMode(mode);
     if(!a||!list.length||!origins?.length)return out;
     availableModes(a,requested);
-    for(const start of origins){
-      const s=normalizeNode(st,start);if(!s||!nodeLocomotionAccessible(st,s,a))continue;
-      const goals=new Map();
-      for(let i=0;i<list.length;i++){
-        const g=normalizeNode(st,list[i]);if(!g||!nodeLocomotionAccessible(st,g,a))continue;
-        if(nodeSame(st,s,g)){out[i]=Math.min(out[i],0);continue;}
-        const gk=nodeKey(st,g),indices=goals.get(gk)||[];indices.push(i);goals.set(gk,indices);
-      }
-      if(!goals.size)continue;
-      routeStateSearch(st,s,a,{objective,mode:requested,onSettle:(node,_mode,best)=>{
-        const key=nodeKey(st,node),indices=goals.get(key);if(!indices)return false;
-        for(const i of indices)out[i]=Math.min(out[i],best.primary);
-        goals.delete(key);return goals.size===0;
-      }});
+    const goals=new Map();
+    for(let i=0;i<list.length;i++){
+      const g=normalizeNode(st,list[i]);if(!g||!nodeLocomotionAccessible(st,g,a))continue;
+      const gk=nodeKey(st,g),indices=goals.get(gk)||[];indices.push(i);goals.set(gk,indices);
     }
+    if(!goals.size)return out;
+    routeStateSearch(st,origins,a,{objective,mode:requested,onSettle:(node,_mode,best)=>{
+      const key=nodeKey(st,node),indices=goals.get(key);if(!indices)return false;
+      for(const i of indices)out[i]=best.primary;
+      goals.delete(key);return goals.size===0;
+    }});
     return out;
   }
   function pathDistancesWithin(st,aOrId,targets,{mode=null}={}){
@@ -413,17 +415,16 @@
     return {pathDistance,stepCount:(route.steps||[]).length,traversalCost,travelTime,transitionTicks:transitions};
   }
   function bestRouteFromOrigins(st,a,origins,goal,{mode=null,objective='traversalCost',movementCredit=0}={}){
-    const requested=resolvedRequestedMode(mode);let winner=null;
-    for(const origin of origins||[]){
-      const route=routeSearch(st,origin,goal,a,{objective,mode:requested,movementCredit}),metrics=routeMetrics(st,a,route),value=metrics[objective]??Infinity;
-      if(!Number.isFinite(value))continue;
-      const candidate={origin:normalizeNode(st,origin),route,metrics,value};
-      if(!winner||candidate.value<winner.value||
-        (candidate.value===winner.value&&candidate.metrics.travelTime<winner.metrics.travelTime)||
-        (candidate.value===winner.value&&candidate.metrics.travelTime===winner.metrics.travelTime&&candidate.metrics.stepCount<winner.metrics.stepCount)||
-        (candidate.value===winner.value&&candidate.metrics.travelTime===winner.metrics.travelTime&&candidate.metrics.stepCount===winner.metrics.stepCount&&nodeKey(st,candidate.origin).localeCompare(nodeKey(st,winner.origin))<0))winner=candidate;
-    }
-    return winner;
+    const requested=resolvedRequestedMode(mode),g=normalizeNode(st,goal);
+    if(!a||!g||!nodeLocomotionAccessible(st,g,a)||!origins?.length)return null;
+    const search=routeStateSearch(st,origins,a,{objective,mode:requested,movementCredit,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
+    if(!search.settledKey)return null;
+    const steps=[];let k=search.settledKey;
+    while(search.came[k]){steps.unshift(search.came[k].step);k=search.came[k].prev;}
+    const origin=search.states[k]?.node;if(!origin)return null;
+    const route={path:[cloneNode(origin),...steps.map(step=>cloneNode(step.to))],steps,startMode:search.startMode,requestedMode:search.requestedMode};
+    const metrics=routeMetrics(st,a,route),value=metrics[objective]??Infinity;
+    return Number.isFinite(value)?{origin:cloneNode(origin),route,metrics,value}:null;
   }
   function bestSlotEgressNode(st,slotOrId,aOrId,goal,{mode=null,objective='traversalCost'}={}){
     const a=agentFor(st,aOrId),egress=slotEgressNodes(st,slotOrId,a,'walk');if(!a||!egress.length)return null;
