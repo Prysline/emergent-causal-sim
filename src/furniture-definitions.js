@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v10';
+  const VERSION='furniture-definitions-v11';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -110,6 +110,23 @@
           {key:'legNE',bounds:{x:.66,y:.30,z:0,width:.04,depth:.04,height:.45}},
           {key:'legSW',bounds:{x:.30,y:.66,z:0,width:.04,depth:.04,height:.45}},
           {key:'legSE',bounds:{x:.66,y:.66,z:0,width:.04,depth:.04,height:.45}}
+        ]
+      }
+    },
+    'pet-bed-small':{
+      id:'pet-bed-small',
+      name:'小型寵物床',
+      icon:'🧺',
+      kind:'pet-bed',
+      orientationSemantics:'frame',
+      footprint:[local(0,0)],
+      displayOffset:local(0,0),
+      slots:[
+        {key:'bed',label:'休息位',offset:local(0,0),approachEdges:['north','east','south','west'],canRest:true,canSleep:true,usableSpace:{width:.55,length:.65},activitySuitability:{rest:.30,sleep:.75}}
+      ],
+      spatial:{
+        solids:[
+          {key:'cushion',bounds:{x:.15,y:.10,z:0,width:.70,depth:.80,height:.12}}
         ]
       }
     },
