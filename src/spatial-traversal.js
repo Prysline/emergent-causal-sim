@@ -446,6 +446,8 @@
     const left=normalizeNode(st,a,FLOOR),right=normalizeNode(st,b,FLOOR);
     if(!left||!right||zOf(left)!==zOf(right))return 'unsupported';
     const edges=contactEdgeNames(left,right);if(!edges)return 'unsupported';
+    const leftTile=SP.tileByPos(st,left),rightTile=SP.tileByPos(st,right);
+    if(!leftTile?.walkable||!rightTile?.walkable)return 'blocked';
     if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,left,right))return 'blocked';
     const leftGeometry=floorGeometry(st,left),rightGeometry=floorGeometry(st,right);
     if(leftGeometry.regionCount>1||rightGeometry.regionCount>1)return 'unsupported';
