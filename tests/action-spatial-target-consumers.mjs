@@ -57,6 +57,18 @@ E.reset(20260911);
   assert.ok(['chairNW:seat','chairNE:seat','chairSW:seat','chairSE:seat'].includes(sit.data.slot));
 }
 
+// The same reported-world bug affected 老周, not only 阿真. Keep a second Human consumer regression.
+E.reset(20260911);
+{
+  const st=E.getState(),human=st.agents.zhou;st.agents.zhen.offMap=true;st.agents.orange.offMap=true;
+  human.needs.hunger=60;human.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};
+  for(let i=0;i<45&&human.action;i++)E.tick();
+  const sit=eventByAction(st,'sitForMeal'),stand=eventByAction(st,'standForMeal');
+  assert.ok(sit,'老周 must also find a reachable dining-chair approach in the reported world');
+  assert.equal(stand,undefined,'老周 must not use standForMeal while a legal dining-chair approach exists');
+  assert.ok(['chairNW:seat','chairNE:seat','chairSW:seat','chairSE:seat'].includes(sit.data.slot));
+}
+
 // Negative control: if every meal/rest Slot has no legal approach edge, standing to eat remains valid fallback.
 E.reset(20260911);
 {
