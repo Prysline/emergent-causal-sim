@@ -165,8 +165,37 @@
   function worldExitFor(a){return (SP.allExits?.(state)||[]).filter(exit=>SP.exitStructurallyAvailable?.(state,exit)).map(exit=>({exit,d:routeBurden(a,exit.access)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d||x.exit.id.localeCompare(y.exit.id))[0]?.exit||null;}
   function externalSupplyDestination(){return containersByRole('externalSupplyDestination')[0]||null;}
   function sleepChoice(a){const p=sleepProfile(a),bias=circadianSleepBias(a),propensity=sleepPropensity(a);if(a.needs.sleepNeed<p.minimumSleepNeed||propensity<p.sleepOpportunityThreshold||!SP.sleepTargets(state,a).length)return null;return {id:'sleep',score:42+a.needs.sleepNeed*.55+Math.max(-8,bias*.55)+Math.max(0,a.needs.fatigue-65)*.15,why:[`睡眠需求 ${Math.round(a.needs.sleepNeed)}`,`${circadianPatternName(p.circadianPattern)}節律與目前時段共同影響睡眠傾向`]};}
-  function canSatisfyHunger(a){if(!a)return false;if(a.kind==='cat'||a.needs.hunger>=82)return !!chooseFoodSource(a);const dishes=servingDishes(a);if(dishes.some(d=>amountAt(d.id,'food')>.05))return true;if(dishes.length&&chooseFoodSource(a,{readyOnly:true}))return true;return !!chooseFoodSource(a);}
-  function canDrinkResource(a,r){if(!a)return false;if(a.kind==='cat')return !!directDrinkContainers(r,a);const vessel=chooseDrinkVessel(a,r);if(!vessel)return false;if(amountAt(vessel.id,r)>=4)return true;return !!resourceSources(r,a,{excludeId:vessel.id});}
+  function firstReachableFoodSource(a,{readyOnly=false}={}){for(const c of edibleFoodContainers(a)){if(readyOnly&&!SP.hasRole(c,'readyFood'))continue;if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'eatFrom')))return c;}return null;}
+  function hasReachableResourceSource(r,a,{excludeId=null}={}){for(const s of Object.values(state.sources)){if(s.id===excludeId||s.resource!==r||amountAt(s.id,r)<=0)continue;if(Number.isFinite(targetTraversalCost(a,{kind:'source',id:s.id},'fill')))return true;}for(const c of Object.values(state.containers)){if(c.id===excludeId||amountAt(c.id,r)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'fill')))return true;}return false;}
+  function firstReachableDirectDrinkContainer(r,a){for(const c of Object.values(state.containers)){if(!c.canDrinkFrom||amountAt(c.id,r)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'drinkFrom')))return c;}return null;}
+  function canSatisfyHunger(a){
+    if(!a)return false;
+    if(a.kind==='cat'||a.needs.hunger>=82)return !!firstReachableFoodSource(a);
+    let reachableDish=false;
+    for(const dish of Object.values(state.containers)){
+      if(!dish.servingDish||!dish.portable)continue;
+      const holder=holderOf(dish.id);if(holder&&holder.id!==a.id)continue;
+      if(Object.entries(dish.contents||{}).some(([r,v])=>r!=='food'&&v>.05))continue;
+      if(!Number.isFinite(targetTraversalCost(a,{kind:'object',id:dish.id},'pickup')))continue;
+      reachableDish=true;if(amountAt(dish.id,'food')>.05)return true;
+    }
+    if(reachableDish&&firstReachableFoodSource(a,{readyOnly:true}))return true;
+    return !!firstReachableFoodSource(a);
+  }
+  function canDrinkResource(a,r){
+    if(!a)return false;
+    if(a.kind==='cat')return !!firstReachableDirectDrinkContainer(r,a);
+    const desperate=a.needs.thirst>=88;
+    let reachableEmptyVessel=false;
+    for(const vessel of Object.values(state.containers)){
+      if(!vessel.portable||!vessel.canDrinkFrom||holderOf(vessel.id))continue;
+      if(!desperate&&Object.entries(vessel.contents||{}).some(([x,v])=>x!==r&&v>.1))continue;
+      if(!Number.isFinite(targetTraversalCost(a,{kind:'object',id:vessel.id},'pickup')))continue;
+      if(amountAt(vessel.id,r)>=4)return true;
+      reachableEmptyVessel=true;
+    }
+    return reachableEmptyVessel&&hasReachableResourceSource(r,a);
+  }
 
   function baseUtilityForAction(a,id){
     const n=a?.needs||{},traits=a?.traits||{};
