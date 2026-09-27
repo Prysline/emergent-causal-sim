@@ -6,11 +6,21 @@
 
 目前 current runtime marker：
 
-`11.33.0-pose-envelope-static-fit`
+`11.33.1-action-spatial-target-consumers`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog換代為 `furniture-definitions-v11`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
 
-### Current PoseEnvelope static-fit release
+### Current Action spatial-target consumer correctness release
+
+`11.33.1-action-spatial-target-consumers` 修正 Slot / Interaction Geometry contract 升級後仍殘留在部分 Action / Deliberation consumer 的舊 route-target 假設。Furniture Definition、Slot geometry、PoseEnvelope、Passage、Route 與 Contact owner 都沒有改；改的是 downstream consumer 必須真正使用既有 canonical spatial target。
+
+Human 用餐選座現在先以 `bestSlotApproachNode(..., objective:'traversalCost')` 取得合法 approach，再 route 到 approach 並於 settle 前重新驗證 activity、PoseEnvelope fit、Slot availability / reservation 與 current `slotApproachNodes()`；不再以 Slot coarse anchor 作 ordinary floor route destination。因此有合法餐椅 approach 時會實際坐下，只有所有合格座位都沒有可達 approach 時才使用 `standForMeal` fallback。
+
+Agent social target 的 core nearest fallback、Intent deliberation、hard replan 與 Memory target evaluation 現統一以 `Interaction Geometry` 的 `socialReach` 判定可達性與 access cost。slot-bound target Agent 由 `agentContactNodes() → slotApproachNodes()` 派生合法接觸點，不再對 `target.position`（Slot coarse anchor）直接查 Route。Object / Source 類 target 的既有 Interaction Geometry execution contract不變；Cat drink 的 Intent / replan helper則同步把 resolved interaction position 的 ranking objective從 `pathDistance` 收斂為 canonical `traversalCost`，避免 Decision consumer 使用第二套客觀 access 尺度。
+
+這個 patch 改變玩家可觀察到的用餐與自主社交 target selection semantics，因此 overall runtime / Presentation current marker升為 11.33.1；但沒有新增 persistent schema、Spatial public API 或 Furniture / World Authoring generation，所以 Physical仍為 `11.33.0-pose-envelope-static-fit`、Spatial Traversal / Contact仍為 `11.32.0-contact-slot-corner`、Route / Locomotion仍為 11.30.0 line，World Authoring / Furniture Catalog仍為 v7 / v11。
+
+### Previous PoseEnvelope static-fit release
 
 `11.33.0-pose-envelope-static-fit` 正式建立第一階段 **PoseEnvelope（靜態姿勢包絡）**：Physical 依每個 Agent 的 current `bodyGeometry` + authoring-safe embodiment posture profile，即時計算 sitting / lying 的 `height / width / length`，不保存 `physical.poseEnvelope` mirror。這個 contract 與 MovementEnvelope（移動包絡）分離；standing / kneeling / prone 的 static profile 未在本 slice 提前補齊。
 
@@ -24,7 +34,7 @@ Furniture Catalog 現為 `furniture-definitions-v11`。v9 加入 `cabinet-tall`�
 
 v11 不新增 Agent / species-specific furniture preference。Current `activitySuitability` 仍是 Slot 對活動的共用適性；若未來要讓同一家具有物種差異偏好，需另開 behavior preference contract，不能用 Physical、`allowKinds` 或 Furniture ID 特判代替。
 
-這些變更都只擴充 system-owned Furniture Definition set，沒有改 Furniture Instance canonical shape、World Authoring schema、Physical / Spatial / Route / Locomotion / Crowding API 或 overall runtime observable semantics。因此 World Authoring 維持 `world-authoring-v7`，overall runtime 仍為 `11.33.0-pose-envelope-static-fit`；只換代 Furniture Catalog generation。
+這些 catalog 變更都只擴充 system-owned Furniture Definition set，沒有改 Furniture Instance canonical shape、World Authoring schema、Physical / Spatial / Route / Locomotion / Crowding API，因此當時 overall runtime 維持 `11.33.0-pose-envelope-static-fit`、只換代 Furniture Catalog generation。之後的 `11.33.1-action-spatial-target-consumers` 只修 downstream Action consumer semantics，Furniture Catalog仍維持 `furniture-definitions-v11`。
 
 ### Current Contact + Slot Corner release
 
@@ -192,7 +202,7 @@ Default dining table 的 `.72m` under-clearance、`diningTable:surface` identity
 `11.21.4-editor-playtest-bridge` 新增玩家可見的 Editor→Simulator playtest flow，但不改 `world-authoring-v2` shape，也不改 Physical / Passage / Route / Locomotion / Crowding / Relationship / Memory subsystem generation。Editor 在 launch 前用 current authoring validation + runtime compatibility preflight 拒絕 invalid schema、broken references、multi-layer / non-zero Z；成功 handoff 只存在同 origin `sessionStorage`，並且只有 explicit `?preview=editor` simulator load 會消費。`SimWorld.createInitialStateFromAuthoring(...)` 與 default `createInitialState(...)` 共用同一 named initial-state pipeline，Preview Reset 重建同一 snapshot；normal simulator load 不受先前 preview 影響。因此這是 current product / presentation + bootstrap contract 的 patch-level 更新，使用 `11.21.4-editor-playtest-bridge`，authoring generation 維持 `world-authoring-v2`。
 ### World authoring contract version
 
-World authoring 另有獨立 contract generation：current `SimWorldAuthoring.VERSION = "world-authoring-v7"`，canonical package 保存 `authoringSchema: "world-authoring-v7"`、`furnitureCatalogVersion: "furniture-definitions-v7"`、`map.cellSizeMeters = 1`、root `structures` 與 Furniture Instance required `orientation`。Furniture Catalog generation由 `SimFurnitureDefinitions.VERSION` 獨立持有。
+World authoring 另有獨立 contract generation：current `SimWorldAuthoring.VERSION = "world-authoring-v7"`，canonical package 保存 `authoringSchema: "world-authoring-v7"`、`furnitureCatalogVersion: "furniture-definitions-v11"`、`map.cellSizeMeters = 1`、root `structures` 與 Furniture Instance required `orientation`。Furniture Catalog generation由 `SimFurnitureDefinitions.VERSION` 獨立持有；v8～v11 的 catalog-only expansion沒有改 Furniture Instance schema，因此 World Authoring仍維持 v7。
 
 只有 authoring package shape / compatibility需要新 generation時才升 `world-authoring-vN`；本 release 雖未改 Furniture Instance 欄位 shape，但改變了 `orientation` 的 compatibility semantics，所以 World Authoring 換代為 v7。Furniture Catalog 同步以 south-canonical local frame、`orientationSemantics` 與 shared resolver contract 換代為 current `furniture-definitions-v7`。Current Spatial Traversal / Passage / Crowding 分別維持 `11.28.0-furniture-local-geometry`、`11.28.0-positioned-passage-options`、`11.28.0-effective-passage-width`；Physical、Route、Locomotion、Spatial Identity也維持原 generation。
 
