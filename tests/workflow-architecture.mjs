@@ -16,6 +16,7 @@ const semanticNodeTests=[
   'tests/horizontal-geometry-foundation.mjs',
   'tests/spatial-z-identity.mjs',
   'tests/physical-profile-foundation.mjs',
+  'tests/pose-envelope-static-fit.mjs',
   'tests/passage-profile-multimode.mjs',
   'tests/route-semantics.mjs',
   'tests/metric-route-locomotion.mjs',
