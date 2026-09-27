@@ -6,9 +6,17 @@
 
 目前 current runtime marker：
 
-`11.32.0-contact-slot-corner`
+`11.33.0-pose-envelope-static-fit`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.32.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog換代為 `furniture-definitions-v8`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+
+### Current PoseEnvelope static-fit release
+
+`11.33.0-pose-envelope-static-fit` 正式建立第一階段 **PoseEnvelope（靜態姿勢包絡）**：Physical 依每個 Agent 的 current `bodyGeometry` + authoring-safe embodiment posture profile，即時計算 sitting / lying 的 `height / width / length`，不保存 `physical.poseEnvelope` mirror。這個 contract 與 MovementEnvelope（移動包絡）分離；standing / kneeling / prone 的 static profile 未在本 slice 提前補齊。
+
+Furniture Catalog 換代為 `furniture-definitions-v8`。rest / sleep Slot 必須提供 `usableSpace.width / length`，`height` 可省略表示該軸不限制；第一版不自動旋轉 PoseEnvelope 90°。餐椅 seat 為 `0.50 × 0.65m`、沙發每 Slot 為 `0.90 × 0.70m`、雙人床每 Slot 為 `0.70 × 2.00m`。雙人床移除舊 `allowKinds:['human']` 尺寸代理；餐椅的 human-only `allowKinds` 仍保留，明確證明種類門檻與物理尺寸門檻互相獨立。
+
+同一 static-fit contract 由 rest / sleep target selection、meal seat selection、真正 settle 前 recheck、sleeping state validity、`SimWorldInitializer` initial furnitureSlot placement 與 Validator 共用。Slot occupancy 仍由 `agent.posture.slotId` 持有，slot-bound Agent 仍不算 ordinary floor occupant。World Authoring Instance schema 沒改，因此維持 `world-authoring-v7`；Spatial Traversal / Contact、Passage、Route、Locomotion、Dynamic Congestion 也不因整體 release 更新而假升。本 slice 不加入 multi-slot occupancy、usable-surface packing、dynamic seated obstruction、turn clearance、sideways movement或 8-direction Slice 6。
 
 ### Current Contact + Slot Corner release
 
