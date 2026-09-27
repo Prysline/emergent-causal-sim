@@ -52,7 +52,7 @@ assert.deepEqual(layeredRuntime.structures.stairA,{id:'stairA',kind:'stair',lowe
 
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
-  invalid.furnitureCatalogVersion='furniture-definitions-v1099';
+  invalid.furnitureCatalogVersion='furniture-definitions-v999';
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_furniture_catalog_unsupported'));
