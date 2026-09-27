@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.31.1-autoplay-completion-aware');
-assert.equal(E.VERSION,'11.31.1-autoplay-completion-aware');
+assert.equal(st.version,'11.32.0-contact-slot-corner');
+assert.equal(E.VERSION,'11.32.0-contact-slot-corner');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
