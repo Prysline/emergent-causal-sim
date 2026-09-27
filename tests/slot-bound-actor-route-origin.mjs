@@ -115,6 +115,8 @@ E.reset(20260911);
   bindToSlot(st,cat,'pet-bed-small-1:bed','lying');
   quiet(cat,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
   assert.equal(E.canDrinkResource(cat,'water'),true);
+  st.containers.cupB.contents={};
+  assert.equal(E.buildAction(cat,{id:'drinkWater',targetObject:'cupB'}),null,'explicit Cat drink target must itself be executable, not merely rely on another reachable source');
   const result=SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'waterBucket'},'drinkFrom');
   assert.ok(result&&Number.isFinite(result.traversalCost));
   const action=E.buildAction(cat,{id:'drinkWater'});
