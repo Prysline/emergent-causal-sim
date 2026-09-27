@@ -12,11 +12,11 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen,zhou=st.agents.zhou;
-assert.equal(st.version,'11.33.1-action-spatial-target-consumers');
+assert.equal(st.version,'11.33.2-coarse-place-description');
 assert.equal(SP.VERSION,'11.32.0-contact-slot-corner');
 assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
 
-assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'橘子可在餐桌下方 floor 通行');
+assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'橘子可使用餐桌 footprint 所在格的合法剩餘 floor');
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),true,'partial table geometry leaves a Human-sized standing region in the coarse floor node');
 assert.equal(SP.nodeWalkable(st,table(st,5,2),orange),true,'橘子可站上餐桌桌面');
 assert.equal(SP.nodeWalkable(st,table(st,5,2),zhen),true,'人類能力上也可爬上餐桌');

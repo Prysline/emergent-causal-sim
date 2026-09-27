@@ -10,7 +10,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.33.1-action-spatial-target-consumers';
+const APP_VERSION='11.33.2-coarse-place-description';
 const PHYSICAL_VERSION='11.33.0-pose-envelope-static-fit';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');

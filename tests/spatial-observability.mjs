@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.33.1-action-spatial-target-consumers');
-assert.equal(E.VERSION,'11.33.1-action-spatial-target-consumers');
+assert.equal(st.version,'11.33.2-coarse-place-description');
+assert.equal(E.VERSION,'11.33.2-coarse-place-description');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
@@ -21,7 +21,9 @@ assert.match(obs.nodeKey,/\|floor\|2,6$/);
 
 orange.position={...SP.normalizeNode(st,{x:5,y:2},'floor')};
 obs=SP.agentObservation(st,orange);
-assert.equal(obs.covered,true,'餐桌 footprint 下方應顯示 covered floor');
+assert.equal(SP.describePlace(st,orange),'餐桌所在格的地面','coarse floor identity must not claim an exact under-table local position');
+assert.notEqual(SP.describePlace(st,orange),'餐桌下');
+assert.equal(obs.covered,true,'餐桌 footprint 所在格仍應顯示 covered floor observability');
 assert.equal(obs.overhead[0].id,'diningTable');
 assert.equal(obs.clearanceSummary,.72,'node-level clearance is only an observability summary of elevated solids');
 assert.equal(obs.requiredClearance,.32);
@@ -34,6 +36,7 @@ assert.equal(humanUnder.requiredClearance,1.65);
 orange.position={...SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')};
 orange.action={kind:'wander',phase:'move',spatialGoal:{...SP.normalizeNode(st,{x:6,y:2},'diningTable:surface')},lastPath:[SP.normalizeNode(st,{x:4,y:2},'floor'),SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')]};
 obs=SP.agentObservation(st,orange);
+assert.equal(SP.describePlace(st,orange),'餐桌桌面','explicit Surface identity may use the precise tabletop label');
 assert.equal(obs.surfaceId,'diningTable:surface');
 assert.equal(obs.surfaceLabel,'餐桌桌面');
 assert.equal(obs.covered,false,'桌面 node 不應被標成桌下 covered floor');

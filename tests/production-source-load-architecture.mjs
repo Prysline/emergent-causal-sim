@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.33.1-action-spatial-target-consumers';
+const CURRENT_VERSION='11.33.2-coarse-place-description';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
