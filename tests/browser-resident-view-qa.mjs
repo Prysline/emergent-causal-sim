@@ -87,6 +87,21 @@ const postureProjection=await page.evaluate(()=>{
 });
 assert.match(postureProjection.actionLocation,/俯臥/,'Action Card must render runtime prone posture instead of falling back to standing');
 assert.match(postureProjection.debugText,/俯臥/,'Debug Inspector projection must use the same runtime posture label');
+
+const placeProjection=await page.evaluate(()=>{
+  const E=window.SimEngine,SP=window.SimSpatial,UI=window.SimUI,st=E.getState(),a=st.agents.zhen;
+  const original={position:structuredClone(a.position),posture:structuredClone(a.posture)};
+  a.position={...SP.normalizeNode(st,{x:5,y:2},'floor')};a.posture={kind:'standing',slotId:null,furnitureId:null};UI.setCurrentZ(UI.getCurrentZ());
+  const standing=document.querySelector('.action-card.agent-zhen .action-location')?.textContent||'';
+  const chair=SP.getSlot(st,'chairNE:seat');a.position={...chair.position};a.posture={kind:'sitting',slotId:chair.id,furnitureId:chair.furnitureId};UI.setCurrentZ(UI.getCurrentZ());
+  const sitting=document.querySelector('.action-card.agent-zhen .action-location')?.textContent||'';
+  a.position=original.position;a.posture=original.posture;UI.setCurrentZ(UI.getCurrentZ());
+  return {standing,sitting};
+});
+assert.match(placeProjection.standing,/餐桌所在格的地面/,'standing coarse-floor projection must use canonical coarse wording');
+assert.ok(!placeProjection.standing.includes('餐桌下'),'standing Action Card must not reintroduce under-table wording');
+assert.match(placeProjection.sitting,/餐椅 B・座位/,'sitting Action Card must use the precise Slot identity');
+assert.ok(!placeProjection.sitting.includes('所在格的地面')&&!placeProjection.sitting.includes('餐椅 B下'),'sitting Action Card must not mix Slot occupancy with coarse floor/under-furniture wording');
 let desktop=await snapshot();
 assert.equal(desktop.version,CURRENT_VERSION);
 assert.equal(desktop.uiVersion,CURRENT_VERSION);
