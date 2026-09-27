@@ -1,8 +1,8 @@
 (() => {
   const W=window.SimWorld,C=window.SimEmbodimentCapabilities;if(!W)return;
-  if(!C?.defaultPhysicalProfile||!C?.DEFAULT_PHYSICAL_PROFILES)throw new Error('systems/physical.js requires embodiment-capabilities.js.');
+  if(!C?.defaultPhysicalProfile||!C?.DEFAULT_PHYSICAL_PROFILES||!C?.getPoseEnvelopeForKind||!C?.poseEnvelopeFitsUsableSpace)throw new Error('systems/physical.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/physical.js requires world.js initial-state pipeline.');
-  const VERSION='11.17.0-passage-profile-multimode';
+  const VERSION='11.33.0-pose-envelope-static-fit';
 
   function defaultPhysicalProfile(kind){return C.defaultPhysicalProfile(kind);}
 
@@ -48,9 +48,18 @@
     if(![clearanceHeight,clearanceWidth,clearanceLength].every(finitePositive))return null;
     return {clearanceHeight,clearanceWidth,clearanceLength,speedFactor,sourceMode:mode};
   }
+  function getPoseEnvelope(agent,posture){
+    const physical=getPhysicalProfile(agent);if(!physical)return null;
+    return C.getPoseEnvelopeForKind(agent?.kind,physical.bodyGeometry,posture);
+  }
+  function poseEnvelopeFits(envelope,usableSpace){return C.poseEnvelopeFitsUsableSpace(envelope,usableSpace);}
+  function agentPoseFitsUsableSpace(agent,posture,usableSpace){
+    const envelope=getPoseEnvelope(agent,posture);
+    return !!envelope&&poseEnvelopeFits(envelope,usableSpace);
+  }
   function requiredClearance(agent,mode='walk'){return getMovementEnvelope(agent,mode)?.clearanceHeight??null;}
 
-  Object.assign(P,{VERSION,getPhysicalProfile,getLocomotionProfile,supportedLocomotionModes,getMovementEnvelope,requiredClearance});
+  Object.assign(P,{VERSION,getPhysicalProfile,getLocomotionProfile,supportedLocomotionModes,getMovementEnvelope,getPoseEnvelope,poseEnvelopeFits,agentPoseFitsUsableSpace,requiredClearance});
   window.SimPhysical=P;
   W.PHYSICAL_RUNTIME_VERSION=VERSION;
 })();
