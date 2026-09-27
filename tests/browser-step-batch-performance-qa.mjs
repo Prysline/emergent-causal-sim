@@ -95,11 +95,15 @@ async function installInstrumentation(){
       ticks:[],
       queries:{},
       routeEntries:[],
+      edgeGroups:{},
+      diagnosticEnabled:false,
       domWrites:{},
       longTasks:[],
       longTaskSupported:false,
       stepOne:[]
     };
+    let routeContextCounter=0;
+    const routeContextStack=[];
 
     function row(store,name){
       return store[name]||(store[name]={calls:0,totalMs:0,maxMs:0,byPhase:{}});
@@ -133,15 +137,41 @@ async function installInstrumentation(){
     function wrapRouteEntry(name,signature){
       const original=SP[name];if(typeof original!=='function')return;
       SP[name]=function(...args){
-        const st=E.getState(),stateJson=JSON.stringify(st);
-        data.routeEntries.push({
+        if(!data.diagnosticEnabled)return original.apply(this,args);
+        const st=E.getState(),stateHash=diagnosticHash(JSON.stringify(st));
+        const entry={
+          id:++routeContextCounter,
           name,
           phase,
           tickOrdinal:activeTickOrdinal,
-          stateHash:diagnosticHash(stateJson),
+          stateHash,
+          stateStable:null,
           signature:signature(args,st),
           caller:routeCaller()
-        });
+        };
+        data.routeEntries.push(entry);
+        routeContextStack.push(entry);
+        try{return original.apply(this,args);}
+        finally{
+          routeContextStack.pop();
+          entry.stateStable=diagnosticHash(JSON.stringify(E.getState()))===stateHash;
+        }
+      };
+    }
+    function wrapEdgeEntry(name,signature){
+      const original=SP[name];if(typeof original!=='function')return;
+      SP[name]=function(...args){
+        if(data.diagnosticEnabled){
+          const context=routeContextStack[routeContextStack.length-1]||null;
+          if(context){
+            const st=E.getState(),edgeSignature=signature(args,st),key=[context.id,name,edgeSignature].join('|');
+            const row=data.edgeGroups[key]||(data.edgeGroups[key]={
+              contextId:context.id,contextName:context.name,contextSignature:context.signature,
+              name,signature:edgeSignature,calls:0
+            });
+            row.calls++;
+          }
+        }
         return original.apply(this,args);
       };
     }
@@ -207,6 +237,12 @@ async function installInstrumentation(){
     }));
     wrapRouteEntry('restTargets',(args)=>JSON.stringify({agent:agentId(args[1])}));
     wrapRouteEntry('sleepTargets',(args)=>JSON.stringify({agent:agentId(args[1])}));
+    wrapEdgeEntry('traversalFeasibility',(args,st)=>JSON.stringify({
+      agent:agentId(args[1]),from:nodeKey(st,args[2]),to:nodeKey(st,args[3])
+    }));
+    wrapEdgeEntry('getPassageProfile',(args,st)=>JSON.stringify({
+      from:nodeKey(st,args[1]),to:nodeKey(st,args[2])
+    }));
 
     const domIds=new Set(['mobileAgentSummary','map','actions','timeline','inspector','worldBadges','runtimeLayerSelect']);
     const descriptor=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
@@ -238,17 +274,23 @@ async function installInstrumentation(){
         data.ticks.length=0;
         clearStore(data.queries);
         data.routeEntries.length=0;
+        clearStore(data.edgeGroups);
+        data.diagnosticEnabled=false;
+        routeContextCounter=0;
+        routeContextStack.length=0;
         clearStore(data.domWrites);
         data.longTasks.length=0;
         data.stepOne.length=0;
         window.__stepBatchAutoplayTargetTick=null;
         window.__stepBatchPipelineProbe?.reset();
       },
+      setRouteDiagnosticEnabled(enabled){data.diagnosticEnabled=enabled===true;},
       snapshot(){
         return {
           ticks:data.ticks.map(x=>({...x})),
           queries:structuredClone(data.queries),
           routeEntries:data.routeEntries.map(x=>({...x})),
+          edgeGroups:structuredClone(data.edgeGroups),
           domWrites:structuredClone(data.domWrites),
           longTasks:data.longTasks.map(x=>({...x})),
           longTaskSupported:data.longTaskSupported,
@@ -306,6 +348,7 @@ async function clickWithFrames(id,expectedTicks=1){
 async function runCase(mode,selected){
   await openCase({selected});
   const startTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  await page.evaluate(enabled=>window.__stepBatchPerf.setRouteDiagnosticEnabled(enabled),mode==='single');
   const interactions=[];
   if(mode==='single'){
     interactions.push(await clickWithFrames('step',1));
@@ -378,11 +421,28 @@ function routeDuplicateSummary(result){
   const signatureOnly=groupBy(x=>[x.name,x.signature].join('|'));
   return {
     insideEntryCount:entries.length,
+    unstableContextCount:entries.filter(x=>x.stateStable===false).length,
     strictDuplicateCalls:strict.reduce((sum,x)=>sum+x.duplicateCalls,0),
     strictGroups:strict,
     repeatedSignatureCalls:signatureOnly.reduce((sum,x)=>sum+x.duplicateCalls,0),
     repeatedSignatureGroups:signatureOnly
   };
+}
+
+function edgeDuplicateSummary(result){
+  const groups=Object.values(result.metrics.edgeGroups||{});
+  const byKind={};
+  for(const group of groups){
+    const row=byKind[group.name]||(byKind[group.name]={uniqueSignatures:0,totalCalls:0,duplicateCalls:0,duplicateGroups:[]});
+    row.uniqueSignatures++;
+    row.totalCalls+=group.calls;
+    if(group.calls>1){
+      row.duplicateCalls+=group.calls-1;
+      row.duplicateGroups.push(group);
+    }
+  }
+  for(const row of Object.values(byKind))row.duplicateGroups.sort((a,b)=>b.calls-a.calls||String(a.signature).localeCompare(String(b.signature)));
+  return byKind;
 }
 
 function reportCase(result){
@@ -482,6 +542,10 @@ try{
     singleNone:routeDuplicateSummary(results.single_none),
     singleAgent:routeDuplicateSummary(results.single_agent)
   }));
+  console.log('ROUTE_EDGE_DUPLICATE_DIAGNOSTIC '+JSON.stringify({
+    singleNone:edgeDuplicateSummary(results.single_none),
+    singleAgent:edgeDuplicateSummary(results.single_agent)
+  }));
   assert.equal(feasibilityCounts.singleInside,8621,'render-scoped validation reuse must not change the measured single-tick simulation feasibility baseline');
   assert.equal(feasibilityCounts.singleOutside,3802,'one no-selection render must retain the measured one-pass outside-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Inside,25253,'render-scoped validation reuse must not change the measured step(10) inside-tick feasibility baseline');
@@ -502,7 +566,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.31.1 residual-route diagnostic: production behavior is unchanged; high-level route entry calls now record caller, arguments, tick phase, and a strict full-state hash so same-state duplicate work can be separated from merely repeated signatures. Existing deterministic/autoplay gates remain authoritative. Wall-clock remains secondary and runner-dependent.',
+    note:'11.31.1 residual-route diagnostic: production behavior is unchanged. Single-step cases record high-level Route query contexts plus per-context traversalFeasibility / getPassageProfile edge signatures, allowing same-query edge recomputation to be measured without persistent or cross-tick caching. Existing deterministic/autoplay gates remain authoritative. Wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
       mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
