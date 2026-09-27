@@ -90,6 +90,24 @@ assert.equal(snapshot.document.map.layers[0].cells['1,1'].terrain,'floor');
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
 assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id]').count(),await page.evaluate(()=>window.SimFurnitureDefinitions.listDefinitions().length),'Furniture Catalog must expose every system-owned Definition exactly once');
+assert.equal(await page.locator('#furnitureCatalog [data-furniture-definition-id="cabinet-tall"]').count(),1,'Furniture Catalog must expose the new high-cabinet Definition');
+await page.click('#furnitureCatalog [data-furniture-definition-id="cabinet-tall"]');
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
+assert.equal(snapshot.pendingOperation?.kind,'create-furniture');
+assert.equal(snapshot.pendingOperation?.definitionId,'cabinet-tall');
+await page.click('[data-cell="3,4"]');
+snapshot=await page.evaluate(()=>({
+  session:window.SimWorldEditor.getSession(),
+  document:window.SimWorldEditor.getDocument(),
+  resolved:window.SimWorldAuthoring.resolveFurnitureInstance(window.SimWorldEditor.getDocument().furniture['cabinet-tall-1'])
+}));
+assert.deepEqual(snapshot.document.furniture['cabinet-tall-1'],{id:'cabinet-tall-1',definitionId:'cabinet-tall',origin:{x:3,y:4,z:0},orientation:'south'},'high cabinet creation must persist only compact Instance truth');
+assert.equal(snapshot.resolved.slots.length,0,'high cabinet must remain Slot-free in the Editor-resolved view');
+assert.equal(snapshot.resolved.spatial.surface,undefined,'high cabinet must remain Surface-free in the Editor-resolved view');
+assert.deepEqual(snapshot.resolved.spatial.solids[0].bounds,{x:3.05,y:4.05,z:0,width:.90,depth:.90,height:1.90});
+assert.equal(snapshot.session.validation.ok,true);
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
+
 await page.click('#furnitureCatalog [data-furniture-definition-id="chair-basic"]');
 snapshot=await page.evaluate(()=>window.SimWorldEditor.getSession());
 assert.equal(snapshot.pendingOperation?.kind,'create-furniture');

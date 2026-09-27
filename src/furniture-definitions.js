@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v8';
+  const VERSION='furniture-definitions-v9';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -74,6 +74,21 @@
         solids:[
           {key:'base',bounds:{x:.10,y:0,z:0,width:1.80,depth:.88,height:.42}},
           {key:'back',bounds:{x:.10,y:0,z:.42,width:1.80,depth:.18,height:.38}}
+        ]
+      }
+    },
+    'cabinet-tall':{
+      id:'cabinet-tall',
+      name:'高櫃',
+      icon:'▥',
+      kind:'cabinet',
+      orientationSemantics:'frame',
+      footprint:[local(0,0)],
+      displayOffset:local(0,0),
+      slots:[],
+      spatial:{
+        solids:[
+          {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.90}}
         ]
       }
     },
