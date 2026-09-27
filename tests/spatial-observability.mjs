@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.33.2-coarse-place-description');
-assert.equal(E.VERSION,'11.33.2-coarse-place-description');
+assert.equal(st.version,'11.33.3-place-description-projection');
+assert.equal(E.VERSION,'11.33.3-place-description-projection');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
