@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.31.1-autoplay-completion-aware`
+`11.32.0-contact-slot-corner`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.31.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.30.0-metric-route-locomotion`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.32.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.17.0-passage-profile-multimode`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v7`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
-### Current Completion-Aware Autoplay release
+### Current Contact + Slot Corner release
+
+`11.32.0-contact-slot-corner` 完成 8-direction implementation 的 **Slice 5｜Contact + Slot Corner Semantics**。原本允許 local-neighbor 的 `reach / socialReach` 與相應 support / cross-surface local Contact 現可產生 diagonal candidate，但 Contact 保持自己的 shared-corner occlusion owner：diagonal endpoints 之間的兩條 L 型接觸路徑任一條仍保有可確認 corner opening即可成立，因此單側 wall / closed Door 可以阻止身體 Traversal，卻不必阻止 Contact；只有兩條路徑都被 Boundary / Door / Furniture 聯合封死才 blocked，無法安全確認 opening 的局部幾何第一版保守拒絕。這個判定不呼叫 diagonal Traversal legality 作 Contact truth。
+
+Furniture Slot authored contract 維持 cardinal `approachEdges`，沒有新增 `approachCorners` 或 World Authoring / Furniture Catalog schema。Runtime 只在兩個 incident approach sides 都 authored/legal，且 outside corner 對兩個 side approach floor nodes 的 Passage × current MovementEnvelope 都可行時，派生 direct diagonal settle / egress candidate；approach 與 egress 共用同一 candidate owner。Slot occupancy 仍由 `posture.slotId` 持有，slot-bound Agent 仍不算 ordinary floor occupant。
+
+本 release 沒有改 HorizontalConnection / PassageProfile、Route objective / metrics、Locomotion timing、Crowding、Physical MovementEnvelope public contract、Spatial Identity、World Authoring 或 Furniture Catalog，也沒有加入 PoseEnvelope、turn clearance、sideways / step-over、Initializer / Editor / Preview diagonal parity或 persistent / cross-tick geometry cache。因此 overall runtime、Spatial Traversal與 Contact generation推進到 `11.32.0-contact-slot-corner`；Spatial Passage維持 `11.29.0-horizontal-connection-passage`，Route / Locomotion維持 11.30.0 line，Dynamic Congestion維持 `11.31.0-crowding-8-direction`，Physical維持 `11.17.0-passage-profile-multimode`，World Authoring / Furniture Catalog維持 v7。Presentation marker 只因 canonical overall release 跟隨更新，不代表新增 Presentation-owned simulation truth。
+
+### Previous Completion-Aware Autoplay release
 
 `11.31.1-autoplay-completion-aware` 將 simulator autoplay 的 tick-source scheduling 從固定 `setInterval(stepOne,700)` 改為 Presentation-owned completion-aware controller。名目 start-to-start cadence仍為約 700ms：若完整同步 `E.tick() → render()` 在週期內完成，下一 callback只等待剩餘時間；若工作本身已超過700ms，不補跑或追趕 overdue callback，而是在完整 callback 結束後先跨過兩個 browser `requestAnimationFrame` opportunities，再以零額外 cadence delay安排下一 tick。
 

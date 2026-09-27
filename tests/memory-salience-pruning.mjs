@@ -28,7 +28,7 @@ function memory(agent,eventId,{tick=0,last=tick,relevance=.1,congruence=0,action
 }
 
 E.reset(1133);let st=E.getState(),a=st.agents.zhou;
-assert.equal(st.version,'11.31.1-autoplay-completion-aware');
+assert.equal(st.version,'11.32.0-contact-slot-corner');
 assert.equal(E.MEMORY_RETENTION_SCHEMA_VERSION,'11.13.3-memory-salience-pruning');
 assert.equal(E.MAX_EPISODIC_MEMORIES,64);
 noIssues('reset');

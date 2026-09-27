@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP?.normalizeNode)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-contact.js requires world.js initial-state pipeline.');
-  const VERSION='11.11.2-supported-contact-audit';
+  const VERSION='11.32.0-contact-slot-corner';
 
   function mergeInteractions(container,defs){
     if(!container)return;

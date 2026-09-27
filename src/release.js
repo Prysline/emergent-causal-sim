@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.31.1-autoplay-completion-aware';
+  const VERSION='11.32.0-contact-slot-corner';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{
