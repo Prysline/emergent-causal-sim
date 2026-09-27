@@ -1,7 +1,7 @@
 (() => {
   const A=window.SimWorldAuthoring,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;
   if(!A?.DEFAULT_WORLD_AUTHORING||!D?.analyzeFloorTile||!D?.envelopeFitsTile)throw new Error('SimWorldAuthoring / SimFurnitureDefinitions must load before world-initializer.js.');
-  if(!C?.ALL_POSTURES)throw new Error('SimEmbodimentCapabilities must load before world-initializer.js.');
+  if(!C?.ALL_POSTURES||!C?.defaultPhysicalProfile||!C?.getPoseEnvelopeForKind||!C?.poseEnvelopeFitsUsableSpace)throw new Error('SimEmbodimentCapabilities must load before world-initializer.js.');
   const clone=value=>JSON.parse(JSON.stringify(value));
   const POSTURES=new Set(C.ALL_POSTURES);
   const zOf=p=>p?.z??0;
@@ -212,6 +212,12 @@
     return {x:node.x,y:node.y,z,...(node.surfaceId!==undefined?{surfaceId:node.surfaceId}:{})};
   }
 
+  function authoredSlotPoseFits(kind,slot,posture){
+    if(!['sitting','lying'].includes(posture))return true;
+    const physical=C.defaultPhysicalProfile(kind),envelope=C.getPoseEnvelopeForKind(kind,physical?.bodyGeometry,posture);
+    return !!envelope&&C.poseEnvelopeFitsUsableSpace(envelope,slot?.usableSpace);
+  }
+
   function validatePostureKind(residentId,posture,errors){
     const kind=posture?.kind||'standing';
     if(!POSTURES.has(kind)){
@@ -256,6 +262,9 @@
     }
     if(postureKind==='lying'&&!slot.canRest&&!slot.canSleep){
       errors.push(issue('initial_anchor_lying_unusable',`${residentId} 不能以 lying posture 使用 ${slotId}；該 slot 不支援 rest / sleep。`,{residentId,slotId}));
+    }
+    if(postureKind&&['sitting','lying'].includes(postureKind)&&!authoredSlotPoseFits(entry.kind,slot,postureKind)){
+      errors.push(issue('initial_anchor_pose_fit_mismatch',`${residentId}（${entry.kind}）的 ${postureKind} PoseEnvelope 無法放入 ${slotId} 的 usable space。`,{residentId,slotId,kind:entry.kind,posture:postureKind}));
     }
     const node=slot.position,z=zOf(node),cell=authoredCellAt(authoring,node);
     if(!node||!Number.isInteger(node.x)||!Number.isInteger(node.y)||!Number.isInteger(z)||!cell||cell.terrain!=='floor'){
@@ -396,7 +405,7 @@
       for(const c of Object.values(authoring.entities?.containers||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom',cache));
       for(const s of Object.values(authoring.entities?.sources||{}))if(s.resource==='water')out.push(...objectAccessPositions(authoring,s,'fill',cache));
     }else if(type==='sleep'){
-      for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind)))out.push(...slotApproachPositions(authoring,slot,kind,cache));
+      for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind))&&authoredSlotPoseFits(kind,slot,'lying'))out.push(...slotApproachPositions(authoring,slot,kind,cache));
     }
     return dedupePositions(authoring,out,cache);
   }
