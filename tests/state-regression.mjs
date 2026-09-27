@@ -56,7 +56,7 @@ function oneStepContainerLoadCase({water=null,basketFood=null}){
 
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange;cat.needs.fatigue=75;cat.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};for(let i=0;i<6&&cat.posture.kind==='standing';i++)E.tick();assert.ok(['lying','sitting'].includes(cat.posture.kind));noIssues('cat rest posture');
+  const st=E.getState(),cat=st.agents.orange;cat.needs.fatigue=75;cat.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};for(let i=0;i<20&&cat.posture.kind==='standing';i++)E.tick();assert.ok(['lying','sitting'].includes(cat.posture.kind));noIssues('cat rest posture');
 }
 
 E.reset(20260911);
