@@ -55,6 +55,16 @@ function openFixture(){
 
 {
   const {st,human,target,cornerNode}=openFixture();
+  st.map.tiles['2,1'].terrain='void';st.map.tiles['2,1'].walkable=false;
+  let contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
+  assert.ok(hasNode(st,contact.positions,cornerNode),'one non-walkable intermediate terrain cell must leave the other diagonal Contact path available');
+  st.map.tiles['1,2'].terrain='void';st.map.tiles['1,2'].walkable=false;
+  contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
+  assert.equal(hasNode(st,contact.positions,cornerNode),false,'two non-walkable intermediate terrain cells must seal the diagonal Contact corner');
+}
+
+{
+  const {st,human,target,cornerNode}=openFixture();
   st.map.boundaries['0|v:2,1']={id:'v:2,1',kind:'wall'};
   const contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
   assert.ok(hasNode(st,contact.positions,cornerNode),'one fully blocked incident side must not block diagonal Contact while the other side remains open');
