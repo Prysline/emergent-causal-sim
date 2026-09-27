@@ -14,7 +14,7 @@
 
 `11.33.0-pose-envelope-static-fit` 正式建立第一階段 **PoseEnvelope（靜態姿勢包絡）**：Physical 依每個 Agent 的 current `bodyGeometry` + authoring-safe embodiment posture profile，即時計算 sitting / lying 的 `height / width / length`，不保存 `physical.poseEnvelope` mirror。這個 contract 與 MovementEnvelope（移動包絡）分離；standing / kneeling / prone 的 static profile 未在本 slice 提前補齊。
 
-Furniture Catalog 換代為 `furniture-definitions-v9`。rest / sleep Slot 必須提供 `usableSpace.width / length`，`height` 可省略表示該軸不限制；第一版不自動旋轉 PoseEnvelope 90°。餐椅 seat 為 `0.50 × 0.65m`、沙發每 Slot 為 `0.90 × 0.70m`、雙人床每 Slot 為 `0.70 × 2.00m`。雙人床移除舊 `allowKinds:['human']` 尺寸代理；餐椅的 human-only `allowKinds` 仍保留，明確證明種類門檻與物理尺寸門檻互相獨立。
+Furniture Catalog 在 PoseEnvelope release 當時換代為 `furniture-definitions-v8`。rest / sleep Slot 必須提供 `usableSpace.width / length`，`height` 可省略表示該軸不限制；第一版不自動旋轉 PoseEnvelope 90°。餐椅 seat 為 `0.50 × 0.65m`、沙發每 Slot 為 `0.90 × 0.70m`、雙人床每 Slot 為 `0.70 × 2.00m`。雙人床移除舊 `allowKinds:['human']` 尺寸代理；餐椅的 human-only `allowKinds` 仍保留，明確證明種類門檻與物理尺寸門檻互相獨立。
 
 同一 static-fit contract 由 rest / sleep target selection、meal seat selection、真正 settle 前 recheck、sleeping state validity、`SimWorldInitializer` initial furnitureSlot placement 與 Validator 共用。Slot occupancy 仍由 `agent.posture.slotId` 持有，slot-bound Agent 仍不算 ordinary floor occupant。World Authoring Instance schema 沒改，因此維持 `world-authoring-v7`；Spatial Traversal / Contact、Passage、Route、Locomotion、Dynamic Congestion 也不因整體 release 更新而假升。本 slice 不加入 multi-slot occupancy、usable-surface packing、dynamic seated obstruction、turn clearance、sideways movement或 8-direction Slice 6。
 
