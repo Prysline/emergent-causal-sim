@@ -4,7 +4,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','release.js',
-  'spatial.js','spatial-traversal.js','engine.js'
+  'spatial.js','spatial-traversal.js','systems/physical.js','engine.js'
 ]);
 
 const E=globalThis.SimEngine;
