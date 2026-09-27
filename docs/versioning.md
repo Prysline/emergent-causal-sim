@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.33.1-action-spatial-target-consumers`
+`11.33.2-coarse-place-description`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
 
 ### Current Coarse Place Description release
 
