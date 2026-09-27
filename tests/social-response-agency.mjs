@@ -5,7 +5,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
 const files=[
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/physical.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
   'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
@@ -45,7 +45,7 @@ noIssues('deterministic response bands');
 
 // High social need: human intent becomes an observable petOffer, animal accepts, then and only then petAnimal succeeds.
 st=armDirectPet(90,21321);E.tick();st=E.getState();
-assert.equal(st.version,'11.32.0-contact-slot-corner');
+assert.equal(st.version,'11.33.0-pose-envelope-static-fit');
 const acceptOffer=latestAction('petOffer'),acceptResponse=latestAction('acceptPet');
 assert.ok(acceptOffer?.data?.socialBid,'high-social case must create observable petOffer');
 assert.equal(acceptOffer.data.bidKind,'petOffer');

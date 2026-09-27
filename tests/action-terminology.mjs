@@ -4,15 +4,15 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/action/state.js','engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/physical.js','systems/action/state.js','engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js']);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.32.0-contact-slot-corner');
-assert.equal(E.VERSION,'11.32.0-contact-slot-corner');
+assert.equal(st.version,'11.33.0-pose-envelope-static-fit');
+assert.equal(E.VERSION,'11.33.0-pose-envelope-static-fit');
 assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
 noIssues('reset');
 

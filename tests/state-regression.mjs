@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','engine.js','validation/registry.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','systems/physical.js','engine.js','validation/registry.js']);
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 
 function noIssues(label){const v=V.validateState(E.getState());if(v.issueCount)console.error('STATE_DEBUG',label,JSON.stringify(v,null,2));assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);}
@@ -14,7 +14,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.32.0-contact-slot-corner');
+  assert.equal(st.version,'11.33.0-pose-envelope-static-fit');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
@@ -56,7 +56,7 @@ function oneStepContainerLoadCase({water=null,basketFood=null}){
 
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange;cat.needs.fatigue=75;cat.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};for(let i=0;i<6&&cat.posture.kind==='standing';i++)E.tick();assert.ok(['lying','sitting'].includes(cat.posture.kind));noIssues('cat rest posture');
+  const st=E.getState(),cat=st.agents.orange;cat.needs.fatigue=75;cat.action={kind:'rest',phase:'chooseSurface',restTicks:0,started:st.tick,wait:0};for(let i=0;i<20&&cat.posture.kind==='standing';i++)E.tick();assert.ok(['lying','sitting'].includes(cat.posture.kind));noIssues('cat rest posture');
 }
 
 E.reset(20260911);

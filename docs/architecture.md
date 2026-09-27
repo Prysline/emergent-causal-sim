@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.32.0-contact-slot-corner`。
+目前 runtime marker：`11.33.0-pose-envelope-static-fit`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -29,7 +29,7 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v7"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v8"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
 Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
@@ -73,7 +73,7 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 ### Furniture Orientation / Shared Local Transform
 
-Current `furniture-definitions-v7` 將 Definition canonical local orientation 固定為 `south`。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
+Current `furniture-definitions-v8` 將 Definition canonical local orientation 固定為 `south`。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
 
 Definition 的 `orientationSemantics` 分為 `facing` 與 `frame`。Directional Furniture 的 `orientation` 表示正面／主要 facing：椅子與沙發是 back → front，床是 head → foot；沒有自然正面的 Furniture 仍保留 quarter-turn frame orientation，但不宣稱有正面。`origin` 不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 透過同一 world→local→world transform 跟隨；slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference。
 
@@ -89,7 +89,15 @@ Resident initial placement 在 current authoring contract內支援兩種 mode：
 
 Initializer 的 hard validation只判斷自己擁有的 authoring/reference/base-floor occupancy facts。Physical / locomotion / posture 的正式 runtime invariant仍由既有 Spatial / Physical / Validator owners負責，不在 initializer 複製第二套 subsystem rule。
 
-Physical / Passage contract 同樣遵守 single-source rule：Agent 保存 Physical facts；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(...)` derived。`PassageProfile`由 Spatial geometry即時計算為位置化 `options`，mode feasibility只在同一 option 同時容納 MovementEnvelope時成立；兩者都不保存 persistent cache。
+Physical / Passage contract 同樣遵守 single-source rule：Agent 保存 Physical facts；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(...)` derived。第一階段 `PoseEnvelope` 也由 Physical 依 current `bodyGeometry` + embodiment posture profile 即時計算 sitting / lying 尺寸，不保存 persistent mirror；Furniture Slot 只持有 `usableSpace`，Static fit 由共用 Physical query 比較，不能讓 Furniture 重新持有 species 尺寸規則。`PassageProfile`由 Spatial geometry即時計算為位置化 `options`，mode feasibility只在同一 option 同時容納 MovementEnvelope時成立。MovementEnvelope、PoseEnvelope 與 PassageProfile 都維持 derived truth。
+
+### PoseEnvelope / Furniture Slot static-fit ownership
+
+第一階段 **PoseEnvelope（靜態姿勢包絡）** 與 MovementEnvelope（移動包絡）是兩個不同 Physical query。MovementEnvelope 回答移動過程的空間需求；`SimPhysical.getPoseEnvelope(agent, posture)` 回答 Agent 以 sitting / lying 靜態姿勢需要的 `height / width / length`。姿勢推導模板位於 authoring-safe `SimEmbodimentCapabilities`，runtime Physical 只讀 Agent current `bodyGeometry` 即時計算，不把結果寫回 Agent state。
+
+Furniture Definition 的 Slot 持有 `usableSpace`，表示該使用位置可容納的靜態身體空間；它不是 Furniture solid、Surface、footprint 或 Contact geometry。Spatial / Engine consumer 透過 Physical-owned fit query 串接「activity affordance + static fit + `allowKinds` + Slot occupancy/reservation + approach/settle/egress」等獨立 gate。缺少必要 usable-space 資料不得默認 fit。第一版軸向直接對齊 Furniture local frame，不自動嘗試 90° 旋轉。
+
+Initializer 與 Validator 也消費同一 contract，避免 authored opening state 與 runtime state 使用兩套姿勢尺寸規則。Slot occupancy truth 仍只有 `agent.posture.slotId`；本 slice 不把 slot-bound Agent 重新算成 ordinary floor occupant，也不建立 multi-slot / usable-surface packing 或 dynamic body obstruction。
 
 ### Agent-private Truth
 
@@ -679,11 +687,11 @@ v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route met
 - **objective 與 tie-break**：route primary objective仍是 `traversalCost`；v11.24.0 起 primary cost 已包含 mode traversal burden 與 mode-transition burden。只有 primary cost 同分時，才以 executable `travelTime`、transition數、mode rank作 deterministic tie-break。這些都是客觀 execution facts，不是人格偏好。
 - **timing truth**：v11.30.0 起 movement timing 由實際 `distanceMeters / speedFactor` 推導；同 mode 連續 edge 的 fractional requirement以 Action-scoped `locomotionCredit` 延續，避免 diagonal 每 edge各自向上取整。route `travelTime` 與 core movement共用同一 timing facts，mode transition仍額外支付明確 tick並清除 credit。
 - **execution boundary**：core `moveToward()` 仍是單一 movement owner；所有既有 Action透過 `moveToExact / moveToInteraction` 共用同一 locomotion lifecycle，不建立 crawl-specific Action type。multi-tick edge進度暫存在 current Action 的 `locomotionStep`，不是 persistent route cache。
-- **occupancy vs walk feasibility**：`SP.nodeWalkable(...)` 保留「walk 是否可進入該 node」語意；`SP.nodeLocomotionAccessible(...)` 只判 node 結構上是否可被 locomotion state佔據。`spatial.node` Validator使用後者，避免低姿勢合法停留被 walk-only clearance誤判。這不是 PoseEnvelope/static-fit；current occupancy仍不宣稱有完整靜態 body bounds。
+- **occupancy vs walk feasibility**：`SP.nodeWalkable(...)` 保留「walk 是否可進入該 node」語意；`SP.nodeLocomotionAccessible(...)` 只判 node 結構上是否可被 locomotion state佔據。`spatial.node` Validator使用後者，避免低姿勢合法停留被 walk-only clearance誤判。這不是 PoseEnvelope/static-fit；`11.33.0-pose-envelope-static-fit` 只對 sitting / lying 的單一 Slot 使用位置提供獨立 static-fit contract，普通 traversal occupancy 仍不宣稱有完整靜態 body obstruction。
 - **arrival semantics**：crawl抵達後 posture不自動改回 standing；完成 Action只清除 active locomotion phase。下一次需要其他 mode時再支付 transition，避免在低矮幾何中出現免費站立。
 - **observability / validation**：Locomotion Debug顯示 posture、active mode、phase、speedFactor、edge ticks與 pending edge；Validator檢查 locomotion phase、posture/mode一致性與 pending step timing，不建立第二份 UI truth。
 - **心理層明確未接線**：v11.19 只會依 objective route facts選擇 physically executable mode。Relationship、Memory、traits、goal pressure、discomfort / embarrassment / dirt aversion尚未參與「願不願意爬」；它們未來只能影響 behavioral choice，不能回寫 Physical feasibility或把客觀 travel time變成零。
-- **仍未包含**：PoseEnvelope/static fit、length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。Dynamic Congestion 已由下一節接線；現有 exertion仍維持 per-edge parity，避免本 slice偷改 energy balance。
+- **Locomotion 本身仍未包含**：length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。PoseEnvelope/static fit 已於 `11.33.0-pose-envelope-static-fit` 由獨立 Physical + Furniture Slot contract 接線，不併入 locomotion mode feasibility。Dynamic Congestion 已由下一節接線；現有 exertion仍維持 per-edge parity，避免本 slice偷改 energy balance。
 
 ### Dynamic Congestion
 

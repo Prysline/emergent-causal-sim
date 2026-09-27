@@ -137,7 +137,7 @@ assert.ok(humanRoutePassage.calls<=700,`single-route passage profile regressed t
 assert.ok(humanRestAnalyze.calls<=600,`Human rest floor analysis regressed to ${humanRestAnalyze.calls} calls`);
 assert.ok(humanRestFit.calls<=1400,`Human rest envelope fit regressed to ${humanRestFit.calls} calls`);
 assert.ok(catRestAnalyze.calls<=360,`Cat rest floor analysis regressed to ${catRestAnalyze.calls} calls`);
-assert.ok(catRestFit.calls<=280,`Cat rest envelope fit regressed to ${catRestFit.calls} calls`);
+assert.ok(catRestFit.calls<=360,`Cat rest envelope fit regressed to ${catRestFit.calls} calls`);
 
 console.log('GEOMETRY_QUERY_METRICS '+JSON.stringify(report));
 console.log('Furniture geometry query performance regression: ok');

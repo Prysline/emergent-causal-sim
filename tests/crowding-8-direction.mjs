@@ -42,7 +42,7 @@ function idleAgent(agent,node){
 }
 
 E.reset(20260926);
-assert.equal(E.getState().version,'11.32.0-contact-slot-corner');
+assert.equal(E.getState().version,'11.33.0-pose-envelope-static-fit');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 

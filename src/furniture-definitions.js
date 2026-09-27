@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v7';
+  const VERSION='furniture-definitions-v8';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -45,7 +45,7 @@
       footprint:[local(0,0)],
       displayOffset:local(0,0),
       slots:[
-        {key:'seat',label:'座位',offset:local(0,0),approachEdges:['south','west','east'],canRest:true,allowKinds:['human'],activitySuitability:{rest:.48}}
+        {key:'seat',label:'座位',offset:local(0,0),approachEdges:['south','west','east'],canRest:true,usableSpace:{width:.50,length:.65},allowKinds:['human'],activitySuitability:{rest:.48}}
       ],
       spatial:{
         solids:[
@@ -67,8 +67,8 @@
       footprint:[local(0,0),local(1,0)],
       displayOffset:local(0,0),
       slots:[
-        {key:'left',label:'左側',offset:local(0,0),approachEdges:['south'],canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}},
-        {key:'right',label:'右側',offset:local(1,0),approachEdges:['south'],canRest:true,canSleep:true,allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}}
+        {key:'left',label:'左側',offset:local(0,0),approachEdges:['south'],canRest:true,canSleep:true,usableSpace:{width:.90,length:.70},allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}},
+        {key:'right',label:'右側',offset:local(1,0),approachEdges:['south'],canRest:true,canSleep:true,usableSpace:{width:.90,length:.70},allowKinds:['human','cat'],activitySuitability:{rest:.82,sleep:.62}}
       ],
       spatial:{
         solids:[
@@ -86,8 +86,8 @@
       footprint:[local(0,0),local(1,0),local(0,1),local(1,1)],
       displayOffset:local(0,0),
       slots:[
-        {key:'left',label:'左側',offset:local(0,0),approachEdges:['west'],canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}},
-        {key:'right',label:'右側',offset:local(1,0),approachEdges:['east'],canRest:true,canSleep:true,restPosture:'lying',allowKinds:['human'],activitySuitability:{rest:.98,sleep:1}}
+        {key:'left',label:'左側',offset:local(0,0),approachEdges:['west'],canRest:true,canSleep:true,restPosture:'lying',usableSpace:{width:.70,length:2.00},activitySuitability:{rest:.98,sleep:1}},
+        {key:'right',label:'右側',offset:local(1,0),approachEdges:['east'],canRest:true,canSleep:true,restPosture:'lying',usableSpace:{width:.70,length:2.00},activitySuitability:{rest:.98,sleep:1}}
       ],
       spatial:{
         solids:[
@@ -113,6 +113,12 @@
 
   const CARDINAL_DIRECTIONS=new Set(ORIENTATIONS);
   const finite=value=>Number.isFinite(Number(value));
+  const positive=value=>finite(value)&&Number(value)>0;
+  function assertUsableSpace(space,path){
+    if(!isRecord(space))throw new Error(path+' must be an object.');
+    for(const field of ['width','length'])if(!positive(space[field]))throw new Error(path+'.'+field+' must be positive.');
+    if(space.height!==undefined&&!positive(space.height))throw new Error(path+'.height must be positive when provided.');
+  }
   function assertBounds(bounds,path,frame){
     if(!isRecord(bounds))throw new Error(path+' must be a bounds object.');
     for(const field of ['x','y','z','width','depth','height'])if(!finite(bounds[field]))throw new Error(path+'.'+field+' must be finite.');
@@ -164,6 +170,8 @@
       if(keys.has(slot.key))throw new Error('Furniture Definition '+key+' duplicates slot key '+slot.key+'.');
       keys.add(slot.key);
       assertLocalPosition(slot.offset,key+'.slots['+index+'].offset');
+      if(slot.canRest===true||slot.canSleep===true)assertUsableSpace(slot.usableSpace,key+'.slots['+index+'].usableSpace');
+      else if(slot.usableSpace!==undefined)assertUsableSpace(slot.usableSpace,key+'.slots['+index+'].usableSpace');
       if(!Array.isArray(slot.approachEdges)||!slot.approachEdges.length||new Set(slot.approachEdges).size!==slot.approachEdges.length||slot.approachEdges.some(edge=>!CARDINAL_DIRECTIONS.has(edge)))throw new Error('Furniture Definition '+key+' slot '+slot.key+' requires unique cardinal approachEdges.');
       for(const activity of ['rest','sleep']){
         const value=slot.activitySuitability?.[activity];
@@ -419,6 +427,7 @@
         if(slot.canRest===true)out.canRest=true;
         if(slot.canSleep===true)out.canSleep=true;
         if(slot.restPosture)out.restPosture=slot.restPosture;
+        if(slot.usableSpace)out.usableSpace=clone(slot.usableSpace);
         if(Array.isArray(slot.allowKinds))out.allowKinds=clone(slot.allowKinds);
         if(Number.isFinite(slot.activitySuitability?.rest))out.restQuality=slot.activitySuitability.rest;
         if(Number.isFinite(slot.activitySuitability?.sleep))out.sleepQuality=slot.activitySuitability.sleep;

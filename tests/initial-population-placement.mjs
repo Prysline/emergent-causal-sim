@@ -49,8 +49,8 @@ const base=A.DEFAULT_WORLD_AUTHORING;
   authored.residents.orange.initial.placement={mode:'anchor',anchor:{kind:'furnitureSlot',id:'bed:left'}};
   authored.residents.orange.initial.posture={kind:'lying'};
   const report=I.analyzeInitialPlacements(authored);
-  assert.equal(report.ok,false);
-  assert.ok(report.hardErrors.some(x=>x.code==='initial_anchor_kind_mismatch'&&x.residentId==='orange'));
+  assert.equal(report.ok,true,report.hardErrors.map(x=>x.message).join('\n'));
+  assert.deepEqual(report.resolvedPlacements.orange.posture,{kind:'lying',slotId:'bed:left',furnitureId:'bed'});
 }
 
 {

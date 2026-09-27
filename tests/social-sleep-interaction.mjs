@@ -5,7 +5,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
 loadRuntimeProfile([
-  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/physical.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js',
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js','validation/rules/intent-active.js','validation/rules/social-bid.js'
@@ -70,12 +70,13 @@ E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   st.agents.zhou.offMap=true;
-  human.position={x:9,y:2};
-  cat.position={x:9,y:3};
-  cat.action={kind:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
   human.needs.sleepNeed=70;
   human.traits.sleepRecoveryRate=0; // 凍結本測試的 sleepNeed，避免同 tick 的正常睡眠恢復改變 wakeChance 基準。
-  putToSleep(st,human,'sofa:left',0);
+  const sleepSlot=putToSleep(st,human,'bed:left',0);
+  const contactNode=SP.slotApproachNodes(st,sleepSlot,cat,'walk')[0];
+  assert.ok(contactNode,'bed:left 應提供動物可用的正式接觸／approach node');
+  cat.position={...contactNode};
+  cat.action={kind:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
   const before=E.interactionWakeChance(human,34);
   E.tick();
 

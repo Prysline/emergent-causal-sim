@@ -5,7 +5,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
 const files=[
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/physical.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
   'systems/memory/state.js','systems/appraisal/state.js','systems/affect/state.js',
   'engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','systems/intent/deliberation.js',
@@ -33,7 +33,7 @@ function calm(a,{social=55}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue
 function socialCandidate(st,a){return E.candidateIntents(st,a).find(c=>c.intentKind==='socialize')||null;}
 
 E.reset(11340);let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.32.0-contact-slot-corner');
+assert.equal(st.version,'11.33.0-pose-envelope-static-fit');
 assert.equal(E.MEMORY_DELIBERATION_SCHEMA_VERSION,'11.13.4-memory-deliberation-influence');
 assert.equal(E.MEMORY_DELIBERATION_MAX_DELTA,18);
 noIssues('reset');

@@ -10,6 +10,15 @@
       if(!slotBound){
         const list=byNode.get(key)||[];list.push(a.id);byNode.set(key,list);
         if(!(SP.nodeLocomotionAccessible?.(st,node,a)??SP.nodeWalkable(st,node,a)))add('agent_on_untraversable_node',`${a.name}位於自身 locomotion 無法佔據的 Spatial Node ${key}。`,{agentId:a.id,position:key});
+      }else{
+        const slot=SP.getSlot?.(st,a.posture.slotId);
+        if(!slot)add('slot_reference_missing',`${a.name} 的 posture.slotId=${a.posture.slotId} 不存在。`,{agentId:a.id,slotId:a.posture.slotId});
+        else{
+          if(a.posture.furnitureId!==slot.furnitureId)add('slot_furniture_mismatch',`${a.name} 的 posture.furnitureId 與 Slot owner 不一致。`,{agentId:a.id,slotId:slot.id,furnitureId:a.posture.furnitureId,expectedFurnitureId:slot.furnitureId});
+          if(!SP.nodeSame?.(st,node,slot.position))add('slot_anchor_position_mismatch',`${a.name} 的 slot-bound coarse position 與 ${slot.id} anchor 不一致。`,{agentId:a.id,slotId:slot.id,position:key});
+          if(!SP.slotAllows?.(slot,a))add('slot_kind_mismatch',`${a.name} 的種類不符合 ${slot.id} 的 allowKinds。`,{agentId:a.id,slotId:slot.id,kind:a.kind});
+          if(['sitting','lying'].includes(a.posture?.kind)&&!SP.slotPoseFits?.(slot,a,a.posture.kind))add('slot_pose_fit_invalid',`${a.name} 的 ${a.posture.kind} PoseEnvelope 無法放入 ${slot.id} 的 usable space。`,{agentId:a.id,slotId:slot.id,posture:a.posture.kind});
+        }
       }
       if(a.held){const held=SP.objectNode(st,a.held);if(held&&!SP.nodeSame(st,node,held))add('held_spatial_node_mismatch',`${a.name}持有的 ${a.held} 與角色不在同一 Spatial Node。`,{agentId:a.id,containerId:a.held,agentNode:key,objectNode:SP.nodeKey(st,held)});}
     }
