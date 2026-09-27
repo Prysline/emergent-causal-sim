@@ -8,7 +8,7 @@
 
 `11.33.0-pose-envelope-static-fit`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog換代為 `furniture-definitions-v10`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog換代為 `furniture-definitions-v11`；未改 contract 的 Relationship / Memory 等 generation 不跟著假升。
 
 ### Current PoseEnvelope static-fit release
 
@@ -20,7 +20,9 @@ Furniture Catalog 在 PoseEnvelope release 當時換代為 `furniture-definition
 
 ### Current Furniture Expansion catalog generation
 
-Furniture Catalog 現為 `furniture-definitions-v10`。v9 先加入第一個 Furniture Expansion 代表案例 `cabinet-tall`（高櫃）：1×1 coarse footprint、單一置中的 `0.90 × 0.90 × 1.90m` floor-start solid，沒有 Slot、Surface、storage interior 或家具 ID 特判。v10 再加入 `stool-basic`（矮凳）作低家具代表案例：1×1 footprint、`0.44 × 0.44m` 座面底高 `0.45m`、四支 `0.04m` 方腿；座位是四邊可 approach 的 sitting Slot，`usableSpace = 0.50 × 0.65m`，不新增 Surface，也不設定 species `allowKinds`。Default Human / Cat sitting PoseEnvelope 都能 fit；MovementEnvelope × solids 則獨立得到 Human walk 不可穿過、Cat walk 可利用凳下／周圍空間。
+Furniture Catalog 現為 `furniture-definitions-v11`。v9 加入 `cabinet-tall`（高櫃）obstruction-only consumer；v10 加入 `stool-basic`（矮凳）低家具 consumer；v11 再加入 `pet-bed-small`（小型寵物床）作既有 PoseEnvelope／可供性分層的產品 consumer。小型寵物床為 1×1 footprint、單一 `0.70 × 0.80 × 0.12m` floor-start cushion solid，四邊可 approach 的單一 Slot 同時提供 `canRest + canSleep`，`usableSpace = 0.55 × 0.65m`，`activitySuitability.rest = 0.30`、`sleep = 0.75`，不新增 Surface，也不設定 species `allowKinds`。Default Human sitting 可 fit、lying 不 fit；Default Cat sitting / lying 都可 fit，因此 Human 可坐著休息但不可在此睡眠，Cat 則可休息與睡眠。這是代表性 calibration fixture，不宣稱現實世界寵物床標準尺寸。
+
+v11 不新增 Agent / species-specific furniture preference。Current `activitySuitability` 仍是 Slot 對活動的共用適性；若未來要讓同一家具有物種差異偏好，需另開 behavior preference contract，不能用 Physical、`allowKinds` 或 Furniture ID 特判代替。
 
 這些變更都只擴充 system-owned Furniture Definition set，沒有改 Furniture Instance canonical shape、World Authoring schema、Physical / Spatial / Route / Locomotion / Crowding API 或 overall runtime observable semantics。因此 World Authoring 維持 `world-authoring-v7`，overall runtime 仍為 `11.33.0-pose-envelope-static-fit`；只換代 Furniture Catalog generation。
 
