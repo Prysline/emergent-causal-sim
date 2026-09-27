@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.30.0-metric-route-locomotion';
+  const VERSION='11.32.0-contact-slot-corner';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -127,19 +127,42 @@
   function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&!a.posture?.slotId&&a.id!==except&&nodeSame(st,a.position,n));}
 
   const APPROACH_DELTA=Object.freeze({north:[0,-1],east:[1,0],south:[0,1],west:[-1,0]});
+  const APPROACH_CORNERS=Object.freeze([
+    Object.freeze({edges:Object.freeze(['north','west']),delta:Object.freeze([-1,-1])}),
+    Object.freeze({edges:Object.freeze(['north','east']),delta:Object.freeze([1,-1])}),
+    Object.freeze({edges:Object.freeze(['south','west']),delta:Object.freeze([-1,1])}),
+    Object.freeze({edges:Object.freeze(['south','east']),delta:Object.freeze([1,1])})
+  ]);
+  function cardinalSlotApproachNode(st,anchor,edge,a,mode='walk'){
+    const delta=APPROACH_DELTA[edge];if(!delta)return null;
+    const q=normalizeNode(st,localPos(anchor.x+delta[0],anchor.y+delta[1],zOf(anchor)),FLOOR);
+    if(!floorNodeFitsMode(st,q,a,mode))return null;
+    if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,anchor,q))return null;
+    return q;
+  }
+  function slotCornerApproachNode(st,anchor,corner,a,mode='walk'){
+    const sideNodes=corner.edges.map(edge=>cardinalSlotApproachNode(st,anchor,edge,a,mode));
+    if(sideNodes.some(node=>!node))return null;
+    const q=normalizeNode(st,localPos(anchor.x+corner.delta[0],anchor.y+corner.delta[1],zOf(anchor)),FLOOR);
+    if(!floorNodeFitsMode(st,q,a,mode))return null;
+    if(!sideNodes.every(node=>walkEdgeFeasible(st,a,q,node)))return null;
+    return q;
+  }
   function slotApproachNodes(st,slotOrId,aOrId=null,mode='walk'){
     const slot=typeof slotOrId==='string'?SP.getSlot?.(st,slotOrId):slotOrId,a=agentFor(st,aOrId),out=new Map();
     if(!slot?.position)return[];
-    const anchor=normalizeNode(st,slot.position,FLOOR),geometry=floorGeometry(st,anchor);
+    const anchor=normalizeNode(st,slot.position,FLOOR),geometry=floorGeometry(st,anchor),approachEdges=new Set(slot.approachEdges||[]);
     if(floorNodeFitsMode(st,anchor,a,mode)){
-      for(const edge of slot.approachEdges||[])if((geometry.edgeIntervals?.[edge]||[]).length){out.set(nodeKey(st,anchor),anchor);break;}
+      for(const edge of approachEdges)if((geometry.edgeIntervals?.[edge]||[]).length){out.set(nodeKey(st,anchor),anchor);break;}
     }
-    for(const edge of slot.approachEdges||[]){
-      const delta=APPROACH_DELTA[edge];if(!delta)continue;
-      const q=normalizeNode(st,localPos(anchor.x+delta[0],anchor.y+delta[1],zOf(anchor)),FLOOR);
-      if(!floorNodeFitsMode(st,q,a,mode))continue;
-      if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,anchor,q))continue;
-      out.set(nodeKey(st,q),q);
+    for(const edge of approachEdges){
+      const q=cardinalSlotApproachNode(st,anchor,edge,a,mode);
+      if(q)out.set(nodeKey(st,q),q);
+    }
+    for(const corner of APPROACH_CORNERS){
+      if(!corner.edges.every(edge=>approachEdges.has(edge)))continue;
+      const q=slotCornerApproachNode(st,anchor,corner,a,mode);
+      if(q)out.set(nodeKey(st,q),q);
     }
     return [...out.values()];
   }
@@ -394,19 +417,121 @@
   function pathDistance(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'pathDistance'}).pathDistance;}
   function travelTime(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}).travelTime;}
 
-  function floorReachNodes(st,p,agent,{includeSelf=true}={}){const out=new Map(),target=normalizeNode(st,p,FLOOR);for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),FLOOR);if(nodeWalkable(st,q,agent)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,target,q)))out.set(nodeKey(st,q),q);}if(includeSelf&&nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);return [...out.values()];}
-  function surfaceLocalReachNodes(st,node,agent){const target=normalizeNode(st,node),out=new Map();if(nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);for(const [dx,dy] of DIRS){const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),target.surfaceId);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}return [...out.values()];}
+  const CONTACT_EPS=1e-9;
+  function contactEdgeNames(a,b){
+    const dx=b.x-a.x,dy=b.y-a.y;
+    if(dx===1&&dy===0)return ['east','west'];
+    if(dx===-1&&dy===0)return ['west','east'];
+    if(dx===0&&dy===1)return ['south','north'];
+    if(dx===0&&dy===-1)return ['north','south'];
+    return null;
+  }
+  function edgeCornerParameter(cell,edge,corner){
+    return edge==='north'||edge==='south'?corner.x-cell.x:corner.y-cell.y;
+  }
+  function edgeCornerExtent(intervals,t){
+    let extent=0;
+    for(const interval of intervals||[]){
+      if(t<=CONTACT_EPS){
+        if(interval.start>CONTACT_EPS)continue;
+        extent=Math.max(extent,interval.end);
+      }else if(t>=1-CONTACT_EPS){
+        if(interval.end<1-CONTACT_EPS)continue;
+        extent=Math.max(extent,1-interval.start);
+      }
+    }
+    return extent;
+  }
+  function cardinalCornerContactStatus(st,a,b,corner){
+    const left=normalizeNode(st,a,FLOOR),right=normalizeNode(st,b,FLOOR),edges=contactEdgeNames(left,right);
+    if(!left||!right||!edges||zOf(left)!==zOf(right))return 'unsupported';
+    if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,left,right))return 'blocked';
+    const leftGeometry=floorGeometry(st,left),rightGeometry=floorGeometry(st,right);
+    if(leftGeometry.regionCount>1||rightGeometry.regionCount>1)return 'unsupported';
+    const leftExtent=edgeCornerExtent(leftGeometry.edgeIntervals?.[edges[0]],edgeCornerParameter(left,edges[0],corner));
+    const rightExtent=edgeCornerExtent(rightGeometry.edgeIntervals?.[edges[1]],edgeCornerParameter(right,edges[1],corner));
+    return Math.min(leftExtent,rightExtent)>CONTACT_EPS?'candidate':'blocked';
+  }
+  function diagonalFloorContactStatus(st,target,candidate){
+    const a=normalizeNode(st,target,FLOOR),b=normalizeNode(st,candidate,FLOOR);
+    if(!a||!b||zOf(a)!==zOf(b)||Math.abs(b.x-a.x)!==1||Math.abs(b.y-a.y)!==1)return 'unsupported';
+    const corner={x:Math.max(a.x,b.x),y:Math.max(a.y,b.y),z:zOf(a)};
+    const horizontal=normalizeNode(st,localPos(b.x,a.y,zOf(a)),FLOOR);
+    const vertical=normalizeNode(st,localPos(a.x,b.y,zOf(a)),FLOOR);
+    const paths=[
+      [[a,horizontal],[horizontal,b]],
+      [[a,vertical],[vertical,b]]
+    ];
+    let sawUnsupported=false;
+    for(const path of paths){
+      const statuses=path.map(([from,to])=>cardinalCornerContactStatus(st,from,to,corner));
+      if(statuses.every(status=>status==='candidate'))return 'candidate';
+      if(!statuses.includes('blocked')&&statuses.includes('unsupported'))sawUnsupported=true;
+    }
+    if(sawUnsupported)return 'unsupported';
+    return 'blocked';
+  }
+  function floorReachNodes(st,p,agent,{includeSelf=true}={}){
+    const out=new Map(),target=normalizeNode(st,p,FLOOR);
+    for(const [dx,dy] of FLOOR_DIRS){
+      const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),FLOOR);
+      if(!nodeWalkable(st,q,agent))continue;
+      const diagonal=dx!==0&&dy!==0;
+      if(diagonal){
+        if(diagonalFloorContactStatus(st,target,q)!=='candidate')continue;
+      }else if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,target,q))continue;
+      out.set(nodeKey(st,q),q);
+    }
+    if(includeSelf&&nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);
+    return [...out.values()];
+  }
+  function surfaceLocalReachNodes(st,node,agent){
+    const target=normalizeNode(st,node),out=new Map();
+    if(nodeWalkable(st,target,agent))out.set(nodeKey(st,target),target);
+    for(const [dx,dy] of FLOOR_DIRS){
+      const q=normalizeNode(st,localPos(target.x+dx,target.y+dy,zOf(target)),target.surfaceId);
+      if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);
+    }
+    return [...out.values()];
+  }
   function crossSurfaceContactNodes(st,node,agent,affordance){
     if(!agent||agent.kind!=='human')return [];
     const target=normalizeNode(st,node),entry=surfaceEntry(st,target.surfaceId);if(!entry)return [];
     const allowed=new Set(['pickup','serve','eatFrom','drinkFrom','fill','takeResource','deposit','receive','default']);if(!allowed.has(affordance))return [];
-    const out=[];for(const [dx,dy] of DIRS){const p=localPos(target.x+dx,target.y+dy,zOf(target));if(isFootprintCell(entry,p))continue;const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,target,q)))out.push(q);}return out;
+    const projected=normalizeNode(st,target,FLOOR),out=[];
+    for(const [dx,dy] of FLOOR_DIRS){
+      const p=localPos(target.x+dx,target.y+dy,zOf(target));if(isFootprintCell(entry,p))continue;
+      const q=normalizeNode(st,p,FLOOR);if(!nodeWalkable(st,q,agent))continue;
+      const diagonal=dx!==0&&dy!==0;
+      if(diagonal){
+        if(diagonalFloorContactStatus(st,projected,q)!=='candidate')continue;
+      }else if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,projected,q))continue;
+      out.push(q);
+    }
+    return out;
+  }
+  function outsideContactFloorNodes(st,entry,agent){
+    const out=new Map();
+    for(const cell of entry.surface.cells||[])for(const [dx,dy] of FLOOR_DIRS){
+      const p=localPos(cell.x+dx,cell.y+dy,zOf(cell));if(isFootprintCell(entry,p))continue;
+      const q=normalizeNode(st,p,FLOOR);if(!nodeWalkable(st,q,agent))continue;
+      const projected=normalizeNode(st,cell,FLOOR),diagonal=dx!==0&&dy!==0;
+      if(diagonal){
+        if(diagonalFloorContactStatus(st,projected,q)!=='candidate')continue;
+      }else if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,projected,q))continue;
+      out.set(nodeKey(st,q),q);
+    }
+    return [...out.values()];
   }
   function supportContactNodes(st,supportId,agent){
     const f=st.furniture?.[supportId],entry=f?.spatial?.surface;if(!f)return [];
     const out=new Map();
-    if(entry){for(const q of outsidePerimeterFloorNodes(st,{furniture:f,surface:entry},agent))out.set(nodeKey(st,q),q);for(const c of entry.cells||[]){const q=normalizeNode(st,c,entry.id);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}}
-    else for(const p of baseInteractionGeometry(st,{kind:'furniture',id:supportId},agent,'default').positions||[]){const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}
+    if(entry){
+      for(const q of outsideContactFloorNodes(st,{furniture:f,surface:entry},agent))out.set(nodeKey(st,q),q);
+      for(const cell of entry.cells||[]){const q=normalizeNode(st,cell,entry.id);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}
+    }else for(const p of baseInteractionGeometry(st,{kind:'furniture',id:supportId},agent,'default').positions||[]){
+      const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);
+    }
     return [...out.values()];
   }
   function dedupeNodes(st,list){const out=new Map();for(const p of list||[]){const n=normalizeNode(st,p);if(n)out.set(nodeKey(st,n),n);}return [...out.values()];}
@@ -443,6 +568,14 @@
       }
       if(rule?.mode==='reach')return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};
       const legacy=baseInteractionGeometry(st,target,agent,affordance);return {...legacy,positions:(legacy.positions||[]).map(p=>normalizeNode(st,p,FLOOR))};
+    }
+    if(target.kind==='source'){
+      const src=st.sources?.[target.id],node=objectNode(st,target.id);if(!src||!node)return {mode:'none',positions:[],target,affordance};
+      const rule=src.interactions?.[affordance]||src.interactions?.default||null;
+      if(rule?.mode==='reach'){
+        const positions=node.surfaceId===FLOOR?floorReachNodes(st,node,agent):surfaceLocalReachNodes(st,node,agent);
+        return {mode:'reach',positions,target,affordance};
+      }
     }
     const legacy=baseInteractionGeometry(st,target,agent,affordance);return {...legacy,positions:(legacy.positions||[]).map(p=>normalizeNode(st,p,FLOOR))};
   }
