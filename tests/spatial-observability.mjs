@@ -33,6 +33,14 @@ const humanUnder=SP.nodeObservation(st,{x:5,y:2,surfaceId:'floor'},zhen);
 assert.equal(humanUnder.walkable,true,'metric partial-tile geometry leaves enough standing space beside the tabletop projection');
 assert.equal(humanUnder.requiredClearance,1.65);
 
+const originalZhenPosition={...zhen.position},originalZhenPosture={...zhen.posture},chairSeat=SP.getSlot(st,'chairNE:seat');
+zhen.position={...chairSeat.position};
+zhen.posture={kind:'sitting',slotId:chairSeat.id,furnitureId:chairSeat.furnitureId};
+assert.equal(SP.describePlace(st,zhen),'餐椅 B・座位','slot-bound Agent place description must use the exact Slot identity instead of coarse floor geometry');
+assert.ok(!SP.describePlace(st,zhen).includes('所在格的地面'));
+assert.ok(!SP.describePlace(st,zhen).includes('下'));
+zhen.position=originalZhenPosition;zhen.posture=originalZhenPosture;
+
 orange.position={...SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')};
 orange.action={kind:'wander',phase:'move',spatialGoal:{...SP.normalizeNode(st,{x:6,y:2},'diningTable:surface')},lastPath:[SP.normalizeNode(st,{x:4,y:2},'floor'),SP.normalizeNode(st,{x:5,y:2},'diningTable:surface')]};
 obs=SP.agentObservation(st,orange);
