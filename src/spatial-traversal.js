@@ -443,8 +443,9 @@
     return extent;
   }
   function cardinalCornerContactStatus(st,a,b,corner){
-    const left=normalizeNode(st,a,FLOOR),right=normalizeNode(st,b,FLOOR),edges=contactEdgeNames(left,right);
-    if(!left||!right||!edges||zOf(left)!==zOf(right))return 'unsupported';
+    const left=normalizeNode(st,a,FLOOR),right=normalizeNode(st,b,FLOOR);
+    if(!left||!right||zOf(left)!==zOf(right))return 'unsupported';
+    const edges=contactEdgeNames(left,right);if(!edges)return 'unsupported';
     if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,left,right))return 'blocked';
     const leftGeometry=floorGeometry(st,left),rightGeometry=floorGeometry(st,right);
     if(leftGeometry.regionCount>1||rightGeometry.regionCount>1)return 'unsupported';
@@ -566,13 +567,13 @@
         if(c.supportId)return {mode:'supportReach',positions:supportContactNodes(st,c.supportId,agent),target,affordance,supportId:c.supportId};
         return {mode:'reach',positions:dedupeNodes(st,[...local,...cross]),target,affordance,surfaceId:node.surfaceId};
       }
-      if(rule?.mode==='reach')return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};
+      if(rule?.mode==='reach'||(!rule&&!c.supportId))return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};
       const legacy=baseInteractionGeometry(st,target,agent,affordance);return {...legacy,positions:(legacy.positions||[]).map(p=>normalizeNode(st,p,FLOOR))};
     }
     if(target.kind==='source'){
       const src=st.sources?.[target.id],node=objectNode(st,target.id);if(!src||!node)return {mode:'none',positions:[],target,affordance};
-      const rule=src.interactions?.[affordance]||src.interactions?.default||null;
-      if(rule?.mode==='reach'){
+      const rule=src.interactions?.[affordance]||src.interactions?.default||null,ports=(src.interactionPorts||[]).filter(port=>!port.affordances?.length||port.affordances.includes(affordance));
+      if(rule?.mode==='reach'||(!rule&&!ports.length)){
         const positions=node.surfaceId===FLOOR?floorReachNodes(st,node,agent):surfaceLocalReachNodes(st,node,agent);
         return {mode:'reach',positions,target,affordance};
       }

@@ -10,6 +10,9 @@ loadRuntimeProfile([
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
+assert.equal(E.VERSION,'11.32.0-contact-slot-corner');
+assert.equal(SP.VERSION,'11.32.0-contact-slot-corner');
+assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
 
 function openFixture(){
   E.reset(20260927);
@@ -63,6 +66,45 @@ function openFixture(){
   st.map.boundaries['0|h:1,2']={id:'h:1,2',kind:'wall'};
   const contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
   assert.equal(hasNode(st,contact.positions,cornerNode),false,'two blocked incident sides must seal the shared corner for Contact');
+}
+
+{
+  const {st,human,target,cornerNode}=openFixture();
+  st.map.boundaries['0|v:2,1']={id:'v:2,1',kind:'opening'};
+  st.doors.closedNorth={id:'closedNorth',boundary:{z:0,id:'v:2,1'},state:'closed'};
+  const contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
+  assert.ok(hasNode(st,contact.positions,cornerNode),'one closed Door side must still allow diagonal Contact through the other confirmed opening');
+}
+
+{
+  const {st,human,target,cornerNode}=openFixture();
+  st.furniture.northNib={id:'northNib',footprint:[{x:2,y:1,z:0}],slots:[],spatial:{solids:[{key:'nib',layerZ:0,bounds:{x:2,y:1.8,z:0,width:.2,depth:.2,height:1}}]}};
+  let contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
+  assert.ok(hasNode(st,contact.positions,cornerNode),'Furniture blocking one L-shaped corner path must still allow Contact through the other path');
+  st.furniture.westNib={id:'westNib',footprint:[{x:1,y:2,z:0}],slots:[],spatial:{solids:[{key:'nib',layerZ:0,bounds:{x:1.8,y:2,z:0,width:.2,depth:.2,height:1}}]}};
+  contact=SP.interactionGeometry(st,{kind:'agent',id:target.id},human,'default');
+  assert.equal(hasNode(st,contact.positions,cornerNode),false,'Furniture sealing both L-shaped corner paths must block diagonal Contact');
+}
+
+{
+  const {st,human,targetNode,cornerNode}=openFixture();
+  st.agents.zhou.offMap=true;
+  st.containers.defaultReach={id:'defaultReach',name:'default reach',portable:true,capacity:1,contents:{},position:{...targetNode}};
+  let geometry=SP.interactionGeometry(st,{kind:'object',id:'defaultReach'},human,'default');
+  assert.equal(geometry.mode,'reach');
+  assert.ok(hasNode(st,geometry.positions,cornerNode),'generic object default reach must use the same diagonal Contact helper');
+  st.sources.defaultReachSource={id:'defaultReachSource',name:'default source',position:{...targetNode},blocksMovement:false};
+  geometry=SP.interactionGeometry(st,{kind:'source',id:'defaultReachSource'},human,'default');
+  assert.equal(geometry.mode,'reach');
+  assert.ok(hasNode(st,geometry.positions,cornerNode),'generic source default reach must use the same diagonal Contact helper');
+  st.sources.cornerPort={id:'cornerPort',name:'corner port',position:{...targetNode},blocksMovement:false,interactions:{default:{mode:'port'}},interactionPorts:[{id:'cornerPort:south',position:{x:1,y:2,z:0},affordances:['default']}]};
+  geometry=SP.interactionGeometry(st,{kind:'source',id:'cornerPort'},human,'default');
+  assert.equal(geometry.mode,'port');
+  assert.equal(hasNode(st,geometry.positions,cornerNode),false,'port must remain authored-port-only instead of inheriting diagonal reach');
+  st.containers.cornerOccupy={id:'cornerOccupy',name:'corner occupy',portable:true,capacity:1,contents:{},position:{...targetNode},interactions:{default:{mode:'occupy'}}};
+  geometry=SP.interactionGeometry(st,{kind:'object',id:'cornerOccupy'},human,'default');
+  assert.equal(geometry.mode,'occupy');
+  assert.equal(hasNode(st,geometry.positions,cornerNode),false,'occupy must remain exact-position geometry');
 }
 
 function slotFixture(edges=['north','west']){
