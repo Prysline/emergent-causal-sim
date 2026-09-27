@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
@@ -12,7 +13,9 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
+const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial;
+const reportedWorld=JSON.parse(fs.readFileSync(new URL('./fixtures/action-spatial-target-consumers.world.json',import.meta.url),'utf8'));
+E.configureResetStateSource('reported-world-action-spatial-target-consumers',seed=>W.createInitialStateFromAuthoring(reportedWorld,seed));
 const calm=(a,{social=8,thirst=8}={})=>{Object.assign(a.needs,{hunger:8,thirst,fatigue:8,sleepNeed:8,social});a.action=null;a.activeIntent=null;a.offMap=false;};
 function bindToSlot(st,a,slotId,posture='sitting'){
   const slot=SP.getSlot(st,slotId);assert.ok(slot,slotId+' must exist');
@@ -23,6 +26,12 @@ function addHuman(st,id,name,position){
   const a=structuredClone(st.agents.zhou);a.id=id;a.name=name;a.position={...position};a.posture={kind:'standing',slotId:null,furnitureId:null};a.action=null;a.activeIntent=null;a.offMap=false;a.episodicMemories=[];a.relationships={};a.observedSocialBids=[];st.agents[id]=a;return a;
 }
 function eventByAction(st,action){return st.events.find(e=>e.data?.action===action);}
+
+// The fixture is the user-reported World Authoring scene. Its original v10 catalog pin was advanced to v11 only; furniture/resident geometry is unchanged.
+assert.equal(reportedWorld.furniture.chairNW.origin.x,3);
+assert.equal(reportedWorld.furniture.chairNE.origin.x,6);
+assert.equal(reportedWorld.furniture.chairNW.orientation,'east');
+assert.equal(reportedWorld.furniture.chairNE.orientation,'west');
 
 // All four differently oriented dining chairs resolve to reachable approach nodes.
 E.reset(20260911);
