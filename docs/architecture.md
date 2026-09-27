@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.32.0-contact-slot-corner`。
+目前 runtime marker：`11.33.0-pose-envelope-static-fit`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -687,11 +687,11 @@ v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route met
 - **objective 與 tie-break**：route primary objective仍是 `traversalCost`；v11.24.0 起 primary cost 已包含 mode traversal burden 與 mode-transition burden。只有 primary cost 同分時，才以 executable `travelTime`、transition數、mode rank作 deterministic tie-break。這些都是客觀 execution facts，不是人格偏好。
 - **timing truth**：v11.30.0 起 movement timing 由實際 `distanceMeters / speedFactor` 推導；同 mode 連續 edge 的 fractional requirement以 Action-scoped `locomotionCredit` 延續，避免 diagonal 每 edge各自向上取整。route `travelTime` 與 core movement共用同一 timing facts，mode transition仍額外支付明確 tick並清除 credit。
 - **execution boundary**：core `moveToward()` 仍是單一 movement owner；所有既有 Action透過 `moveToExact / moveToInteraction` 共用同一 locomotion lifecycle，不建立 crawl-specific Action type。multi-tick edge進度暫存在 current Action 的 `locomotionStep`，不是 persistent route cache。
-- **occupancy vs walk feasibility**：`SP.nodeWalkable(...)` 保留「walk 是否可進入該 node」語意；`SP.nodeLocomotionAccessible(...)` 只判 node 結構上是否可被 locomotion state佔據。`spatial.node` Validator使用後者，避免低姿勢合法停留被 walk-only clearance誤判。這不是 PoseEnvelope/static-fit；current occupancy仍不宣稱有完整靜態 body bounds。
+- **occupancy vs walk feasibility**：`SP.nodeWalkable(...)` 保留「walk 是否可進入該 node」語意；`SP.nodeLocomotionAccessible(...)` 只判 node 結構上是否可被 locomotion state佔據。`spatial.node` Validator使用後者，避免低姿勢合法停留被 walk-only clearance誤判。這不是 PoseEnvelope/static-fit；`11.33.0-pose-envelope-static-fit` 只對 sitting / lying 的單一 Slot 使用位置提供獨立 static-fit contract，普通 traversal occupancy 仍不宣稱有完整靜態 body obstruction。
 - **arrival semantics**：crawl抵達後 posture不自動改回 standing；完成 Action只清除 active locomotion phase。下一次需要其他 mode時再支付 transition，避免在低矮幾何中出現免費站立。
 - **observability / validation**：Locomotion Debug顯示 posture、active mode、phase、speedFactor、edge ticks與 pending edge；Validator檢查 locomotion phase、posture/mode一致性與 pending step timing，不建立第二份 UI truth。
 - **心理層明確未接線**：v11.19 只會依 objective route facts選擇 physically executable mode。Relationship、Memory、traits、goal pressure、discomfort / embarrassment / dirt aversion尚未參與「願不願意爬」；它們未來只能影響 behavioral choice，不能回寫 Physical feasibility或把客觀 travel time變成零。
-- **仍未包含**：PoseEnvelope/static fit、length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。Dynamic Congestion 已由下一節接線；現有 exertion仍維持 per-edge parity，避免本 slice偷改 energy balance。
+- **Locomotion 本身仍未包含**：length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。PoseEnvelope/static fit 已於 `11.33.0-pose-envelope-static-fit` 由獨立 Physical + Furniture Slot contract 接線，不併入 locomotion mode feasibility。Dynamic Congestion 已由下一節接線；現有 exertion仍維持 per-edge parity，避免本 slice偷改 energy balance。
 
 ### Dynamic Congestion
 
