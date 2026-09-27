@@ -54,6 +54,7 @@ jobs:
       - run: node tests/spatial-floor-boundaries.mjs
       - run: node tests/surface-liquid-foundation.mjs
       - run: node tests/physical-profile-foundation.mjs
+      - run: node tests/pose-envelope-static-fit.mjs
       - run: node tests/passage-profile-multimode.mjs
       - run: node tests/runtime-horizontal-passage-maneuver.mjs
       - run: node tests/route-semantics.mjs
