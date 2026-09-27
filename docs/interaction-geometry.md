@@ -43,7 +43,8 @@ isAtInteraction(state, agent, target, affordance)
 Interaction Geometry 不只屬於 Action 的最後移動階段。只要 consumer 正在判斷「能否接近某個互動目標」或比較互動目標的客觀 access cost，initial chooser、Intent deliberation、hard replan、Memory target evaluation 與 Action execution 都必須使用同一份 geometry：
 
 - Object / Source / Agent 不得直接以 entity `position` 做 interaction reachability / ranking shortcut；
-- slot-bound Agent 的 coarse `position` 仍是 Slot anchor，social contact 必須走 `socialReach → agentContactNodes() → slotApproachNodes()`；
+- slot-bound **target** Agent 的 coarse `position` 仍是 Slot anchor，social contact 必須走 `socialReach → agentContactNodes() → slotApproachNodes()`；
+- slot-bound **actor** 的 coarse `position` 也不是 locomotion route origin。Interaction winner scoring 必須從合法 `slotEgressNodes()` 做 multi-source access query；execution 離座時選同一 target-compatible egress。若 actor 在目前 Slot posture 已經能直接 interaction，該 current-contact 仍是 0-cost candidate且不得強制 egress；
 - target ranking 若只需要 winner + 客觀成本，優先使用 `bestInteractionPositionResult(...)` 已算出的 canonical `traversalCost`；
 - Action 真正移動時仍重新查詢當下 geometry，不把較早的 winner 或 route 永久快取；
 - Furniture Slot 的坐／躺／睡／用餐 settle 是獨立 Slot contract：先 route 到合法 Slot approach，再 settle；不能把 Slot anchor 當 floor route destination。
