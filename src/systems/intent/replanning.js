@@ -13,8 +13,9 @@
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
   function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
   function cleanupForInterruption(st,a){clearAgentReservations(st,a);dropHeld(st,a);a.action=null;}
-  function nearestAgent(st,a,kind,{awakeOnly=false}={}){return Object.values(st.agents||{}).filter(x=>x.id!==a.id&&!x.offMap&&x.kind===kind&&(!awakeOnly||!E.isSleeping(x))).map(x=>({x,d:SP.pathDistance(st,a,x.position)})).filter(x=>Number.isFinite(x.d)).sort((p,q)=>p.d-q.d)[0]?.x||null;}
-  function nearestDrinkContainer(st,a,resource){return Object.values(st.containers||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[resource]||0)>.05).map(c=>{const goal=SP.bestInteractionPosition(st,a,{kind:'object',id:c.id},'drinkFrom');return goal?{c,d:SP.pathDistance(st,a,goal)}:null;}).filter(x=>x&&Number.isFinite(x.d)).sort((p,q)=>p.d-q.d)[0]?.c||null;}
+  function interactionTraversalCost(st,a,target,affordance='default'){if(typeof SP.bestInteractionPositionResult==='function')return SP.bestInteractionPositionResult(st,a,target,affordance)?.traversalCost??Infinity;const goal=SP.bestInteractionPosition(st,a,target,affordance);return goal?(SP.traversalCost?.(st,a,goal)??SP.pathDistance(st,a,goal)):Infinity;}
+  function nearestAgent(st,a,kind,{awakeOnly=false}={}){return Object.values(st.agents||{}).filter(x=>x.id!==a.id&&!x.offMap&&x.kind===kind&&(!awakeOnly||!E.isSleeping(x))).map(x=>({x,d:interactionTraversalCost(st,a,{kind:'agent',id:x.id},'social')})).filter(x=>Number.isFinite(x.d)).sort((p,q)=>p.d-q.d||String(p.x.id).localeCompare(String(q.x.id)))[0]?.x||null;}
+  function nearestDrinkContainer(st,a,resource){return Object.values(st.containers||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[resource]||0)>.05).map(c=>{const d=interactionTraversalCost(st,a,{kind:'object',id:c.id},'drinkFrom');return Number.isFinite(d)?{c,d}:null;}).filter(Boolean).sort((p,q)=>p.d-q.d||String(p.c.id).localeCompare(String(q.c.id)))[0]?.c||null;}
   function buildAction(st,a,actionKindValue,{targetAgent=null}={}){
     if(!E.buildAction)return null;
     const choice={id:actionKindValue};
