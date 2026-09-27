@@ -2,7 +2,8 @@
   const E=window.SimEngine,SP=window.SimSpatial,V=window.SimValidator;if(!E||!SP||!V)return;
   const UI=window.SimUI=window.SimUI||{};
   const inspectorDecorators=new Map(),startupExtensions=new Map();
-  let selected=null,timer=null,manualBatch=null,batchGeneration=0,mobileView='map',logMode='summary',currentZ=0,started=false;
+  let selected=null,autoplay=null,autoplayGeneration=0,manualBatch=null,batchGeneration=0,mobileView='map',logMode='summary',currentZ=0,started=false;
+  const AUTOPLAY_INTERVAL_MS=700;
   const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const st=()=>E.getState(),zOf=p=>SP.zOf?.(p)??p?.z??0,posText=p=>p?`(${p.x}, ${p.y}, Z ${zOf(p)})`:'無',fmtLoad=v=>Math.round((v||0)*100)/100,isMobile=()=>matchMedia('(max-width:720px)').matches;
   const sum=o=>Object.values(o||{}).reduce((a,b)=>a+b,0),NEED_SHORT_ZH={hunger:'飢餓',thirst:'口渴',fatigue:'疲勞',sleepNeed:'睡意',social:'社交'};
@@ -117,17 +118,17 @@
     button.textContent=manualBatch?`執行中 ${manualBatch.completed}/${manualBatch.total}`:'10 步';
   }
   function syncControlState(){
-    const batch=!!manualBatch,autoplay=!!timer,workspace=document.querySelector('.workspace');
-    setDisabled('step',batch||autoplay);setDisabled('step10',batch||autoplay);setDisabled('play',batch);setDisabled('reset',false);
+    const batch=!!manualBatch,playing=!!autoplay,workspace=document.querySelector('.workspace');
+    setDisabled('step',batch||playing);setDisabled('step10',batch||playing);setDisabled('play',batch);setDisabled('reset',false);
     setDisabled('runtimeLayerSelect',batch||runtimeZLevels().length<=1);setDisabled('showThoughts',batch);
     setDisabled('loadSocialScenario',batch);setDisabled('socialScenario',batch);
     if(workspace){workspace.inert=batch;if(batch)workspace.setAttribute('aria-busy','true');else workspace.removeAttribute('aria-busy');}
     updateBatchProgress();
   }
-  function manualStep(){if(manualBatch||timer)return false;stepOne();return true;}
+  function manualStep(){if(manualBatch||autoplay)return false;stepOne();return true;}
   function yieldToBrowser(){return new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));}
   async function runManualBatch(total=10){
-    if(manualBatch||timer||!Number.isInteger(total)||total<1)return false;
+    if(manualBatch||autoplay||!Number.isInteger(total)||total<1)return false;
     const context={token:++batchGeneration,total,completed:0,intermediate:true};
     manualBatch=context;syncControlState();
     try{
@@ -149,14 +150,42 @@
     }
   }
   function invalidateManualBatch(){batchGeneration++;manualBatch=null;}
+  function stopAutoplay(){
+    const context=autoplay;if(!context)return false;
+    autoplayGeneration++;
+    if(context.timeoutId!==null)clearTimeout(context.timeoutId);
+    if(context.frameId!==null)cancelAnimationFrame(context.frameId);
+    autoplay=null;$('play').textContent='▶ 開始';syncControlState();return true;
+  }
+  function scheduleAutoplay(context,delayMs){
+    if(autoplay!==context||context.token!==autoplayGeneration)return false;
+    context.timeoutId=setTimeout(()=>{
+      if(autoplay!==context||context.token!==autoplayGeneration)return;
+      context.timeoutId=null;
+      const startedAt=performance.now();
+      stepOne();
+      if(autoplay!==context||context.token!==autoplayGeneration)return;
+      context.frameId=requestAnimationFrame(()=>{
+        if(autoplay!==context||context.token!==autoplayGeneration)return;
+        context.frameId=requestAnimationFrame(()=>{
+          context.frameId=null;
+          if(autoplay!==context||context.token!==autoplayGeneration)return;
+          const elapsed=performance.now()-startedAt,remaining=Math.max(0,AUTOPLAY_INTERVAL_MS-elapsed);
+          scheduleAutoplay(context,remaining);
+        });
+      });
+    },Math.max(0,Number(delayMs)||0));
+    return true;
+  }
   function togglePlay(){
     if(manualBatch)return false;
-    if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';syncControlState();return false;}
-    $('play').textContent='⏸ 暫停';timer=setInterval(stepOne,700);syncControlState();return true;
+    if(autoplay){stopAutoplay();return false;}
+    const context={token:++autoplayGeneration,timeoutId:null,frameId:null};
+    autoplay=context;$('play').textContent='⏸ 暫停';syncControlState();scheduleAutoplay(context,AUTOPLAY_INTERVAL_MS);return true;
   }
   function reset(){
     invalidateManualBatch();
-    if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 開始';}
+    stopAutoplay();
     selected=null;E.reset(Number($('seedInput').value)||20260911);normalizeCurrentZ();syncControlState();render();
   }
   function bindEvents(){

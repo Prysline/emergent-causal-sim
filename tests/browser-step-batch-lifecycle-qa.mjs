@@ -37,14 +37,19 @@ async function installProbe(){
     if(window.__batchLifecycleProbe)return;
     const E=window.SimEngine;
     const data={rafCount:0,ticks:[],mutations:{mobile:0,map:0,actions:0,timeline:0,inspector:0}};
-    let running=true;
+    let running=true,autoplayStopTick=null;
     function frame(){data.rafCount++;if(running)requestAnimationFrame(frame);}
     requestAnimationFrame(frame);
 
     const originalTick=E.tick;
     E.tick=function(...args){
       data.ticks.push({before:E.getState().tick,rafCount:data.rafCount});
-      return originalTick.apply(this,args);
+      const result=originalTick.apply(this,args);
+      if(autoplayStopTick!==null&&E.getState().tick>=autoplayStopTick){
+        autoplayStopTick=null;
+        queueMicrotask(()=>document.getElementById('play')?.click());
+      }
+      return result;
     };
 
     const observers=[];
@@ -57,8 +62,9 @@ async function installProbe(){
 
     window.__batchLifecycleProbe={
       snapshot:()=>structuredClone(data),
-      reset(){data.ticks.length=0;for(const key of Object.keys(data.mutations))data.mutations[key]=0;},
-      stop(){running=false;for(const observer of observers)observer.disconnect();E.tick=originalTick;}
+      reset(){data.ticks.length=0;autoplayStopTick=null;for(const key of Object.keys(data.mutations))data.mutations[key]=0;},
+      setAutoplayStopTick(tick){autoplayStopTick=Number(tick);},
+      stop(){running=false;autoplayStopTick=null;for(const observer of observers)observer.disconnect();E.tick=originalTick;}
     };
   });
 }
@@ -249,7 +255,19 @@ try{
   assert.equal(cancelled.progress,'10 步');
   assert.match(cancelled.tickLabel,/Tick 0/,'stale batch continuation must not perform a final render');
 
+  const autoplayReference=await page.evaluate(seed=>{
+    const E=window.SimEngine;
+    E.reset(seed);
+    E.tick();
+    E.tick();
+    return {stateJson:JSON.stringify(E.getState()),rng:E.getState().rngState,tick:E.getState().tick};
+  },seed);
+  assert.equal(autoplayReference.tick,2);
+
   await resetThroughUi();
+  await page.evaluate(()=>window.__batchLifecycleProbe.reset());
+  const autoplayInitialRaf=await page.evaluate(()=>window.__batchLifecycleProbe.snapshot().rafCount);
+  await page.evaluate(()=>window.__batchLifecycleProbe.setAutoplayStopTick(2));
   await page.click('#play');
   const autoplay=await page.evaluate(()=>({
     step:document.getElementById('step').disabled,
@@ -263,16 +281,45 @@ try{
   assert.equal(autoplay.play,false,'play must remain available as pause during autoplay');
   assert.equal(autoplay.reset,false);
   assert.match(autoplay.playText,/暫停/);
-  await page.waitForFunction(()=>window.SimEngine.getState().tick>=1);
-  await page.click('#play');
-  const pausedTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  await page.waitForFunction(()=>window.SimEngine.getState().tick===2&&document.getElementById('play').textContent.includes('開始'));
+  await settleFrames(2);
+  const autoplayCompleted=await page.evaluate(()=>({
+    tick:window.SimEngine.getState().tick,
+    rng:window.SimEngine.getState().rngState,
+    stateJson:JSON.stringify(window.SimEngine.getState()),
+    probe:window.__batchLifecycleProbe.snapshot(),
+    playText:document.getElementById('play').textContent
+  }));
+  assert.equal(autoplayCompleted.tick,2,'autoplay pause must stop at the observed target tick without an overdue catch-up tick');
+  assert.equal(autoplayCompleted.probe.ticks.length,2,'autoplay must execute exactly two complete E.tick calls in the lifecycle probe');
+  assert.ok(autoplayCompleted.probe.ticks[0].rafCount>=autoplayInitialRaf,'first autoplay tick may begin after the initial delay without requiring a new frame assertion');
+  assert.ok(autoplayCompleted.probe.ticks[1].rafCount>=autoplayCompleted.probe.ticks[0].rafCount+2,'two browser animation-frame opportunities must occur between autoplay tick callbacks');
+  assert.equal(autoplayCompleted.stateJson,autoplayReference.stateJson,'completion-aware autoplay must preserve canonical state parity for the same tick count');
+  assert.equal(autoplayCompleted.rng,autoplayReference.rng,'completion-aware autoplay must preserve RNG parity for the same tick count');
+  assert.match(autoplayCompleted.playText,/開始/);
+  const pausedTick=autoplayCompleted.tick;
   await page.waitForTimeout(850);
   assert.equal(await page.evaluate(()=>window.SimEngine.getState().tick),pausedTick,'autoplay pause must stop the only active tick source');
+
+  await resetThroughUi();
+  await page.click('#play');
+  await page.click('#reset');
+  await page.waitForTimeout(850);
+  const resetAutoplay=await page.evaluate(()=>({
+    tick:window.SimEngine.getState().tick,
+    playText:document.getElementById('play').textContent,
+    stepDisabled:document.getElementById('step').disabled,
+    step10Disabled:document.getElementById('step10').disabled
+  }));
+  assert.equal(resetAutoplay.tick,0,'reset must cancel the pending autoplay callback');
+  assert.match(resetAutoplay.playText,/開始/);
+  assert.equal(resetAutoplay.stepDisabled,false);
+  assert.equal(resetAutoplay.step10Disabled,false);
 
   assert.deepEqual(pageErrors,[],'batch lifecycle QA must have no page errors');
   assert.deepEqual(consoleErrors,[],'batch lifecycle QA must have no console errors');
 
-  const report={generatedAt:new Date().toISOString(),reference:{tick:reference.tick,rng:reference.rng},completed:{tick:completed.tick,mutations:completed.probe.mutations,ticks:completed.probe.ticks},cancelled:{tick:cancelled.tick},pageErrors,consoleErrors};
+  const report={generatedAt:new Date().toISOString(),reference:{tick:reference.tick,rng:reference.rng},completed:{tick:completed.tick,mutations:completed.probe.mutations,ticks:completed.probe.ticks},cancelled:{tick:cancelled.tick},autoplay:{tick:autoplayCompleted.tick,ticks:autoplayCompleted.probe.ticks},pageErrors,consoleErrors};
   fs.writeFileSync(outDir+'/result.json',JSON.stringify(report,null,2));
   console.log('Batch-step lifecycle QA: atomic ticks + yielding + cancellation + presentation parity ok');
 } finally {

@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.31.0-crowding-8-direction';
+const APP_VERSION='11.31.1-autoplay-completion-aware';
 const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
 const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;

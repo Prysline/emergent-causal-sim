@@ -38,6 +38,15 @@ await page.addInitScript(()=>{
   };
 });
 
+await page.route('**/src/ui/core.js',async route=>{
+  const response=await route.fetch();
+  let body=await response.text();
+  const anchor="function stepOne(){E.tick();render();}";
+  if(!body.includes(anchor))throw new Error('autoplay performance stepOne instrumentation anchor missing');
+  body=body.replace(anchor,"function stepOne(){const __start=performance.now();try{E.tick();render();}finally{const __tick=E.getState()?.tick??null;globalThis.__stepBatchStepOneProbe?.(__start,performance.now(),__tick);if(globalThis.__stepBatchAutoplayTargetTick&&__tick>=globalThis.__stepBatchAutoplayTargetTick)queueMicrotask(()=>document.getElementById('play')?.click());}}");
+  await route.fulfill({response,body});
+});
+
 await page.route('**/src/runtime-hook-pipeline.js',async route=>{
   const response=await route.fetch();
   let body=await response.text();
@@ -87,7 +96,8 @@ async function installInstrumentation(){
       queries:{},
       domWrites:{},
       longTasks:[],
-      longTaskSupported:false
+      longTaskSupported:false,
+      stepOne:[]
     };
 
     function row(store,name){
@@ -118,6 +128,16 @@ async function installInstrumentation(){
         finally{record(data.queries,label||name,performance.now()-start);}
       };
     }
+
+    window.__stepBatchStepOneProbe=(start,end,tick)=>{
+      const rec={startMs:start,endMs:end,durationMs:end-start,tick,firstTimerOpportunityMs:null,firstFrameMs:null,usableFrameMs:null};
+      data.stepOne.push(rec);
+      setTimeout(()=>{rec.firstTimerOpportunityMs=performance.now()-start;},0);
+      requestAnimationFrame(()=>{
+        rec.firstFrameMs=performance.now()-start;
+        requestAnimationFrame(()=>{rec.usableFrameMs=performance.now()-start;});
+      });
+    };
 
     const originalTick=E.tick;
     E.tick=function(...args){
@@ -175,6 +195,8 @@ async function installInstrumentation(){
         clearStore(data.queries);
         clearStore(data.domWrites);
         data.longTasks.length=0;
+        data.stepOne.length=0;
+        window.__stepBatchAutoplayTargetTick=null;
         window.__stepBatchPipelineProbe?.reset();
       },
       snapshot(){
@@ -184,6 +206,7 @@ async function installInstrumentation(){
           domWrites:structuredClone(data.domWrites),
           longTasks:data.longTasks.map(x=>({...x})),
           longTaskSupported:data.longTaskSupported,
+          stepOne:data.stepOne.map(x=>({...x})),
           pipeline:window.__stepBatchPipelineProbe?.snapshot?.()||{},
           tick:E.getState()?.tick??null,
           stateJson:JSON.stringify(E.getState())
@@ -256,6 +279,33 @@ async function runCase(mode,selected){
   };
 }
 
+async function runAutoplayReference(ticks=3){
+  await openCase({selected:false});
+  return page.evaluate(ticks=>{
+    const E=window.SimEngine;
+    for(let i=0;i<ticks;i++)E.tick();
+    return {tick:E.getState().tick,stateJson:JSON.stringify(E.getState()),rng:E.getState().rngState};
+  },ticks);
+}
+
+async function runAutoplayCase(selected,ticks=3){
+  await openCase({selected});
+  const startTick=await page.evaluate(()=>window.SimEngine.getState().tick);
+  const targetTick=startTick+ticks;
+  await page.evaluate(targetTick=>{window.__stepBatchAutoplayTargetTick=targetTick;},targetTick);
+  const start=performance.now();
+  const handlerMs=await page.evaluate(()=>{
+    const start=performance.now();
+    document.getElementById('play').click();
+    return performance.now()-start;
+  });
+  await page.waitForFunction(targetTick=>window.SimEngine.getState().tick===targetTick&&document.getElementById('play').textContent.includes('開始'),targetTick,{timeout:60000});
+  const totalCompletionMs=performance.now()-start;
+  await settleFrames(3);
+  const metrics=await page.evaluate(()=>window.__stepBatchPerf.snapshot());
+  return {mode:'autoplay',selected,startTick,targetTick,handlerMs,totalCompletionMs,metrics};
+}
+
 function assertCase(result,expectedTicks){
   assert.equal(result.metrics.tick,result.startTick+expectedTicks,result.mode+' must advance exact tick count');
   assert.equal(result.metrics.ticks.length,expectedTicks,result.mode+' instrumentation must see every E.tick call');
@@ -294,6 +344,25 @@ try{
   }
 
   for(const [name,result] of Object.entries(results))assertCase(result,result.mode==='single'?1:10);
+
+  const autoplayReference=await runAutoplayReference(3);
+  const autoplayResults={};
+  for(const selected of [false,true]){
+    const suffix=selected?'agent':'none';
+    const result=await runAutoplayCase(selected,3);
+    autoplayResults[suffix]=result;
+    assert.equal(result.metrics.tick,result.targetTick,'autoplay must advance exactly the requested production tick count');
+    assert.equal(result.metrics.ticks.length,3,'autoplay instrumentation must see exactly three E.tick calls');
+    assert.equal(result.metrics.stepOne.length,3,'autoplay must record exactly three complete stepOne callbacks');
+    assert.ok(result.metrics.stepOne.every(x=>Number.isFinite(x.durationMs)&&Number.isFinite(x.firstTimerOpportunityMs)&&Number.isFinite(x.firstFrameMs)&&Number.isFinite(x.usableFrameMs)),'autoplay callbacks must expose callback and frame/timer timing');
+    for(let i=1;i<result.metrics.stepOne.length;i++){
+      const prior=result.metrics.stepOne[i-1],next=result.metrics.stepOne[i];
+      assert.ok(next.startMs>=prior.endMs,'autoplay callbacks must never overlap');
+      assert.ok(prior.startMs+prior.usableFrameMs<=next.startMs,'each completed autoplay callback must expose a usable two-frame browser opportunity before the next callback starts');
+    }
+    assert.equal(result.metrics.stateJson,autoplayReference.stateJson,'autoplay must preserve canonical state parity with the same number of direct ticks');
+  }
+  assert.equal(autoplayResults.none.metrics.stateJson,autoplayResults.agent.metrics.stateJson,'Agent Inspector selection must remain simulation-state inert during autoplay');
 
   assert.equal(
     results.tenSingles_none.metrics.stateJson,
@@ -358,8 +427,14 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.31 render-scoped Validator reuse profile: inside-tick deterministic simulation workload remains unchanged; one full no-selection render performs one validation pass, reducing outside-tick Route/Passage work without changing exact canonical state. Latency remains secondary and runner-dependent.',
+    note:'11.31.1 completion-aware autoplay profile: single/step10 deterministic workload baselines remain unchanged; dedicated autoplay measures complete callbacks, Long Tasks, timer/frame opportunities, query composition, and exact canonical-state parity. Wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
+    autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
+      mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
+      handlerMs:result.handlerMs,totalCompletionMs:result.totalCompletionMs,
+      metrics:{...result.metrics,stateJson:undefined},
+      summary:{stateHash:hashText(result.metrics.stateJson),stateBytes:Buffer.byteLength(result.metrics.stateJson)}
+    }])),
     pageErrors,
     consoleErrors
   };
