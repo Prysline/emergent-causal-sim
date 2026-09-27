@@ -407,10 +407,10 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
-  assert.equal(feasibilityCounts.singleInside,4858,'Slice 5 diagonal Contact must retain the measured single-tick simulation feasibility baseline');
-  assert.equal(feasibilityCounts.singleOutside,2255,'Slice 5 must retain the measured one-pass outside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,14837,'Slice 5 diagonal Contact must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,2036,'Slice 5 must retain the measured step(10) outside-tick baseline');
+  assert.equal(feasibilityCounts.singleInside,5853,'PoseEnvelope static-fit semantics must retain the measured single-tick simulation feasibility baseline');
+  assert.equal(feasibilityCounts.singleOutside,2255,'PoseEnvelope static-fit semantics must retain the measured one-pass outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,16600,'PoseEnvelope static-fit semantics must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,1649,'PoseEnvelope static-fit semantics must retain the measured step(10) outside-tick baseline');
 
   await openCase({selected:false});
   await page.locator('#showThoughts').click();
@@ -427,7 +427,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.32.0 Contact + Slot corner profile: diagonal local Contact legitimately changes interaction candidates and therefore the deterministic route-query composition. PR #141 route-search-local directed-edge feasibility reuse remains intact; this fixture records the new Slice 5 semantic workload while preserving single/step10/autoplay state parity and the existing responsiveness gates. Wall-clock remains secondary and runner-dependent.',
+    note:'11.33.0 PoseEnvelope static-fit profile: posture-fit filtering and the removal of the double-bed human-only proxy legitimately change rest/sleep candidate availability and therefore deterministic route-query composition. PR #141 route-search-local directed-edge feasibility reuse remains intact; this fixture records the new semantic workload while preserving single/step10/autoplay state parity and the existing responsiveness gates. Wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
       mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
