@@ -68,6 +68,7 @@ jobs:
       - run: node tests/crowding-8-direction.mjs
       - run: node tests/action-terminology.mjs
       - run: node tests/action-construction.mjs
+      - run: node tests/action-spatial-target-consumers.mjs
       - run: node tests/active-intent-foundation.mjs
       - run: node tests/social-bid-lifecycle.mjs
       - run: node tests/legacy-pending-interaction-cleanup.mjs
