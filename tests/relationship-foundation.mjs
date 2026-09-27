@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.33.0-pose-envelope-static-fit';
+const APP_VERSION='11.33.1-action-spatial-target-consumers';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,V=globalThis.SimValidator,W=globalThis.SimWorld;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
