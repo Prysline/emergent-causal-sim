@@ -70,12 +70,13 @@ E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   st.agents.zhou.offMap=true;
-  human.position={x:9,y:2};
-  cat.position={x:9,y:3};
-  cat.action={kind:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
   human.needs.sleepNeed=70;
   human.traits.sleepRecoveryRate=0; // 凍結本測試的 sleepNeed，避免同 tick 的正常睡眠恢復改變 wakeChance 基準。
-  putToSleep(st,human,'bed:left',0);
+  const sleepSlot=putToSleep(st,human,'bed:left',0);
+  const contactNode=SP.slotApproachNodes(st,sleepSlot,cat,'walk')[0];
+  assert.ok(contactNode,'bed:left 應提供動物可用的正式接觸／approach node');
+  cat.position={...contactNode};
+  cat.action={kind:'seekHuman',phase:'interact',targetAgent:human.id,started:st.tick,wait:0};
   const before=E.interactionWakeChance(human,34);
   E.tick();
 
