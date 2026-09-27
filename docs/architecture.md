@@ -29,7 +29,7 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v8"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v9"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
 Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
@@ -73,7 +73,7 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 ### Furniture Orientation / Shared Local Transform
 
-Current `furniture-definitions-v8` 將 Definition canonical local orientation 固定為 `south`。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
+Current `furniture-definitions-v9` 將 Definition canonical local orientation 固定為 `south`。 Catalog 的 `cabinet-tall` 是 obstruction-only Definition proof：只有 footprint + metric `spatial.solids`，沒有 Slot / Surface / storage interior，downstream 不新增家具 ID 特判。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
 
 Definition 的 `orientationSemantics` 分為 `facing` 與 `frame`。Directional Furniture 的 `orientation` 表示正面／主要 facing：椅子與沙發是 back → front，床是 head → foot；沒有自然正面的 Furniture 仍保留 quarter-turn frame orientation，但不宣稱有正面。`origin` 不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 透過同一 world→local→world transform 跟隨；slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference。
 
