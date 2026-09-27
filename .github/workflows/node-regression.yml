@@ -50,6 +50,7 @@ jobs:
       - run: node tests/furniture-traversal-geometry.mjs
       - run: node tests/furniture-expansion-high-cabinet.mjs
       - run: node tests/furniture-expansion-stool.mjs
+      - run: node tests/furniture-expansion-small-pet-bed.mjs
       - run: node tests/furniture-orientation.mjs
       - run: node tests/spatial-observability.mjs
       - run: node tests/supported-contact-audit.mjs
