@@ -9,7 +9,7 @@ for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-au
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v9');
+assert.equal(D.VERSION,'furniture-definitions-v10');
 assert.equal(A.VERSION,'world-authoring-v7');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
@@ -26,7 +26,7 @@ assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'exp
 assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
 assert.equal(imported.authoringSchema,'world-authoring-v7');
-assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v9');
+assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v10');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
 assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},orientation:'east',name:'餐椅 A'});
