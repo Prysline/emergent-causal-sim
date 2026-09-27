@@ -27,7 +27,7 @@ const profile=C.defaultPhysicalProfile('human');
 profile.bodyGeometry.height=99;
 assert.equal(C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry.height,1.65,'defaultPhysicalProfile must clone the shared template');
 assert.equal(C.defaultPhysicalProfile('unknown'),null);
-assert.deepEqual(C.getPoseEnvelopeForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'sitting'),{height:.9075000000000001,width:.45,length:.594});
+assert.deepEqual(C.getPoseEnvelopeForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'sitting'),{height:.9075,width:.45,length:.594});
 assert.deepEqual(C.getPoseEnvelopeForKind('cat',C.DEFAULT_PHYSICAL_PROFILES.cat.bodyGeometry,'lying'),{height:.16,width:.22499999999999998,length:.45});
 assert.equal(C.getPoseEnvelopeForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'standing'),null,'standing PoseEnvelope is intentionally not part of Slice 1');
 assert.equal(C.poseEnvelopeFitsUsableSpace({height:.9,width:.45,length:.59},{width:.5,length:.65}),true);
