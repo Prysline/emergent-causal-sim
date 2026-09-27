@@ -89,7 +89,14 @@ E.reset(20260911);
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
   st.containers.mealTray.contents.food=68;
-  slot.approachEdges=[];
+  const exits=SP.slotEgressNodes(st,slot,cat,'walk');
+  assert.ok(exits.length>0,'negative fixture must begin with legal egress nodes');
+  exits.forEach((node,i)=>{
+    const blocker=structuredClone(st.agents.zhen);
+    blocker.id='egressBlocker'+i;blocker.name='出口阻擋 '+i;blocker.offMap=false;blocker.position={...node};
+    blocker.posture={kind:'standing',slotId:null,furnitureId:null};blocker.action=null;blocker.activeIntent=null;
+    st.agents[blocker.id]=blocker;
+  });
   assert.deepEqual(SP.routeOriginsForAgent(st,cat,'walk'),[]);
   assert.equal(SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'mealTray'},'eatFrom'),null);
   assert.equal(E.canSatisfyHunger(cat),false,'global food existence must not count as an executable hunger plan without any egress');
