@@ -7,8 +7,12 @@
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function foodAmount(st){return Object.values(st.containers||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
   function wetTotal(st){return Object.values(st.map?.tiles||{}).reduce((sum,t)=>sum+(SP.tileLiquidAmount?.(t)||0),0);}
+  function interactionTraversalCost(st,a,target,affordance='default'){
+    if(typeof SP.bestInteractionPositionResult==='function')return SP.bestInteractionPositionResult(st,a,target,affordance)?.traversalCost??Infinity;
+    const goal=SP.bestInteractionPosition(st,a,target,affordance);return goal?(SP.traversalCost?.(st,a,goal)??SP.pathDistance(st,a,goal)):Infinity;
+  }
   function nearestAgent(st,a,kind,{awakeOnly=false}={}){
-    return Object.values(st.agents||{}).filter(x=>x.id!==a.id&&!x.offMap&&x.kind===kind&&(!awakeOnly||!E.isSleeping?.(x))).map(x=>({x,d:SP.pathDistance(st,a,x.position)})).filter(x=>Number.isFinite(x.d)).sort((p,q)=>p.d-q.d)[0]?.x||null;
+    return Object.values(st.agents||{}).filter(x=>x.id!==a.id&&!x.offMap&&x.kind===kind&&(!awakeOnly||!E.isSleeping?.(x))).map(x=>({x,d:interactionTraversalCost(st,a,{kind:'agent',id:x.id},'social')})).filter(x=>Number.isFinite(x.d)).sort((p,q)=>p.d-q.d||String(p.x.id).localeCompare(String(q.x.id)))[0]?.x||null;
   }
   function nearestPettableAnimal(a){return E.nearestPettableAnimal?.(a)||null;}
   function resourceExists(st,r){
@@ -17,7 +21,7 @@
   }
   function drinkableContainer(st,a,r){
     return Object.values(st.containers||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[r]||0)>.05&&(!E.holderOf?.(c.id)||E.holderOf(c.id)?.id===a.id)).map(c=>{
-      const goal=SP.bestInteractionPosition(st,a,{kind:'object',id:c.id},'drinkFrom');return goal?{c,d:SP.pathDistance(st,a,goal)}:null;
+      const d=interactionTraversalCost(st,a,{kind:'object',id:c.id},'drinkFrom');return Number.isFinite(d)?{c,d}:null;
     }).filter(x=>x&&Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.c||null;
   }
   function hasHumanDrinkPlan(st,a,r){
