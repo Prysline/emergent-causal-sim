@@ -237,6 +237,8 @@ const spatialUiSource=fs.readFileSync(new URL('../src/ui/spatial/observability.j
 assert.match(spatialUiSource,/registerInspectorDecorator\('spatial\.observability'/,'spatial Inspector must use explicit decorator lifecycle');
 assert.match(spatialUiSource,/Dynamic Congestion/,'Spatial Debug must expose current next-edge congestion');
 assert.doesNotMatch(spatialUiSource,/\['inspector','map','actions'\]/,'spatial DOM observer must no longer own Inspector rendering');
+assert.doesNotMatch(spatialUiSource,/overhead\[0\].*下|name\}下|家具'}下/,'Spatial UI must not reconstruct exact under-furniture wording from coarse covered-node observability');
+assert.match(spatialUiSource,/SP\.describePlace\(s,target\)/,'map titles must consume the canonical place description owner');
 const probeEventId=E.addEvent('presentation event tick probe','system',[],{action:'presentationProbe'});
 assert.equal(st.causes[probeEventId]?.tick,st.tick,'canonical events must preserve creation tick for derived presentation recency');
 E.registerActionLabelResolver('qa.presentation-label',(state,a)=>a?.id==='qa-probe'?'QA presentation label':null,10);
