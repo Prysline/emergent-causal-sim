@@ -1,19 +1,28 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
 import assert from 'node:assert/strict';
+import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-for(const file of ['furniture-definitions.js','embodiment-capabilities.js','world-authoring.js','editor-authoring-mutations.js']){
-  vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
-}
+loadInitialStateProfile([
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js',
+  'systems/physical.js','spatial-passage.js','editor-authoring-mutations.js'
+]);
 
 const D=globalThis.SimFurnitureDefinitions;
 const C=globalThis.SimEmbodimentCapabilities;
 const A=globalThis.SimWorldAuthoring;
+const I=globalThis.SimWorldInitializer;
+const W=globalThis.SimWorld;
+const SP=globalThis.SimSpatial;
 const M=globalThis.SimEditorAuthoringMutations;
 const clone=value=>JSON.parse(JSON.stringify(value));
+const compile=authoring=>{
+  const st=I.createInitialState(authoring,{seed:20260927,version:'test'});
+  W.runInitialStateInitializers(st,{seed:20260927});
+  return st;
+};
 
 assert.equal(D.VERSION,'furniture-definitions-v10');
+assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 
 const definition=D.getDefinition('stool-basic');
 assert.ok(definition,'Furniture Catalog must expose stool-basic');
@@ -34,6 +43,7 @@ assert.deepEqual(seat,{
   usableSpace:{width:.50,length:.65},
   activitySuitability:{rest:.40}
 });
+assert.equal(seat.allowKinds,undefined,'stool must not use species allowKinds as a proxy for physical size');
 
 assert.deepEqual(definition.spatial.solids,[
   {key:'seat',bounds:{x:.28,y:.28,z:.45,width:.44,depth:.44,height:.04}},
@@ -54,17 +64,32 @@ assert.deepEqual(resolved.slots[0].approachEdges,['north','east','south','west']
 assert.equal(resolved.slots[0].restQuality,.40);
 assert.equal(resolved.spatial.surface,undefined);
 
-const human=C.defaultPhysicalProfile('human');
-const cat=C.defaultPhysicalProfile('cat');
-const humanSitting=C.getPoseEnvelopeForKind('human',human.bodyGeometry,'sitting');
-const catSitting=C.getPoseEnvelopeForKind('cat',cat.bodyGeometry,'sitting');
+const humanProfile=C.defaultPhysicalProfile('human');
+const catProfile=C.defaultPhysicalProfile('cat');
+const humanSitting=C.getPoseEnvelopeForKind('human',humanProfile.bodyGeometry,'sitting');
+const catSitting=C.getPoseEnvelopeForKind('cat',catProfile.bodyGeometry,'sitting');
 assert.deepEqual(humanSitting,{height:.9075000000000001,width:.45,length:.594});
+assert.deepEqual(catSitting,{height:.45,width:.18,length:.28800000000000003});
 assert.equal(C.poseEnvelopeFitsUsableSpace(humanSitting,seat.usableSpace),true,'default Human sitting PoseEnvelope must fit stool seat');
 assert.equal(C.poseEnvelopeFitsUsableSpace(catSitting,seat.usableSpace),true,'default Cat sitting PoseEnvelope must fit the same stool seat');
-assert.equal(seat.allowKinds,undefined,'stool must not use species allowKinds as a proxy for physical size; PoseEnvelope owns static fit');
 
 assert.equal(D.envelopeFitsTile(resolved.spatial.solids,3,4,0,1.65,.45),false,'default Human walk envelope must not fit through or around the low stool within one tile');
 assert.equal(D.envelopeFitsTile(resolved.spatial.solids,3,4,0,.32,.18),true,'default Cat walk envelope must fit under/around the low stool geometry');
+
+const authored=clone(A.DEFAULT_WORLD_AUTHORING);
+authored.furniture.stoolProof={id:'stoolProof',definitionId:'stool-basic',origin:{x:3,y:4,z:0},orientation:'south'};
+const st=compile(authored);
+const human=st.agents.zhen,cat=st.agents.orange,stoolSlot=SP.getSlot(st,'stoolProof:seat');
+assert.ok(stoolSlot,'runtime compiler must resolve a stable stool Slot');
+assert.equal(stoolSlot.allowKinds,undefined);
+assert.equal(SP.slotAllows(stoolSlot,human),true);
+assert.equal(SP.slotAllows(stoolSlot,cat),true,'Cat must not be rejected by a species whitelist');
+assert.equal(SP.slotPoseFits(stoolSlot,human,'sitting'),true);
+assert.equal(SP.slotPoseFits(stoolSlot,cat,'sitting'),true);
+assert.equal(SP.nodeWalkable(st,{x:3,y:4,z:0},human),false,'Human walk MovementEnvelope must treat the stool tile as unavailable');
+assert.equal(SP.nodeWalkable(st,{x:3,y:4,z:0},cat),true,'Cat walk MovementEnvelope must retain low-furniture under/around access');
+assert.ok(SP.restTargets(st,human).some(target=>target.id==='stoolProof:seat'&&target.posture==='sitting'),'Human must receive the stool as a generic rest Slot candidate');
+assert.ok(SP.restTargets(st,cat).some(target=>target.id==='stoolProof:seat'&&target.posture==='sitting'),'Cat must receive the same stool candidate when PoseEnvelope fits');
 
 const doc=clone(A.DEFAULT_WORLD_AUTHORING);
 const result=M.createFurnitureFromDefinition(doc,{definitionId:'stool-basic',target:{x:3,y:4,z:0}});
