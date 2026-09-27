@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='embodiment-capabilities-v1';
+  const VERSION='embodiment-capabilities-v2';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const deepFreeze=value=>{
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
@@ -28,11 +28,61 @@
       locomotionProfiles:{walk:{heightFactor:1,widthFactor:1,lengthFactor:1,speedFactor:1}}
     }
   });
+  const POSE_PROFILES=deepFreeze({
+    human:{
+      sitting:{
+        height:{source:'height',factor:.55},
+        width:{source:'width',factor:1},
+        length:{source:'height',factor:.36}
+      },
+      lying:{
+        height:{source:'length',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'height',factor:1}
+      }
+    },
+    cat:{
+      sitting:{
+        height:{source:'length',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'height',factor:.90}
+      },
+      lying:{
+        height:{source:'height',factor:.50},
+        width:{source:'width',factor:1.25},
+        length:{source:'length',factor:1}
+      }
+    }
+  });
   const ALL_POSTURES=Object.freeze(['standing','sitting','lying','kneeling','prone']);
   const POSTURE_BY_MODE=Object.freeze({walk:'standing',kneelCrawl:'kneeling',proneCrawl:'prone'});
   const MODE_BY_POSTURE=Object.freeze({standing:'walk',kneeling:'kneelCrawl',prone:'proneCrawl'});
   const POSTURE_LABELS=Object.freeze({standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥'});
   const MODE_LABELS=Object.freeze({walk:'步行',kneelCrawl:'跪爬',proneCrawl:'匍匐'});
+  const finitePositive=value=>Number.isFinite(Number(value))&&Number(value)>0;
+
+  function poseProfileForKind(kind,posture){return POSE_PROFILES[kind]?.[posture]||null;}
+  function derivePoseEnvelope(bodyGeometry,poseProfile){
+    if(!bodyGeometry||!poseProfile)return null;
+    const out={};
+    for(const axis of ['height','width','length']){
+      const rule=poseProfile[axis],source=rule?.source,base=Number(bodyGeometry?.[source]),factor=Number(rule?.factor);
+      if(typeof source!=='string'||!finitePositive(base)||!finitePositive(factor))return null;
+      out[axis]=base*factor;
+    }
+    return out;
+  }
+  function getPoseEnvelopeForKind(kind,bodyGeometry,posture){
+    return derivePoseEnvelope(bodyGeometry,poseProfileForKind(kind,posture));
+  }
+  function poseEnvelopeFitsUsableSpace(envelope,usableSpace){
+    if(!envelope||!usableSpace||!finitePositive(usableSpace.width)||!finitePositive(usableSpace.length))return false;
+    for(const axis of ['width','length','height']){
+      if(!finitePositive(envelope[axis]))return false;
+      if(usableSpace[axis]!==undefined&&(!finitePositive(usableSpace[axis])||Number(envelope[axis])>Number(usableSpace[axis])+1e-9))return false;
+    }
+    return true;
+  }
 
   function defaultPhysicalProfile(kind){
     const template=DEFAULT_PHYSICAL_PROFILES[kind];
@@ -64,10 +114,15 @@
   window.SimEmbodimentCapabilities=Object.freeze({
     VERSION,
     DEFAULT_PHYSICAL_PROFILES,
+    POSE_PROFILES,
     ALL_POSTURES,
     POSTURE_BY_MODE,
     MODE_BY_POSTURE,
     defaultPhysicalProfile,
+    poseProfileForKind,
+    derivePoseEnvelope,
+    getPoseEnvelopeForKind,
+    poseEnvelopeFitsUsableSpace,
     supportedLocomotionModesForKind,
     postureForMode,
     modeFromPosture,
