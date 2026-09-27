@@ -290,7 +290,12 @@
   }
   function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,trackPath=false,onSettle=null}={}){
     if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
-    const a=agentFor(st,aOrId),s=normalizeNode(st,start),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={};
+    const a=agentFor(st,aOrId),s=normalizeNode(st,start),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={},feasibilityByEdge=new Map();
+    const edgeFeasibility=(from,to)=>{
+      const key=`${nodeKey(st,from)}>${nodeKey(st,to)}`;
+      if(!feasibilityByEdge.has(key))feasibilityByEdge.set(key,SP.traversalFeasibility?.(st,a,from,to)||null);
+      return feasibilityByEdge.get(key);
+    };
     if(!s||!nodeLocomotionAccessible(st,s,a))return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:null};
     const sk=routeStateKey(st,s,startMode),open=new Set([sk]);
     score[sk]={primary:0,time:0,transitions:0,modeRank:0,movementCredit:normalizedMovementCredit(movementCredit)};states[sk]={node:s,mode:startMode};
@@ -300,7 +305,7 @@
       const cur=states[ck];open.delete(ck);
       if(onSettle?.(cur.node,cur.mode,best,ck)===true)return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:ck};
       for(const q of candidateTraversalNeighbors(st,cur.node,a)){
-        const feasibility=SP.traversalFeasibility?.(st,a,cur.node,q)||null;
+        const feasibility=edgeFeasibility(cur.node,q);
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
           const maneuver=traversalManeuver(st,cur.node,q),distanceMeters=maneuver?.distanceMeters??1;

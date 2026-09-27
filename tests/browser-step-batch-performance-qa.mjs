@@ -407,10 +407,10 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
-  assert.equal(feasibilityCounts.singleInside,8621,'render-scoped validation reuse must not change the measured single-tick simulation feasibility baseline');
-  assert.equal(feasibilityCounts.singleOutside,3802,'one no-selection render must retain the measured one-pass outside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,25253,'render-scoped validation reuse must not change the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,3877,'render-scoped validation reuse must retain the measured step(10) outside-tick baseline');
+  assert.equal(feasibilityCounts.singleInside,4811,'route-query feasibility reuse must retain the measured single-tick simulation feasibility baseline');
+  assert.equal(feasibilityCounts.singleOutside,2255,'route-query feasibility reuse must retain the measured one-pass outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,14223,'route-query feasibility reuse must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,2596,'route-query feasibility reuse must retain the measured step(10) outside-tick baseline');
 
   await openCase({selected:false});
   await page.locator('#showThoughts').click();
@@ -427,7 +427,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.31.1 completion-aware autoplay profile: single/step10 deterministic workload baselines remain unchanged; dedicated autoplay measures complete callbacks, Long Tasks, timer/frame opportunities, query composition, and exact canonical-state parity. Wall-clock remains secondary and runner-dependent.',
+    note:'11.31.1 route-query feasibility reuse profile: route-search-local directed-edge feasibility reuse reduces duplicate feasibility work while preserving deterministic single/step10/autoplay state parity. Dedicated autoplay still measures complete callbacks, Long Tasks, timer/frame opportunities, and query composition. Wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
       mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
