@@ -432,12 +432,12 @@
   }
   function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost',movementCredit=0}={}){
     const a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
-    if(!a)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity,routeOrigin:null};
+    if(!a)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
     const origins=routeOriginsForAgent(st,a,'walk'),credit=a.posture?.slotId?0:movementCredit,winner=bestRouteFromOrigins(st,a,origins,goal,{mode:requested,objective,movementCredit:credit});
     if(!winner)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity,routeOrigin:null};
     const route=winner.route,metrics=winner.metrics,used=[...new Set((route.steps||[]).map(step=>step.mode))];
     const selectedMode=used.length===1?used[0]:used.length>1?'mixed':route.startMode||requested;
-    return {path:route.path,steps:route.steps,mode:selectedMode,requestedMode:requested,objective,startMode:route.startMode,routeOrigin:cloneNode(winner.origin),...metrics};
+    return {path:route.path,steps:route.steps,mode:selectedMode,requestedMode:requested,objective,startMode:route.startMode,...metrics};
   }
   function astar(st,start,goal,agentId=null){const a=agentFor(st,agentId),requested=locomotionRuntime()?'auto':'walk';return routeSearch(st,start,goal,a,{objective:'traversalCost',mode:requested}).path;}
   function traversalCost(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}).traversalCost;}
