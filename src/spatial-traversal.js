@@ -618,8 +618,19 @@
   function canInteract(st,a,target,affordance='default'){return isAtInteraction(st,a,target,affordance);}
 
 
-  function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos,n=normalizeNode(st,p);if(n.surfaceId!==FLOOR){const entry=surfaceEntry(st,n.surfaceId);if(entry)return entry.surface.label||`${entry.furniture.name}表面`;}
-    const overhead=overheadAt(st,n);if(overhead.length){const names=[...new Set(overhead.map(f=>f?.name).filter(Boolean))];return names.length===1?`${names[0]}所在格的地面`:'家具所在格的地面';}return baseDescribePlace(st,aOrPos);}
+  function describePlace(st,aOrPos){
+    if(aOrPos?.offMap)return '門外';
+    const slotId=aOrPos?.posture?.slotId;
+    if(slotId){
+      const slot=SP.getSlot?.(st,slotId);
+      if(slot){
+        const furniture=st.furniture?.[slot.furnitureId],name=furniture?.name||slot.furnitureId||'家具',label=slot.label||'使用位';
+        return `${name}・${label}`;
+      }
+    }
+    const p=aOrPos?.position||aOrPos,n=normalizeNode(st,p);if(n.surfaceId!==FLOOR){const entry=surfaceEntry(st,n.surfaceId);if(entry)return entry.surface.label||`${entry.furniture.name}表面`;}
+    const overhead=overheadAt(st,n);if(overhead.length){const names=[...new Set(overhead.map(f=>f?.name).filter(Boolean))];return names.length===1?`${names[0]}所在格的地面`:'家具所在格的地面';}return baseDescribePlace(st,aOrPos);
+  }
   W.registerInitialStateInitializer('spatial.schema',(st)=>{ensureSpatialDefs(st);},10);
   SP.walkable=(st,p)=>nodeWalkable(st,p,null);
   SP.astar=astar;
