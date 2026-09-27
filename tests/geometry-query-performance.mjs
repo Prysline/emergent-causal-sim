@@ -51,7 +51,8 @@ const paths=runtimeProfilePaths([
 const patches={
   'src/spatial-traversal.js':[
     ['function furnitureSolids(st,z){',"function furnitureSolids(st,z){globalThis.__geometryPerf.track('furnitureSolids',String(z));"],
-    ['function floorGeometry(st,p){',"function floorGeometry(st,p){globalThis.__geometryPerf.track('floorGeometry',globalThis.__geometryPerf.nodeKey(p));"]
+    ['function floorGeometry(st,p){',"function floorGeometry(st,p){globalThis.__geometryPerf.track('floorGeometry',globalThis.__geometryPerf.nodeKey(p));"],
+    ['function traversalManeuver(st,from,to){',"function traversalManeuver(st,from,to){globalThis.__geometryPerf.track('traversalManeuver',globalThis.__geometryPerf.edgeKey(from,to));"]
   ],
   'src/furniture-definitions.js':[
     ['function analyzeFloorTile(solids,x,y,layerZ){',"function analyzeFloorTile(solids,x,y,layerZ){globalThis.__geometryPerf.track('analyzeFloorTile',[layerZ,x,y].join('|'));"],
@@ -116,6 +117,8 @@ const report={
 const humanRouteAnalyze=report.humanRoute.metrics.analyzeFloorTile;
 const humanRouteFit=report.humanRoute.metrics.envelopeFitsTile;
 const humanRouteFeasibility=report.humanRoute.metrics.traversalFeasibility;
+const humanRouteManeuver=report.humanRoute.metrics.traversalManeuver;
+const humanRoutePassage=report.humanRoute.metrics.getPassageProfile;
 const humanRestAnalyze=report.humanRest.metrics.analyzeFloorTile;
 const humanRestFit=report.humanRest.metrics.envelopeFitsTile;
 const catRestAnalyze=report.catRest.metrics.analyzeFloorTile;
@@ -127,6 +130,9 @@ assert.ok(humanRouteFit.calls<=220,`single-route envelope fit regressed to ${hum
 assert.equal(humanRouteFit.repeatedCalls,0,'single-route envelope fit should be memoized exactly by tile + envelope');
 assert.ok(humanRouteFeasibility.calls<=260,`single-route traversal feasibility regressed to ${humanRouteFeasibility.calls} calls`);
 assert.equal(humanRouteFeasibility.repeatedCalls,0,'one route search should reuse traversal feasibility for the same directed edge');
+assert.ok(humanRouteManeuver.calls<=400,`single-route traversal maneuver regressed to ${humanRouteManeuver.calls} calls`);
+assert.equal(humanRouteManeuver.repeatedCalls,0,'one route search should reuse traversal maneuver for the same directed edge');
+assert.ok(humanRoutePassage.calls<=700,`single-route passage profile regressed to ${humanRoutePassage.calls} calls`);
 
 assert.ok(humanRestAnalyze.calls<=600,`Human rest floor analysis regressed to ${humanRestAnalyze.calls} calls`);
 assert.ok(humanRestFit.calls<=1400,`Human rest envelope fit regressed to ${humanRestFit.calls} calls`);

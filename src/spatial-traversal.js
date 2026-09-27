@@ -178,13 +178,13 @@
     return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
   }
   function traversalEdgeCost(st,from,to,a,mode=null,fromMode=mode){
-    const crowdingSnapshot=arguments[6]||null;
+    const crowdingSnapshot=arguments[6]||null,maneuverSnapshot=arguments.length>7?arguments[7]:undefined;
     const base=baseTraversalEdgeCost(st,from,to,a);if(!Number.isFinite(base))return base;
     const resolvedMode=mode||a?.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk';
     const locomotion=locomotionRuntime(),modeBurden=locomotion?.modeTraversalBurden?.(a,resolvedMode)??0,transitionBurden=locomotion?.modeTransitionBurden?.(a,fromMode,resolvedMode)??0;
     if(!Number.isFinite(modeBurden)||!Number.isFinite(transitionBurden))return Infinity;
     const crowding=crowdingSnapshot||crowdingRuntime()?.getCrowdingProfile?.(st,a,from,to,resolvedMode)||null;
-    const maneuver=traversalManeuver(st,from,to),movementDistance=maneuver?.edgeKind==='horizontal'&&from.surfaceId===to.surfaceId?(maneuver.distanceMeters??1):1;
+    const maneuver=maneuverSnapshot===undefined?traversalManeuver(st,from,to):maneuverSnapshot,movementDistance=maneuver?.edgeKind==='horizontal'&&from.surfaceId===to.surfaceId?(maneuver.distanceMeters??1):1;
     return base*movementDistance+modeBurden*movementDistance+transitionBurden+(crowding?.congestionCost||0);
   }
   function walkEdgeFeasible(st,a,from,to){
@@ -249,10 +249,10 @@
     const n=normalizeNode(st,p);if(!n)return false;
     return n.surfaceId===FLOOR?!fixedFloorBlocker(st,n):surfaceWalkable(st,n,a);
   }
-  function candidateTraversalNeighbors(st,p,aOrId=null){
+  function candidateTraversalNeighbors(st,p,aOrId=null,maneuverResolver=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,p),out=new Map();if(!n||!nodeLocomotionAccessible(st,n,a))return [];
     if(n.surfaceId===FLOOR){
-      for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeLocomotionAccessible(st,q,a)&&(maneuver||legacyCardinal))out.set(nodeKey(st,q),q);}
+      for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=maneuverResolver?maneuverResolver(n,q):traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeLocomotionAccessible(st,q,a)&&(maneuver||legacyCardinal))out.set(nodeKey(st,q),q);}
       for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
         if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
@@ -281,7 +281,7 @@
   function currentLocomotionMode(a){return locomotionRuntime()?.modeFromPosture?.(a)||null;}
   function normalizedMovementCredit(value){const credit=Number(value);return Number.isFinite(credit)&&credit>0?Math.min(credit,1-1e-9):0;}
   function fallbackMovementTiming(distanceMeters,movementCredit=0){const distance=Number(distanceMeters),credit=normalizedMovementCredit(movementCredit);if(!Number.isFinite(distance)||distance<=0)return {movementTicks:Infinity,movementCreditAfter:0,requiredTicks:Infinity};const requiredTicks=distance,effective=Math.max(0,requiredTicks-credit),movementTicks=Math.max(1,Math.ceil(effective-1e-12));return {movementTicks,movementCreditAfter:normalizedMovementCredit(credit+movementTicks-requiredTicks),requiredTicks};}
-  function edgeMoveTiming(st,a,from,to,mode,crowdingSnapshot=null,movementCredit=0){const distanceMeters=traversalManeuver(st,from,to)?.distanceMeters??1,L=locomotionRuntime(),base=L?.movementTiming?.(a,mode,distanceMeters,movementCredit)??fallbackMovementTiming(distanceMeters,movementCredit),delayTicks=Math.max(0,Number(crowdingSnapshot?.delayTicks)||0);return {distanceMeters,movementTicks:base.movementTicks,moveTicks:Number.isFinite(base.movementTicks)?base.movementTicks+delayTicks:Infinity,movementCreditAfter:normalizedMovementCredit(base.movementCreditAfter),delayTicks};}
+  function edgeMoveTiming(st,a,from,to,mode,crowdingSnapshot=null,movementCredit=0,maneuverSnapshot=undefined){const maneuver=maneuverSnapshot===undefined?traversalManeuver(st,from,to):maneuverSnapshot,distanceMeters=maneuver?.distanceMeters??1,L=locomotionRuntime(),base=L?.movementTiming?.(a,mode,distanceMeters,movementCredit)??fallbackMovementTiming(distanceMeters,movementCredit),delayTicks=Math.max(0,Number(crowdingSnapshot?.delayTicks)||0);return {distanceMeters,movementTicks:base.movementTicks,moveTicks:Number.isFinite(base.movementTicks)?base.movementTicks+delayTicks:Infinity,movementCreditAfter:normalizedMovementCredit(base.movementCreditAfter),delayTicks};}
   function transitionTicks(fromMode,toMode){const ticks=locomotionRuntime()?.transitionTicks?.(fromMode,toMode);return Number.isFinite(ticks)&&ticks>=0?ticks:(fromMode===toMode?0:0);}
   function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
   function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank)||((b.movementCredit??0)-(a.movementCredit??0));}
@@ -290,11 +290,17 @@
   }
   function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,trackPath=false,onSettle=null}={}){
     if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
-    const a=agentFor(st,aOrId),s=normalizeNode(st,start),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={},feasibilityByEdge=new Map();
+    const a=agentFor(st,aOrId),s=normalizeNode(st,start),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={},feasibilityByEdge=new Map(),maneuverByEdge=new Map();
+    const directedEdgeKey=(from,to)=>`${nodeKey(st,from)}>${nodeKey(st,to)}`;
     const edgeFeasibility=(from,to)=>{
-      const key=`${nodeKey(st,from)}>${nodeKey(st,to)}`;
+      const key=directedEdgeKey(from,to);
       if(!feasibilityByEdge.has(key))feasibilityByEdge.set(key,SP.traversalFeasibility?.(st,a,from,to)||null);
       return feasibilityByEdge.get(key);
+    };
+    const edgeManeuver=(from,to)=>{
+      const key=directedEdgeKey(from,to);
+      if(!maneuverByEdge.has(key))maneuverByEdge.set(key,traversalManeuver(st,from,to));
+      return maneuverByEdge.get(key);
     };
     if(!s||!nodeLocomotionAccessible(st,s,a))return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:null};
     const sk=routeStateKey(st,s,startMode),open=new Set([sk]);
@@ -304,12 +310,12 @@
       for(const k of open){const value=score[k];if(!best||compareRouteScore(value,best)<0){best=value;ck=k;}}
       const cur=states[ck];open.delete(ck);
       if(onSettle?.(cur.node,cur.mode,best,ck)===true)return {a,start:s,startMode,requestedMode:requested,came,score,states,settledKey:ck};
-      for(const q of candidateTraversalNeighbors(st,cur.node,a)){
+      for(const q of candidateTraversalNeighbors(st,cur.node,a,edgeManeuver)){
         const feasibility=edgeFeasibility(cur.node,q);
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
-          const maneuver=traversalManeuver(st,cur.node,q),distanceMeters=maneuver?.distanceMeters??1;
-          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility,maneuver)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,transition>0?0:best.movementCredit),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding);
+          const maneuver=edgeManeuver(cur.node,q),distanceMeters=maneuver?.distanceMeters??1;
+          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility,maneuver)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,transition>0?0:best.movementCredit,maneuver),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding,maneuver);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks)||!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?distanceMeters:edgeCost),
