@@ -14,7 +14,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.33.0-pose-envelope-static-fit');
+  assert.equal(st.version,'11.33.1-action-spatial-target-consumers');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
@@ -90,7 +90,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.containers.mealTray.contents.food;a.needs.hunger=60;a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood');assert.ok(serve);assert.ok(st.containers.mealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
+  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.containers.mealTray.contents.food;a.needs.hunger=60;a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood'),sit=st.events.find(e=>e.data?.action==='sitForMeal'),stand=st.events.find(e=>e.data?.action==='standForMeal');assert.ok(serve);assert.ok(sit,'reachable dining chairs must result in seated meal consumption');assert.equal(stand,undefined,'standing fallback must not replace a reachable seat');assert.ok(st.containers.mealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
 }
 
 E.reset(20260911);

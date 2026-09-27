@@ -38,6 +38,18 @@ isAtInteraction(state, agent, target, affordance)
 
 既有 `bestInteractionPosition(...)` 保持 **position-only** public contract，作為 compatibility wrapper；不得改成物件回傳。richer result 只重用同步 winner scoring 的已派生結果，不建立 persistent / cross-tick cache，也不代表 action execution 可以沿用完整 route plan。
 
+## Action consumer contract
+
+Interaction Geometry 不只屬於 Action 的最後移動階段。只要 consumer 正在判斷「能否接近某個互動目標」或比較互動目標的客觀 access cost，initial chooser、Intent deliberation、hard replan、Memory target evaluation 與 Action execution 都必須使用同一份 geometry：
+
+- Object / Source / Agent 不得直接以 entity `position` 做 interaction reachability / ranking shortcut；
+- slot-bound Agent 的 coarse `position` 仍是 Slot anchor，social contact 必須走 `socialReach → agentContactNodes() → slotApproachNodes()`；
+- target ranking 若只需要 winner + 客觀成本，優先使用 `bestInteractionPositionResult(...)` 已算出的 canonical `traversalCost`；
+- Action 真正移動時仍重新查詢當下 geometry，不把較早的 winner 或 route 永久快取；
+- Furniture Slot 的坐／躺／睡／用餐 settle 是獨立 Slot contract：先 route 到合法 Slot approach，再 settle；不能把 Slot anchor 當 floor route destination。
+
+ordinary floor exact target（例如清理某格地板）不是 interaction target，仍可直接走正式 floor Route。
+
 目前 mode：
 
 - `occupy`：必須占據指定位置；不因八方向 Contact 自動擴張。

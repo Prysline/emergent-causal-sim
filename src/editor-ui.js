@@ -8,6 +8,7 @@
   }
 
   const $=id=>document.getElementById(id);
+  $('authoringVersion').textContent=A.VERSION;
   const cloneUi=value=>value==null?value:JSON.parse(JSON.stringify(value));
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const terrainLabel=value=>({floor:'地板',void:'空白'}[value]||value||'空白');

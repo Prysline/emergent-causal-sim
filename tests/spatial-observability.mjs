@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.33.0-pose-envelope-static-fit');
-assert.equal(E.VERSION,'11.33.0-pose-envelope-static-fit');
+assert.equal(st.version,'11.33.1-action-spatial-target-consumers');
+assert.equal(E.VERSION,'11.33.1-action-spatial-target-consumers');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

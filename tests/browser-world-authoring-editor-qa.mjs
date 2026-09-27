@@ -11,6 +11,7 @@ page.on('console',message=>{if(message.type()==='error')consoleErrors.push(messa
 page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
+assert.equal(await page.locator('#authoringVersion').textContent(),await page.evaluate(()=>window.SimWorldAuthoring.VERSION),'Editor authoring badge must render the canonical SimWorldAuthoring.VERSION');
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession);
 
 let snapshot=await page.evaluate(()=>({

@@ -58,34 +58,33 @@ assert.equal(JSON.stringify(st),beforeJson,'direct target evaluation must remain
 assert.equal(st.rngState,rngBefore,'direct target evaluation must remain RNG-neutral');
 
 const originalPlanRoute=SP.planRoute;
+const originalBestInteractionPositionResult=SP.bestInteractionPositionResult;
 const originalTraversalCost=SP.traversalCost;
-let planRouteCalls=0,traversalCostCalls=0;
+let planRouteCalls=0,interactionWinnerCalls=0,traversalCostCalls=0;
 SP.planRoute=function(...args){planRouteCalls++;return originalPlanRoute.apply(this,args);};
+SP.bestInteractionPositionResult=function(...args){interactionWinnerCalls++;return originalBestInteractionPositionResult.apply(this,args);};
 SP.traversalCost=function(...args){traversalCostCalls++;return originalTraversalCost.apply(this,args);};
 
 let actual;
 try{
   actual=E.targetEvaluations(st,a,'socialize',base);
-  assert.deepEqual(actual,oracle,'route reuse must preserve target metrics and candidate ordering');
-  assert.equal(planRouteCalls,candidates.length,'targetEvaluations must compute one full route per eligible target');
-  assert.equal(traversalCostCalls,0,'targetEvaluations must not run a separate reachability traversalCost query');
+  assert.deepEqual(actual,oracle,'Interaction Geometry route reuse must preserve target metrics and candidate ordering');
+  assert.equal(interactionWinnerCalls,candidates.length,'each eligible social target must resolve one canonical interaction-position winner');
+  assert.equal(planRouteCalls,candidates.length,'targetEvaluations must compute one full metric route to each resolved interaction position');
+  assert.equal(traversalCostCalls,0,'targetEvaluations must reuse the interaction winner cost instead of querying a target anchor traversalCost');
   assert.equal(JSON.stringify(st),beforeJson,'route reuse must preserve exact canonical state');
   assert.equal(st.rngState,rngBefore,'route reuse must remain RNG-neutral');
 
-  // Model the former production shape: one traversalCost reachability query,
-  // followed by targetEvaluation (which performs the same planRoute again).
-  planRouteCalls=0;traversalCostCalls=0;
-  const legacy=sortEvaluations(candidates
-    .map(target=>({target,traversalCost:SP.traversalCost(st,a,target.position)}))
-    .filter(x=>Number.isFinite(x.traversalCost))
-    .map(({target})=>E.targetEvaluation(st,a,target,'socialize',base)));
-  assert.deepEqual(legacy,actual,'focused legacy shape and production reuse must be semantically identical');
-  assert.equal(traversalCostCalls,candidates.length,'legacy fixture must execute one reachability traversalCost per target');
-  assert.equal(planRouteCalls,candidates.length,'legacy fixture must execute one evaluation planRoute per target');
-  assert.equal(JSON.stringify(st),beforeJson,'legacy comparison must also remain state-neutral');
-  assert.equal(st.rngState,rngBefore,'legacy comparison must remain RNG-neutral');
+  for(const target of candidates){
+    const winner=originalBestInteractionPositionResult(st,a,{kind:'agent',id:target.id},'social');
+    assert.ok(winner,'fixture social target must expose Interaction Geometry');
+    assert.notEqual(winner.position,null);
+  }
+  assert.equal(JSON.stringify(st),beforeJson,'interaction-position verification must remain state-neutral');
+  assert.equal(st.rngState,rngBefore,'interaction-position verification must remain RNG-neutral');
 } finally {
   SP.planRoute=originalPlanRoute;
+  SP.bestInteractionPositionResult=originalBestInteractionPositionResult;
   SP.traversalCost=originalTraversalCost;
 }
 

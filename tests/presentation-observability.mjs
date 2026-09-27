@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.33.0-pose-envelope-static-fit';
+const CURRENT_VERSION='11.33.1-action-spatial-target-consumers';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.30.0-distance-timing';
 const ROUTE_VERSION='11.30.0-metric-route';
@@ -121,7 +121,9 @@ const spatialValidatorSource=fs.readFileSync(new URL('../src/validation/rules/sp
 assert.match(spatialValidatorSource,/SP\.nodeLocomotionAccessible\?\.\(st,node,a\)/,'Spatial validator must validate current occupancy without reusing walk-only node feasibility');
 const memoryDeliberationSource=fs.readFileSync(new URL('../src/systems/memory/deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationSource,/accessPenalty/,'target ranking must expose accessPenalty');
-assert.match(memoryDeliberationSource,/routeOverride\|\|SP\.planRoute\(st,a,target\.position,\{objective:'traversalCost'\}\)/,'target ranking must consume a canonical traversal-cost route or compute it on demand');
+assert.match(memoryDeliberationSource,/bestInteractionPositionResult\?\.\(st,a,\{kind:'agent',id:target\.id\},'social'\)/,'social target ranking must resolve canonical Interaction Geometry');
+assert.match(memoryDeliberationSource,/SP\.planRoute\(st,a,position,\{objective:'traversalCost'\}\)/,'social target ranking must compute the canonical route to the resolved interaction position');
+assert.match(memoryDeliberationSource,/routeOverride\|\|socialTargetRoute\(st,a,target\)/,'target evaluation must consume the canonical social target route or compute it on demand');
 assert.doesNotMatch(memoryDeliberationSource,/distancePenalty/,'current target-ranking decomposition must not retain the stale distancePenalty field');
 const memoryDeliberationUiSource=fs.readFileSync(new URL('../src/ui/inspectors/memory-deliberation.js',import.meta.url),'utf8');
 assert.match(memoryDeliberationUiSource,/path distance/,'Debug target ranking must show real path distance');
