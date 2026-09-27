@@ -10,7 +10,7 @@ loadRuntimeProfile([
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
-assert.equal(E.VERSION,'11.33.1-action-spatial-target-consumers');
+assert.equal(E.VERSION,'11.33.2-coarse-place-description');
 assert.equal(SP.VERSION,'11.32.0-contact-slot-corner');
 assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
 
