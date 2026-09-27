@@ -949,10 +949,7 @@
   },
   "scenario": {
     "startDay": 1,
-    "startMinute": 720,
-    "notes": [
-      "Regression fixture imported from the user-provided mvp-default-house.world(4).json; only furnitureCatalogVersion was advanced v10 → v11 so current main can load the unchanged scene."
-    ]
+    "startMinute": 720
   },
   "structures": {}
 }
