@@ -25,7 +25,7 @@ const cat=st.agents.orange;
 
 assert.equal(C.VERSION,'embodiment-capabilities-v2');
 assert.equal(P.VERSION,'11.33.0-pose-envelope-static-fit');
-assert.equal(st.version,'11.33.2-coarse-place-description');
+assert.equal(st.version,'11.33.3-place-description-projection');
 
 const humanSitting=P.getPoseEnvelope(human,'sitting');
 near(humanSitting.height,.9075,'Human sitting height');
