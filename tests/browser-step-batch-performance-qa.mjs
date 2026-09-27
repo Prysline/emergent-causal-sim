@@ -410,7 +410,7 @@ try{
   assert.equal(feasibilityCounts.singleInside,6898,'Action spatial-target semantics must retain the measured single-tick simulation feasibility baseline');
   assert.equal(feasibilityCounts.singleOutside,3389,'Action spatial-target semantics must retain the measured one-pass outside-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Inside,18385,'Action spatial-target semantics must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,2898,'Action spatial-target semantics must retain the measured step(10) outside-tick baseline');
+  assert.equal(feasibilityCounts.batch10Outside,2780,'Place-description projection must retain the measured step(10) outside-tick baseline after removing duplicate Action-card spatial observation work');
 
   await openCase({selected:false});
   await page.locator('#showThoughts').click();
@@ -427,7 +427,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.33.1 Action spatial-target consumer profile: social target discovery/ranking now resolves canonical Interaction Geometry, and meal seating resolves Slot approaches instead of entity/Slot anchors. The extra feasibility work is the measured semantic workload of those geometry queries; existing responsiveness gates and single/step10/autoplay canonical state parity remain required. Wall-clock remains secondary and runner-dependent.',
+    note:'11.33.3 place-description projection profile: Action-card/map place text now consumes canonical describePlace() and no longer runs a second covered/overhead projection path. This removes redundant outside-tick spatial observation/feasibility work while leaving simulation-side feasibility counts and canonical state parity unchanged. Existing responsiveness gates remain required; wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
       mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,
