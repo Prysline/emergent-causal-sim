@@ -14,7 +14,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
 assert.equal(A.VERSION,'world-authoring-v7');
-assert.equal(C.VERSION,'embodiment-capabilities-v1');
+assert.equal(C.VERSION,'embodiment-capabilities-v2');
 
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
