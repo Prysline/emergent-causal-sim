@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.33.1-action-spatial-target-consumers`。
+目前 runtime marker：`11.33.2-coarse-place-description`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -24,6 +24,8 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - Spatial topology、Surface / Contact / interaction geometry
 
 Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
+
+**Spatial description precision boundary**：current floor Spatial Node 仍是 coarse `spaceId + surfaceId + x/y/z` identity。Furniture-local metric solids 可以證明某 tile 內存在／不存在對目前 MovementEnvelope 可用的 free-space，但 Agent persistent floor position沒有 tile 內 local offset / region identity。因此 Presentation / event wording 不得把「同一 coarse floor tile 有 overhead Furniture」直接翻成「角色在家具正下方」。explicit Surface identity 可使用 Surface label（例如 `diningTable:surface → 餐桌桌面`）；coarse floor + overhead Furniture 只能使用「餐桌所在格的地面」等不超過現有 identity 精度的描述。這不改 `nodeWalkable`、Furniture Surface traversal 或 MovementEnvelope feasibility。
 
 **Current Contact / Slot corner contract**：原本允許 local-neighbor 的 `reach / socialReach` 已擴充 diagonal candidate，但 Contact 由自己的 shared-corner occlusion 判定擁有語意；diagonal endpoints 間兩條 L 型接觸路徑任一條仍有可確認 opening 就可接觸，因此單側 wall / closed Door 可以阻止 Traversal 卻不必阻止 Contact。兩條路徑都被 Boundary / Door / Furniture 封死時 blocked；局部幾何無法安全證明 opening 時保守拒絕。Slot schema 不新增 diagonal authored truth，仍只保存 rotated cardinal `approachEdges`；只有兩個 incident sides 都 authored/legal，且 outside corner 對兩側 ordinary floor approach node 的 current MovementEnvelope / Passage 都可行時，才派生 direct diagonal settle / egress candidate。approach 與 egress 共用同一候選來源；`posture.slotId` 仍是 Slot occupancy truth。
 
