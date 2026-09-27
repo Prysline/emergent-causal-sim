@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.32.0-contact-slot-corner';
+const CURRENT_VERSION='11.33.0-pose-envelope-static-fit';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -187,10 +187,10 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v7');
+assert.equal(FD.VERSION,'furniture-definitions-v8');
 assert.equal(A.VERSION,'world-authoring-v7');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
-assert.equal(EC.VERSION,'embodiment-capabilities-v1');
+assert.equal(EC.VERSION,'embodiment-capabilities-v2');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
@@ -198,8 +198,8 @@ assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.17.0-passage-profile-multimode');
-assert.equal(P.VERSION,'11.17.0-passage-profile-multimode');
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.33.0-pose-envelope-static-fit');
+assert.equal(P.VERSION,'11.33.0-pose-envelope-static-fit');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.30.0-distance-timing');
