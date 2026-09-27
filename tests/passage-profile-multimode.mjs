@@ -8,8 +8,8 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.32.0-contact-slot-corner';
-const PHYSICAL_VERSION='11.17.0-passage-profile-multimode';
+const APP_VERSION='11.33.0-pose-envelope-static-fit';
+const PHYSICAL_VERSION='11.33.0-pose-envelope-static-fit';
 const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
