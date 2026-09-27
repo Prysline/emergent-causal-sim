@@ -51,7 +51,8 @@ const paths=runtimeProfilePaths([
 const patches={
   'src/spatial-traversal.js':[
     ['function furnitureSolids(st,z){',"function furnitureSolids(st,z){globalThis.__geometryPerf.track('furnitureSolids',String(z));"],
-    ['function floorGeometry(st,p){',"function floorGeometry(st,p){globalThis.__geometryPerf.track('floorGeometry',globalThis.__geometryPerf.nodeKey(p));"]
+    ['function floorGeometry(st,p){',"function floorGeometry(st,p){globalThis.__geometryPerf.track('floorGeometry',globalThis.__geometryPerf.nodeKey(p));"],
+    ['function traversalManeuver(st,from,to){',"function traversalManeuver(st,from,to){globalThis.__geometryPerf.track('traversalManeuver',globalThis.__geometryPerf.edgeKey(from,to));globalThis.__geometryPerf.track('traversalManeuverCaller',String(new Error().stack||'').split('\\n')[2]?.trim()||'?');"]
   ],
   'src/furniture-definitions.js':[
     ['function analyzeFloorTile(solids,x,y,layerZ){',"function analyzeFloorTile(solids,x,y,layerZ){globalThis.__geometryPerf.track('analyzeFloorTile',[layerZ,x,y].join('|'));"],
@@ -59,7 +60,7 @@ const patches={
     ['function edgeClearanceOptions(solids,from,to,layerZ){',"function edgeClearanceOptions(solids,from,to,layerZ){globalThis.__geometryPerf.track('edgeClearanceOptions',globalThis.__geometryPerf.edgeKey(from,to));"]
   ],
   'src/spatial-passage.js':[
-    ['function getPassageProfile(st,from,to){',"function getPassageProfile(st,from,to){globalThis.__geometryPerf.track('getPassageProfile',globalThis.__geometryPerf.edgeKey(from,to));"],
+    ['function getPassageProfile(st,from,to){',"function getPassageProfile(st,from,to){globalThis.__geometryPerf.track('getPassageProfile',globalThis.__geometryPerf.edgeKey(from,to));globalThis.__geometryPerf.track('getPassageProfileCaller',String(new Error().stack||'').split('\\n')[2]?.trim()||'?');"],
     ['function traversalFeasibility(st,agent,from,to){',"function traversalFeasibility(st,agent,from,to){globalThis.__geometryPerf.track('traversalFeasibility',(agent?.kind||agent?.id||'?')+'|'+globalThis.__geometryPerf.edgeKey(from,to));"]
   ]
 };
@@ -134,4 +135,24 @@ assert.ok(catRestAnalyze.calls<=360,`Cat rest floor analysis regressed to ${catR
 assert.ok(catRestFit.calls<=280,`Cat rest envelope fit regressed to ${catRestFit.calls} calls`);
 
 console.log('GEOMETRY_QUERY_METRICS '+JSON.stringify(report));
+console.log('RESIDUAL_PASSAGE_MANEUVER_DIAGNOSTIC '+JSON.stringify({
+  humanRoute:{
+    traversalManeuver:report.humanRoute.metrics.traversalManeuver,
+    traversalManeuverCaller:report.humanRoute.metrics.traversalManeuverCaller,
+    getPassageProfile:report.humanRoute.metrics.getPassageProfile,
+    getPassageProfileCaller:report.humanRoute.metrics.getPassageProfileCaller
+  },
+  humanRest:{
+    traversalManeuver:report.humanRest.metrics.traversalManeuver,
+    traversalManeuverCaller:report.humanRest.metrics.traversalManeuverCaller,
+    getPassageProfile:report.humanRest.metrics.getPassageProfile,
+    getPassageProfileCaller:report.humanRest.metrics.getPassageProfileCaller
+  },
+  catRest:{
+    traversalManeuver:report.catRest.metrics.traversalManeuver,
+    traversalManeuverCaller:report.catRest.metrics.traversalManeuverCaller,
+    getPassageProfile:report.catRest.metrics.getPassageProfile,
+    getPassageProfileCaller:report.catRest.metrics.getPassageProfileCaller
+  }
+}));
 console.log('Furniture geometry query performance regression: ok');
