@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.33.0-pose-envelope-static-fit`。
+目前 runtime marker：`11.33.1-action-spatial-target-consumers`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -151,6 +151,18 @@ Concrete Action construction 由 core `E.buildAction(agent, choice)` 統一持�
 Factory 只建立 Action shape；candidate utility、target policy、Intent lifecycle、plan event、responder scoring 不屬於 factory 責任。
 
 Caller 已明確選定的 `targetAgent / targetObject / targetTile / job / destination / carrier` 必須優先保留；不得因 factory fallback 靜默換掉 explicit social target。
+
+### Canonical spatial target consumption
+
+Action / Deliberation 的 spatial target 必須依 target 類型消費正式 owner，不得把所有帶 `position` 的 entity 當成 ordinary floor destination：
+
+- ordinary floor 工作目標（例如 `cleanFloor`、`wander`、Exit `access`）可以直接 route 到該 floor node；
+- Object / Source / Agent interaction target 的 discovery、ranking、replan 與 execution 必須透過 Interaction Geometry；ranking 優先消費 `bestInteractionPositionResult(...).traversalCost`，execution 再由 `moveToInteraction()` 取得當下合法位置；
+- slot-bound Agent 的 `agent.position` 只是 Slot coarse anchor，不是 social route target；`socialReach` 必須由 `agentContactNodes() → slotApproachNodes()` 派生；
+- Furniture Slot 本身不是 ordinary floor destination。rest / sleep / meal 等 Slot 使用者必須先選合法 `bestSlotApproachNode()`，route 到 approach，再於 settle 前重驗 activity / PoseEnvelope / occupancy / reservation / approach legality；
+- objective access burden 使用 canonical `traversalCost`。Decision / Memory / replanning 不得各自退回 `pathDistance` 或 entity anchor 建立第二套可達性尺度。
+
+這個分工不表示所有 Action 都必須透過 Interaction Geometry；真正的 ordinary floor exact target 仍保留 `moveToExact()` 語意。
 
 ### Canonical decision baseline
 
