@@ -32,7 +32,6 @@ assert.deepEqual(seat,{
   approachEdges:['north','east','south','west'],
   canRest:true,
   usableSpace:{width:.50,length:.65},
-  allowKinds:['human'],
   activitySuitability:{rest:.40}
 });
 
@@ -61,8 +60,8 @@ const humanSitting=C.getPoseEnvelopeForKind('human',human.bodyGeometry,'sitting'
 const catSitting=C.getPoseEnvelopeForKind('cat',cat.bodyGeometry,'sitting');
 assert.deepEqual(humanSitting,{height:.9075000000000001,width:.45,length:.594});
 assert.equal(C.poseEnvelopeFitsUsableSpace(humanSitting,seat.usableSpace),true,'default Human sitting PoseEnvelope must fit stool seat');
-assert.equal(C.poseEnvelopeFitsUsableSpace(catSitting,seat.usableSpace),true,'Cat dimensions may physically fit even though stool affordance remains Human-only');
-assert.deepEqual(seat.allowKinds,['human'],'physical pose fit must not silently grant species affordance');
+assert.equal(C.poseEnvelopeFitsUsableSpace(catSitting,seat.usableSpace),true,'default Cat sitting PoseEnvelope must fit the same stool seat');
+assert.equal(seat.allowKinds,undefined,'stool must not use species allowKinds as a proxy for physical size; PoseEnvelope owns static fit');
 
 assert.equal(D.envelopeFitsTile(resolved.spatial.solids,3,4,0,1.65,.45),false,'default Human walk envelope must not fit through or around the low stool within one tile');
 assert.equal(D.envelopeFitsTile(resolved.spatial.solids,3,4,0,.32,.18),true,'default Cat walk envelope must fit under/around the low stool geometry');
