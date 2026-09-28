@@ -37,7 +37,7 @@ let human=st.agents.zhen;
 setAffect(human,0,0);near(E.affectResponseSignal(human),0);
 setAffect(human,.8,0);near(E.affectResponseSignal(human),.8);
 setAffect(human,-.4,.7);near(E.affectResponseSignal(human),-1);
-setAffect(human,0,0,{activation:1});near(E.affectResponseSignal(human),0,'activation alone must not change response willingness');
+setAffect(human,0,0,{activation:1});near(E.affectResponseSignal(human),0,.001,'activation alone must not change response willingness');
 setAffect(human,99,0);near(E.affectResponseSignal(human),1);
 setAffect(human,-99,99);near(E.affectResponseSignal(human),-1);
 
