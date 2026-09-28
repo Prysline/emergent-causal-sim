@@ -41,6 +41,40 @@ assert.throws(
   'Furniture v6 must reject legacy Definition-authored floor/under geometry'
 );
 
+const derivedPlatformDefinition={
+  id:'test-derived-platform',
+  name:'測試派生平台',
+  icon:'▱',
+  kind:'platform',
+  footprint:[local(0,0),local(1,0)],
+  displayOffset:local(0,0),
+  slots:[],
+  spatial:{solids:[{key:'body',bounds:{x:0,y:0,z:0,width:2,depth:1,height:.25},faces:{top:{supportsBodyOccupancy:true,surfaceKey:'top',surfaceLabel:'測試派生平台頂面'}}}]}
+};
+const derivedResolved=D.resolveDefinitionInstance(derivedPlatformDefinition,{
+  id:'derivedPlatform',
+  definitionId:'test-derived-platform',
+  origin:local(1,1),
+  orientation:'south'
+});
+assert.equal(derivedResolved.spatial.surface,undefined,'new authored top-face contract must not create the legacy singular field');
+assert.deepEqual(derivedResolved.spatial.surfaces[0],{
+  id:'derivedPlatform:top',
+  label:'測試派生平台頂面',
+  sourceSolidKey:'body',
+  face:'top',
+  supportRegion:{x:1,y:1,width:2,depth:1},
+  topElevation:.25,
+  cells:[local(1,1),local(2,1)]
+});
+const duplicateTruth=JSON.parse(JSON.stringify(derivedPlatformDefinition));
+duplicateTruth.spatial.surface={key:'legacy',label:'舊 Surface',onSolid:{key:'body',face:'top'},traversable:true};
+assert.throws(
+  ()=>D.resolveDefinitionInstance(duplicateTruth,{id:'duplicateTruth',definitionId:'test-derived-platform',origin:local(0,0),orientation:'south'}),
+  /must not combine spatial\.surface/,
+  'one Definition must not author both legacy Surface truth and top-face derived Surface truth'
+);
+
 const platformDefinition={
   id:'test-low-platform',
   name:'測試矮平台',
@@ -74,6 +108,8 @@ assert.equal(resolved.spatial.solids.length,1);
 assert.deepEqual(resolved.spatial.solids[0],{key:'body',layerZ:0,bounds:{x:3,y:4,z:0,width:2,depth:1,height:.25}});
 assert.equal(resolved.spatial.surface.id,'testPlatform:top');
 assert.deepEqual(resolved.spatial.surface.cells,[local(3,4),local(4,4)]);
+assert.equal(resolved.spatial.surfaces.length,1,'legacy compatibility Surface must also participate in the canonical derived collection');
+assert.equal(resolved.spatial.surfaces[0],resolved.spatial.surface,'legacy compatibility Surface must not duplicate runtime geometry truth');
 assert.equal(resolved.blocksMovement,undefined,'resolved traversal truth must come from spatial geometry, not blocksMovement');
 assert.equal(D.analyzeFloorTile(resolved.spatial.solids,3,4,0).blocked,true,'floor-start solid must block generic floor topology, not only agent-specific envelope checks');
 const invalidRuntimeSurface=JSON.parse(JSON.stringify(platformDefinition));

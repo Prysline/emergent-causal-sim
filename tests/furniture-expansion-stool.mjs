@@ -30,7 +30,7 @@ assert.equal(definition.name,'矮凳');
 assert.equal(definition.kind,'stool');
 assert.equal(definition.orientationSemantics,'frame');
 assert.deepEqual(definition.footprint,[{x:0,y:0,z:0}]);
-assert.equal(definition.spatial.surface,undefined,'stool seat must remain a Slot target, not a traversable Surface');
+assert.equal(definition.spatial.surface,undefined,'stool must not retain legacy explicit spatial.surface truth');
 assert.equal(definition.slots.length,1);
 
 const seat=definition.slots[0];
@@ -46,7 +46,7 @@ assert.deepEqual(seat,{
 assert.equal(seat.allowKinds,undefined,'stool must not use species allowKinds as a proxy for physical size');
 
 assert.deepEqual(definition.spatial.solids,[
-  {key:'seat',bounds:{x:.28,y:.28,z:.45,width:.44,depth:.44,height:.04}},
+  {key:'seat',bounds:{x:.28,y:.28,z:.45,width:.44,depth:.44,height:.04},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'矮凳座面'}}},
   {key:'legNW',bounds:{x:.30,y:.30,z:0,width:.04,depth:.04,height:.45}},
   {key:'legNE',bounds:{x:.66,y:.30,z:0,width:.04,depth:.04,height:.45}},
   {key:'legSW',bounds:{x:.30,y:.66,z:0,width:.04,depth:.04,height:.45}},
@@ -62,7 +62,17 @@ const resolved=D.resolveInstance({
 assert.deepEqual(resolved.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(resolved.slots[0].approachEdges,['north','east','south','west']);
 assert.equal(resolved.slots[0].restQuality,.40);
-assert.equal(resolved.spatial.surface,undefined);
+assert.equal(resolved.spatial.surface,undefined,'legacy singular Surface remains absent during derived-Surface migration');
+assert.equal(resolved.spatial.surfaces.length,1);
+assert.deepEqual(resolved.spatial.surfaces[0],{
+  id:'stool-basic-1:seat',
+  label:'矮凳座面',
+  sourceSolidKey:'seat',
+  face:'top',
+  supportRegion:{x:3.28,y:4.28,width:.44,depth:.44},
+  topElevation:.49,
+  cells:[{x:3,y:4,z:0}]
+});
 
 const humanProfile=C.defaultPhysicalProfile('human');
 const catProfile=C.defaultPhysicalProfile('cat');
