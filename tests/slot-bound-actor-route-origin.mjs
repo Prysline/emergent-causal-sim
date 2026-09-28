@@ -102,6 +102,7 @@ E.reset(20260911);
   assert.equal(E.canSatisfyHunger(cat),false,'global food existence must not count as an executable hunger plan without any egress');
   assert.equal(E.buildAction(cat,{id:'eat'}),null,'Action factory must reject the same impossible hunger plan');
   assert.equal(E.candidateIntents(st,cat).some(c=>c.intentKind==='satisfyHunger'),false,'Intent deliberation must use the same hunger feasibility');
+  assert.equal(E.intentStillValid(st,cat,{kind:'satisfyHunger'}),false,'hard replanning must not reopen an impossible hunger intent');
   E.tick();
   assert.equal(st.thoughts.orange.options.some(o=>o.id==='eat'),false,'core chooser must not advertise impossible eat');
   assert.equal(eventBy(st,e=>e.data?.actor==='orange'&&e.data?.phase==='plan'&&e.data?.action==='eat'),undefined);
