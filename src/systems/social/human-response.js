@@ -35,7 +35,7 @@
     const priorIntent=a.activeIntent,priorActionKind=actionKind(a),action=responseAction(st,c);let sourceExtra={};
     if(softSnapshot){clearAgentReservations(st,a);dropHeld(st,a);a.action=null;a.activeIntent=null;sourceExtra={reconsideration:{type:'soft',tick:st.tick,priorIntentId:priorIntent?.id||null}};}
     const intent=responseIntent(st,a,c,sourceExtra);action.intentId=intent.id;a.action=action;a.activeIntent=intent;
-    if(softSnapshot)E.addEvent(`${a.name}注意到對方正在找自己聊天，重新權衡後決定先回應這次邀請。`,'normal',[],{actor:a.id,action:'intentReconsider',priorIntentId:priorIntent?.id||null,priorIntentKind:priorIntent?.kind||null,priorActionKind:priorActionKind||null,intentId:intent.id,intentKind:intent.kind,nextActionKind:'talk',challengerIntentKind:'respondSocialBid',currentUtility:softSnapshot.currentUtility,challengerUtility:c.utility,switchMargin:softSnapshot.switchMargin,commitmentCost:softSnapshot.commitmentCost,switchThreshold:softSnapshot.switchThreshold,position:E.positionRef?.(a.position)||null});
+    if(softSnapshot)E.addEvent(`${a.name}重新權衡後，改先回應聊天邀請。`,'normal',[],{actor:a.id,action:'intentReconsider',priorIntentId:priorIntent?.id||null,priorIntentKind:priorIntent?.kind||null,priorActionKind:priorActionKind||null,intentId:intent.id,intentKind:intent.kind,nextActionKind:'talk',challengerIntentKind:'respondSocialBid',currentUtility:softSnapshot.currentUtility,challengerUtility:c.utility,switchMargin:softSnapshot.switchMargin,commitmentCost:softSnapshot.commitmentCost,switchThreshold:softSnapshot.switchThreshold,position:E.positionRef?.(a.position)||null});
     return true;
   }
   function promoteTalkResponses(st){
@@ -56,7 +56,7 @@
     return out;
   }
   function addTalkOffer(st,requester,responder,position){
-    const id=E.addEvent(`${requester.name}走近${responder.name}，開口示意想聊幾句（聊天邀請）。`,'normal',[],{actor:requester.id,target:responder.id,action:'talkOffer',position,socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true});
+    const id=E.addEvent(`${requester.name}向${responder.name}發出聊天邀請。`,'normal',[],{actor:requester.id,target:responder.id,action:'talkOffer',position,socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true});
     const event=st.causes?.[id];if(event?.data)event.data.bidId=id;return id;
   }
   function emitTalkOffers(st,records){

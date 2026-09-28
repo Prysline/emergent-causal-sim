@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.35.1-presentation-projection-correctness`。
+目前 runtime marker：`11.35.2-presentation-event-truth`。
 
+> `11.35.2-presentation-event-truth` 只修正 canonical event readable wording 與 Presentation-owned timeline summary classification：summary 改讀 structured event metadata，不再 reverse-parse `event.text`；**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**，也不改 Social Bid、wake、Memory、Affect、Relationship 或 same-tick visibility。
+>
 > `11.35.1-presentation-projection-correctness` 只修正 Presentation projection correctness：canonical release label、posture projection、retired Debug truth、Tile base-blocker wording與 stale Inspector hint；**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**，也不改 same-tick visibility。
 >
 > `11.35.0-affect-responder-bias` 將 Affect 接入 Human / animal responder policy，並把 `affect.decay` 從 beforeTick 500 提前到 250，使 responder preparation 讀到 decay 後的 Current Affect；**沒有新增或刪除 simulation runtime hook**，但這次 ordering 變更本身屬 simulation semantics。

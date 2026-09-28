@@ -32,16 +32,16 @@
   function addPetOffer(st,human,animal,originBidId){
     const data={actor:human.id,target:animal.id,action:'petOffer',position:E.positionRef?.(human.position)||`${human.position.x},${human.position.y}`,socialBid:true,bidKind:'petOffer',interactionKind:'pet',expectsResponse:true,bidFrom:human.id,bidTo:animal.id,perceivedByTarget:true};
     const causes=[];if(originBidId){data.responseToBid=originBidId;causes.push(originBidId);}
-    const id=E.addEvent(`${human.name}走近${animal.name}，伸手示意想摸摸牠。`,'normal',causes,data),event=st.causes?.[id];if(event?.data)event.data.bidId=id;return id;
+    const id=E.addEvent(`${human.name}向${animal.name}發出撫摸邀請。`,'normal',causes,data),event=st.causes?.[id];if(event?.data)event.data.bidId=id;return id;
   }
   function settleOriginBid(st,human,animal,originBidId){if(!originBidId)return;human.observedSocialBids=(human.observedSocialBids||[]).filter(ref=>ref.bidId!==originBidId);if(animal.activeIntent?.kind==='awaitResponse'&&animal.activeIntent.source?.bidId===originBidId)animal.activeIntent=null;}
   function addAnimalResponse(st,human,animal,offerId,response){
     const action=response==='accept'?'acceptPet':response==='tolerate'?'toleratePet':'avoidPet';
-    const text=response==='accept'?`${animal.name}沒有避開，反而主動把身體湊向${human.name}想摸牠的手。`:response==='tolerate'?`${animal.name}沒有迎上去，也沒有避開，留在原地讓${human.name}摸。`:`${animal.name}把身體側開，避開了${human.name}想摸牠的手。`;
+    const text=response==='accept'?`${animal.name}接受了${human.name}的撫摸邀請。`:response==='tolerate'?`${animal.name}容忍了${human.name}的撫摸。`:`${animal.name}避開了${human.name}的撫摸。`;
     return E.addEvent(text,response==='avoid'?'normal':'good',[offerId],{actor:animal.id,target:human.id,action,responseToBid:offerId,petResponse:response,position:E.positionRef?.(animal.position)||`${animal.position.x},${animal.position.y}`});
   }
   function applySuccessfulPet(st,human,animal,offerId,responseId,response){
-    const id=E.addEvent(`${human.name}蹲下來，輕輕摸了摸${animal.name}。`,'good',[offerId,responseId],{actor:human.id,target:animal.id,action:'petAnimal',petOfferId:offerId,petResponse:response,position:E.positionRef?.(human.position)||`${human.position.x},${human.position.y}`,stimulusIntensity:18,stimulusKind:'touch'});
+    const id=E.addEvent(`${human.name}摸了摸${animal.name}。`,'good',[offerId,responseId],{actor:human.id,target:animal.id,action:'petAnimal',petOfferId:offerId,petResponse:response,position:E.positionRef?.(human.position)||`${human.position.x},${human.position.y}`,stimulusIntensity:18,stimulusKind:'touch'});
     const humanRelief=response==='accept'?7:5,animalRelief=response==='accept'?10:3,comfort=response==='accept'?3:.5;human.needs.social=clamp((Number(human.needs?.social)||0)-humanRelief,0,100);animal.needs.social=clamp((Number(animal.needs?.social)||0)-animalRelief,0,100);animal.wellbeing.comfort=clamp((Number(animal.wellbeing?.comfort)||0)+comfort,0,100);return id;
   }
   function resolvePendingPetOffer(st,record){

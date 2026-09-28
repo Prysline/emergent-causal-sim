@@ -92,7 +92,7 @@ assert.ok(desktop.talkId,'desktop engage: accepted offer must produce full talk'
 assert.equal(desktop.talkOfferId,desktop.offerId,'desktop engage: full talk must preserve originating talkOffer');
 assert.equal(desktop.talkResponseEventId,desktop.responseId,'desktop engage: full talk must preserve the explicit responder event');
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
-assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop full timeline should expose the talk offer');
+assert.ok(desktop.timelineText.includes('向阿真發出聊天邀請'),'desktop full timeline should expose the talk offer');
 assert.ok(desktop.inspectorText.includes('Talk responder：base'),'desktop Debug should expose derived Human responder score decomposition');
 assert.ok(desktop.inspectorText.includes('Affect'),'desktop Debug should identify the Affect contribution');
 assert.ok(desktop.inspectorText.includes('Relationship'),'desktop Debug should identify the Relationship contribution');

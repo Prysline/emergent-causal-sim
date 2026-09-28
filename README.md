@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.35.1・Presentation projection correctness**（`11.35.1-presentation-projection-correctness`）。
+目前 runtime marker：**v11.35.2・Presentation event truth**（`11.35.2-presentation-event-truth`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -109,6 +109,7 @@
 - App 頁首版本由 canonical `SimRelease.VERSION` 動態投影短版，不在 HTML 保存第二份 current release literal。
 - Resident / Action / Debug 對 canonical posture 共用一致語意；`kneeling / prone` 有明確投影，missing / unknown posture 使用保守 fallback，不得假裝成 standing。
 - Tile Readable / Debug 的 `SP.walkable() / SP.blockerAt()` 只標示 base/static blocker；完整 per-Agent traversal feasibility 仍由 Physical / Passage / Route owner 提供。Debug 不再顯示 retired Furniture `blocksMovement / value` 或 Room `value` truth。
+- Timeline 摘要分類只讀 structured event `type / data.action` 等正式 metadata，不解析 `event.text`；canonical event wording 也不得宣稱沒有 structured evidence 的 posture、movement、gesture、心理或因果事實。缺少但產品真正需要的 semantic fact 必須回原 subsystem owner 設計，不建立 presentation-only mirror truth。
 - Agent 的「現在」分成三層：Action 表示角色正在具體做什麼；Intent 表示這個行動服務的短期目的；Explanation 只在 final decision evidence 與 live Action 對齊時說明為什麼此刻選了它。
 - Agent Action 會把 raw phase 名稱與工程座標轉成玩家可讀描述；完整 phase / spatial goal 仍留在 Debug。
 - Agent Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
