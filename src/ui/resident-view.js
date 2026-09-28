@@ -52,9 +52,10 @@
     return '平穩';
   }
   function postureText(st,a){
-    if(a?.posture?.kind==='sitting')return '坐著';
-    if(a?.posture?.kind==='lying')return '躺著／蜷著';
-    return '站立';
+    const kind=a?.posture?.kind;
+    if(!kind)return '姿勢未記錄';
+    if(kind==='lying')return a?.kind==='cat'?'蜷臥':'躺臥';
+    return {standing:'站立',sitting:'坐著',kneeling:'跪姿',prone:'俯臥'}[kind]||'未知姿勢';
   }
   function intentText(a){
     const kind=a?.activeIntent?.kind;

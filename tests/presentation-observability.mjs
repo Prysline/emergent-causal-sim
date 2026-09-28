@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.35.0-affect-responder-bias';
+const CURRENT_VERSION='11.35.1-presentation-projection-correctness';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
 const ROUTE_VERSION='11.34.0-surface-traversal-maneuvers';
@@ -62,9 +62,20 @@ assert.doesNotMatch(baseUiSource,/setInterval\(stepOne,700\)/,'autoplay must not
 assert.doesNotMatch(baseUiSource,/function renderBadges\(\)\{[^\n]*validation\(\)/,'world badges must not re-run validation inside one render');
 assert.match(baseUiSource,/kneeling:'跪姿'/,'base UI must render kneeling posture explicitly instead of falling back to standing');
 assert.match(baseUiSource,/prone:'俯臥'/,'base UI must render prone posture explicitly instead of falling back to standing');
+assert.match(baseUiSource,/if\(!kind\)return'姿勢未記錄'/,'base UI must not invent standing when posture is missing');
+assert.match(baseUiSource,/\|\|'未知姿勢'/,'base UI must use a conservative fallback for unknown posture kinds');
+assert.match(baseUiSource,/SimRelease\?\.VERSION/,'app release label must derive from the canonical release owner');
+assert.match(baseUiSource,/releaseLabelText/,'base UI must own current release label projection');
+assert.doesNotMatch(baseUiSource,/f\.blocksMovement|f\.value|r\.value/,'Debug must not project retired Furniture or Room truth');
+assert.match(baseUiSource,/基礎阻擋/,'Tile Debug must label base blocker semantics precisely');
+assert.doesNotMatch(baseUiSource,/<div class="k">可通行<\/div>/,'Tile Debug must not present base walkability as complete traversal feasibility');
 const residentUiSource=fs.readFileSync(new URL('../src/ui/resident-view.js',import.meta.url),'utf8');
 assert.match(residentUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Resident View must inherit the canonical Presentation marker from SimUI');
 assert.match(residentUiSource,/REQUIRED_INTENT_LABELS/,'Resident View must verify canonical Intent label coverage');
+assert.match(residentUiSource,/kneeling:'跪姿'/,'Resident View must project kneeling explicitly');
+assert.match(residentUiSource,/prone:'俯臥'/,'Resident View must project prone explicitly');
+assert.match(residentUiSource,/if\(!kind\)return '姿勢未記錄'/,'Resident View must not invent standing when posture is missing');
+assert.match(residentUiSource,/\|\|'未知姿勢'/,'Resident View must conservatively project unknown posture');
 assert.match(residentUiSource,/drinkWater:'補充水分'/,'drinkWater Intent must describe the goal instead of echoing the Action label');
 assert.match(residentUiSource,/drinkAlcohol:'解渴／喝點酒'/,'drinkAlcohol Intent must describe the goal instead of echoing the Action label');
 assert.match(residentUiSource,/restockResource:'補充室內資源'/,'restockResource Intent must use the canonical Intent kind');
@@ -160,6 +171,14 @@ assert.match(entityUiSource,/SP\.clonePos\?\.\(cell\)/,'Furniture readable surfa
 assert.doesNotMatch(entityUiSource,/slotReservedBy/,'Furniture readable projection must not expose slot reservation as player-facing state');
 assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|entityReadableState)\s*=/,'Entity Readable View must not persist player-facing mirror state');
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
+assert.match(entityUiSource,/fact\('基礎阻擋',SP\.walkable\(st,t\)\?'無':'有'\)/,'Tile Readable must expose only base blocker semantics');
+assert.doesNotMatch(entityUiSource,/fact\('通行',SP\.walkable/,'Tile Readable must not claim complete per-Agent traversal feasibility');
+const appraisalUiSource=fs.readFileSync(new URL('../src/ui/inspectors/appraisal.js',import.meta.url),'utf8');
+assert.doesNotMatch(appraisalUiSource,/尚不產生情緒/,'Appraisal hint must not contradict the current Appraisal → Affect pipeline');
+assert.match(appraisalUiSource,/historical appraisal 更新 Affect/,'Appraisal hint must describe the current downstream Affect boundary without recomputing it');
+const retentionUiSource=fs.readFileSync(new URL('../src/ui/inspectors/memory-retention.js',import.meta.url),'utf8');
+assert.doesNotMatch(retentionUiSource,/仍不把 memory 接進 deliberation utility/,'Retention hint must not contradict the current Memory → Deliberation pipeline');
+assert.match(retentionUiSource,/Memory → Deliberation 由獨立 owner/,'Retention hint must preserve the current owner boundary');
 
 const environmentUiSource=fs.readFileSync(new URL('../src/ui/spatial/environment.js',import.meta.url),'utf8');
 assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI must preserve non-zero z when projecting surface cells');
@@ -167,7 +186,9 @@ assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
 assert.doesNotMatch(indexSource,/<title>[^<]*v\d+\.\d+/,'browser document title must not duplicate the runtime version truth');
-assert.match(indexSource,/v11\.31\.0・Crowding 8-direction/,'app shell must expose the current short version and feature label');
+assert.match(indexSource,/id="releaseLabel"/,'app shell must provide a Presentation target for the canonical release label');
+assert.doesNotMatch(indexSource,/v11\.31\.0・Crowding 8-direction/,'app shell must not retain the stale hardcoded release label');
+assert.doesNotMatch(indexSource,/v11\.35\.1/,'app shell must not duplicate the new release literal');
 assert.match(indexSource,/實體檢視 \/ Debug Inspector/,'Inspector panel heading must remain generalized beyond residents');
 assert.match(indexSource,/href="editor\.html"/,'app shell must expose a direct World Editor entry point');
 assert.match(indexSource,/Physical Profile \/ multi-mode MovementEnvelopes/,'app shell must expose current Physical Debug observability');

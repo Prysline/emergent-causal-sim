@@ -6,11 +6,17 @@
 
 目前 current runtime marker：
 
-`11.35.0-affect-responder-bias`
+`11.35.1-presentation-projection-correctness`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.35.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.35.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
 
-### Current Affect responder bias release
+### Current Presentation projection correctness release
+
+`11.35.1-presentation-projection-correctness` 收斂 Presentation Truth Boundary 的第一階段 correctness：app 頁首 release label 改由 canonical `SimRelease.VERSION` 派生短版；Resident / Action / Debug 對 `standing / sitting / lying / kneeling / prone` 使用一致 projection，missing / unknown posture 不再假裝成 standing；Furniture / Room Debug 移除 retired `blocksMovement / value` 與 `room.value`；Tile Readable / Debug 明確標示 `SP.walkable() / SP.blockerAt()` 只是 base/static blocker，而不是完整 per-Agent traversal feasibility；Appraisal / Memory Retention hint 同步 current Appraisal → Affect 與 Memory → Deliberation ownership。這些變更只修正既有 canonical truth 的玩家／Debug 投影，不新增 simulation state、behavior input 或 semantic pipeline。
+
+因此 overall runtime / `SimUI.PRESENTATION_VERSION` 推進到 `11.35.1-presentation-projection-correctness`。Affect generation 維持 `11.35.0-affect-responder-bias`；Physical / Spatial Traversal / Spatial Passage / Route / Locomotion 維持 `11.34.0-surface-traversal-maneuvers`，Contact 維持 `11.32.0-contact-slot-corner`，Dynamic Congestion 維持 `11.31.0-crowding-8-direction`，World Authoring / Furniture Catalog / Embodiment Capabilities 也不假升。本 release 不包含 event producer transition wording migration 或 timeline `event.text` reverse parsing removal；那些仍屬後續 Presentation work。
+
+### Previous Affect responder bias release
 
 `11.35.0-affect-responder-bias` 將 Current Affect 第一次接到正式 responder behavior，而不擴大到 general Deliberation。Affect runtime 提供 `affectResponseSignal = clamp(valence - frustration, -1, +1)`；Human talk 與 animal pet responder 各自以 `0.12` cap 形成短期 response delta，再與既有 Relationship `0.18` delta 並列後 clamp final score。只讀 responder 自己的 Current Affect；requester Affect 不滲入，`activation` 第一階段保持 decision-neutral。
 

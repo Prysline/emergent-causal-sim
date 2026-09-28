@@ -14,7 +14,7 @@
     const memories=(a.episodicMemories||[]).slice().reverse().slice(0,6);
     const rows=memories.length?memories.map(m=>row(st,a,m)).join(''):'<div class="k">Retention</div><div>目前沒有 episodic memory</div>';
     const section=document.createElement('div');section.className='inspect-section';section.dataset.v1133Retention='';
-    section.innerHTML=`<h3>Memory Retention</h3><div class="kv"><div class="k">Policy</div><div>derived salience・cap ${esc(E.MAX_EPISODIC_MEMORIES)} / Agent</div>${rows}</div><p class="hint">Salience 只在 retention / pruning 時由 historical appraisal、重要事件 recurrence 與 lastObservedTick 即時計算，不寫回 memory state。Current Affect 只暫時保護它目前的 source memory；本版本仍不把 memory 接進 deliberation utility。</p>`;
+    section.innerHTML=`<h3>Memory Retention</h3><div class="kv"><div class="k">Policy</div><div>derived salience・cap ${esc(E.MAX_EPISODIC_MEMORIES)} / Agent</div>${rows}</div><p class="hint">Salience 只在 retention / pruning 時由 historical appraisal、重要事件 recurrence 與 lastObservedTick 即時計算，不寫回 memory state。Current Affect 只暫時保護它目前的 source memory；Memory → Deliberation 由獨立 owner 消費 episodic memory，Retention 本身不計算 deliberation utility。</p>`;
     const memory=host.querySelector('[data-v1130-memory]');if(memory)memory.after(section);else host.append(section);
   }
 

@@ -101,7 +101,7 @@
     const terrain={floor:'地面',wall:'牆面',doorway:'門口'}[t.terrain]||'地面';
     const occupants=SP.occupantsAt(st,t)||[],furniture=SP.furnitureAt(st,t)||[],surface=t.surface?.contents||{};
     return `${hero(t.terrain==='wall'?'🧱':t.terrain==='doorway'?'🚪':'▫️',terrain,roomName(st,t.roomId))}${factCard('目前狀況',[
-      fact('通行',SP.walkable(st,t)?'可以通行':'無法通行'),
+      fact('基礎阻擋',SP.walkable(st,t)?'無':'有'),
       contentsEntries(surface).length?fact('地面／表面',contentsText(surface)):''
     ])}${occupants.length?chipsCard('這裡的人',occupants.map(a=>entityChip('agent',a.id,a.name,a.kind==='cat'?'🐈':'👤'))):''}${furniture.length?chipsCard('這裡的家具',furniture.map(f=>entityChip('furniture',f.id,f.name,f.icon||'▰'))):''}`;
   }

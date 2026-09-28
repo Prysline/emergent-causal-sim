@@ -25,7 +25,7 @@ const cat=st.agents.orange;
 
 assert.equal(C.VERSION,'embodiment-capabilities-v3');
 assert.equal(P.VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(st.version,'11.35.0-affect-responder-bias');
+assert.equal(st.version,'11.35.1-presentation-projection-correctness');
 
 const humanStanding=P.getPoseEnvelope(human,'standing');
 near(humanStanding.height,1.65,'Human standing height');
