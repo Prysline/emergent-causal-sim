@@ -21,7 +21,7 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(D.VERSION,'furniture-definitions-v11');
+assert.equal(D.VERSION,'furniture-definitions-v12');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 
 const definition=D.getDefinition('stool-basic');

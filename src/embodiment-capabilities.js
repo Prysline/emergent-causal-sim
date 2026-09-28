@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='embodiment-capabilities-v2';
+  const VERSION='embodiment-capabilities-v3';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const deepFreeze=value=>{
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;

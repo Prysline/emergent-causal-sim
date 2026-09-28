@@ -8,7 +8,7 @@ delete globalThis.SimEngine;
 vm.runInThisContext(fs.readFileSync(new URL('../src/embodiment-capabilities.js',import.meta.url),'utf8'),{filename:'embodiment-capabilities.js'});
 
 const C=globalThis.SimEmbodimentCapabilities;
-assert.equal(C.VERSION,'embodiment-capabilities-v2');
+assert.equal(C.VERSION,'embodiment-capabilities-v3');
 assert.equal(globalThis.SimWorld,undefined,'authoring-safe capability contract must not require or create SimWorld');
 assert.equal(globalThis.SimEngine,undefined,'authoring-safe capability contract must not require or create SimEngine');
 assert.deepEqual(C.supportedLocomotionModesForKind('human'),['walk','kneelCrawl','proneCrawl']);

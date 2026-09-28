@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getMovementEnvelope||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry)return;
-  const VERSION='11.29.0-horizontal-connection-passage';
+  const VERSION='11.34.0-surface-traversal-maneuvers';
   const FLOOR='floor',EPS=1e-9;
   const finitePositive=v=>Number.isFinite(Number(v))&&Number(v)>0;
   const constrained=v=>finitePositive(v)?Number(v):null;

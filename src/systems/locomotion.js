@@ -2,7 +2,7 @@
   const W=window.SimWorld,P=window.SimPhysical,C=window.SimEmbodimentCapabilities;if(!W||!P?.getMovementEnvelope)return;
   if(!C?.postureForMode||!C?.modeFromPosture)throw new Error('systems/locomotion.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/locomotion.js requires world.js initial-state pipeline.');
-  const VERSION='11.30.0-distance-timing';
+  const VERSION='11.34.0-surface-traversal-maneuvers';
 
   W.registerInitialStateInitializer('locomotion.schema',(st)=>{
     for(const a of Object.values(st.agents||{})){

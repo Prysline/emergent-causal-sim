@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.33.5-drink-vessel-feasibility`。
+目前 runtime marker：`11.34.0-surface-traversal-maneuvers`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -17,7 +17,7 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - canonical World Event：`state.events / state.causes`
 - Agent / Object 的物理位置
 - Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
-- authored structure / passage geometry：`map.cellSizeMeters`、layer `boundaries`、root `structures`、Door / Exit reference、Furniture Definition 的 metric local `spatial.solids`、可選 `spatial.surface.onSolid`、Slot `approachEdges`，以及 low-level `map.passageConstraints`
+- authored structure / passage geometry：`map.cellSizeMeters`、layer `boundaries`、root `structures`、Door / Exit reference、Furniture Definition 的 metric local `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot `approachEdges`，以及 low-level `map.passageConstraints`
 - Container / Source / Surface Environment 的實際 resource contents
 - posture、held container、reservations
 - Action 正在如何執行的 state machine
@@ -31,9 +31,9 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v11"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v7"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
-Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、Surface `onSolid`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v7 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
 `src/horizontal-geometry.js` 現在是 Authoring／後續 Runtime 共同使用的 **pure horizontal geometry kernel**。它只消費 adapter 提供的 Cell、Boundary／Door、fixed blocker、Furniture metric solids 與低階 Passage constraint snapshot，不讀 `SimWorld / SimSpatial / Agent / Crowding / Route` mutable state。kernel 產生 canonical endpoint order 的無向 `HorizontalConnection`：`kind:'cardinal'|'diagonal'`、`distanceMeters`、`status:'candidate'|'blocked'|'unsupported'`、位置化 `options[]`、constraint provenance 與 stable edge／corner resource。第一版 diagonal 使用 B+ conservative local geometry；同 tile 多個 disconnected free-space regions或無法安全證明 corner-continuous corridor 時回 `unsupported`，而不是猜測可通。
 
@@ -75,7 +75,7 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 ### Furniture Orientation / Shared Local Transform
 
-Current `furniture-definitions-v11` 將 Definition canonical local orientation 固定為 `south`。Catalog 的 `cabinet-tall` 是 obstruction-only consumer；`stool-basic` 驗證低家具可同時使用 metric `spatial.solids`、四邊 approach sitting Slot 與 PoseEnvelope static fit；`pet-bed-small` 再以同一 Slot 的 sitting / lying PoseEnvelope 差異表達 Human 可 rest 但不可 sleep、Cat 可 rest / sleep。三者都不新增 Surface identity、species 尺寸 whitelist 或 Furniture ID 特判。真正的 Agent / species-specific furniture preference 尚未建立，不能把 `activitySuitability` 或 Physical 偷當成 preference owner。shared `SimFurnitureDefinitions` resolver 是唯一 Furniture-local transform owner，會依 Instance `orientation` 旋轉 local footprint、display offset、slot offset、`approachEdges`、metric solids 與 Surface coverage，再加上 Instance `origin` 產生 resolved world geometry。Definition footprint 仍以 `minX = 0 / minY = 0` 建立 canonical NW／左上 local frame；south-canonical 描述的是 facing baseline，不改 placement anchor。rotated footprint / slot / Surface cells 不 persistent 回 Instance。
+Current `furniture-definitions-v12` 保留 south-canonical local-frame / orientation contract，並把 body-support Surface eligibility 收斂到 solid top face metadata。`dining-table` tabletop、`chair-basic` seat、`stool-basic` seat、`double-bed` body top 與 `cabinet-tall` body top 會由 resolver 派生 runtime Surface；椅背、細桌腳以及未 author support eligibility 的 sofa / `pet-bed-small` 不會因存在 top face 就自動成為平台。這些 Surface 的 `supportRegion / topElevation / cells` 全由同一 rotated solid bounds 派生，不 persistent 回 Instance，也不以 Furniture ID 或 species whitelist 特判。真正的 Agent / species-specific furniture preference 仍屬 behavior owner，不能把 `activitySuitability` 或 Physical 偷當成 preference truth。
 
 Definition 的 `orientationSemantics` 分為 `facing` 與 `frame`。Directional Furniture 的 `orientation` 表示正面／主要 facing：椅子與沙發是 back → front，床是 head → foot；沒有自然正面的 Furniture 仍保留 quarter-turn frame orientation，但不宣稱有正面。`origin` 不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 透過同一 world→local→world transform 跟隨；slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference。
 
@@ -611,6 +611,29 @@ Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `r
 
 詳見 [`interaction-geometry.md`](interaction-geometry.md)。
 
+### Derived Furniture Surface / static fit / transition maneuver
+
+v11.34.0 將 Furniture top traversal 收斂成一條可追溯的跨 subsystem contract：
+
+```text
+Furniture Definition solid top eligibility
+→ resolver derives runtime spatial.surfaces[]
+→ Physical surfaceStaticFit (support footprint + body clearance)
+→ Passage surfaceTransition objective geometry
+→ Physical step / climb / jump candidates
+→ Locomotion selection + timing / burden
+→ Route step.surfaceManeuver
+→ Engine executes the same maneuver identity
+```
+
+正式邊界：
+
+- Definition 只 author `spatial.solids[].faces.top.supportsBodyOccupancy` 與可選 stable `surfaceKey / surfaceLabel`；legacy singular `spatial.surface` 被明確拒絕。resolver 由 canonical solid bounds 派生 `id / sourceSolidKey / supportRegion / topElevation / cells`，因此不存在第二份 top bounds truth。`supportsObjects:true` 的 Furniture 必須能解析到唯一 support Surface。
+- Surface candidate 存在不等於 Agent 能站上去。`SimPhysical.getSupportFootprint(agent, posture)` 與完整 body / pose clearance 分開；standing support footprint 不重用 MovementEnvelope width/depth。
+- floor ↔ Surface transition 的高度差、水平 gap 與 support-region edge facts 由 Passage 擁有；Physical 依個體 body height × maneuver profile 產生 `step / climb / jump` 候選，上／下方向分開，同一 geometry 可以同時有多個候選。
+- Locomotion 是 maneuver choice、timing、burden 與 execution owner。current baseline 把既有 Human / Cat Surface burden 校準搬到 Locomotion，沒有虛構新的 family-specific timing；Route 把選中的 exact `surfaceManeuver` 放進 route step，Engine pending movement 驗證並執行同一 identity。
+- Contact 不因 Traversal Surface 泛化而改寫自己的 occlusion truth；Surface Environment / liquid 與 `supportId` object resolver 都引用 canonical derived Surface。World Authoring Instance shape 維持 v7；本 slice 不加入 continuous local position、multi-agent / multi-Slot Surface occupancy、turn clearance、sideways traversal或 persistent / cross-tick route cache。
+
 ### Physical Profile + Passage Profile / Multi-mode Feasibility
 
 v11.17.0 在 v11.16.0 individual Physical Profile 基礎上加入 multi-mode MovementEnvelope 與 edge-derived PassageProfile：
@@ -653,7 +676,7 @@ SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
 - Human 第一批 supported modes 為 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不假定所有 body plan 共享 Human mode 名稱；
 - locomotion profile 可用各軸 factor 或 absolute clearance override；Spatial 不自行推導 torso thickness / Anatomy；
 - Current PassageProfile 使用位置化 `options[]`；每個 option 自己保存 `interval / clearanceHeight / clearanceWidth`，某軸 `null` 仍表示該 option 在該軸沒有已知上限。Physical feasibility 必須由**同一個 option**同時容納 MovementEnvelope width / height，不能把不同位置的最大寬度與高度拼成虛構 passage；`clearanceLength` 目前仍不作直線 passage length requirement；
-- current passage geometry 可來自 layer Boundary / Door 的 metric opening、resolved Furniture `spatial.solids` 派生的 directional free intervals / overhead clearance、root Structure clearance，以及可選 edge-local `map.passageConstraints`；Furniture intrinsic obstruction 由 current `furniture-definitions-v6` Definition 持有，Boundary / Structure 由 world authoring 持有，edge constraint只保留 low-level regression override；Spatial 將這些 world facts收斂成 positioned Passage options；
+- current passage geometry 可來自 layer Boundary / Door 的 metric opening、resolved Furniture `spatial.solids` 派生的 directional free intervals / overhead clearance、root Structure clearance，以及可選 edge-local `map.passageConstraints`；Furniture intrinsic obstruction 由 current `furniture-definitions-v12` Definition 持有，Boundary / Structure 由 world authoring 持有，edge constraint只保留 low-level regression override；Spatial 將這些 world facts收斂成 positioned Passage options；
 - `traversalFeasibility` 只回答 physical feasibility，不回傳 `bestMode / recommendedMode / utility`，不讀 Relationship、Memory、traits、goal pressure，也不修改 posture；
 - **v11.17 當時**的 production A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此該 slice 的 crawl-query 可行不代表 routing 會自動 crawl；v11.19+ current production 已由後述 Locomotion Execution contract 接上 mode-aware routing / execution；
 - v11.17 isolated single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；在該 focused harness 的 walk-only execution boundary 下，low/lower 情況的另一側水源仍不可達；
@@ -787,6 +810,13 @@ Physical / Locomotion Current invariant：
 - v11.18.0 建立 Route Semantics Split；v11.19.0 接上 multi-mode execution，Slice 3 再把 production floor Route 升為 metric diagonal semantics：`pathDistance`＝physical-feasible route 的實際公尺長度、`stepCount`＝graph edge count、`traversalCost`＝最低客觀通行負擔、`travelTime`＝selected executable route 的真實 transition + distance-based movement ticks。A* primary objective仍為 traversal cost；
 - mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
 - Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
+
+Surface traversal Current invariant：
+
+- Furniture support eligibility 是客觀 solid-face truth；Surface identity / bounds / elevation 必須由 resolver 派生，不得恢復 singular authored `spatial.surface` 或 Furniture-ID special case；
+- static occupancy fit 與 transition reachability 分開：support footprint + body clearance 只回答「能不能待在 Surface 上」，Passage × Physical maneuver feasibility 才回答「能不能從目前 node 上去／下來」；
+- Route / execution 必須共用同一 selected `surfaceManeuver`；Locomotion 擁有 maneuver timing / burden，不得把 fixed Surface `transitionCost` 當 physical feasibility；
+- Contact、Surface Environment、support-object position 都只能引用 canonical derived Surface；本階段仍沒有自由 local-position / multi-agent Surface packing。
 
 Relationship Current invariant：
 

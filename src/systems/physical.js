@@ -2,7 +2,7 @@
   const W=window.SimWorld,C=window.SimEmbodimentCapabilities;if(!W)return;
   if(!C?.defaultPhysicalProfile||!C?.DEFAULT_PHYSICAL_PROFILES||!C?.getPoseEnvelopeForKind||!C?.getSupportFootprintForKind||!C?.surfaceManeuverProfileForKind||!C?.poseEnvelopeFitsUsableSpace)throw new Error('systems/physical.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/physical.js requires world.js initial-state pipeline.');
-  const VERSION='11.33.0-pose-envelope-static-fit';
+  const VERSION='11.34.0-surface-traversal-maneuvers';
 
   function defaultPhysicalProfile(kind){return C.defaultPhysicalProfile(kind);}
 

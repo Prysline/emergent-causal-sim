@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.33.5-drink-vessel-feasibility';
+const CURRENT_VERSION='11.34.0-surface-traversal-maneuvers';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -187,10 +187,10 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v11');
+assert.equal(FD.VERSION,'furniture-definitions-v12');
 assert.equal(A.VERSION,'world-authoring-v7');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
-assert.equal(EC.VERSION,'embodiment-capabilities-v2');
+assert.equal(EC.VERSION,'embodiment-capabilities-v3');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
@@ -198,12 +198,12 @@ assert.equal(R.VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.33.0-pose-envelope-static-fit');
-assert.equal(P.VERSION,'11.33.0-pose-envelope-static-fit');
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.1-slot-aware-origin');
-assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.30.0-distance-timing');
-assert.equal(L.VERSION,'11.30.0-distance-timing');
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(P.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(L.VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.isInitialStateRegistryFinalized(),true);

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v11';
+  const VERSION='furniture-definitions-v12';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
