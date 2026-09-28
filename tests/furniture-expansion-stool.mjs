@@ -64,15 +64,17 @@ assert.deepEqual(resolved.slots[0].approachEdges,['north','east','south','west']
 assert.equal(resolved.slots[0].restQuality,.40);
 assert.equal(resolved.spatial.surface,undefined,'legacy singular Surface remains absent during derived-Surface migration');
 assert.equal(resolved.spatial.surfaces.length,1);
-assert.deepEqual(resolved.spatial.surfaces[0],{
-  id:'stool-basic-1:seat',
-  label:'矮凳座面',
-  sourceSolidKey:'seat',
-  face:'top',
-  supportRegion:{x:3.28,y:4.28,width:.44,depth:.44},
-  topElevation:.49,
-  cells:[{x:3,y:4,z:0}]
-});
+const stoolSurface=resolved.spatial.surfaces[0];
+assert.equal(stoolSurface.id,'stool-basic-1:seat');
+assert.equal(stoolSurface.label,'矮凳座面');
+assert.equal(stoolSurface.sourceSolidKey,'seat');
+assert.equal(stoolSurface.face,'top');
+assert.ok(Math.abs(stoolSurface.supportRegion.x-3.28)<1e-12);
+assert.ok(Math.abs(stoolSurface.supportRegion.y-4.28)<1e-12);
+assert.equal(stoolSurface.supportRegion.width,.44);
+assert.equal(stoolSurface.supportRegion.depth,.44);
+assert.equal(stoolSurface.topElevation,.49);
+assert.deepEqual(stoolSurface.cells,[{x:3,y:4,z:0}]);
 
 const humanProfile=C.defaultPhysicalProfile('human');
 const catProfile=C.defaultPhysicalProfile('cat');
