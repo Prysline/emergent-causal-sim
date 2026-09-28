@@ -27,13 +27,12 @@
       slots:[],
       spatial:{
         solids:[
-          {key:'tabletop',bounds:{x:.30,y:.61,z:.72,width:1.40,depth:.78,height:.02}},
+          {key:'tabletop',bounds:{x:.30,y:.61,z:.72,width:1.40,depth:.78,height:.02},faces:{top:{supportsBodyOccupancy:true,surfaceKey:'surface',surfaceLabel:'餐桌桌面'}}},
           {key:'legNW',bounds:{x:.38,y:.69,z:0,width:.06,depth:.06,height:.72}},
           {key:'legNE',bounds:{x:1.56,y:.69,z:0,width:.06,depth:.06,height:.72}},
           {key:'legSW',bounds:{x:.38,y:1.25,z:0,width:.06,depth:.06,height:.72}},
           {key:'legSE',bounds:{x:1.56,y:1.25,z:0,width:.06,depth:.06,height:.72}}
-        ],
-        surface:{key:'surface',label:'餐桌桌面',onSolid:{key:'tabletop',face:'top'},traversable:true,allowKinds:['human','cat']}
+        ]
       }
     },
     'chair-basic':{
@@ -207,17 +206,8 @@
         }
       }
     }
-    const surface=spatial.surface;
-    if(surface===undefined)return;
-    if(hasDerivedSurface)throw new Error('Furniture Definition '+key+' must not combine spatial.surface with solid top body-support Surface metadata.');
-    if(isRecord(surface)&&(Object.prototype.hasOwnProperty.call(surface,'id')||Object.prototype.hasOwnProperty.call(surface,'cells')))throw new Error('Furniture Definition '+key+' spatial.surface must not persist runtime id / cells.');
-    if(!isRecord(surface)||typeof surface.key!=='string'||!surface.key||surface.key.includes(':'))throw new Error('Furniture Definition '+key+' has invalid spatial.surface.key.');
-    if(typeof surface.label!=='string'||!surface.label)throw new Error('Furniture Definition '+key+' spatial.surface requires label.');
-    if(!isRecord(surface.onSolid)||typeof surface.onSolid.key!=='string'||surface.onSolid.face!=='top'||!solidKeys.has(surface.onSolid.key))throw new Error('Furniture Definition '+key+' spatial.surface.onSolid must reference an existing solid top face.');
-    if(typeof surface.traversable!=='boolean')throw new Error('Furniture Definition '+key+' spatial.surface.traversable must be boolean.');
-    if(surface.allowKinds!==undefined&&(!Array.isArray(surface.allowKinds)||surface.allowKinds.some(kind=>typeof kind!=='string'||!kind)))throw new Error('Furniture Definition '+key+' spatial.surface.allowKinds must contain non-empty strings.');
-    assertCostMap(surface.moveCost,key+'.spatial.surface.moveCost');
-    assertCostMap(surface.transitionCost,key+'.spatial.surface.transitionCost');
+    if(spatial.surface!==undefined)throw new Error('Furniture Definition '+key+' must not author legacy spatial.surface; use solid top body-support metadata.');
+    if(definition.supportsObjects===true&&derivedSurfaceKeys.size!==1)throw new Error('Furniture Definition '+key+' with supportsObjects=true requires exactly one derived body-support Surface.');
   }
 
   function assertDefinition(definition,key){
@@ -520,19 +510,6 @@
           topElevation:source.bounds.z+source.bounds.height,
           cells:surfaceCellsForBounds(source.bounds,instance.origin.z)
         });
-      }
-      if(definition.spatial.surface){
-        const source=resolved.spatial.solids.find(solid=>solid.key===definition.spatial.surface.onSolid.key);
-        resolved.spatial.surface=clone(definition.spatial.surface);
-        resolved.spatial.surface.id=instance.id+':'+resolved.spatial.surface.key;
-        resolved.spatial.surface.cells=surfaceCellsForBounds(source.bounds,instance.origin.z);
-        resolved.spatial.surface.sourceSolidKey=source.key;
-        resolved.spatial.surface.face='top';
-        resolved.spatial.surface.supportRegion={x:source.bounds.x,y:source.bounds.y,width:source.bounds.width,depth:source.bounds.depth};
-        resolved.spatial.surface.topElevation=source.bounds.z+source.bounds.height;
-        delete resolved.spatial.surface.key;
-        delete resolved.spatial.surface.onSolid;
-        resolved.spatial.surfaces.push(resolved.spatial.surface);
       }
     }
     return resolved;
