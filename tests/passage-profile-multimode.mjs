@@ -26,6 +26,7 @@ function resetFixture({height=2,edgeWidth=null}={}){
   human.position=floor(st,1,1);human.action=null;human.posture={kind:'standing',slotId:null,furnitureId:null};
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   const water=st.containers.waterBucket;
+  st.containers={waterBucket:water};
   water.supportId=null;water.position=floor(st,3,1);
   st.furniture={
     testPassageCover:{
