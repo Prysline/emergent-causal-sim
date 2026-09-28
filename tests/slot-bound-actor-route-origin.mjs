@@ -142,6 +142,29 @@ E.reset(20260911);
   assert.equal(candidate?.targetAgent,target.id);
 }
 
+// Generic moveToExact consumers (wander/rest/sleep/exit) must execute through the same target-aware egress used by Route.
+E.reset(20260911);
+{
+  const st=E.getState(),human=st.agents.zhen;
+  st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  const slot=bindToSlot(st,human,'chairNW:seat','sitting');
+  quiet(human,{hunger:5,thirst:5,fatigue:5,sleepNeed:5,social:5});
+  const egress=SP.slotEgressNodes(st,slot,human,'walk');
+  assert.ok(egress.length>1,'fixture needs multiple legal egress candidates');
+  let target=null,expected=null;
+  for(const tile of Object.values(st.map.tiles||{})){
+    const goal=SP.normalizeNode(st,tile,'floor');
+    if(!goal||!SP.nodeWalkable(st,goal,human))continue;
+    const best=SP.bestSlotEgressNode(st,slot,human,goal,{mode:'auto',objective:'traversalCost'});
+    if(best&&!SP.nodeSame(st,best,egress[0])){target=goal;expected=best;break;}
+  }
+  assert.ok(target&&expected,'fixture must expose a target whose best egress is not the first listed egress');
+  human.action={kind:'wander',phase:'move',targetTile:{...target},oneShot:true,started:st.tick,wait:0};
+  E.tick();
+  assert.equal(human.posture.slotId,null,'generic moveToExact execution must leave the Slot');
+  assert.ok(SP.nodeSame(st,human.position,expected),'generic moveToExact execution must choose the same target-aware egress as Route');
+}
+
 // Slot-to-Slot target ranking must also use actor egress origins.
 E.reset(20260911);
 {
