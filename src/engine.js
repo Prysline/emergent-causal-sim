@@ -156,23 +156,33 @@
   function mealSlots(a){return SP.allSlots(state).filter(s=>SP.slotAllows(s,a)&&SP.slotPoseFits?.(s,a,'sitting')&&SP.slotAvailable(state,s.id,a.id)&&(s.mealSeat||s.canRest)).map(s=>{const position=SP.bestSlotApproachNode?.(state,s,a,{mode:'walk',objective:'traversalCost'})||null;return position?{slot:s,position,d:routeBurden(a,position),penalty:s.mealSeat?0:8,noise:SP.noiseAt(state,s.position)}:null;}).filter(x=>x&&Number.isFinite(x.d)).sort((x,y)=>(x.penalty+x.d+x.noise*.15)-(y.penalty+y.d+y.noise*.15));}
   function resourceSources(resource,a,{excludeId=null}={}){const candidates=[];for(const s of Object.values(state.sources)){if(s.id!==excludeId&&s.resource===resource&&amountAt(s.id,resource)>0)candidates.push({id:s.id,kind:'source'});}for(const c of Object.values(state.containers)){if(c.id===excludeId||amountAt(c.id,resource)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;candidates.push({id:c.id,kind:'object'});}return candidates.map(t=>({t,d:targetTraversalCost(a,t,'fill')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.t||null;}
   function directDrinkContainers(resource,a){return Object.values(state.containers).filter(c=>c.canDrinkFrom&&amountAt(c.id,resource)>0&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'drinkFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.c||null;}
-  function drinkVesselPlans(a,r){
-    const desperate=a.needs.thirst>=88,plans=[];
+  function hasReachableResourceSource(r,a,{excludeId=null}={}){
+    for(const source of Object.values(state.sources)){
+      if(source.id===excludeId||source.resource!==r||amountAt(source.id,r)<=0)continue;
+      if(Number.isFinite(targetTraversalCost(a,{kind:'source',id:source.id},'fill')))return true;
+    }
+    for(const c of Object.values(state.containers)){
+      if(c.id===excludeId||amountAt(c.id,r)<=0)continue;
+      const holder=holderOf(c.id);
+      if(holder&&holder.id!==a.id)continue;
+      if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'fill')))return true;
+    }
+    return false;
+  }
+  function chooseDrinkVessel(a,r){
+    const desperate=a.needs.thirst>=88,candidates=[];
     for(const c of Object.values(state.containers)){
       if(!c.portable||!c.canDrinkFrom)continue;
       const holder=holderOf(c.id);
       if(holder&&holder.id!==a.id)continue;
       if(!desperate&&Object.entries(c.contents||{}).some(([x,v])=>x!==r&&v>.1))continue;
-      const held=holder?.id===a.id||a.held===c.id,d=held?0:targetTraversalCost(a,{kind:'object',id:c.id},'pickup');
-      if(!Number.isFinite(d))continue;
-      const amount=amountAt(c.id,r);
-      if(amount<4&&!resourceSources(r,a,{excludeId:c.id}))continue;
-      plans.push({c,d});
+      const d=(holder?.id===a.id||a.held===c.id)?0:targetTraversalCost(a,{kind:'object',id:c.id},'pickup');
+      if(Number.isFinite(d))candidates.push({c,d});
     }
-    plans.sort((x,y)=>{const sx=(x.c.drinkPreference??.5)*45+(amountAt(x.c.id,r)>0?25:sumContents(x.c)<=.1?12:0)-x.d*4,sy=(y.c.drinkPreference??.5)*45+(amountAt(y.c.id,r)>0?25:sumContents(y.c)<=.1?12:0)-y.d*4;return sy-sx||String(x.c.id).localeCompare(String(y.c.id));});
-    return plans;
+    candidates.sort((x,y)=>{const sx=(x.c.drinkPreference??.5)*45+(amountAt(x.c.id,r)>0?25:sumContents(x.c)<=.1?12:0)-x.d*4,sy=(y.c.drinkPreference??.5)*45+(amountAt(y.c.id,r)>0?25:sumContents(y.c)<=.1?12:0)-y.d*4;return sy-sx||String(x.c.id).localeCompare(String(y.c.id));});
+    for(const {c} of candidates)if(amountAt(c.id,r)>=4||hasReachableResourceSource(r,a,{excludeId:c.id}))return c;
+    return null;
   }
-  function chooseDrinkVessel(a,r){return drinkVesselPlans(a,r)[0]?.c||null;}
   function logisticsContainerCanCarry(c,resource){return SP.hasRole(c,'logisticsContainer')&&c.portable&&(!c.transportResources?.length||c.transportResources.includes(resource))&&!Object.entries(c.contents||{}).some(([r,v])=>r!==resource&&v>.05);}
   function logisticsContainers(resource,a){return Object.values(state.containers).filter(c=>logisticsContainerCanCarry(c,resource)&&capacityLeft(c.id)>.05).filter(c=>{const holder=holderOf(c.id),reserved=reservationOwner(`object:${c.id}`);return (!holder||holder.id===a.id)&&(!reserved||reserved.id===a.id);}).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'pickup'),empty:sumContents(c)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.empty-y.empty||x.d-y.d).map(x=>x.c);}
   function sourceForRestock(job,a){if(job.sourceRole==='resourceSource'){const sources=SP.entitiesWithRole(state,job.sourceRole,['sources']).filter(s=>s.resource===job.resource&&amountAt(s.id,job.resource)>0);return sources.map(s=>({id:s.id,kind:'source',d:targetTraversalCost(a,{kind:'source',id:s.id},'fill')})).sort((x,y)=>x.d-y.d)[0]||null;}const sources=containersByRole(job.sourceRole).filter(c=>amountAt(c.id,job.resource)>0);return sources.map(c=>({id:c.id,kind:'object',d:targetTraversalCost(a,{kind:'object',id:c.id},'takeResource')})).sort((x,y)=>x.d-y.d)[0]||null;}
