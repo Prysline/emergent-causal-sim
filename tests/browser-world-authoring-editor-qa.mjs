@@ -126,7 +126,10 @@ assert.equal(snapshot.resolved.slots[0].id,'stool-basic-1:seat');
 assert.deepEqual(snapshot.resolved.slots[0].approachEdges,['north','east','south','west']);
 assert.equal(snapshot.resolved.slots[0].allowKinds,undefined,'stool must not serialize or resolve a species whitelist');
 assert.equal(snapshot.resolved.spatial.surface,undefined,'legacy singular Surface must remain absent for the stool');
-assert.deepEqual(snapshot.resolved.spatial.surfaces,[{id:'stool-basic-1:seat',label:'矮凳座面',sourceSolidKey:'seat',face:'top',supportRegion:{x:3.28,y:4.28,width:.44,depth:.44},topElevation:.49,cells:[{x:3,y:4,z:0}]}],'stool must expose its derived traversal Surface while retaining the independent activity Slot');
+assert.equal(snapshot.resolved.spatial.surfaces.length,1,'stool must expose exactly one derived traversal Surface');
+const stoolSurface=snapshot.resolved.spatial.surfaces[0];
+assert.deepEqual({id:stoolSurface.id,label:stoolSurface.label,sourceSolidKey:stoolSurface.sourceSolidKey,face:stoolSurface.face,topElevation:stoolSurface.topElevation,cells:stoolSurface.cells},{id:'stool-basic-1:seat',label:'矮凳座面',sourceSolidKey:'seat',face:'top',topElevation:.49,cells:[{x:3,y:4,z:0}]},'stool derived Surface identity must remain independent from its activity Slot');
+assert.ok(Math.abs(stoolSurface.supportRegion.x-3.28)<1e-12&&Math.abs(stoolSurface.supportRegion.y-4.28)<1e-12&&stoolSurface.supportRegion.width===.44&&stoolSurface.supportRegion.depth===.44,'stool supportRegion must preserve resolved metric geometry');
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
