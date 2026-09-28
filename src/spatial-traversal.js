@@ -167,11 +167,18 @@
   function nodeWalkable(st,p,aOrId=null){const a=agentFor(st,aOrId),n=normalizeNode(st,p);if(!n)return false;return n.surfaceId===FLOOR?floorWalkable(st,n,a):surfaceWalkable(st,n,a);}
 
   function nodeForAgent(st,a){return normalizeNode(st,a?.position);}
+  function supportSurfaceForFurniture(st,furnitureOrId){
+    const furniture=typeof furnitureOrId==='string'?st.furniture?.[furnitureOrId]:furnitureOrId;
+    if(!furniture)return null;
+    const surfaces=furniture.spatial?.surfaces||[];
+    if(surfaces.length!==1)return null;
+    return {furniture,surface:surfaces[0]};
+  }
   function objectNode(st,id){
     const holder=SP.holderOf(st,id);if(holder)return nodeForAgent(st,holder);
     const c=st.containers?.[id],s=st.sources?.[id],obj=c||s;if(!obj?.position)return null;
     let surfaceId=obj.position.surfaceId||FLOOR;
-    if(c?.supportId){const entry=st.furniture?.[c.supportId]?.spatial?.surface; if(entry)surfaceId=entry.id;}
+    if(c?.supportId){const entry=supportSurfaceForFurniture(st,c.supportId);if(entry)surfaceId=entry.surface.id;}
     return normalizeNode(st,obj.position,surfaceId);
   }
   function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&!a.posture?.slotId&&a.id!==except&&nodeSame(st,a.position,n));}
@@ -607,11 +614,11 @@
     return [...out.values()];
   }
   function supportContactNodes(st,supportId,agent){
-    const f=st.furniture?.[supportId],entry=f?.spatial?.surface;if(!f)return [];
+    const f=st.furniture?.[supportId],entry=supportSurfaceForFurniture(st,f);if(!f)return [];
     const out=new Map();
     if(entry){
-      for(const q of outsideContactFloorNodes(st,{furniture:f,surface:entry},agent))out.set(nodeKey(st,q),q);
-      for(const cell of entry.cells||[]){const q=normalizeNode(st,cell,entry.id);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}
+      for(const q of outsideContactFloorNodes(st,entry,agent))out.set(nodeKey(st,q),q);
+      for(const cell of entry.surface.cells||[]){const q=normalizeNode(st,cell,entry.surface.id);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}
     }else for(const p of baseInteractionGeometry(st,{kind:'furniture',id:supportId},agent,'default').positions||[]){
       const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);
     }
@@ -710,5 +717,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.30.1-slot-aware-origin',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.30.1-slot-aware-origin',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();
