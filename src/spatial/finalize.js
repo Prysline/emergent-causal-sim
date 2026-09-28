@@ -12,7 +12,8 @@
     }
     for(const c of Object.values(st.containers||{})){
       if(!c.position)continue;
-      const surfaceId=c.supportId&&st.furniture?.[c.supportId]?.spatial?.surface?.id||c.position.surfaceId||FLOOR;
+      const supportedSurfaceId=c.supportId&&SP.supportSurfaceForFurniture?.(st,c.supportId)?.surface?.id||null;
+      const surfaceId=supportedSurfaceId||c.position.surfaceId||FLOOR;
       const n=SP.normalizeNode(st,c.position,surfaceId);
       c.position={...c.position,spaceId:n.spaceId,surfaceId:n.surfaceId};
     }
