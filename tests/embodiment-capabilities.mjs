@@ -8,7 +8,7 @@ delete globalThis.SimEngine;
 vm.runInThisContext(fs.readFileSync(new URL('../src/embodiment-capabilities.js',import.meta.url),'utf8'),{filename:'embodiment-capabilities.js'});
 
 const C=globalThis.SimEmbodimentCapabilities;
-assert.equal(C.VERSION,'embodiment-capabilities-v2');
+assert.equal(C.VERSION,'embodiment-capabilities-v3');
 assert.equal(globalThis.SimWorld,undefined,'authoring-safe capability contract must not require or create SimWorld');
 assert.equal(globalThis.SimEngine,undefined,'authoring-safe capability contract must not require or create SimEngine');
 assert.deepEqual(C.supportedLocomotionModesForKind('human'),['walk','kneelCrawl','proneCrawl']);
@@ -29,7 +29,15 @@ assert.equal(C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry.height,1.65,'default
 assert.equal(C.defaultPhysicalProfile('unknown'),null);
 assert.deepEqual(C.getPoseEnvelopeForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'sitting'),{height:.9075,width:.45,length:.594});
 assert.deepEqual(C.getPoseEnvelopeForKind('cat',C.DEFAULT_PHYSICAL_PROFILES.cat.bodyGeometry,'lying'),{height:.16,width:.22499999999999998,length:.45});
-assert.equal(C.getPoseEnvelopeForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'standing'),null,'standing PoseEnvelope is intentionally not part of Slice 1');
+assert.deepEqual(C.getPoseEnvelopeForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'standing'),{height:1.65,width:.45,length:.30});
+assert.deepEqual(C.getPoseEnvelopeForKind('cat',C.DEFAULT_PHYSICAL_PROFILES.cat.bodyGeometry,'standing'),{height:.32,width:.18,length:.45});
+const humanSupport=C.getSupportFootprintForKind('human',C.DEFAULT_PHYSICAL_PROFILES.human.bodyGeometry,'standing');
+const catSupport=C.getSupportFootprintForKind('cat',C.DEFAULT_PHYSICAL_PROFILES.cat.bodyGeometry,'standing');
+assert.ok(Math.abs(humanSupport.width-.27)<1e-9&&Math.abs(humanSupport.length-.24)<1e-9);
+assert.ok(Math.abs(catSupport.width-.18)<1e-9&&Math.abs(catSupport.length-.36)<1e-9);
+assert.equal(C.surfaceManeuverProfileForKind('human','step').upHeightRatio,.30);
+assert.equal(C.surfaceManeuverProfileForKind('cat','jump').upHeightRatio,3);
+assert.notEqual(C.surfaceManeuverProfileForKind('human','jump').upHeightRatio,C.surfaceManeuverProfileForKind('cat','jump').upHeightRatio,'different species must own different maneuver ratios');
 assert.equal(C.poseEnvelopeFitsUsableSpace({height:.9,width:.45,length:.59},{width:.5,length:.65}),true);
 assert.equal(C.poseEnvelopeFitsUsableSpace({height:.3,width:.45,length:1.65},{width:.9,length:.7}),false);
 

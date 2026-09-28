@@ -25,7 +25,7 @@
     for(const c of Object.values(st?.containers||{})){
       if(!c.position||SP.holderOf(st,c.id))continue;
       const node=SP.objectNode(st,c.id);if(!node)continue;
-      if(c.supportId){const expected=st.furniture?.[c.supportId]?.spatial?.surface?.id;if(expected&&node.surfaceId!==expected)add('supported_object_surface_mismatch',`${c.name}承載於 ${c.supportId}，但 Spatial Node 不在其 surface。`,{containerId:c.id,supportId:c.supportId,surfaceId:node.surfaceId,expectedSurfaceId:expected});}
+      if(c.supportId){const expected=SP.supportSurfaceForFurniture?.(st,c.supportId)?.surface?.id||null;if(!expected)add('supported_object_surface_ambiguous',`${c.name}承載於 ${c.supportId}，但找不到唯一 canonical support Surface。`,{containerId:c.id,supportId:c.supportId});else if(node.surfaceId!==expected)add('supported_object_surface_mismatch',`${c.name}承載於 ${c.supportId}，但 Spatial Node 不在其 Surface。`,{containerId:c.id,supportId:c.supportId,surfaceId:node.surfaceId,expectedSurfaceId:expected});}
     }
     for(const f of Object.values(st?.furniture||{})){
       const solids=f.spatial?.solids;

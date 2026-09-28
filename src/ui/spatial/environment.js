@@ -17,8 +17,8 @@
       return `<h3>Spatial Environment</h3><div class="kv spatial-kv"><div class="k">Environment Node</div><div class="spatial-mono">${esc(SP.nodeKey(s,node))}</div><div class="k">Surface 內容</div><div>${esc(contentsText(env.contents))}</div><div class="k">液體總量</div><div>${SP.environmentLiquidAmount(s,node).toFixed(1)}</div></div>`;
     }
     if(type==='Furniture'){
-      const f=s.furniture?.[id],surface=f?.spatial?.surface;if(!surface?.cells?.length)return'';
-      const rows=surface.cells.map(cell=>{const p=SP.clonePos(cell),n=SP.normalizeNode(s,p,surface.id),env=SP.environmentAt(s,n,{create:false}),z=SP.zOf?.(cell)??cell.z??0;return `<div class="content-item"><div class="content-head"><span>(${cell.x}, ${cell.y}, Z ${z})</span><b>${esc(contentsText(env?.contents||{}))}</b></div></div>`;}).join('');
+      const f=s.furniture?.[id],surfaces=f?.spatial?.surfaces||[];if(!surfaces.some(surface=>surface.cells?.length))return'';
+      const rows=surfaces.flatMap(surface=>(surface.cells||[]).map(cell=>{const p=SP.clonePos(cell),n=SP.normalizeNode(s,p,surface.id),env=SP.environmentAt(s,n,{create:false}),z=SP.zOf?.(cell)??cell.z??0;return `<div class="content-item"><div class="content-head"><span>${esc(surface.label||surface.id)}・(${cell.x}, ${cell.y}, Z ${z})</span><b>${esc(contentsText(env?.contents||{}))}</b></div></div>`;})).join('');
       return `<h3>Surface Environment</h3><div class="content-list">${rows}</div>`;
     }
     return'';

@@ -18,7 +18,7 @@
   function clearanceSummaryFor(st,node){const values=elevatedSolidEntries(st,node).map(entry=>entry.bottomZ).filter(Number.isFinite);return values.length?Math.min(...values):null;}
   function locomotionMode(agent){return agent?.locomotion?.mode||window.SimLocomotion?.modeFromPosture?.(agent)||'walk';}
   function movementEnvelope(agent){return agent?(window.SimPhysical?.getMovementEnvelope?.(agent,locomotionMode(agent))??null):null;}
-  function requiredClearance(agent){return agent?(movementEnvelope(agent)?.clearanceHeight??SP.TRAVERSAL_PROFILES?.[agent.kind]?.requiredClearance??null):null;}
+  function requiredClearance(agent){return agent?(movementEnvelope(agent)?.clearanceHeight??null):null;}
   function nodeObservation(st,p,agent=null){
     const node=SP.normalizeNode(st,p);if(!node)return null;
     const overhead=node.surfaceId===FLOOR?(SP.overheadAt?.(st,node)||[]):[];
@@ -57,17 +57,12 @@
   function objectObservation(st,id){const node=SP.objectNode(st,id);if(!node)return null;const out=nodeObservation(st,node,null);if(out){out.objectId=id;out.supportId=st.containers?.[id]?.supportId||null;}return out;}
   function furnitureObservation(st,id){
     const f=st.furniture?.[id];if(!f)return null;
-    const surface=f.spatial?.surface||null,solids=(f.spatial?.solids||[]).map(solid=>({key:solid.key,layerZ:solid.layerZ,bounds:{...solid.bounds}}));
-    return {
-      furnitureId:id,
-      surfaceId:surface?.id||null,
-      surfaceLabel:surface?.label||null,
-      traversable:!!surface?.traversable,
-      cells:(surface?.cells||[]).map(p=>SP.clonePos(p)),
-      allowKinds:[...(surface?.allowKinds||[])],
-      solids,
-      solidCount:solids.length
-    };
+    const surfaces=(f.spatial?.surfaces||[]).map(surface=>({
+      id:surface.id,label:surface.label||surface.id,sourceSolidKey:surface.sourceSolidKey||null,
+      topElevation:surface.topElevation??null,supportRegion:surface.supportRegion?{...surface.supportRegion}:null,
+      cells:(surface.cells||[]).map(p=>SP.clonePos(p))
+    })),solids=(f.spatial?.solids||[]).map(solid=>({key:solid.key,layerZ:solid.layerZ,bounds:{...solid.bounds}}));
+    return {furnitureId:id,surfaces,surfaceCount:surfaces.length,solids,solidCount:solids.length};
   }
   function formatNode(st,p){const o=nodeObservation(st,p);if(!o)return'無';const z=SP.zOf?.(o.position)??o.position.z??0;return `${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y}${z!==0?`, z=${z}`:''})`;}
   Object.assign(SP,{OBSERVABILITY_VERSION:VERSION,roomLabel,surfaceLabel,elevatedSolidEntries,clearanceSummaryFor,nodeObservation,agentObservation,objectObservation,furnitureObservation,formatNode});

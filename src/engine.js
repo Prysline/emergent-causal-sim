@@ -118,13 +118,15 @@
     a.action.lastMoveReason=reason;a.action.lastPath=plan.path.map(p=>({...p}));
     if(adoptLocomotionPosture(a,step.mode)){delete a.action.locomotionStep;delete a.action.locomotionCredit;setLocomotionState(a,step.mode,'transition');return false;}
     setLocomotionState(a,step.mode,'moving');
-    const toKey=SP.nodeKey?SP.nodeKey(state,step.to):SP.key(step.to),pending=a.action.locomotionStep;
-    if(!pending||pending.mode!==step.mode||pending.toKey!==toKey){
+    const toKey=SP.nodeKey?SP.nodeKey(state,step.to):SP.key(step.to),pending=a.action.locomotionStep,stepManeuverKey=L.surfaceManeuverKey?.(step.surfaceManeuver)||null,pendingManeuverKey=L.surfaceManeuverKey?.(pending?.surfaceManeuver)||null;
+    let executionManeuver=step.surfaceManeuver||null;
+    if(!pending||pending.mode!==step.mode||pending.toKey!==toKey||pendingManeuverKey!==stepManeuverKey){
       const ticks=Number(step.moveTicks),creditAfter=Number(step.movementCreditAfter)||0;if(!Number.isFinite(ticks)||ticks<1){clearLocomotionState(a);return false;}
-      if(ticks>1){a.action.locomotionStep={mode:step.mode,to:{...step.to},toKey,ticksRemaining:ticks-1,movementCreditAfter:creditAfter};return false;}
+      if(ticks>1){a.action.locomotionStep={mode:step.mode,to:{...step.to},toKey,ticksRemaining:ticks-1,movementCreditAfter:creditAfter,surfaceManeuver:step.surfaceManeuver?{...step.surfaceManeuver}:null};return false;}
       a.action.locomotionCredit=creditAfter;
     }else if(pending.ticksRemaining>1){pending.ticksRemaining--;return false;}
-    else {a.action.locomotionCredit=Number(pending.movementCreditAfter)||0;delete a.action.locomotionStep;}
+    else {executionManeuver=pending.surfaceManeuver||step.surfaceManeuver||null;a.action.locomotionCredit=Number(pending.movementCreditAfter)||0;delete a.action.locomotionStep;}
+    if(executionManeuver&&!L.executeSurfaceManeuver?.(a,executionManeuver)){clearLocomotionState(a);return false;}
     a.position={...step.to};
     const load=effectiveCarryLoad(a),cost=movementExertion(load),moveLabel=L.modeLabel?.(step.mode)||step.mode||'移動';
     applyExertion(a,cost,load>.01?`負重${moveLabel}`:moveLabel,{thirstFactor:.18,hungerFactor:.05,load});

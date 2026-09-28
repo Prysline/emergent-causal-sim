@@ -17,7 +17,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(D.VERSION,'furniture-definitions-v11');
+assert.equal(D.VERSION,'furniture-definitions-v12');
 assert.equal(A.VERSION,'world-authoring-v7');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
@@ -34,8 +34,7 @@ const asymmetricDefinition={
   displayOffset:local(2,1),
   slots:[{key:'off-center',label:'偏心槽位',offset:local(0,1),approachEdges:['south','west'],allowKinds:['human']}],
   spatial:{
-    solids:[{key:'body',bounds:{x:.2,y:.3,z:.4,width:1.1,depth:.6,height:.5}}],
-    surface:{key:'top',label:'測試頂面',onSolid:{key:'body',face:'top'},traversable:true,allowKinds:['human']}
+    solids:[{key:'body',bounds:{x:.2,y:.3,z:.4,width:1.1,depth:.6,height:.5},faces:{top:{supportsBodyOccupancy:true,surfaceKey:'top',surfaceLabel:'測試頂面'}}}]
   }
 };
 const origin=local(4,3);
@@ -82,7 +81,8 @@ for(const orientation of D.ORIENTATIONS){
   assert.equal(resolved.slots[0].id,'probe-'+orientation+':off-center','slot identity must stay instanceId:key');
   assert.deepEqual(resolved.slots[0].approachEdges,expected[orientation].approachEdges,orientation+' slot approach edges');
   assert.deepEqual(resolved.spatial.solids[0].bounds,expected[orientation].bounds,orientation+' metric AABB must use the shared quarter-turn transform');
-  assert.deepEqual(resolved.spatial.surface.cells,expected[orientation].surfaceCells,orientation+' surface cells must derive from rotated solid top-face overlap');
+  assert.equal(resolved.spatial.surface,undefined,orientation+' must not reintroduce legacy singular Surface truth');
+  assert.deepEqual(resolved.spatial.surfaces[0].cells,expected[orientation].surfaceCells,orientation+' Surface cells must derive from rotated eligible solid top-face overlap');
   for(const point of asymmetricDefinition.footprint){
     const world=D.localToWorld(asymmetricDefinition,instance,point);
     assert.deepEqual(D.worldToLocal(asymmetricDefinition,instance,world),point,orientation+' local/world inverse');

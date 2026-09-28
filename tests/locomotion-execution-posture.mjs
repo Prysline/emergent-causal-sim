@@ -12,8 +12,8 @@ loadRuntimeProfile([
 ]);
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.33.5-drink-vessel-feasibility';
-const LOCOMOTION_VERSION='11.30.0-distance-timing';
+const APP_VERSION='11.34.0-surface-traversal-maneuvers';
+const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 const verticalAuthoring=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -81,6 +81,10 @@ assert.equal(L.modeTraversalBurden(human,'walk'),0);
 assert.equal(L.modeTraversalBurden(human,'kneelCrawl'),1);
 assert.equal(L.modeTraversalBurden(human,'proneCrawl'),2);
 assert.equal(L.modeTransitionBurden(human,'walk','proneCrawl'),1);
+assert.deepEqual(L.SURFACE_TRAVERSAL_BURDEN_BY_KIND,{human:4,cat:1.1},'Surface traversal calibration must move intact from Spatial into Locomotion ownership');
+assert.deepEqual(L.SURFACE_MANEUVER_BURDEN_BY_KIND,{human:9,cat:1.6},'Surface transition calibration must move intact from Spatial into maneuver-owned Locomotion policy');
+assert.equal(L.surfaceManeuverBurden(human,{family:'climb',kind:'climbUp',direction:'up'}),9);
+assert.equal(L.surfaceManeuverTiming(human,'walk',{family:'climb',kind:'climbUp',direction:'up'},1,0).movementTicks,1,'first maneuver policy must preserve existing walk timing instead of inventing extra magic ticks');
 
 // A: normal corridor stays walk-first; no posture-transition tax when already standing.
 let f=resetFixture({height:2,width:.8});
@@ -163,6 +167,37 @@ assert.ok(SP.nodeSame(E.getState(),human.position,stairUpper),'one walk movement
 assert.equal(human.posture.kind,'standing');
 assert.equal(human.locomotion.mode,'walk');
 
+// G: a Surface transition executes the same maneuver identity selected by Route / Locomotion.
+E.reset(11902);
+st=E.getState();human=st.agents.zhen;
+st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+const tableSurface=st.furniture.diningTable.spatial.surfaces.find(surface=>surface.id==='diningTable:surface');
+const tableTop=SP.normalizeNode(st,tableSurface.cells[0],tableSurface.id),tableStart=floor(st,5,1);
+human.position={...tableStart};human.action=null;human.posture={kind:'standing',slotId:null,furnitureId:null};human.locomotion={mode:null,phase:'idle'};
+plan=SP.planRoute(st,human,tableTop,{mode:'auto',objective:'traversalCost'});
+assert.equal(plan.steps[0]?.surfaceManeuver?.kind,'climbUp','Default Human tabletop transition must carry the Physical-feasible climbUp identity');
+const executedSurfaceManeuvers=[],originalExecuteSurfaceManeuver=L.executeSurfaceManeuver;
+L.executeSurfaceManeuver=(agent,maneuver)=>{executedSurfaceManeuvers.push(maneuver?.kind||null);return originalExecuteSurfaceManeuver(agent,maneuver);};
+try{
+  armWander({st,human,goal:tableTop});
+  E.tick();
+}finally{
+  L.executeSurfaceManeuver=originalExecuteSurfaceManeuver;
+}
+assert.ok(SP.nodeSame(E.getState(),human.position,tableTop),'discrete Surface maneuver execution must complete the selected edge');
+assert.deepEqual(executedSurfaceManeuvers,['climbUp'],'Engine execution must consume the exact maneuver identity carried by the Route step');
+
+E.reset(11903);
+st=E.getState();
+const cat=st.agents.orange;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
+const catTableSurface=st.furniture.diningTable.spatial.surfaces.find(surface=>surface.id==='diningTable:surface');
+const catTableTop=SP.normalizeNode(st,catTableSurface.cells[0],catTableSurface.id);
+cat.position={...floor(st,5,1)};cat.action=null;cat.posture={kind:'standing',slotId:null,furnitureId:null};cat.locomotion={mode:null,phase:'idle'};
+plan=SP.planRoute(st,cat,catTableTop,{mode:'auto',objective:'traversalCost'});
+assert.equal(plan.steps[0]?.surfaceManeuver?.kind,'jumpUp','Default Cat tabletop transition must retain its distinct jumpUp capability result');
+
+E.reset(11904);
+
 // Validator owns locomotion/posture consistency and pending edge timing.
 let validation=V.validateState(E.getState());
 assert.equal(validation.issueCount,0,validation.issues.map(x=>x.message).join('\n'));
@@ -173,5 +208,9 @@ f.human.posture={kind:'kneeling',slotId:null,furnitureId:null};
 f.human.action={kind:'wander',phase:'move',locomotionStep:{mode:'kneelCrawl',to:{...f.mid},toKey:SP.nodeKey(f.st,f.mid),ticksRemaining:0}};
 validation=V.validateState(f.st);
 assert.ok(validation.issues.some(x=>x.code==='locomotion_step_ticks_invalid'));
+f.human.action.locomotionStep.ticksRemaining=1;
+f.human.action.locomotionStep.surfaceManeuver={family:'teleport',kind:'teleportUp',direction:'up'};
+validation=V.validateState(f.st);
+assert.ok(validation.issues.some(x=>x.code==='locomotion_step_surface_maneuver_invalid'),'validator must reject invented pending Surface maneuver identities');
 
 console.log('v11.24.0 locomotion execution + objective burden regression: ok');

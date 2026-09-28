@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='embodiment-capabilities-v2';
+  const VERSION='embodiment-capabilities-v3';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const deepFreeze=value=>{
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
@@ -30,6 +30,11 @@
   });
   const POSE_PROFILES=deepFreeze({
     human:{
+      standing:{
+        height:{source:'height',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'length',factor:1}
+      },
       sitting:{
         height:{source:'height',factor:.55},
         width:{source:'width',factor:1},
@@ -42,6 +47,11 @@
       }
     },
     cat:{
+      standing:{
+        height:{source:'height',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'length',factor:1}
+      },
       sitting:{
         height:{source:'length',factor:1},
         width:{source:'width',factor:1},
@@ -52,6 +62,22 @@
         width:{source:'width',factor:1.25},
         length:{source:'length',factor:1}
       }
+    }
+  });
+  const SUPPORT_PROFILES=deepFreeze({
+    human:{standing:{width:{source:'width',factor:.60},length:{source:'length',factor:.80}}},
+    cat:{standing:{width:{source:'width',factor:1},length:{source:'length',factor:.80}}}
+  });
+  const SURFACE_MANEUVER_PROFILES=deepFreeze({
+    human:{
+      step:{upHeightRatio:.30,downHeightRatio:.35,horizontalGapRatio:.25},
+      climb:{upHeightRatio:.60,downHeightRatio:.70,horizontalGapRatio:.50},
+      jump:{upHeightRatio:.40,downHeightRatio:.75,horizontalGapRatio:.60}
+    },
+    cat:{
+      step:{upHeightRatio:.20,downHeightRatio:.30,horizontalGapRatio:.20},
+      climb:{upHeightRatio:1.25,downHeightRatio:1.50,horizontalGapRatio:.75},
+      jump:{upHeightRatio:3.00,downHeightRatio:4.50,horizontalGapRatio:4.00}
     }
   });
   const ALL_POSTURES=Object.freeze(['standing','sitting','lying','kneeling','prone']);
@@ -75,6 +101,21 @@
   function getPoseEnvelopeForKind(kind,bodyGeometry,posture){
     return derivePoseEnvelope(bodyGeometry,poseProfileForKind(kind,posture));
   }
+  function supportProfileForKind(kind,posture){return SUPPORT_PROFILES[kind]?.[posture]||null;}
+  function deriveSupportFootprint(bodyGeometry,supportProfile){
+    if(!bodyGeometry||!supportProfile)return null;
+    const out={};
+    for(const axis of ['width','length']){
+      const rule=supportProfile[axis],source=rule?.source,base=Number(bodyGeometry?.[source]),factor=Number(rule?.factor);
+      if(typeof source!=='string'||!finitePositive(base)||!finitePositive(factor))return null;
+      out[axis]=base*factor;
+    }
+    return out;
+  }
+  function getSupportFootprintForKind(kind,bodyGeometry,posture='standing'){
+    return deriveSupportFootprint(bodyGeometry,supportProfileForKind(kind,posture));
+  }
+  function surfaceManeuverProfileForKind(kind,family){return SURFACE_MANEUVER_PROFILES[kind]?.[family]||null;}
   function poseEnvelopeFitsUsableSpace(envelope,usableSpace){
     if(!envelope||!usableSpace||!finitePositive(usableSpace.width)||!finitePositive(usableSpace.length))return false;
     for(const axis of ['width','length','height']){
@@ -115,6 +156,8 @@
     VERSION,
     DEFAULT_PHYSICAL_PROFILES,
     POSE_PROFILES,
+    SUPPORT_PROFILES,
+    SURFACE_MANEUVER_PROFILES,
     ALL_POSTURES,
     POSTURE_BY_MODE,
     MODE_BY_POSTURE,
@@ -122,6 +165,10 @@
     poseProfileForKind,
     derivePoseEnvelope,
     getPoseEnvelopeForKind,
+    supportProfileForKind,
+    deriveSupportFootprint,
+    getSupportFootprintForKind,
+    surfaceManeuverProfileForKind,
     poseEnvelopeFitsUsableSpace,
     supportedLocomotionModesForKind,
     postureForMode,

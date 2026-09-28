@@ -10,8 +10,8 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.33.5-drink-vessel-feasibility';
-const PHYSICAL_VERSION='11.33.0-pose-envelope-static-fit';
+const APP_VERSION='11.34.0-surface-traversal-maneuvers';
+const PHYSICAL_VERSION='11.34.0-surface-traversal-maneuvers';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
@@ -20,7 +20,7 @@ const st=E.getState(),zhen=st.agents.zhen,zhou=st.agents.zhou,orange=st.agents.o
 assert.equal(st.version,APP_VERSION);
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,PHYSICAL_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
-assert.equal(C.VERSION,'embodiment-capabilities-v2');
+assert.equal(C.VERSION,'embodiment-capabilities-v3');
 assert.equal(W.PHYSICAL_DEFAULT_PROFILES,C.DEFAULT_PHYSICAL_PROFILES,'runtime Physical defaults must reference the shared capability owner');
 assert.equal(W.defaultPhysicalProfile('unknown-kind'),null,'unknown kinds must not silently inherit Human physical geometry');
 
@@ -41,6 +41,28 @@ assert.deepEqual(P.supportedLocomotionModes(orange),['walk'],'Cat Slice 2 must n
 
 assert.equal(P.requiredClearance(zhen,'walk'),1.65,'default Human walk clearance must preserve v11.11 standing behavior');
 assert.equal(P.requiredClearance(orange,'walk'),.32,'default Cat walk clearance must preserve v11.11 standing behavior');
+
+assert.deepEqual(P.getPoseEnvelope(zhen,'standing'),{height:1.65,width:.45,length:.30},'standing static body geometry must be distinct from MovementEnvelope');
+const humanSupport=P.getSupportFootprint(zhen,'standing'),catSupport=P.getSupportFootprint(orange,'standing');
+assert.ok(Math.abs(humanSupport.width-.27)<1e-9&&Math.abs(humanSupport.length-.24)<1e-9,'Human standing support footprint must fit ordinary chair-scale support without using shoulder width');
+assert.ok(Math.abs(catSupport.width-.18)<1e-9&&Math.abs(catSupport.length-.36)<1e-9,'Cat quadruped support footprint must derive from Cat body geometry');
+assert.ok(Math.abs(P.getSurfaceManeuverCapability(zhen,'step').maxUpHeight-.495)<1e-9);
+assert.ok(Math.abs(P.getSurfaceManeuverCapability(zhen,'climb').maxUpHeight-.99)<1e-9);
+assert.ok(Math.abs(P.getSurfaceManeuverCapability(orange,'jump').maxUpHeight-.96)<1e-9);
+
+const humanChair=P.surfaceManeuverScaleCandidates(zhen,{verticalDelta:.47,horizontalGap:.30}).map(x=>x.kind);
+assert.ok(humanChair.includes('stepUp')&&humanChair.includes('climbUp'),'default Human chair-scale transition may expose multiple maneuver candidates');
+const humanTable=P.surfaceManeuverScaleCandidates(zhen,{verticalDelta:.74,horizontalGap:.61}).map(x=>x.kind);
+assert.deepEqual(humanTable,['climbUp'],'default Human table-scale calibration must require climb by scale');
+const catTable=P.surfaceManeuverScaleCandidates(orange,{verticalDelta:.74,horizontalGap:.61}).map(x=>x.kind);
+assert.deepEqual(catTable,['jumpUp'],'default Cat table-scale calibration must use jump rather than Human maneuver ratios');
+assert.deepEqual(P.surfaceManeuverScaleCandidates(zhen,{verticalDelta:1.90,horizontalGap:.05}),[],'default Human must not gain cabinet-top reachability from scale alone');
+assert.deepEqual(P.surfaceManeuverScaleCandidates(orange,{verticalDelta:1.90,horizontalGap:.05}),[],'default Cat must not gain cabinet-top reachability from scale alone');
+
+const originalHeight=zhen.physical.bodyGeometry.height;
+zhen.physical.bodyGeometry.height=1.80;
+assert.ok(Math.abs(P.getSurfaceManeuverCapability(zhen,'step').maxUpHeight-.54)<1e-9,'maneuver capability must derive from current individual bodyGeometry');
+zhen.physical.bodyGeometry.height=originalHeight;
 
 // Physical feasibility must use an independent full-cell low-roof fixture.
 // Production dining-table geometry now has real side free-space, so it is not a canonical whole-cell clearance test.

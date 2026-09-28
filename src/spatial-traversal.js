@@ -1,17 +1,13 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.32.1-slot-aware-route-origin';
+  const VERSION='11.34.0-surface-traversal-maneuvers';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
   const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
   const FLOOR_DIRS=[...DIRS,[1,1],[1,-1],[-1,1],[-1,-1]];
-  const TRAVERSAL_PROFILES={
-    human:{requiredClearance:1.65,surfaceMoveCost:4,transitionCost:9},
-    cat:{requiredClearance:.32,surfaceMoveCost:1.1,transitionCost:1.6}
-  };
   const FLOOR='floor';
   const STRUCTURE_TRAVERSAL_PROFILES=Object.freeze({stair:Object.freeze({upBurden:1,downBurden:.5})});
 
@@ -24,24 +20,26 @@
   if(typeof normalizeNode!=='function')throw new Error('spatial-traversal.js requires Spatial core normalizeNode().');
   function nodeKey(st,p){const n=normalizeNode(st,p);return n?`${n.spaceId}|${n.surfaceId}|${SP.key(n)}`:'?';}
   function nodeSame(st,a,b){if(!a||!b)return false;const x=normalizeNode(st,a),y=normalizeNode(st,b);return localSame(x,y)&&x.spaceId===y.spaceId&&x.surfaceId===y.surfaceId;}
-  function profile(agent){return TRAVERSAL_PROFILES[agent?.kind]||TRAVERSAL_PROFILES.human;}
-
   function ensureSpatialDefs(st){
     for(const furniture of Object.values(st.furniture||{})){
       if(!Array.isArray(furniture.spatial?.solids)||!furniture.spatial.solids.length)throw new Error('Furniture '+furniture.id+' has invalid runtime metric solids.');
-      const surface=furniture.spatial?.surface;
-      if(surface&&(!surface.id||!Array.isArray(surface.cells)||!surface.sourceSolidKey))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
+      const surfaces=furniture.spatial?.surfaces;
+      if(!Array.isArray(surfaces))throw new Error('Furniture '+furniture.id+' requires canonical runtime spatial.surfaces.');
+      for(const surface of surfaces){
+        const region=surface?.supportRegion;
+        if(!surface?.id||!Array.isArray(surface.cells)||!surface.sourceSolidKey||surface.face!=='top'||!region||!Number.isFinite(surface.topElevation)||![region.x,region.y,region.width,region.depth].every(Number.isFinite)||region.width<=0||region.depth<=0)throw new Error('Furniture '+furniture.id+' has invalid runtime Surface geometry.');
+      }
     }
     return st;
   }
-  function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.surface?[{furniture:f,surface:f.spatial.surface}]:[]);}
+  function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>(f.spatial?.surfaces||[]).map(surface=>({furniture:f,surface})));}
   function surfaceEntry(st,surfaceId){return surfaceEntries(st).find(x=>x.surface.id===surfaceId)||null;}
   function surfaceAt(st,p){return surfaceEntries(st).find(({surface})=>(surface.cells||[]).some(c=>localSame(c,p)))||null;}
   let activeGeometrySnapshot=null;
   function geometrySnapshotFor(st){return activeGeometrySnapshot?.state===st?activeGeometrySnapshot:null;}
   function withGeometrySnapshot(st,fn){
     const current=geometrySnapshotFor(st);if(current)return fn(current);
-    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),horizontalByLayer:new Map(),horizontalRuntimeSnapshots:new Map()};
+    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),surfaceFits:new Map(),horizontalByLayer:new Map(),horizontalRuntimeSnapshots:new Map()};
     activeGeometrySnapshot=snapshot;
     try{return fn(snapshot);}finally{activeGeometrySnapshot=previous;}
   }
@@ -110,18 +108,72 @@
     const envelope=movementEnvelopeFor(agent,mode);if(!envelope)return false;
     return floorEnvelopeFits(st,n,envelope);
   }
-  function surfaceWalkable(st,node,agent=null){
-    const entry=surfaceEntry(st,node.surfaceId);if(!entry||!entry.surface.traversable||!isSurfaceCell(entry,node))return false;
-    return !agent||!entry.surface.allowKinds?.length||entry.surface.allowKinds.includes(agent.kind);
+  function axisCandidates(min,max,bounds=[]){
+    const values=[min,max,(min+max)/2];
+    for(const value of bounds)if(Number.isFinite(value)&&value>=min-CONTACT_EPS&&value<=max+CONTACT_EPS)values.push(Math.min(max,Math.max(min,value)));
+    const sorted=[...new Set(values.map(value=>Math.round(value*1e12)/1e12))].sort((a,b)=>a-b),out=[...sorted];
+    for(let i=1;i<sorted.length;i++)if(sorted[i]-sorted[i-1]>CONTACT_EPS)out.push((sorted[i]+sorted[i-1])/2);
+    return [...new Set(out.map(value=>Math.round(value*1e12)/1e12))].sort((a,b)=>a-b);
   }
+  function rectOverlapAtAnchor(anchor,pose,solid){
+    const b=solid.bounds,body={x:anchor.x-pose.width/2,y:anchor.y-pose.length/2,width:pose.width,depth:pose.length};
+    return Math.min(body.x+body.width,b.x+b.width)-Math.max(body.x,b.x)>CONTACT_EPS&&Math.min(body.y+body.depth,b.y+b.depth)-Math.max(body.y,b.y)>CONTACT_EPS;
+  }
+  function surfaceStaticFitResult(st,node,aOrId=null,posture='standing'){
+    const a=agentFor(st,aOrId),n=normalizeNode(st,node),entry=n?surfaceEntry(st,n.surfaceId):null;
+    if(!entry||!isSurfaceCell(entry,n))return {fits:false,reason:'surface',surfaceId:n?.surfaceId||null,witness:null};
+    if(!a)return {fits:true,reason:null,surfaceId:entry.surface.id,witness:null};
+    const P=physicalRuntime(),body=a.physical?.bodyGeometry||C?.defaultPhysicalProfile?.(a.kind)?.bodyGeometry||null;
+    const support=P?.getSupportFootprint?.(a,posture)||C?.getSupportFootprintForKind?.(a.kind,body,posture)||null;
+    const pose=P?.getPoseEnvelope?.(a,posture)||C?.getPoseEnvelopeForKind?.(a.kind,body,posture)||null;
+    if(!support||!pose)return {fits:false,reason:'postureProfile',surfaceId:entry.surface.id,witness:null};
+    const snapshot=geometrySnapshotFor(st),cacheKey=[entry.surface.id,nodeKey(st,n),a.id||a.kind,posture,support.width,support.length,pose.width,pose.length,pose.height].join('|');
+    if(snapshot?.surfaceFits.has(cacheKey))return snapshot.surfaceFits.get(cacheKey);
+    const region=entry.surface.supportRegion,minX=Math.max(n.x,region.x+support.width/2),maxX=Math.min(n.x+1,region.x+region.width-support.width/2),minY=Math.max(n.y,region.y+support.length/2),maxY=Math.min(n.y+1,region.y+region.depth-support.length/2);
+    if(maxX<minX-CONTACT_EPS||maxY<minY-CONTACT_EPS){
+      const result={fits:false,reason:'support',surfaceId:entry.surface.id,witness:null,supportAnchorRegion:null};
+      if(snapshot)snapshot.surfaceFits.set(cacheKey,result);return result;
+    }
+    const supportAnchorRegion={minX,maxX,minY,maxY},bodyBottom=entry.surface.topElevation,bodyTop=bodyBottom+pose.height;
+    const blockers=furnitureSolids(st,zOf(n)).filter(solid=>{
+      const b=solid.bounds,verticalOverlap=Math.min(bodyTop,b.z+b.height)-Math.max(bodyBottom,b.z);
+      return verticalOverlap>CONTACT_EPS;
+    });
+    const xBounds=[],yBounds=[];
+    for(const solid of blockers){
+      const b=solid.bounds;xBounds.push(b.x-pose.width/2,b.x+b.width+pose.width/2);yBounds.push(b.y-pose.length/2,b.y+b.depth+pose.length/2);
+    }
+    const xs=axisCandidates(minX,maxX,xBounds),ys=axisCandidates(minY,maxY,yBounds);let witness=null;
+    outer:for(const y of ys)for(const x of xs){
+      const anchor={x,y};
+      if(blockers.some(solid=>rectOverlapAtAnchor(anchor,pose,solid)))continue;
+      witness={x,y,topElevation:entry.surface.topElevation};break outer;
+    }
+    const result={fits:!!witness,reason:witness?null:'clearance',surfaceId:entry.surface.id,witness,supportAnchorRegion,blockedSolidKeys:blockers.map(s=>s.key)};
+    if(snapshot)snapshot.surfaceFits.set(cacheKey,result);return result;
+  }
+  function surfaceNodeFitsMode(st,node,agent,mode='walk'){
+    const entry=surfaceEntry(st,node.surfaceId);if(!entry||!isSurfaceCell(entry,node))return false;
+    if(!agent)return true;
+    const posture=C?.postureForMode?.(mode);if(!posture)return false;
+    return surfaceStaticFitResult(st,node,agent,posture).fits;
+  }
+  function surfaceWalkable(st,node,agent=null){return surfaceNodeFitsMode(st,node,agent,'walk');}
   function nodeWalkable(st,p,aOrId=null){const a=agentFor(st,aOrId),n=normalizeNode(st,p);if(!n)return false;return n.surfaceId===FLOOR?floorWalkable(st,n,a):surfaceWalkable(st,n,a);}
 
   function nodeForAgent(st,a){return normalizeNode(st,a?.position);}
+  function supportSurfaceForFurniture(st,furnitureOrId){
+    const furniture=typeof furnitureOrId==='string'?st.furniture?.[furnitureOrId]:furnitureOrId;
+    if(!furniture)return null;
+    const surfaces=furniture.spatial?.surfaces||[];
+    if(surfaces.length!==1)return null;
+    return {furniture,surface:surfaces[0]};
+  }
   function objectNode(st,id){
     const holder=SP.holderOf(st,id);if(holder)return nodeForAgent(st,holder);
     const c=st.containers?.[id],s=st.sources?.[id],obj=c||s;if(!obj?.position)return null;
     let surfaceId=obj.position.surfaceId||FLOOR;
-    if(c?.supportId){const entry=st.furniture?.[c.supportId]?.spatial?.surface; if(entry)surfaceId=entry.id;}
+    if(c?.supportId){const entry=supportSurfaceForFurniture(st,c.supportId);if(entry)surfaceId=entry.surface.id;}
     return normalizeNode(st,obj.position,surfaceId);
   }
   function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&!a.posture?.slotId&&a.id!==except&&nodeSame(st,a.position,n));}
@@ -194,8 +246,16 @@
   }
   function crowdingRuntime(){return window.SimCrowding||null;}
   function floorStepCost(st,node,a){const t=SP.tileByPos(st,node),wet=SP.tileLiquidAmount(t);let cost=1+wet*(a?.kind==='cat'?.015:.07);if(!crowdingRuntime()){const occupied=nodeOccupantsAt(st,node,a?.id).length;cost+=occupied*(a?.kind==='cat'?2.5:5);}return cost;}
-  function surfaceStepCost(st,node,a){const entry=surfaceEntry(st,node.surfaceId),configured=entry?.surface?.moveCost?.[a?.kind];return configured??profile(a).surfaceMoveCost;}
-  function baseTraversalEdgeCost(st,from,to,a){
+  function surfaceStepCost(st,node,a){
+    if(!surfaceEntry(st,node.surfaceId))return Infinity;
+    return locomotionRuntime()?.surfaceTraversalBurden?.(a)??Infinity;
+  }
+  function selectedSurfaceManeuver(a,modeFeasibility,mode='walk',distanceMeters=1,movementCredit=0){
+    const candidates=modeFeasibility?.maneuverCandidates||[];if(!candidates.length)return null;
+    const selected=locomotionRuntime()?.selectSurfaceManeuver?.(a,candidates,mode,distanceMeters,movementCredit)??modeFeasibility?.effectiveManeuver??candidates[0];
+    return selected?JSON.parse(JSON.stringify(selected)):null;
+  }
+  function baseTraversalEdgeCost(st,from,to,a,surfaceManeuver=null){
     const structure=SP.structureBetween?.(st,from,to)||null;
     if(structure){
       const profile=STRUCTURE_TRAVERSAL_PROFILES[structure.kind];if(!profile)return Infinity;
@@ -204,16 +264,22 @@
     }
     if(from.surfaceId===to.surfaceId)return to.surfaceId===FLOOR?floorStepCost(st,to,a):surfaceStepCost(st,to,a);
     const surfaceNode=from.surfaceId===FLOOR?to:from,entry=surfaceEntry(st,surfaceNode.surfaceId);if(!entry)return Infinity;
-    return entry.surface.transitionCost?.[a?.kind]??profile(a).transitionCost;
+    return locomotionRuntime()?.surfaceManeuverBurden?.(a,surfaceManeuver)??Infinity;
   }
   function traversalEdgeCost(st,from,to,a,mode=null,fromMode=mode){
-    const crowdingSnapshot=arguments[6]||null,maneuverSnapshot=arguments.length>7?arguments[7]:undefined;
-    const base=baseTraversalEdgeCost(st,from,to,a);if(!Number.isFinite(base))return base;
+    const crowdingSnapshot=arguments[6]||null,maneuverSnapshot=arguments.length>7?arguments[7]:undefined,surfaceManeuverSnapshot=arguments.length>8?arguments[8]:undefined;
     const resolvedMode=mode||a?.locomotion?.mode||locomotionRuntime()?.modeFromPosture?.(a)||'walk';
+    const maneuver=maneuverSnapshot===undefined?traversalManeuver(st,from,to):maneuverSnapshot;
+    let surfaceManeuver=surfaceManeuverSnapshot;
+    if(surfaceManeuver===undefined&&maneuver?.edgeKind==='surfaceTransition'){
+      const modeFeasibility=SP.traversalFeasibility?.(st,a,from,to)?.modes?.[resolvedMode]||null;
+      surfaceManeuver=selectedSurfaceManeuver(a,modeFeasibility,resolvedMode,maneuver?.distanceMeters??1,0);
+    }
+    const base=baseTraversalEdgeCost(st,from,to,a,surfaceManeuver);if(!Number.isFinite(base))return base;
     const locomotion=locomotionRuntime(),modeBurden=locomotion?.modeTraversalBurden?.(a,resolvedMode)??0,transitionBurden=locomotion?.modeTransitionBurden?.(a,fromMode,resolvedMode)??0;
     if(!Number.isFinite(modeBurden)||!Number.isFinite(transitionBurden))return Infinity;
     const crowding=crowdingSnapshot||crowdingRuntime()?.getCrowdingProfile?.(st,a,from,to,resolvedMode)||null;
-    const maneuver=maneuverSnapshot===undefined?traversalManeuver(st,from,to):maneuverSnapshot,movementDistance=maneuver?.edgeKind==='horizontal'&&from.surfaceId===to.surfaceId?(maneuver.distanceMeters??1):1;
+    const movementDistance=maneuver?.edgeKind==='horizontal'&&from.surfaceId===to.surfaceId?(maneuver.distanceMeters??1):1;
     return base*movementDistance+modeBurden*movementDistance+transitionBurden+(crowding?.congestionCost||0);
   }
   function walkEdgeFeasible(st,a,from,to){
@@ -230,7 +296,6 @@
       for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeWalkable(st,q,a)&&(maneuver||legacyCardinal)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeWalkable(st,q,a)&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
-        if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
         for(const c of entry.surface.cells||[]){if(!sameLayer(c,n)||Math.abs(c.x-n.x)+Math.abs(c.y-n.y)!==1||isFootprintCell(entry,n))continue;const q=normalizeNode(st,c,entry.surface.id);if(nodeWalkable(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,c))&&walkEdgeFeasible(st,a,n,q))out.set(nodeKey(st,q),q);}
       }
     }else{
@@ -245,8 +310,9 @@
     const passage=SP.getPassageProfile?.(st,a,b);if(!passage)return null;
     const structure=passage.edgeKind==='structure';
     const horizontal=passage.edgeKind==='horizontal';
-    if(!structure&&!horizontal)return null;
-    if(horizontal&&passage.status&&passage.status!=='candidate')return null;
+    const surfaceTransition=passage.edgeKind==='surfaceTransition';
+    if(!structure&&!horizontal&&!surfaceTransition)return null;
+    if((horizontal||surfaceTransition)&&passage.status&&passage.status!=='candidate')return null;
     const dz=zOf(b)-zOf(a),dx=b.x-a.x,dy=b.y-a.y;
     return {
       from:cloneNode(a),to:cloneNode(b),
@@ -258,7 +324,8 @@
         :[cloneNode(a),cloneNode(b)],
       edgeKind:passage.edgeKind,
       horizontalKind:passage.horizontalKind||null,
-      structureId:passage.structureId||null
+      structureId:passage.structureId||null,
+      surfaceTransition:surfaceTransition&&passage.surfaceTransition?JSON.parse(JSON.stringify(passage.surfaceTransition)):null
     };
   }
   function locomotionRuntime(){return window.SimLocomotion||null;}
@@ -284,7 +351,6 @@
       for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=maneuverResolver?maneuverResolver(n,q):traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeLocomotionAccessible(st,q,a)&&(maneuver||legacyCardinal))out.set(nodeKey(st,q),q);}
       for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
-        if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
         for(const cell of entry.surface.cells||[]){
           if(!sameLayer(cell,n)||Math.abs(cell.x-n.x)+Math.abs(cell.y-n.y)!==1||isFootprintCell(entry,n))continue;
           const q=normalizeNode(st,cell,entry.surface.id);if(nodeLocomotionAccessible(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,cell)))out.set(nodeKey(st,q),q);
@@ -310,7 +376,12 @@
   function currentLocomotionMode(a){return locomotionRuntime()?.modeFromPosture?.(a)||null;}
   function normalizedMovementCredit(value){const credit=Number(value);return Number.isFinite(credit)&&credit>0?Math.min(credit,1-1e-9):0;}
   function fallbackMovementTiming(distanceMeters,movementCredit=0){const distance=Number(distanceMeters),credit=normalizedMovementCredit(movementCredit);if(!Number.isFinite(distance)||distance<=0)return {movementTicks:Infinity,movementCreditAfter:0,requiredTicks:Infinity};const requiredTicks=distance,effective=Math.max(0,requiredTicks-credit),movementTicks=Math.max(1,Math.ceil(effective-1e-12));return {movementTicks,movementCreditAfter:normalizedMovementCredit(credit+movementTicks-requiredTicks),requiredTicks};}
-  function edgeMoveTiming(st,a,from,to,mode,crowdingSnapshot=null,movementCredit=0,maneuverSnapshot=undefined){const maneuver=maneuverSnapshot===undefined?traversalManeuver(st,from,to):maneuverSnapshot,distanceMeters=maneuver?.distanceMeters??1,L=locomotionRuntime(),base=L?.movementTiming?.(a,mode,distanceMeters,movementCredit)??fallbackMovementTiming(distanceMeters,movementCredit),delayTicks=Math.max(0,Number(crowdingSnapshot?.delayTicks)||0);return {distanceMeters,movementTicks:base.movementTicks,moveTicks:Number.isFinite(base.movementTicks)?base.movementTicks+delayTicks:Infinity,movementCreditAfter:normalizedMovementCredit(base.movementCreditAfter),delayTicks};}
+  function edgeMoveTiming(st,a,from,to,mode,crowdingSnapshot=null,movementCredit=0,maneuverSnapshot=undefined,surfaceManeuverSnapshot=null){
+    const maneuver=maneuverSnapshot===undefined?traversalManeuver(st,from,to):maneuverSnapshot,distanceMeters=maneuver?.distanceMeters??1,L=locomotionRuntime();
+    const base=surfaceManeuverSnapshot?L?.surfaceManeuverTiming?.(a,mode,surfaceManeuverSnapshot,distanceMeters,movementCredit):L?.movementTiming?.(a,mode,distanceMeters,movementCredit);
+    const timing=base??fallbackMovementTiming(distanceMeters,movementCredit),delayTicks=Math.max(0,Number(crowdingSnapshot?.delayTicks)||0);
+    return {distanceMeters,movementTicks:timing.movementTicks,moveTicks:Number.isFinite(timing.movementTicks)?timing.movementTicks+delayTicks:Infinity,movementCreditAfter:normalizedMovementCredit(timing.movementCreditAfter),delayTicks};
+  }
   function transitionTicks(fromMode,toMode){const ticks=locomotionRuntime()?.transitionTicks?.(fromMode,toMode);return Number.isFinite(ticks)&&ticks>=0?ticks:(fromMode===toMode?0:0);}
   function routeStateKey(st,node,mode){return `${nodeKey(st,node)}|mode:${mode||'none'}`;}
   function compareRouteScore(a,b){return (a.primary-b.primary)||(a.time-b.time)||(a.transitions-b.transitions)||(a.modeRank-b.modeRank)||((b.movementCredit??0)-(a.movementCredit??0));}
@@ -349,8 +420,8 @@
         const feasibility=edgeFeasibility(cur.node,q);
         for(const nextMode of modes){
           if(!modeEdgeFeasible(st,a,cur.node,q,nextMode,feasibility))continue;
-          const maneuver=edgeManeuver(cur.node,q),distanceMeters=maneuver?.distanceMeters??1;
-          const transition=transitionTicks(cur.mode,nextMode),crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility,maneuver)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,transition>0?0:best.movementCredit,maneuver),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding,maneuver);
+          const maneuver=edgeManeuver(cur.node,q),distanceMeters=maneuver?.distanceMeters??1,modeFeasibility=feasibility?.modes?.[nextMode]||null;
+          const transition=transitionTicks(cur.mode,nextMode),movementCreditBefore=transition>0?0:best.movementCredit,surfaceManeuver=maneuver?.edgeKind==='surfaceTransition'?selectedSurfaceManeuver(a,modeFeasibility,nextMode,distanceMeters,movementCreditBefore):null,crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility,maneuver)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,movementCreditBefore,maneuver,surfaceManeuver),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding,maneuver,surfaceManeuver);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks)||!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?distanceMeters:edgeCost),
@@ -362,7 +433,7 @@
           const qk=routeStateKey(st,q,nextMode);
           if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
           if(trackPath){
-            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore:transition>0?0:best.movementCredit,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,edgeTraversalCost:edgeCost,congestion:crowding};
+            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,surfaceManeuver:surfaceManeuver?JSON.parse(JSON.stringify(surfaceManeuver)):null,edgeTraversalCost:edgeCost,congestion:crowding};
             came[qk]={prev:ck,step};
           }
           score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
@@ -556,11 +627,11 @@
     return [...out.values()];
   }
   function supportContactNodes(st,supportId,agent){
-    const f=st.furniture?.[supportId],entry=f?.spatial?.surface;if(!f)return [];
+    const f=st.furniture?.[supportId],entry=supportSurfaceForFurniture(st,f);if(!f)return [];
     const out=new Map();
     if(entry){
-      for(const q of outsideContactFloorNodes(st,{furniture:f,surface:entry},agent))out.set(nodeKey(st,q),q);
-      for(const cell of entry.cells||[]){const q=normalizeNode(st,cell,entry.id);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}
+      for(const q of outsideContactFloorNodes(st,entry,agent))out.set(nodeKey(st,q),q);
+      for(const cell of entry.surface.cells||[]){const q=normalizeNode(st,cell,entry.surface.id);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);}
     }else for(const p of baseInteractionGeometry(st,{kind:'furniture',id:supportId},agent,'default').positions||[]){
       const q=normalizeNode(st,p,FLOOR);if(nodeWalkable(st,q,agent))out.set(nodeKey(st,q),q);
     }
@@ -659,5 +730,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.30.1-slot-aware-origin',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.34.0-surface-traversal-maneuvers',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();

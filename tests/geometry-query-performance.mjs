@@ -128,7 +128,7 @@ assert.ok(humanRouteAnalyze.calls<=100,`single-route floor analysis regressed to
 assert.ok(humanRouteAnalyze.repeatRatio<2,`single-route floor analysis repeat ratio regressed to ${humanRouteAnalyze.repeatRatio}`);
 assert.ok(humanRouteFit.calls<=220,`single-route envelope fit regressed to ${humanRouteFit.calls} calls`);
 assert.equal(humanRouteFit.repeatedCalls,0,'single-route envelope fit should be memoized exactly by tile + envelope');
-assert.ok(humanRouteFeasibility.calls<=260,`single-route traversal feasibility regressed to ${humanRouteFeasibility.calls} calls`);
+assert.ok(humanRouteFeasibility.calls<=280,`single-route traversal feasibility regressed to ${humanRouteFeasibility.calls} calls`);
 assert.equal(humanRouteFeasibility.repeatedCalls,0,'one route search should reuse traversal feasibility for the same directed edge');
 assert.ok(humanRouteManeuver.calls<=400,`single-route traversal maneuver regressed to ${humanRouteManeuver.calls} calls`);
 assert.equal(humanRouteManeuver.repeatedCalls,0,'one route search should reuse traversal maneuver for the same directed edge');

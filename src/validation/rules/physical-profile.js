@@ -18,10 +18,16 @@
         for(const key of ['clearanceHeight','clearanceWidth','clearanceLength','speedFactor'])if(!positive(envelope[key]))add('physical_envelope_invalid',`${a.name} 的 ${mode} MovementEnvelope.${key} 必須是正數。`,{agentId:a.id,mode,field:key,value:envelope[key]});
       }
       for(const [mode,enabled] of Object.entries(p.locomotionCapabilities||{}))if(enabled===true&&!p.locomotionProfiles?.[mode])add('physical_locomotion_profile_missing',`${a.name} 啟用了 ${mode} capability，但缺少同名 locomotion profile。`,{agentId:a.id,mode});
-      for(const posture of ['sitting','lying']){
+      for(const posture of ['standing','sitting','lying']){
         const envelope=P.getPoseEnvelope?.(a,posture);
         if(!envelope){add('physical_pose_envelope_invalid',`${a.name} 無法推導 ${posture} PoseEnvelope。`,{agentId:a.id,posture});continue;}
         for(const key of ['height','width','length'])if(!positive(envelope[key]))add('physical_pose_envelope_invalid',`${a.name} 的 ${posture} PoseEnvelope.${key} 必須是正數。`,{agentId:a.id,posture,field:key,value:envelope[key]});
+      }
+      const supportFootprint=P.getSupportFootprint?.(a,'standing');
+      if(!supportFootprint||!positive(supportFootprint.width)||!positive(supportFootprint.length))add('physical_support_footprint_invalid',`${a.name} 無法推導 standing support footprint。`,{agentId:a.id});
+      for(const family of ['step','climb','jump']){
+        const capability=P.getSurfaceManeuverCapability?.(a,family);
+        if(!capability||!positive(capability.maxUpHeight)||!positive(capability.maxDownHeight)||!positive(capability.maxHorizontalGap))add('physical_surface_maneuver_capability_invalid',`${a.name} 缺少合法 ${family} Surface maneuver capability。`,{agentId:a.id,family});
       }
       if(Object.prototype.hasOwnProperty.call(p,'movementEnvelope'))add('physical_derived_envelope_persisted',`${a.name} 不應保存 derived movementEnvelope cache。`,{agentId:a.id});
       if(Object.prototype.hasOwnProperty.call(p,'poseEnvelope'))add('physical_derived_pose_envelope_persisted',`${a.name} 不應保存 derived poseEnvelope cache。`,{agentId:a.id});

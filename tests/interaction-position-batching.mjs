@@ -8,7 +8,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
+assert.equal(SP.VERSION,'11.34.0-surface-traversal-maneuvers');
 
 function zOf(p){return SP.zOf?SP.zOf(p):(p?.z??0);}
 function localSame(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y&&zOf(a)===zOf(b);}

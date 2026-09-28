@@ -12,7 +12,7 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1132);
 let st=E.getState();
-assert.equal(st.version,'11.33.5-drink-vessel-feasibility');
+assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
 assert.equal(E.AFFECT_SCHEMA_VERSION,'11.13.2-short-lived-affect');
 assert.equal(st.affects,undefined,'v11.13.2 must not add a global affect registry');
 for(const a of Object.values(st.agents))assert.deepEqual(a.affect,{valence:0,activation:0,frustration:0,lastUpdatedTick:0,lastDecayTick:0,source:null});

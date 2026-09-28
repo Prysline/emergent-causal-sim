@@ -12,7 +12,7 @@ const A=globalThis.SimWorldAuthoring;
 const M=globalThis.SimEditorAuthoringMutations;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v11');
+assert.equal(D.VERSION,'furniture-definitions-v12');
 
 const definition=D.getDefinition('cabinet-tall');
 assert.ok(definition,'Furniture Catalog must expose cabinet-tall');
@@ -20,9 +20,9 @@ assert.equal(definition.name,'高櫃');
 assert.equal(definition.kind,'cabinet');
 assert.deepEqual(definition.footprint,[{x:0,y:0,z:0}]);
 assert.deepEqual(definition.slots,[],'high cabinet must not invent activity Slots');
-assert.equal(definition.spatial.surface,undefined,'high cabinet must not invent a traversable Surface');
+assert.equal(definition.spatial.surface,undefined,'high cabinet must not retain legacy explicit spatial.surface truth');
 assert.deepEqual(definition.spatial.solids,[
-  {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.90}}
+  {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.90},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'高櫃頂面'}}}
 ]);
 
 const resolved=D.resolveInstance({
@@ -33,7 +33,17 @@ const resolved=D.resolveInstance({
 });
 assert.deepEqual(resolved.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(resolved.slots,[]);
-assert.equal(resolved.spatial.surface,undefined);
+assert.equal(resolved.spatial.surface,undefined,'legacy singular Surface remains absent during derived-Surface migration');
+assert.equal(resolved.spatial.surfaces.length,1);
+assert.deepEqual(resolved.spatial.surfaces[0],{
+  id:'cabinet-tall-1:body',
+  label:'高櫃頂面',
+  sourceSolidKey:'body',
+  face:'top',
+  supportRegion:{x:3.05,y:4.05,width:.90,depth:.90},
+  topElevation:1.90,
+  cells:[{x:3,y:4,z:0}]
+});
 assert.deepEqual(resolved.spatial.solids[0],{
   key:'body',
   layerZ:0,

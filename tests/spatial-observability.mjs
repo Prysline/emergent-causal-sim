@@ -3,13 +3,13 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','engine.js','validation/registry.js','validation/rules/spatial-node.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','engine.js','validation/registry.js','validation/rules/spatial-node.js']);
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.33.5-drink-vessel-feasibility');
-assert.equal(E.VERSION,'11.33.5-drink-vessel-feasibility');
+assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+assert.equal(E.VERSION,'11.34.0-surface-traversal-maneuvers');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
@@ -64,9 +64,11 @@ assert.equal(tray.position.x,5);
 assert.equal(tray.position.y,2);
 
 const table=SP.furnitureObservation(st,'diningTable');
-assert.equal(table.surfaceId,'diningTable:surface');
-assert.equal(table.traversable,true);
-assert.equal(table.cells.length,4);
+assert.equal(table.surfaceCount,1);
+assert.equal(table.surfaces[0].id,'diningTable:surface');
+assert.equal(table.surfaces[0].label,'餐桌桌面');
+assert.equal(table.surfaces[0].cells.length,4);
+assert.equal(table.surfaces[0].sourceSolidKey,'tabletop');
 assert.equal(table.solidCount,5);
 assert.equal(table.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
 

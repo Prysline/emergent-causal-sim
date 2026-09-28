@@ -3,8 +3,8 @@
 
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
-    for(const f of Object.values(st?.furniture||{})){
-      const surface=f.spatial?.surface;if(!surface?.cells)continue;
+    for(const f of Object.values(st?.furniture||{}))for(const surface of f.spatial?.surfaces||[]){
+      if(!Array.isArray(surface.cells))continue;
       for(const cell of surface.cells){
         if(!cell.contents||typeof cell.contents!=='object'||Array.isArray(cell.contents)){add('surface_environment_missing_contents',`${f.name} 的 Surface Cell (${cell.x}, ${cell.y}) 缺少合法 contents storage。`,{furnitureId:f.id,surfaceId:surface.id,x:cell.x,y:cell.y});continue;}
         for(const [resource,amount] of Object.entries(cell.contents)){

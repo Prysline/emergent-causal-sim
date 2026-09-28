@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js']);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.33.5-drink-vessel-feasibility');
-assert.equal(E.VERSION,'11.33.5-drink-vessel-feasibility');
+assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+assert.equal(E.VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(SP.SPATIAL_ENVIRONMENT_VERSION,'11.11.4-surface-liquid-foundation');
 
 // B architecture: one API, existing floor storage remains the actual source of truth.

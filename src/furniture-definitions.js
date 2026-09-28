@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v11';
+  const VERSION='furniture-definitions-v12';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -27,13 +27,12 @@
       slots:[],
       spatial:{
         solids:[
-          {key:'tabletop',bounds:{x:.30,y:.61,z:.72,width:1.40,depth:.78,height:.02}},
+          {key:'tabletop',bounds:{x:.30,y:.61,z:.72,width:1.40,depth:.78,height:.02},faces:{top:{supportsBodyOccupancy:true,surfaceKey:'surface',surfaceLabel:'餐桌桌面'}}},
           {key:'legNW',bounds:{x:.38,y:.69,z:0,width:.06,depth:.06,height:.72}},
           {key:'legNE',bounds:{x:1.56,y:.69,z:0,width:.06,depth:.06,height:.72}},
           {key:'legSW',bounds:{x:.38,y:1.25,z:0,width:.06,depth:.06,height:.72}},
           {key:'legSE',bounds:{x:1.56,y:1.25,z:0,width:.06,depth:.06,height:.72}}
-        ],
-        surface:{key:'surface',label:'餐桌桌面',onSolid:{key:'tabletop',face:'top'},traversable:true,allowKinds:['human','cat']}
+        ]
       }
     },
     'chair-basic':{
@@ -49,7 +48,7 @@
       ],
       spatial:{
         solids:[
-          {key:'seat',bounds:{x:.29,y:.305,z:.43,width:.42,depth:.44,height:.04}},
+          {key:'seat',bounds:{x:.29,y:.305,z:.43,width:.42,depth:.44,height:.04},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'餐椅椅座'}}},
           {key:'back',bounds:{x:.29,y:.255,z:.43,width:.42,depth:.05,height:.47}},
           {key:'frontLeftLeg',bounds:{x:.31,y:.685,z:0,width:.04,depth:.04,height:.43}},
           {key:'frontRightLeg',bounds:{x:.65,y:.685,z:0,width:.04,depth:.04,height:.43}},
@@ -88,7 +87,7 @@
       slots:[],
       spatial:{
         solids:[
-          {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.90}}
+          {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.90},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'高櫃頂面'}}}
         ]
       }
     },
@@ -105,7 +104,7 @@
       ],
       spatial:{
         solids:[
-          {key:'seat',bounds:{x:.28,y:.28,z:.45,width:.44,depth:.44,height:.04}},
+          {key:'seat',bounds:{x:.28,y:.28,z:.45,width:.44,depth:.44,height:.04},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'矮凳座面'}}},
           {key:'legNW',bounds:{x:.30,y:.30,z:0,width:.04,depth:.04,height:.45}},
           {key:'legNE',bounds:{x:.66,y:.30,z:0,width:.04,depth:.04,height:.45}},
           {key:'legSW',bounds:{x:.30,y:.66,z:0,width:.04,depth:.04,height:.45}},
@@ -144,7 +143,7 @@
       ],
       spatial:{
         solids:[
-          {key:'body',bounds:{x:.30,y:0,z:0,width:1.40,depth:2.00,height:.55}}
+          {key:'body',bounds:{x:.30,y:0,z:0,width:1.40,depth:2.00,height:.55},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'雙人床床面'}}}
         ]
       }
     }
@@ -153,14 +152,6 @@
   function assertLocalPosition(position,path){
     if(!isRecord(position)||!Number.isInteger(position.x)||!Number.isInteger(position.y)||!Number.isInteger(position.z)){
       throw new Error(path+' must contain integer x / y / z local coordinates.');
-    }
-  }
-
-  function assertCostMap(costs,path){
-    if(costs===undefined)return;
-    if(!isRecord(costs))throw new Error(path+' must be an object keyed by agent kind.');
-    for(const [kind,value] of Object.entries(costs)){
-      if(!kind||!Number.isFinite(value)||value<0)throw new Error(path+' has invalid cost for '+String(kind)+'.');
     }
   }
 
@@ -184,23 +175,31 @@
     const spatial=definition.spatial,frame=definitionFrame(definition);
     if(!isRecord(spatial)||!Array.isArray(spatial.solids)||!spatial.solids.length)throw new Error('Furniture Definition '+key+' requires non-empty spatial.solids.');
     if(spatial.floor!==undefined||spatial.under!==undefined)throw new Error('Furniture Definition '+key+' must use spatial.solids instead of spatial.floor / spatial.under.');
-    const solidKeys=new Set();
+    const solidKeys=new Set(),derivedSurfaceKeys=new Set();let hasDerivedSurface=false;
     for(let index=0;index<spatial.solids.length;index++){
       const solid=spatial.solids[index],path=key+'.spatial.solids['+index+']';
       if(!isRecord(solid)||typeof solid.key!=='string'||!solid.key||solid.key.includes(':'))throw new Error(path+' requires a stable key.');
       if(solidKeys.has(solid.key))throw new Error('Furniture Definition '+key+' duplicates solid key '+solid.key+'.');
       solidKeys.add(solid.key);assertBounds(solid.bounds,path+'.bounds',frame);
+      if(solid.faces!==undefined){
+        if(!isRecord(solid.faces)||Object.keys(solid.faces).some(face=>face!=='top'))throw new Error(path+'.faces currently supports top only.');
+        const top=solid.faces.top;
+        if(top!==undefined){
+          if(!isRecord(top)||typeof top.supportsBodyOccupancy!=='boolean')throw new Error(path+'.faces.top requires boolean supportsBodyOccupancy.');
+          if(top.surfaceKey!==undefined&&(typeof top.surfaceKey!=='string'||!top.surfaceKey||top.surfaceKey.includes(':')))throw new Error(path+'.faces.top.surfaceKey must be a stable key.');
+          if(top.surfaceLabel!==undefined&&(typeof top.surfaceLabel!=='string'||!top.surfaceLabel))throw new Error(path+'.faces.top.surfaceLabel must be a non-empty string.');
+          if(top.supportsBodyOccupancy!==true&&(top.surfaceKey!==undefined||top.surfaceLabel!==undefined))throw new Error(path+'.faces.top Surface metadata requires supportsBodyOccupancy=true.');
+          if(top.supportsBodyOccupancy===true){
+            hasDerivedSurface=true;
+            const surfaceKey=top.surfaceKey||solid.key;
+            if(derivedSurfaceKeys.has(surfaceKey))throw new Error('Furniture Definition '+key+' duplicates derived Surface key '+surfaceKey+'.');
+            derivedSurfaceKeys.add(surfaceKey);
+          }
+        }
+      }
     }
-    const surface=spatial.surface;
-    if(surface===undefined)return;
-    if(isRecord(surface)&&(Object.prototype.hasOwnProperty.call(surface,'id')||Object.prototype.hasOwnProperty.call(surface,'cells')))throw new Error('Furniture Definition '+key+' spatial.surface must not persist runtime id / cells.');
-    if(!isRecord(surface)||typeof surface.key!=='string'||!surface.key||surface.key.includes(':'))throw new Error('Furniture Definition '+key+' has invalid spatial.surface.key.');
-    if(typeof surface.label!=='string'||!surface.label)throw new Error('Furniture Definition '+key+' spatial.surface requires label.');
-    if(!isRecord(surface.onSolid)||typeof surface.onSolid.key!=='string'||surface.onSolid.face!=='top'||!solidKeys.has(surface.onSolid.key))throw new Error('Furniture Definition '+key+' spatial.surface.onSolid must reference an existing solid top face.');
-    if(typeof surface.traversable!=='boolean')throw new Error('Furniture Definition '+key+' spatial.surface.traversable must be boolean.');
-    if(surface.allowKinds!==undefined&&(!Array.isArray(surface.allowKinds)||surface.allowKinds.some(kind=>typeof kind!=='string'||!kind)))throw new Error('Furniture Definition '+key+' spatial.surface.allowKinds must contain non-empty strings.');
-    assertCostMap(surface.moveCost,key+'.spatial.surface.moveCost');
-    assertCostMap(surface.transitionCost,key+'.spatial.surface.transitionCost');
+    if(spatial.surface!==undefined)throw new Error('Furniture Definition '+key+' must not author legacy spatial.surface; use solid top body-support metadata.');
+    if(definition.supportsObjects===true&&derivedSurfaceKeys.size!==1)throw new Error('Furniture Definition '+key+' with supportsObjects=true requires exactly one derived body-support Surface.');
   }
 
   function assertDefinition(definition,key){
@@ -489,15 +488,20 @@
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
     if(definition.spatial){
-      resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,layerZ:instance.origin.z,bounds:metricBoundsToWorld(definition,instance,solid.bounds)}))};
-      if(definition.spatial.surface){
-        const source=resolved.spatial.solids.find(solid=>solid.key===definition.spatial.surface.onSolid.key);
-        resolved.spatial.surface=clone(definition.spatial.surface);
-        resolved.spatial.surface.id=instance.id+':'+resolved.spatial.surface.key;
-        resolved.spatial.surface.cells=surfaceCellsForBounds(source.bounds,instance.origin.z);
-        resolved.spatial.surface.sourceSolidKey=source.key;
-        delete resolved.spatial.surface.key;
-        delete resolved.spatial.surface.onSolid;
+      resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,layerZ:instance.origin.z,bounds:metricBoundsToWorld(definition,instance,solid.bounds)})),surfaces:[]};
+      for(let index=0;index<definition.spatial.solids.length;index++){
+        const authoredSolid=definition.spatial.solids[index],top=authoredSolid.faces?.top;
+        if(top?.supportsBodyOccupancy!==true)continue;
+        const source=resolved.spatial.solids[index],surfaceKey=top.surfaceKey||authoredSolid.key;
+        resolved.spatial.surfaces.push({
+          id:instance.id+':'+surfaceKey,
+          label:top.surfaceLabel||definition.name+'・'+authoredSolid.key+'頂面',
+          sourceSolidKey:source.key,
+          face:'top',
+          supportRegion:{x:source.bounds.x,y:source.bounds.y,width:source.bounds.width,depth:source.bounds.depth},
+          topElevation:source.bounds.z+source.bounds.height,
+          cells:surfaceCellsForBounds(source.bounds,instance.origin.z)
+        });
       }
     }
     return resolved;

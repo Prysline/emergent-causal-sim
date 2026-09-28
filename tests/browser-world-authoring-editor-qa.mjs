@@ -104,7 +104,8 @@ snapshot=await page.evaluate(()=>({
 }));
 assert.deepEqual(snapshot.document.furniture['cabinet-tall-1'],{id:'cabinet-tall-1',definitionId:'cabinet-tall',origin:{x:3,y:4,z:0},orientation:'south'},'high cabinet creation must persist only compact Instance truth');
 assert.equal(snapshot.resolved.slots.length,0,'high cabinet must remain Slot-free in the Editor-resolved view');
-assert.equal(snapshot.resolved.spatial.surface,undefined,'high cabinet must remain Surface-free in the Editor-resolved view');
+assert.equal(snapshot.resolved.spatial.surface,undefined,'legacy singular Surface must remain absent in the Editor-resolved view');
+assert.deepEqual(snapshot.resolved.spatial.surfaces,[{id:'cabinet-tall-1:body',label:'高櫃頂面',sourceSolidKey:'body',face:'top',supportRegion:{x:3.05,y:4.05,width:.90,depth:.90},topElevation:1.90,cells:[{x:3,y:4,z:0}]}],'high cabinet resolved view must expose its derived top Surface without serializing it into the Instance');
 assert.deepEqual(snapshot.resolved.spatial.solids[0].bounds,{x:3.05,y:4.05,z:0,width:.90,depth:.90,height:1.90});
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
@@ -124,7 +125,11 @@ assert.deepEqual(snapshot.document.furniture['stool-basic-1'],{id:'stool-basic-1
 assert.equal(snapshot.resolved.slots[0].id,'stool-basic-1:seat');
 assert.deepEqual(snapshot.resolved.slots[0].approachEdges,['north','east','south','west']);
 assert.equal(snapshot.resolved.slots[0].allowKinds,undefined,'stool must not serialize or resolve a species whitelist');
-assert.equal(snapshot.resolved.spatial.surface,undefined,'stool seat remains a Slot, not a traversable Surface');
+assert.equal(snapshot.resolved.spatial.surface,undefined,'legacy singular Surface must remain absent for the stool');
+assert.equal(snapshot.resolved.spatial.surfaces.length,1,'stool must expose exactly one derived traversal Surface');
+const stoolSurface=snapshot.resolved.spatial.surfaces[0];
+assert.deepEqual({id:stoolSurface.id,label:stoolSurface.label,sourceSolidKey:stoolSurface.sourceSolidKey,face:stoolSurface.face,topElevation:stoolSurface.topElevation,cells:stoolSurface.cells},{id:'stool-basic-1:seat',label:'矮凳座面',sourceSolidKey:'seat',face:'top',topElevation:.49,cells:[{x:3,y:4,z:0}]},'stool derived Surface identity must remain independent from its activity Slot');
+assert.ok(Math.abs(stoolSurface.supportRegion.x-3.28)<1e-12&&Math.abs(stoolSurface.supportRegion.y-4.28)<1e-12&&stoolSurface.supportRegion.width===.44&&stoolSurface.supportRegion.depth===.44,'stool supportRegion must preserve resolved metric geometry');
 assert.equal(snapshot.session.validation.ok,true);
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 

@@ -8,9 +8,9 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.33.5-drink-vessel-feasibility';
-const PHYSICAL_VERSION='11.33.0-pose-envelope-static-fit';
-const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
+const APP_VERSION='11.34.0-surface-traversal-maneuvers';
+const PHYSICAL_VERSION='11.34.0-surface-traversal-maneuvers';
+const PASSAGE_VERSION='11.34.0-surface-traversal-maneuvers';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
@@ -26,6 +26,7 @@ function resetFixture({height=2,edgeWidth=null}={}){
   human.position=floor(st,1,1);human.action=null;human.posture={kind:'standing',slotId:null,furnitureId:null};
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   const water=st.containers.waterBucket;
+  st.containers={waterBucket:water};
   water.supportId=null;water.position=floor(st,3,1);
   st.furniture={
     testPassageCover:{

@@ -23,9 +23,19 @@ let st=E.getState();
 const human=st.agents.zhen;
 const cat=st.agents.orange;
 
-assert.equal(C.VERSION,'embodiment-capabilities-v2');
-assert.equal(P.VERSION,'11.33.0-pose-envelope-static-fit');
-assert.equal(st.version,'11.33.5-drink-vessel-feasibility');
+assert.equal(C.VERSION,'embodiment-capabilities-v3');
+assert.equal(P.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+
+const humanStanding=P.getPoseEnvelope(human,'standing');
+near(humanStanding.height,1.65,'Human standing height');
+near(humanStanding.width,.45,'Human standing width');
+near(humanStanding.length,.30,'Human standing length');
+const humanSupport=P.getSupportFootprint(human,'standing'),catSupport=P.getSupportFootprint(cat,'standing');
+near(humanSupport.width,.27,'Human standing support width');
+near(humanSupport.length,.24,'Human standing support length');
+near(catSupport.width,.18,'Cat standing support width');
+near(catSupport.length,.36,'Cat standing support length');
 
 const humanSitting=P.getPoseEnvelope(human,'sitting');
 near(humanSitting.height,.9075,'Human sitting height');

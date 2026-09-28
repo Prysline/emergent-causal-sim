@@ -22,8 +22,8 @@ function openSquare(){
   return {st,human,a:floor(st,1,1),b:floor(st,2,2),east:floor(st,2,1)};
 }
 
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
-assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.VERSION,'11.34.0-surface-traversal-maneuvers');
 
 {
   const {st,human,a,b,east}=openSquare();

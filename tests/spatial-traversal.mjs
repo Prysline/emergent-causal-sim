@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','systems/physical.js','spatial-passage.js','engine.js','validation/registry.js','validation/rules/spatial-node.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','engine.js','validation/registry.js','validation/rules/spatial-node.js']);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -12,9 +12,9 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen,zhou=st.agents.zhou;
-assert.equal(st.version,'11.33.5-drink-vessel-feasibility');
-assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
-assert.equal(st.furniture.diningTable.spatial.surface.id,'diningTable:surface');
+assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.ok(st.furniture.diningTable.spatial.surfaces.some(surface=>surface.id==='diningTable:surface'),'default dining table must expose the canonical derived Surface identity');
 
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'橘子可使用餐桌 footprint 所在格的合法剩餘 floor');
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),zhen),true,'partial table geometry leaves a Human-sized standing region in the coarse floor node');

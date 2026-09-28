@@ -46,10 +46,9 @@
   }
   function placeText(st,p){return p?SP.describePlace(st,p):'位置不明';}
   function surfaceContents(st,f){
-    const cells=f?.spatial?.surface?.cells||[];
     const totals={};
-    for(const cell of cells){
-      const node=SP.normalizeNode?.(st,SP.clonePos?.(cell)||{...cell},f.spatial.surface.id);
+    for(const surface of f?.spatial?.surfaces||[])for(const cell of surface.cells||[]){
+      const node=SP.normalizeNode?.(st,SP.clonePos?.(cell)||{...cell},surface.id);
       const env=node&&SP.environmentAt?.(st,node,{create:false});
       for(const [r,v] of Object.entries(env?.contents||{}))totals[r]=(totals[r]||0)+(Number(v)||0);
     }

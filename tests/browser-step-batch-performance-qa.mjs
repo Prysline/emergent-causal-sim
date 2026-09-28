@@ -407,10 +407,10 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
-  assert.equal(feasibilityCounts.singleInside,9389,'Slot-aware actor-origin semantics must retain the measured single-tick simulation feasibility baseline');
-  assert.equal(feasibilityCounts.singleOutside,3389,'Slot-aware actor-origin semantics must retain the measured one-pass outside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,21579,'Drink-vessel feasibility semantics must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,2780,'Slot-aware actor-origin semantics must retain the measured step(10) outside-tick baseline');
+  assert.equal(feasibilityCounts.singleInside,10691,'Derived Surface graph must retain the measured single-tick simulation feasibility baseline');
+  assert.equal(feasibilityCounts.singleOutside,3813,'Derived Surface graph must retain the measured one-pass outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,24537,'Derived Surface graph must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,3127,'Derived Surface graph must retain the measured step(10) outside-tick feasibility baseline');
 
   await openCase({selected:false});
   await page.locator('#showThoughts').click();
@@ -427,7 +427,7 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
-    note:'11.33.3 place-description projection profile: Action-card/map place text now consumes canonical describePlace() and no longer runs a second covered/overhead projection path. This removes redundant outside-tick spatial observation/feasibility work while leaving simulation-side feasibility counts and canonical state parity unchanged. Existing responsiveness gates remain required; wall-clock remains secondary and runner-dependent.',
+    note:'Surface traversal profile: the default world now contains additional legal derived Surface nodes from chair seats and the double-bed top, expanding the Route graph without adding duplicate planRoute/pathDistances work. The measured feasibility baseline therefore tracks the larger legal graph; focused geometry-query regression still requires zero repeated traversalFeasibility work for the same directed edge within one Route search. Existing responsiveness gates remain required; wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
       mode:result.mode,selected:result.selected,startTick:result.startTick,targetTick:result.targetTick,

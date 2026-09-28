@@ -6,11 +6,21 @@
 
 目前 current runtime marker：
 
-`11.33.5-drink-vessel-feasibility`
+`11.34.0-surface-traversal-maneuvers`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.5`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.1-slot-aware-route-origin`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.1-slot-aware-origin`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Contact / Passage / Locomotion / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.34.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
 
-### Current Human drink vessel feasibility release
+### Current Surface traversal maneuvers release
+
+`11.34.0-surface-traversal-maneuvers` 將 Furniture top traversal 從 Definition 額外 author 一份可走 Surface policy，收斂為客觀幾何／支撐事實到執行 maneuver 的單一路徑。Furniture Catalog 升為 `furniture-definitions-v12`：Definition 只在 canonical solid top face author `faces.top.supportsBodyOccupancy:true` 與可選 `surfaceKey / surfaceLabel`；resolver 從同一 rotated solid bounds 派生 runtime `spatial.surfaces[]` 的 stable `id / sourceSolidKey / supportRegion / topElevation / cells`。legacy singular `spatial.surface` 現在直接拒絕，Surface 不再 author species `allowKinds`、`traversable`、`moveCost / transitionCost` 或 duplicate bounds。World Authoring Instance shape沒有改，仍為 `world-authoring-v7`，但 current document以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin 新 Catalog。
+
+Embodiment Capabilities 升為 `embodiment-capabilities-v3`，新增 posture-specific support footprint 與 Human / Cat Surface maneuver profile；Physical 以 support footprint + full body / pose clearance 判斷 Surface static fit。Passage 只擁有 floor ↔ Surface 的 objective elevation、gap、support-region edge geometry；Physical 依個體 geometry 產生 `step / climb / jump` 上／下候選，同一 geometry 可同時存在多個合法 candidate。
+
+Locomotion 現正式擁有 Surface traversal / maneuver burden、timing、candidate selection 與 execution；本 release 只搬移既有 Human / Cat Surface burden calibration，沒有憑空新增 family-specific timing 差異。Route 將選中的 exact `surfaceManeuver` 保存到 route step；Engine pending movement 驗證並執行同一 maneuver identity。Contact 保持獨立 occlusion owner；Surface Environment、support-object resolver、Initializer、Validator、Editor / Debug 都消費同一 derived Surface enumeration。
+
+因此 overall runtime、Physical、Spatial Traversal、Spatial Passage、Route 與 Locomotion generation一同推進到 `11.34.0-surface-traversal-maneuvers`。Contact仍為 `11.32.0-contact-slot-corner`、Dynamic Congestion仍為 `11.31.0-crowding-8-direction`、Surface Environment仍為 `11.11.4-surface-liquid-foundation`；沒有新增 continuous Surface local position、多角色／跨 Slot occupancy、turn clearance、sideways traversal或 persistent / cross-tick Route cache。性能量測確認 default graph 增加 8 個合法 derived Surface nodes後，single/batch feasibility 與 Passage query 增量來自 graph expansion；focused geometry-query regression仍要求單次 Route search `traversalFeasibility.repeatedCalls = 0`。
+
+### Previous Human drink vessel feasibility release
 
 `11.33.5-drink-vessel-feasibility` 修正 11.33.4 need-plan parity 中兩個 Human drink 邊界。第一，actor 自己已持有的 portable `canDrinkFrom` vessel 原本會被 `canDrinkResource()` 與 `chooseDrinkVessel()` 當成「已被持有」而整個排除，即使 execution 已具備直接飲用或帶去 refill 的條件；現在 self-held vessel 以 0 pickup burden 參與同一個 executable vessel plan。第二，內容低於直接飲用門檻的 vessel 原本可能在 feasibility 階段被同一 vessel 自己當成 refill source，導致 Action 建立後 execution 用 `excludeId` 排除它才 abort；現在 candidate plan 在成立前就用相同 exclusion 驗證真正可達的外部 source。
 
@@ -58,13 +68,13 @@ Furniture Catalog 在 PoseEnvelope release 當時換代為 `furniture-definition
 
 同一 static-fit contract 由 rest / sleep target selection、meal seat selection、真正 settle 前 recheck、sleeping state validity、`SimWorldInitializer` initial furnitureSlot placement 與 Validator 共用。Slot occupancy 仍由 `agent.posture.slotId` 持有，slot-bound Agent 仍不算 ordinary floor occupant。World Authoring Instance schema 沒改，因此維持 `world-authoring-v7`；Spatial Traversal / Contact、Passage、Route、Locomotion、Dynamic Congestion 也不因整體 release 更新而假升。本 slice 不加入 multi-slot occupancy、usable-surface packing、dynamic seated obstruction、turn clearance、sideways movement或 8-direction Slice 6。
 
-### Current Furniture Expansion catalog generation
+### Current Furniture Catalog generation
 
-Furniture Catalog 現為 `furniture-definitions-v11`。v9 加入 `cabinet-tall`（高櫃）obstruction-only consumer；v10 加入 `stool-basic`（矮凳）低家具 consumer；v11 再加入 `pet-bed-small`（小型寵物床）作既有 PoseEnvelope／可供性分層的產品 consumer。小型寵物床為 1×1 footprint、單一 `0.70 × 0.80 × 0.12m` floor-start cushion solid，四邊可 approach 的單一 Slot 同時提供 `canRest + canSleep`，`usableSpace = 0.55 × 0.65m`，`activitySuitability.rest = 0.30`、`sleep = 0.75`，不新增 Surface，也不設定 species `allowKinds`。Default Human sitting 可 fit、lying 不 fit；Default Cat sitting / lying 都可 fit，因此 Human 可坐著休息但不可在此睡眠，Cat 則可休息與睡眠。這是代表性 calibration fixture，不宣稱現實世界寵物床標準尺寸。
+Furniture Catalog 現為 `furniture-definitions-v12`。v9 加入 `cabinet-tall`、v10 加入 `stool-basic`、v11 加入 `pet-bed-small`；v12 把 top body-support eligibility 收斂到各 solid 的 `faces.top.supportsBodyOccupancy` metadata。current resolver 會為 dining-table tabletop、chair seat、stool seat、double-bed body top 與 cabinet body top 派生 Surface；未 author eligibility 的 top face 不會自動成為平台。
 
-v11 不新增 Agent / species-specific furniture preference。Current `activitySuitability` 仍是 Slot 對活動的共用適性；若未來要讓同一家具有物種差異偏好，需另開 behavior preference contract，不能用 Physical、`allowKinds` 或 Furniture ID 特判代替。
+v12 的 `supportRegion / topElevation / cells` 必須由 canonical metric solid bounds派生；Definition-level legacy `spatial.surface` 被拒絕。若 Furniture `supportsObjects:true`，Catalog validator要求恰好一個 derived body-support Surface，讓 `supportId` object resolution沒有歧義。
 
-這些 catalog 變更都只擴充 system-owned Furniture Definition set，沒有改 Furniture Instance canonical shape、World Authoring schema、Physical / Spatial / Route / Locomotion / Crowding API，因此當時 overall runtime 維持 `11.33.0-pose-envelope-static-fit`、只換代 Furniture Catalog generation。之後的 `11.33.1-action-spatial-target-consumers` 只修 downstream Action consumer semantics，Furniture Catalog仍維持 `furniture-definitions-v11`。
+Furniture Instance canonical shape與 World Authoring schema沒有改，因此 World Authoring維持 `world-authoring-v7`；current authoring document只把 `furnitureCatalogVersion` pin到 v12。產品仍未正式公開，所以舊 Catalog generation不建立 production migration machinery；unsupported catalog version直接拒絕。
 
 ### Current Contact + Slot Corner release
 

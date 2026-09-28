@@ -5,14 +5,14 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
-  'systems/physical.js','spatial-passage.js','engine.js'
+  'systems/physical.js','spatial-passage.js','systems/locomotion.js','engine.js'
 ]);
 
 const D=globalThis.SimFurnitureDefinitions,E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 const local=(x,y,z=0)=>({x,y,z});
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
-assert.equal(D.VERSION,'furniture-definitions-v11');
+assert.equal(D.VERSION,'furniture-definitions-v12');
 
 const invalidLegacyDefinition={
   id:'invalid-legacy',
@@ -41,7 +41,41 @@ assert.throws(
   'Furniture v6 must reject legacy Definition-authored floor/under geometry'
 );
 
-const platformDefinition={
+const derivedPlatformDefinition={
+  id:'test-derived-platform',
+  name:'測試派生平台',
+  icon:'▱',
+  kind:'platform',
+  footprint:[local(0,0),local(1,0)],
+  displayOffset:local(0,0),
+  slots:[],
+  spatial:{solids:[{key:'body',bounds:{x:0,y:0,z:0,width:2,depth:1,height:.25},faces:{top:{supportsBodyOccupancy:true,surfaceKey:'top',surfaceLabel:'測試派生平台頂面'}}}]}
+};
+const derivedResolved=D.resolveDefinitionInstance(derivedPlatformDefinition,{
+  id:'derivedPlatform',
+  definitionId:'test-derived-platform',
+  origin:local(1,1),
+  orientation:'south'
+});
+assert.equal(derivedResolved.spatial.surface,undefined,'new authored top-face contract must not create the legacy singular field');
+assert.deepEqual(derivedResolved.spatial.surfaces[0],{
+  id:'derivedPlatform:top',
+  label:'測試派生平台頂面',
+  sourceSolidKey:'body',
+  face:'top',
+  supportRegion:{x:1,y:1,width:2,depth:1},
+  topElevation:.25,
+  cells:[local(1,1),local(2,1)]
+});
+const duplicateTruth=JSON.parse(JSON.stringify(derivedPlatformDefinition));
+duplicateTruth.spatial.surface={key:'legacy',label:'舊 Surface',onSolid:{key:'body',face:'top'},traversable:true};
+assert.throws(
+  ()=>D.resolveDefinitionInstance(duplicateTruth,{id:'duplicateTruth',definitionId:'test-derived-platform',origin:local(0,0),orientation:'south'}),
+  /must not author legacy spatial\.surface/,
+  'one Definition must not author both legacy Surface truth and top-face derived Surface truth'
+);
+
+const legacySurfaceDefinition={
   id:'test-low-platform',
   name:'測試矮平台',
   icon:'▱',
@@ -62,27 +96,26 @@ const platformDefinition={
     }
   }
 };
+assert.throws(
+  ()=>D.resolveDefinitionInstance(legacySurfaceDefinition,{id:'legacySurface',definitionId:'test-low-platform',origin:local(3,4),orientation:'south'}),
+  /must not author legacy spatial\.surface/,
+  'current Furniture Definitions must reject legacy Surface feasibility and cost truth instead of preserving a compatibility success path'
+);
 
-const resolved=D.resolveDefinitionInstance(platformDefinition,{
+const resolved=D.resolveDefinitionInstance(derivedPlatformDefinition,{
   id:'testPlatform',
-  definitionId:'test-low-platform',
+  definitionId:'test-derived-platform',
   origin:local(3,4),
   orientation:'south'
 });
 assert.deepEqual(resolved.footprint,[local(3,4),local(4,4)]);
 assert.equal(resolved.spatial.solids.length,1);
 assert.deepEqual(resolved.spatial.solids[0],{key:'body',layerZ:0,bounds:{x:3,y:4,z:0,width:2,depth:1,height:.25}});
-assert.equal(resolved.spatial.surface.id,'testPlatform:top');
-assert.deepEqual(resolved.spatial.surface.cells,[local(3,4),local(4,4)]);
+assert.equal(resolved.spatial.surface,undefined,'derived traversal geometry must not recreate the legacy singular field');
+assert.equal(resolved.spatial.surfaces[0].id,'testPlatform:top');
+assert.deepEqual(resolved.spatial.surfaces[0].cells,[local(3,4),local(4,4)]);
 assert.equal(resolved.blocksMovement,undefined,'resolved traversal truth must come from spatial geometry, not blocksMovement');
 assert.equal(D.analyzeFloorTile(resolved.spatial.solids,3,4,0).blocked,true,'floor-start solid must block generic floor topology, not only agent-specific envelope checks');
-const invalidRuntimeSurface=JSON.parse(JSON.stringify(platformDefinition));
-invalidRuntimeSurface.spatial.surface.id='precomputed:top';
-assert.throws(
-  ()=>D.resolveDefinitionInstance(invalidRuntimeSurface,{id:'invalidSurface',definitionId:'test-low-platform',origin:local(1,1),orientation:'south'}),
-  /runtime id \/ cells/,
-  'Definition must not persist instance-specific runtime surface identity'
-);
 
 E.reset(20260911);
 const st=E.getState(),cat=st.agents.orange,human=st.agents.zhen;
@@ -95,10 +128,10 @@ for(const cell of resolved.footprint){
 const topA=SP.normalizeNode(st,{x:3,y:4},'testPlatform:top');
 const topB=SP.normalizeNode(st,{x:4,y:4},'testPlatform:top');
 assert.equal(SP.nodeWalkable(st,floor(st,3,4),cat),false,'solid footprint must block the floor node');
-assert.equal(SP.nodeWalkable(st,topA,cat),true,'generic Definition surface must be traversable for allowed kinds');
-assert.equal(SP.nodeWalkable(st,topA,human),false,'generic Definition surface must enforce allowKinds');
-assert.equal(SP.traversalEdgeCost(st,floor(st,2,4),topA,cat,'walk','walk'),3.5,'surface transition cost must come from Definition surface override');
-assert.equal(SP.traversalEdgeCost(st,topA,topB,cat,'walk','walk'),2.25,'surface move cost must come from Definition surface override');
+assert.equal(SP.nodeWalkable(st,topA,cat),true,'generic derived Surface must use Physical static-fit rather than a species whitelist');
+assert.equal(SP.nodeWalkable(st,topA,human),true,'generic derived Surface must not preserve legacy allowKinds as a second physical-feasibility truth');
+assert.equal(SP.surfaceStaticFitResult(st,topA,cat,'standing').fits,true);
+assert.equal(SP.surfaceStaticFitResult(st,topA,human,'standing').fits,true);
 
 cat.position={...floor(st,2,4)};
 const path=SP.astar(st,cat.position,topA,cat.id);
