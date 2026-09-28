@@ -4,8 +4,8 @@
   const VERSION='11.11.4-surface-liquid-foundation',FLOOR='floor';
 
   function installSurfaceEnvironment(st){
-    for(const f of Object.values(st?.furniture||{})){
-      const surface=f.spatial?.surface;if(!surface?.cells)continue;
+    for(const f of Object.values(st?.furniture||{}))for(const surface of f.spatial?.surfaces||[]){
+      if(!Array.isArray(surface.cells))continue;
       for(const cell of surface.cells)cell.contents??={};
     }
     return st;
