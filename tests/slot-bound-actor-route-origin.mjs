@@ -191,6 +191,44 @@ E.reset(20260911);
 }
 
 
+// Human drink feasibility must reuse an already-held drinking vessel instead of rejecting an executable plan.
+E.reset(20260911);
+{
+  const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB;
+  st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  quiet(human,{hunger:5,thirst:90,fatigue:5,sleepNeed:5,social:5});
+  for(const c of Object.values(st.containers))if(c.canDrinkFrom){c.portable=false;c.contents={};}
+  cup.portable=true;cup.canDrinkFrom=true;cup.contents={water:8};
+  human.held=cup.id;delete cup.supportId;
+  assert.equal(E.canDrinkResource(human,'water'),true,'a self-held usable vessel is already an executable Human drink plan');
+  const before=cup.contents.water,action=E.buildAction(human,{id:'drinkWater'});
+  assert.equal(action?.kind,'drinkWater');
+  human.action=action;
+  E.tick();
+  assert.equal(human.action?.container,cup.id,'self-held vessel must be the selected Human drink container');
+  assert.equal(human.action?.phase,'take','self-held vessel must skip route/pickup and enter the idempotent take phase');
+  E.tick();
+  assert.equal(human.held,cup.id,'idempotent take must preserve the already-held vessel');
+  assert.equal(human.action?.phase,'drink','a sufficiently filled self-held vessel must advance directly to drink');
+  E.tick();
+  assert.ok(cup.contents.water<before,'Human must drink directly from the already-held vessel without routing back to pick it up');
+}
+
+// A partially filled vessel cannot count itself as the refill source used to justify a drink plan.
+E.reset(20260911);
+{
+  const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB;
+  quiet(human,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5});
+  for(const source of Object.values(st.sources))if(source.resource==='water'){source.infinite=false;source.amount=0;}
+  for(const c of Object.values(st.containers)){
+    if(c.canDrinkFrom){c.portable=false;c.contents={};}
+    else if(c.contents?.water)delete c.contents.water;
+  }
+  cup.portable=true;cup.canDrinkFrom=true;cup.contents={water:2};
+  assert.equal(E.canDrinkResource(human,'water'),false,'the chosen vessel itself must be excluded from its refill-source feasibility');
+  assert.equal(E.buildAction(human,{id:'drinkWater'}),null,'Action construction must reject the same non-executable partial-vessel plan');
+}
+
 // If a direct food source disappears after the action has already claimed it, the action must abort explicitly
 // instead of silently finishing and allowing the same unmet need to look like a successful completion.
 E.reset(20260911);

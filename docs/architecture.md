@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.33.4-slot-aware-route-origin`。
+目前 runtime marker：`11.33.5-drink-vessel-feasibility`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -165,6 +165,7 @@ Action / Deliberation 的 spatial target 必須依 target 類型消費正式 own
 - **actor-side route origin 也遵守 Slot contract**：slot-bound actor 的 `agent.position` 同樣只是 Slot anchor。Route / Interaction Geometry ranking / Slot-target ranking 必須以合法 `slotEgressNodes()` 作 multi-source origins；真正 execution 離座時使用對該目標的同一個 best egress。若 current Slot posture 已經直接滿足 interaction，保留 0-cost current-contact，不為了 route query 強制站起；
 - objective access burden 使用 canonical `traversalCost`。Decision / Memory / replanning 不得各自退回 `pathDistance`、target anchor 或 actor Slot anchor 建立第二套可達性尺度；
 - need candidate availability 與 Action factory feasibility 必須對齊。`satisfyHunger` / Human-Cat drink candidate 必須存在依目前 actor geometry 真正可執行的 food / vessel / resource plan；「世界上存在資源」本身不足以建立 Action。動態失去來源時走明確 abort / bounded replan lifecycle，不 silent-finish 後下一 tick 重選同一不可行 Action。
+- Human drink 的 vessel-plan feasibility 也必須與 execution 對齊：actor 自己已持有的 `canDrinkFrom` portable vessel 視為 0-pickup plan；若內容低於直接飲用門檻，source discovery 必須以該 vessel `id` 作 `excludeId`，不能讓 destination vessel 充當自己的 refill source。
 
 這個分工不表示所有 Action 都必須透過 Interaction Geometry；真正的 ordinary floor exact target 仍保留 `moveToExact()` 語意。
 

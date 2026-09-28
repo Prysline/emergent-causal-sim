@@ -6,11 +6,17 @@
 
 目前 current runtime marker：
 
-`11.33.4-slot-aware-route-origin`
+`11.33.5-drink-vessel-feasibility`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.4`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.1-slot-aware-route-origin`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.1-slot-aware-origin`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Contact / Passage / Locomotion / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.5`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.1-slot-aware-route-origin`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.1-slot-aware-origin`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Contact / Passage / Locomotion / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
 
-### Current Slot-aware actor route-origin release
+### Current Human drink vessel feasibility release
+
+`11.33.5-drink-vessel-feasibility` 修正 11.33.4 need-plan parity 中兩個 Human drink 邊界。第一，actor 自己已持有的 portable `canDrinkFrom` vessel 原本會被 `canDrinkResource()` 與 `chooseDrinkVessel()` 當成「已被持有」而整個排除，即使 execution 已具備直接飲用或帶去 refill 的條件；現在 self-held vessel 以 0 pickup burden 參與同一個 executable vessel plan。第二，內容低於直接飲用門檻的 vessel 原本可能在 feasibility 階段被同一 vessel 自己當成 refill source，導致 Action 建立後 execution 用 `excludeId` 排除它才 abort；現在 candidate plan 在成立前就用相同 exclusion 驗證真正可達的外部 source。
+
+Human drink 的 Decision / Intent / `E.buildAction()` 與 `chooseDrinkVessel()` 共用同一套 vessel access / refill-source feasibility：availability 保留 existence-only short-circuit，不為每次 deliberation 重跑完整 vessel ranking；execution 再在同一 feasibility 上選出實際 winner。若 winner 已是 `a.held`，直接進入 idempotent take / drink-or-refill lifecycle，不再繞回 pickup 自己手上的容器。這是 observable behavior correctness patch，因此 overall runtime / Presentation marker 升為 `11.33.5-drink-vessel-feasibility`；Spatial Traversal仍為 `11.32.1-slot-aware-route-origin`、Route仍為 `11.30.1-slot-aware-origin`、Contact仍為 `11.32.0-contact-slot-corner`，World Authoring / Furniture Catalog維持 v7 / v11。
+
+### Previous Slot-aware actor route-origin release
 
 `11.33.4-slot-aware-route-origin` 修正 actor 本身位於 Furniture Slot 時的 Route origin correctness。先前 PR #147 已讓 slot-bound **target** 不再把 Slot anchor 當 interaction destination，但 actor-side `planRoute / pathDistances / bestInteractionPositionResult` 仍從 `agent.position` 起算；對 sitting / lying Slot occupant 而言，該位置是 Furniture Slot coarse anchor，通常被 solid 覆蓋，不是 ordinary locomotion node。因此角色實際可以 `standUp → slotEgressNodes → route`，target ranking 卻會先得到 Infinity。Seed 20260911 的橘子躺在小型寵物床時反覆「決定吃東西 → Action 消失」就是此漂移的玩家可見重現。
 
