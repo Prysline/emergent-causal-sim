@@ -407,10 +407,10 @@ try{
     singleNone:compactQueryCounts(results.single_none),
     batch10None:compactQueryCounts(results.batch10_none)
   }));
-  assert.equal(feasibilityCounts.singleInside,6898,'Action spatial-target semantics must retain the measured single-tick simulation feasibility baseline');
-  assert.equal(feasibilityCounts.singleOutside,3389,'Action spatial-target semantics must retain the measured one-pass outside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,18385,'Action spatial-target semantics must retain the measured step(10) inside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Outside,2780,'Place-description projection must retain the measured step(10) outside-tick baseline after removing duplicate Action-card spatial observation work');
+  assert.equal(feasibilityCounts.singleInside,9389,'Slot-aware actor-origin semantics must retain the measured single-tick simulation feasibility baseline');
+  assert.equal(feasibilityCounts.singleOutside,3389,'Slot-aware actor-origin semantics must retain the measured one-pass outside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,21496,'Slot-aware actor-origin semantics must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Outside,2780,'Slot-aware actor-origin semantics must retain the measured step(10) outside-tick baseline');
 
   await openCase({selected:false});
   await page.locator('#showThoughts').click();
