@@ -155,14 +155,6 @@
     }
   }
 
-  function assertCostMap(costs,path){
-    if(costs===undefined)return;
-    if(!isRecord(costs))throw new Error(path+' must be an object keyed by agent kind.');
-    for(const [kind,value] of Object.entries(costs)){
-      if(!kind||!Number.isFinite(value)||value<0)throw new Error(path+' has invalid cost for '+String(kind)+'.');
-    }
-  }
-
   const CARDINAL_DIRECTIONS=new Set(ORIENTATIONS);
   const finite=value=>Number.isFinite(Number(value));
   const positive=value=>finite(value)&&Number(value)>0;
