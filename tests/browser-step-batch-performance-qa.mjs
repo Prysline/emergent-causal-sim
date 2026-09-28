@@ -409,7 +409,7 @@ try{
   }));
   assert.equal(feasibilityCounts.singleInside,9389,'Slot-aware actor-origin semantics must retain the measured single-tick simulation feasibility baseline');
   assert.equal(feasibilityCounts.singleOutside,3389,'Slot-aware actor-origin semantics must retain the measured one-pass outside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,21496,'Slot-aware actor-origin semantics must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,21579,'Drink-vessel feasibility semantics must retain the measured step(10) inside-tick feasibility baseline');
   assert.equal(feasibilityCounts.batch10Outside,2780,'Slot-aware actor-origin semantics must retain the measured step(10) outside-tick baseline');
 
   await openCase({selected:false});
