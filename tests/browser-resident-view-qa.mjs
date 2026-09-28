@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.35.0-affect-responder-bias';
+const CURRENT_VERSION='11.35.1-presentation-projection-correctness';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -38,6 +38,7 @@ async function snapshot(){
       recentRows:[...(resident?.querySelectorAll('.resident-life-event')||[])].map(row=>{const ref=row.dataset.entity||'',eventId=ref.startsWith('event:')?ref.slice(6):null,source=eventId?st.causes?.[eventId]:null;return {eventId,text:row.innerText,badges:[...row.querySelectorAll('.resident-private-badge')].map(b=>b.textContent?.trim()||''),visibility:source?.data?.visibility||'public',owner:source?.data?.owner||null};}),
       validator:window.SimValidator.validateState(st),
       affectLabels:{neutral:E.residentAffectLabel({valence:0,activation:0,frustration:0}),frustrated:E.residentAffectLabel({valence:-.1,activation:.2,frustration:.6})},
+      releaseLabel:document.getElementById('releaseLabel')?.textContent?.trim()??'',
       width:innerWidth,docWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth,
       inspectorActive:document.querySelector('[data-view="inspector"]')?.classList.contains('mobile-active')??false,
       navActive:document.querySelector('.mobile-nav [data-tab="inspector"]')?.classList.contains('active')??false,
@@ -76,17 +77,24 @@ async function entitySnapshot(){
 
 await openStory();
 const postureProjection=await page.evaluate(()=>{
-  const st=window.SimEngine.getState(),a=st.agents.zhou,original=structuredClone(a.posture);
-  a.posture={kind:'prone',slotId:null,furnitureId:null};
-  window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());
-  const actionLocation=document.querySelector('.action-card.agent-zhou .action-location')?.textContent||'';
-  const debugText=document.querySelector('[data-v1140-debug-view]')?.textContent||'';
-  a.posture=original;
-  window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());
-  return {actionLocation,debugText};
+  const UI=window.SimUI,st=window.SimEngine.getState(),a=st.agents.zhou,original=structuredClone(a.posture);
+  const project=kind=>{
+    a.posture=kind===null?{}:{kind,slotId:null,furnitureId:null};
+    UI.setCurrentZ(UI.getCurrentZ());
+    return {
+      actionLocation:document.querySelector('.action-card.agent-zhou .action-location')?.textContent||'',
+      debugText:document.querySelector('[data-v1140-debug-view]')?.textContent||'',
+      residentText:document.querySelector('[data-v1140-resident-view]')?.textContent||''
+    };
+  };
+  const prone=project('prone'),kneeling=project('kneeling'),unknown=project('hovering'),missing=project(null);
+  a.posture=original;UI.setCurrentZ(UI.getCurrentZ());
+  return {prone,kneeling,unknown,missing};
 });
-assert.match(postureProjection.actionLocation,/俯臥/,'Action Card must render runtime prone posture instead of falling back to standing');
-assert.match(postureProjection.debugText,/俯臥/,'Debug Inspector projection must use the same runtime posture label');
+for(const text of Object.values(postureProjection.prone))assert.match(text,/俯臥/,'prone posture must agree across Action, Resident and Debug projections');
+for(const text of Object.values(postureProjection.kneeling))assert.match(text,/跪姿/,'kneeling posture must agree across Action, Resident and Debug projections');
+for(const text of Object.values(postureProjection.unknown))assert.match(text,/未知姿勢/,'unknown posture must use a conservative projection instead of standing');
+for(const text of Object.values(postureProjection.missing))assert.match(text,/姿勢未記錄/,'missing posture must not be invented as standing');
 
 const placeProjection=await page.evaluate(()=>{
   const E=window.SimEngine,SP=window.SimSpatial,UI=window.SimUI,st=E.getState(),a=st.agents.zhen;
@@ -109,6 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
+assert.equal(desktop.releaseLabel,'v11.35.1','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -206,6 +215,10 @@ assert.ok(debug.debugText.includes('Relationship')&&debug.debugText.includes('Fa
 assert.ok(debug.debugText.includes('Physical Profile')&&debug.debugText.includes('MovementEnvelopes'),'Debug must expose authoritative Physical Profile and derived multi-mode MovementEnvelopes');
 assert.ok(debug.debugText.includes('Locomotion Execution')&&debug.debugText.includes('Edge Move Ticks'),'Debug must expose current locomotion execution timing and posture state');
 assert.ok(debug.spatialText.includes('Dynamic Congestion'),'Spatial Debug must expose Dynamic Congestion observability');
+assert.ok(!debug.debugText.includes('尚不產生情緒'),'Appraisal Debug hint must match the current Appraisal → Affect pipeline');
+assert.ok(debug.debugText.includes('historical appraisal 更新 Affect'),'Appraisal Debug must state the current downstream Affect boundary');
+assert.ok(!debug.debugText.includes('仍不把 memory 接進 deliberation utility'),'Retention Debug hint must match the current Memory → Deliberation pipeline');
+assert.ok(debug.debugText.includes('Memory → Deliberation 由獨立 owner'),'Retention Debug must state the current owner boundary');
 const debugOwnership=await page.evaluate(()=>({
   roots:document.querySelectorAll('[data-v1140-resident-root]').length,
   entityRoots:document.querySelectorAll('[data-v1141-entity-root]').length,
@@ -279,15 +292,15 @@ await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot
 await selectEntity('furniture',entityFixtures.furniture.id);entity=await entitySnapshot();
 assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.furniture.name));assert.ok(entity.readableText.includes('用途'));assert.ok(entity.readableText.includes('正在使用'));assert.ok(!entity.readableText.includes('Footprint'));assert.ok(!entity.readableText.includes('預約：'));
 const furnitureState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Furniture・${entityFixtures.furniture.id}`));assert.ok(entity.debugText.includes('Footprint'));assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),furnitureState,'Furniture readable/debug switch must be state-inert');
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Furniture・${entityFixtures.furniture.id}`));assert.ok(entity.debugText.includes('Footprint'));assert.ok(!entity.debugText.includes('阻擋通行')&&!entity.debugText.includes('價值'),'Furniture Debug must not expose retired blocksMovement/value truth');assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),furnitureState,'Furniture readable/debug switch must be state-inert');
 
 await selectEntity('tile',entityFixtures.tile.id);entity=await entitySnapshot();
-assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes('目前狀況'));assert.ok(!entity.readableText.includes(`Tile ${entityFixtures.tile.id}`));assert.ok(!entity.readableText.includes('局部噪音'));assert.ok(!entity.readableText.includes('阻擋來源'));
-await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Tile ${entityFixtures.tile.id}`));assert.ok(entity.debugText.includes('局部噪音'));
+assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes('目前狀況'));assert.ok(entity.readableText.includes('基礎阻擋'));assert.ok(!entity.readableText.includes('可以通行')&&!entity.readableText.includes('無法通行'));assert.ok(!entity.readableText.includes(`Tile ${entityFixtures.tile.id}`));assert.ok(!entity.readableText.includes('局部噪音'));assert.ok(!entity.readableText.includes('阻擋來源'));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Tile ${entityFixtures.tile.id}`));assert.ok(entity.debugText.includes('局部噪音'));assert.ok(entity.debugText.includes('基礎阻擋'));assert.ok(!entity.debugText.includes('可通行'));
 
 await selectEntity('room',entityFixtures.room.id);entity=await entitySnapshot();
 assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.room.name));assert.ok(entity.readableText.includes('目前狀況'));assert.ok(!entity.readableText.includes(`Derived Room・${entityFixtures.room.id}`));assert.ok(!entity.readableText.includes('平均局部舒適'));
-await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Derived Room・${entityFixtures.room.id}`));assert.ok(entity.debugText.includes('平均局部舒適'));
+await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(`Derived Room・${entityFixtures.room.id}`));assert.ok(entity.debugText.includes('平均局部舒適'));assert.ok(!entity.debugText.includes('房間價值'),'Room Debug must not expose retired room.value truth');
 
 await selectEntity('event',entityFixtures.event.id);entity=await entitySnapshot();
 assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.event.text));assert.ok(entity.readableText.includes('相關對象'));assert.ok(!entity.readableText.includes('詳細資料'));assert.ok(!entity.readableText.includes('因果鏈'));

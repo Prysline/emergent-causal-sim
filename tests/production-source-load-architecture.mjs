@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.35.0-affect-responder-bias';
+const CURRENT_VERSION='11.35.1-presentation-projection-correctness';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -217,6 +217,12 @@ const labelsSource=readRepoFile('src/ui/labels.js');
 assert.match(labelsSource,/const VERSION=R\.VERSION;/,'Presentation marker must derive from the canonical release owner');
 assert.match(labelsSource,/PRESENTATION_VERSION:VERSION/,'Presentation marker must be owned by SimUI');
 assert.match(labelsSource,/interactionLabel/,'interaction labels must be owned by the semantic UI labels module');
+const appShellSource=readRepoFile('index.html');
+const coreUiSource=readRepoFile('src/ui/core.js');
+assert.match(appShellSource,/id="releaseLabel"/,'production shell must expose a release-label projection target');
+assert.doesNotMatch(appShellSource,/v11\.31\.0・Crowding 8-direction/,'production shell must not keep the stale hardcoded release label');
+assert.match(coreUiSource,/SimRelease\?\.VERSION/,'production release display must read the canonical release owner');
+assert.doesNotMatch(coreUiSource,/f\.blocksMovement|f\.value|r\.value/,'production Debug source must not project retired Furniture or Room truth');
 assert.equal(scripts.includes('src/presentation-schema-v1140.js'),false,'production must not load the retired no-op Presentation schema');
 assert.equal(fs.existsSync(new URL('../src/presentation-schema-v1140.js',import.meta.url)),false,'retired Presentation schema source must not remain in the current tree');
 

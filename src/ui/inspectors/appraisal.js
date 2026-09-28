@@ -28,7 +28,7 @@
       return `<div class="k">${esc(m.sourceEventId)}・${esc(m.observed?.action||'unknown')}</div><div>關聯 ${esc(pct(p.relevance))}・目標一致 ${esc(signed(p.goalCongruence))}・Agency ${esc(agencyLabel(st,p))}<br><span class="hint">${esc(p.ruleId)}・${esc(factors)}</span></div>`;
     }).join(''):'<div class="k">Historical appraisal</div><div>目前沒有已評估的 episodic memory</div>';
     const section=document.createElement('div');section.className='inspect-section';section.dataset.v1131Appraisal='';
-    section.innerHTML=`<h3>事件主觀評估</h3><div class="kv">${rows}</div><p class="hint">v11.13.1 的 appraisal 在 memory 首次形成時固定保存，只讀 observable snapshot＋該 Agent 當下 private context；不重新讀 raw event.data、不隨目前需求重算，也尚不產生情緒或改變 deliberation。</p>`;
+    section.innerHTML=`<h3>事件主觀評估</h3><div class="kv">${rows}</div><p class="hint">v11.13.1 的 appraisal 在 memory 首次形成時固定保存，只讀 observable snapshot＋該 Agent 當下 private context；不重新讀 raw event.data、不隨目前需求重算。Current pipeline 會以這份 historical appraisal 更新 Affect；此 Inspector 只讀既有 appraisal，不重新計算情緒。</p>`;
     const memory=host.querySelector('[data-v1130-memory]');if(memory)memory.after(section);else{const intent=host.querySelector('[data-v1121-intent]');if(intent)intent.after(section);else host.append(section);}
   }
 

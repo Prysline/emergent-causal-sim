@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.35.0-affect-responder-bias`。
+目前 runtime marker：`11.35.1-presentation-projection-correctness`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -511,7 +511,7 @@ PR #45 / #46 建立的 deterministic timing baseline 是這個 lifecycle 的 com
 
 ## 8. Presentation ownership
 
-Presentation 不再參與 initial-state schema，也不再持有 `SimWorld.PRESENTATION_SCHEMA_VERSION`。Current Presentation marker 與 interaction labels 由 `SimUI.PRESENTATION_VERSION / SimUI.interactionLabel(...)` 持有，marker直接跟隨 canonical `SimRelease.VERSION`；這只描述 UI/presentation contract，不寫入 runtime state，也不成為 simulation schema owner。
+Presentation 不再參與 initial-state schema，也不再持有 `SimWorld.PRESENTATION_SCHEMA_VERSION`。Current Presentation marker 與 interaction labels 由 `SimUI.PRESENTATION_VERSION / SimUI.interactionLabel(...)` 持有，marker直接跟隨 canonical `SimRelease.VERSION`；這只描述 UI/presentation contract，不寫入 runtime state，也不成為 simulation schema owner。App shell 的玩家可見短版 release label 也必須由同一 canonical owner 即時投影，不得在 HTML 複製 current release literal。Resident / Action / Debug 對 posture snapshot 必須一致，missing / unknown posture 只能使用保守 fallback；Tile 的 base `walkable / blockerAt` projection 不得冒充完整 per-Agent traversal feasibility。Retired Furniture `blocksMovement / value` 與 Room `value` 不再屬 current Presentation truth。
 
 Resident View 的「最近發生的事」仍直接投影 bounded canonical events。對 `visibility: private` 且 `owner === residentId` 的事件，只在玩家可讀列項加上獨立「私人」badge；事件正文不加前綴，公開事件不加 badge。這個 badge 不建立新的 private-state truth，也不改 Memory / Relationship / event visibility 語意。
 
