@@ -10,7 +10,7 @@ loadRuntimeProfile([
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
-assert.equal(E.VERSION,'11.33.4-slot-aware-route-origin');
+assert.equal(E.VERSION,'11.33.5-drink-vessel-feasibility');
 assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
 assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
 
