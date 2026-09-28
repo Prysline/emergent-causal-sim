@@ -119,6 +119,31 @@
       constrainedBy:{...option.constrainedBy,explicitEdge:option.constrainedBy?.explicitPassage===true}
     }));
   }
+  function rectGap(a,b){
+    const dx=Math.max(0,b.x-(a.x+a.width),a.x-(b.x+b.width));
+    const dy=Math.max(0,b.y-(a.y+a.depth),a.y-(b.y+b.depth));
+    return Math.hypot(dx,dy);
+  }
+  function surfaceTransitionProfile(st,a,b){
+    const aFloor=a.surfaceId===FLOOR,bFloor=b.surfaceId===FLOOR;if(aFloor===bFloor||!edgeAdjacent(st,a,b))return null;
+    const surfaceNode=aFloor?b:a,entry=SP.surfaceEntry?.(st,surfaceNode.surfaceId);if(!entry)return null;
+    const region=entry.surface.supportRegion,floorNode=aFloor?a:b;
+    const horizontalGap=rectGap({x:floorNode.x,y:floorNode.y,width:1,depth:1},region);
+    const fromElevation=aFloor?0:entry.surface.topElevation,toElevation=bFloor?0:entry.surface.topElevation;
+    const heightDelta=toElevation-fromElevation;
+    return {
+      from:a,to:b,edgeKind:'surfaceTransition',horizontalKind:null,status:'candidate',
+      structureId:null,structureKind:null,
+      options:[{interval:null,clearanceWidth:null,clearanceHeight:null,constrainedBy:{surface:entry.surface.id}}],
+      constrainedBy:{structure:null,boundary:null,explicitEdge:false,surface:entry.surface.id},
+      resource:'surface:'+entry.surface.id,distanceMeters:1,horizontalConnection:null,
+      surfaceTransition:{
+        surfaceId:entry.surface.id,sourceSolidKey:entry.surface.sourceSolidKey,
+        fromElevation,toElevation,heightDelta,horizontalGap,
+        supportRegion:{...region},topElevation:entry.surface.topElevation
+      }
+    };
+  }
   function getPassageProfile(st,from,to){
     const a=SP.normalizeNode(st,from),b=SP.normalizeNode(st,to);if(!a||!b)return null;
     const structure=structureConstraint(st,a,b);
@@ -136,6 +161,7 @@
         horizontalConnection:JSON.parse(JSON.stringify(connection))
       };
     }
+    const surfaceTransition=surfaceTransitionProfile(st,a,b);if(surfaceTransition)return surfaceTransition;
     if(!edgeAdjacent(st,a,b))return null;
     const explicit=explicitEdgeConstraint(st,a,b),boundary=authoredBoundaryConstraint(st,a,b);
     return {from:a,to:b,edgeKind:'horizontal',horizontalKind:'cardinal',status:'candidate',structureId:null,structureKind:null,options:genericOptions(boundary,explicit),constrainedBy:{structure:null,boundary:boundary?.id||null,explicitEdge:!!explicit},resource:null,distanceMeters:1,horizontalConnection:null};
@@ -154,11 +180,26 @@
   }
   function endpointFits(st,node,agent,mode){
     const n=SP.normalizeNode(st,node);if(!n)return false;
-    return n.surfaceId===FLOOR?(SP.floorNodeFitsMode?.(st,n,agent,mode)??SP.nodeWalkable(st,n,agent)):SP.nodeWalkable(st,n,agent);
+    return n.surfaceId===FLOOR?(SP.floorNodeFitsMode?.(st,n,agent,mode)??SP.nodeWalkable(st,n,agent)):(SP.surfaceNodeFitsMode?.(st,n,agent,mode)??SP.nodeWalkable(st,n,agent));
   }
   function modeFeasibility(st,agent,mode,passage,edgeOpen){
     const envelope=P.getMovementEnvelope(agent,mode),failedAxes=[];
     if(!envelope)return {feasible:false,failedAxes:['envelope'],effectiveOption:null,effectiveClearanceWidth:null};
+    if(passage.edgeKind==='surfaceTransition'){
+      if(mode!=='walk')failedAxes.push('surfacePosture');
+      if(!endpointFits(st,passage.from,agent,mode)||!endpointFits(st,passage.to,agent,mode))failedAxes.push('nodeFit');
+      const transition=passage.surfaceTransition||{},maneuverCandidates=mode==='walk'?(P.surfaceManeuverScaleCandidates?.(agent,{verticalDelta:transition.heightDelta,horizontalGap:transition.horizontalGap})||[]):[];
+      if(!maneuverCandidates.length)failedAxes.push('maneuver');
+      const effectiveOption=passage.options?.[0]||null;
+      return {
+        feasible:edgeOpen&&failedAxes.length===0,
+        failedAxes:[...new Set(failedAxes)],
+        effectiveOption:effectiveOption?JSON.parse(JSON.stringify(effectiveOption)):null,
+        effectiveClearanceWidth:null,
+        maneuverCandidates:JSON.parse(JSON.stringify(maneuverCandidates)),
+        effectiveManeuver:maneuverCandidates[0]?JSON.parse(JSON.stringify(maneuverCandidates[0])):null
+      };
+    }
     if(passage.edgeKind==='structure'&&passage.structureKind==='stair'&&mode!=='walk')failedAxes.push('structureMode');
     if(!endpointFits(st,passage.from,agent,mode)||!endpointFits(st,passage.to,agent,mode))failedAxes.push('nodeFit');
     const feasibleOptions=(passage.options||[]).filter(option=>optionFits(envelope,option));
