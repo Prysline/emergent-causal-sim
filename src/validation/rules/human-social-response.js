@@ -8,7 +8,7 @@
     const responsesByOffer=new Map(),talksByOffer=new Map();
 
     for(const a of Object.values(st?.agents||{})){
-      for(const key of ['talkResponseDecision','talkResponseScore','talkResponseUtility','socialResponsePriority','ignoredBy']){
+      for(const key of ['talkResponseDecision','talkResponseScore','talkResponseUtility','socialResponsePriority','affectResponseDelta','ignoredBy']){
         if(own(a,key))add('talk_response_private_cache_forbidden',`${a.name} 不應保存 ${key}；Human talk response 必須保持 derived。`,{agentId:a.id,field:key});
       }
       for(const m of a.episodicMemories||[]){
@@ -32,7 +32,7 @@
         if(!offer||offer.data?.bidKind!=='talkOffer')add('talk_response_offer_missing',`事件 ${e.id} 必須回應有效的 talkOffer。`,{eventId:e.id,bidId:d.responseToBid});
         else if(offer.data.bidFrom!==d.target||offer.data.bidTo!==d.actor)add('talk_response_direction_mismatch',`事件 ${e.id} 的 responder/requester 方向與 talkOffer 不一致。`,{eventId:e.id,bidId:offer.id});
         if(d.responseToBid){const list=responsesByOffer.get(d.responseToBid)||[];list.push(e);responsesByOffer.set(d.responseToBid,list);}
-        for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship','intentionalIgnore'])if(own(d,key))add('talk_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
+        for(const key of ['responseScore','baseResponseScore','finalScore','affectResponseSignal','affectResponseDelta','relationshipResponseDelta','socialNeed','socialTrait','affect','relationship','intentionalIgnore'])if(own(d,key))add('talk_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
       }
       if(d.action==='talk'&&d.talkOfferId){
         const offer=E.bidEvent?.(st,d.talkOfferId),response=st.causes?.[d.talkResponseEventId];

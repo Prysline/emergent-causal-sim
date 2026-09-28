@@ -3,7 +3,7 @@
 
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
-    if(st?.affects!==undefined)add('global_affect_registry_forbidden','v11.13.2 不應建立 global affects registry。');
+    if(st?.affects!==undefined)add('global_affect_registry_forbidden','Affect 不應建立 global affects registry。');
     for(const a of Object.values(st?.agents||{})){
       const f=a.affect;
       if(!f||typeof f!=='object'){add('agent_affect_missing',`${a.name} 缺少 Agent-private current affect。`,{agentId:a.id});continue;}
@@ -23,7 +23,8 @@
           if(m&&(!m.appraisal||m.sourceEventId!==s.sourceEventId||m.appraisal.appraisedTick!==s.appraisedTick))add('agent_affect_source_mismatch',`${a.name} 的 affect source 與 episodic appraisal 不一致。`,{agentId:a.id,memoryId:s.memoryId});
         }
       }else if(f.source!=null)add('neutral_affect_source_stale',`${a.name} 的 neutral affect 不應保留 stale source。`,{agentId:a.id,source:f.source});
-      for(const key of ['relationship','relationshipDelta','targetAgentId','intentionality','utilityInfluence'])if(Object.prototype.hasOwnProperty.call(f,key))add('agent_affect_out_of_scope_field',`${a.name} 的 v11.13.2 affect 不應提前保存 ${key}。`,{agentId:a.id,key});
+      for(const key of ['relationship','relationshipDelta','targetAgentId','intentionality','utilityInfluence','affectResponseSignal','affectResponseDelta'])if(Object.prototype.hasOwnProperty.call(f,key))add('agent_affect_out_of_scope_field',`${a.name} 的 current affect 不應保存 ${key}。`,{agentId:a.id,key});
+      for(const key of ['affectResponseSignal','affectResponseDelta'])if(Object.prototype.hasOwnProperty.call(a,key))add('agent_affect_derived_cache_forbidden',`${a.name} 不應保存 derived ${key}。`,{agentId:a.id,key});
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }

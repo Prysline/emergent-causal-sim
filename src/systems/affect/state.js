@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('systems/affect/state.js requires world.js initial-state pipeline.');
-  const VERSION='11.13.2-short-lived-affect';
+  const VERSION='11.35.0-affect-responder-bias';
   const DECAY=Object.freeze({valence:.90,activation:.82,frustration:.86});
   const EPSILON=.005;
   const createNeutralAffect=(tick=0)=>({valence:0,activation:0,frustration:0,lastUpdatedTick:tick,lastDecayTick:tick,source:null});

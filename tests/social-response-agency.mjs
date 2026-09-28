@@ -39,13 +39,13 @@ cat.needs.social=45;assert.equal(E.petResponseFor(cat),'tolerate');
 cat.needs.social=90;assert.equal(E.petResponseFor(cat),'accept');
 const baselineScore=E.petResponseScore(cat),neutralAffect=JSON.parse(JSON.stringify(cat.affect));
 cat.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:0,lastDecayTick:0,source:null};
-assert.equal(E.petResponseScore(cat),baselineScore,'v11.13.2a must not let current Affect enter pet response scoring');
+assert.ok(E.petResponseScore(cat)<baselineScore,'negative responder Affect should lower pet response scoring');
 cat.affect=neutralAffect;
 noIssues('deterministic response bands');
 
 // High social need: human intent becomes an observable petOffer, animal accepts, then and only then petAnimal succeeds.
 st=armDirectPet(90,21321);E.tick();st=E.getState();
-assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+assert.equal(st.version,'11.35.0-affect-responder-bias');
 const acceptOffer=latestAction('petOffer'),acceptResponse=latestAction('acceptPet');
 assert.ok(acceptOffer?.data?.socialBid,'high-social case must create observable petOffer');
 assert.equal(acceptOffer.data.bidKind,'petOffer');
@@ -84,11 +84,11 @@ assert.ok(st.agents.orange.affect.valence>catBefore.valence,'animal may get shor
 for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship'])assert.equal(Object.prototype.hasOwnProperty.call(avoidResponse.data,key),false,`world event must not leak ${key}`);
 noIssues('avoid flow with appraisal/affect');
 
-// Animal response remains independent of Affect even after an actual Affect source exists.
-const responseBeforeAffectMutation=E.petResponseFor(st.agents.orange),validSource=JSON.parse(JSON.stringify(st.agents.orange.affect.source));
+// Responder Current Affect now contributes a bounded response modifier, while the source remains Agent-private.
+const responseScoreBeforeAffectMutation=E.petResponseScore(st.agents.orange),validSource=JSON.parse(JSON.stringify(st.agents.orange.affect.source));
 st.agents.orange.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:validSource};
-assert.equal(E.petResponseFor(st.agents.orange),responseBeforeAffectMutation,'Affect-to-response influence belongs to a later deliberation slice');
-noIssues('affect remains decision inert');
+assert.equal(E.affectResponseSignal(st.agents.orange),-1);assert.ok(E.petResponseScore(st.agents.orange)<responseScoreBeforeAffectMutation,'negative responder Affect should lower the current pet response score');
+noIssues('affect responder influence');
 
 // An existing animal→human Social Bid can be answered by a nested human petOffer without collapsing private waiting truth.
 E.reset(46321);st=E.getState();

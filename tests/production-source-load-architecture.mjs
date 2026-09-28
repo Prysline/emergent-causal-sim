@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.34.0-surface-traversal-maneuvers';
+const CURRENT_VERSION='11.35.0-affect-responder-bias';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -205,6 +205,7 @@ assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(L.VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
+assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');

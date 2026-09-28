@@ -1,10 +1,12 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld;if(!E||!W?.AFFECT_SCHEMA_VERSION||!E.APPRAISAL_SCHEMA_VERSION)return;
-  const VERSION=W.AFFECT_SCHEMA_VERSION||'11.13.2-short-lived-affect';
+  const VERSION=W.AFFECT_SCHEMA_VERSION||'11.35.0-affect-responder-bias';
   const DECAY=W.AFFECT_DECAY||{valence:.90,activation:.82,frustration:.86};
   const EPSILON=W.AFFECT_EPSILON??.005;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
+
+  function affectResponseSignal(agent){const f=agent?.affect||{},valence=Number(f.valence),frustration=Number(f.frustration);return clamp((Number.isFinite(valence)?valence:0)-(Number.isFinite(frustration)?frustration:0),-1,1);}
   const neutral=tick=>W.createNeutralAffect?W.createNeutralAffect(tick):{valence:0,activation:0,frustration:0,lastUpdatedTick:tick,lastDecayTick:tick,source:null};
 
   function normalizeAgentAffect(a,tick=0){
@@ -31,8 +33,8 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/affect/runtime.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','affect.from-appraisal',(ctx)=>{updateAffectFromAppraisal(ctx.state,ctx.agent,ctx.memory);ctx.result=ctx.memory?.appraisal||ctx.result;},400);
-  E.registerRuntimeHook('beforeTick','affect.decay',()=>{const st=E.getState();decayAffectState(st,(st?.tick||0)+1);},500);
+  E.registerRuntimeHook('beforeTick','affect.decay',()=>{const st=E.getState();decayAffectState(st,(st?.tick||0)+1);},250);
   E.registerRuntimeHook('afterReset','affect.normalize-reset',()=>normalizeAffectState(E.getState()),400);
 
-  Object.assign(E,{AFFECT_SCHEMA_VERSION:VERSION,AFFECT_DECAY:DECAY,AFFECT_EPSILON:EPSILON,normalizeAffectState,decayAgentAffect,decayAffectState,updateAffectFromAppraisal});
+  Object.assign(E,{AFFECT_SCHEMA_VERSION:VERSION,AFFECT_DECAY:DECAY,AFFECT_EPSILON:EPSILON,affectResponseSignal,normalizeAffectState,decayAgentAffect,decayAffectState,updateAffectFromAppraisal});
 })();

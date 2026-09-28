@@ -37,11 +37,11 @@ responder.needs.social=35;assert.equal(E.talkResponseFor(responder),'brief');
 responder.needs.social=90;assert.equal(E.talkResponseFor(responder),'engage');
 const scoreBefore=E.talkEngagementScore(responder),utilityBefore=E.talkResponseUtility(responder),neutral=structuredClone(responder.affect);
 responder.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:0,lastDecayTick:0,source:null};
-assert.equal(E.talkEngagementScore(responder),scoreBefore);assert.equal(E.talkResponseUtility(responder),utilityBefore);
+assert.ok(E.talkEngagementScore(responder)<scoreBefore,'negative responder Affect should lower the responder-specific score');assert.ok(E.talkResponseUtility(responder)<utilityBefore,'responder-specific utility should follow the bounded final response score');
 responder.affect=neutral;noIssues('response bands');
 
 armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
-assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+assert.equal(st.version,'11.35.0-affect-responder-bias');
 const engageOffer=eventBy(e=>e.data?.action==='talkOffer'),accept=eventBy(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer?.id),talk=eventBy(e=>e.data?.action==='talk'&&e.data?.talkOfferId===engageOffer?.id);
 assert.ok(engageOffer?.data?.socialBid);assert.ok(accept);assert.ok(talk);
 assert.equal(talk.data.talkResponseEventId,accept.id);assert.equal(talk.data.talkResponse,'engage');assert.equal(Object.hasOwn(talk.data,'responseToBid'),false,'full talk is an outcome, not a second responder event');

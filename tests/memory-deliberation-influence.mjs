@@ -33,7 +33,7 @@ function calm(a,{social=55}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue
 function socialCandidate(st,a){return E.candidateIntents(st,a).find(c=>c.intentKind==='socialize')||null;}
 
 E.reset(11340);let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
+assert.equal(st.version,'11.35.0-affect-responder-bias');
 assert.equal(E.MEMORY_DELIBERATION_SCHEMA_VERSION,'11.13.4-memory-deliberation-influence');
 assert.equal(E.MEMORY_DELIBERATION_MAX_DELTA,18);
 noIssues('reset');
@@ -82,17 +82,17 @@ a.episodicMemories=[
 assert.equal(E.targetAssociation(st,a,'zhou').memoryUtilityDelta,0,'non-other agency must not create person-specific association');
 noIssues('agency boundary');
 
-// Affect-only changes do not alter deliberation utility; responder scores also stay untouched.
+// Affect-only changes do not alter general deliberation utility; responder-specific score reads Current Affect, not Memory directly.
 E.reset(21340);st=E.getState();a=st.agents.zhen;calm(a,{social:65});st.agents.orange.offMap=false;
 const selfMem=memory(a,'affect-source',{tick:0,last:0,relevance:.5,congruence:-.5,actorId:a.id,agencyKind:'self'});a.episodicMemories=[selfMem];
 const beforeCandidate=socialCandidate(st,a),beforeTalkResponse=E.talkEngagementScore(a),beforePetResponse=E.petResponseScore(st.agents.orange);
 a.affect={valence:-.8,activation:.9,frustration:.8,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:{memoryId:selfMem.id,sourceEventId:selfMem.sourceEventId,appraisedTick:selfMem.appraisal.appraisedTick,appliedTick:st.tick}};
 const afterCandidate=socialCandidate(st,a);
-assert.equal(afterCandidate.utility,beforeCandidate.utility,'Current Affect must remain directly decision-inert in v11.13.4');
-assert.equal(E.talkEngagementScore(a),beforeTalkResponse,'Human responder engagement score must not read Memory/Affect');
-assert.equal(E.petResponseScore(st.agents.orange),beforePetResponse,'petResponseScore must stay unchanged');
+assert.equal(afterCandidate.utility,beforeCandidate.utility,'Current Affect must not change general social candidate utility');
+assert.ok(E.talkEngagementScore(a)<beforeTalkResponse,'Human responder score should read Current Affect without reading Memory directly');
+assert.equal(E.petResponseScore(st.agents.orange),beforePetResponse,'another responder\'s score must stay unchanged');
 assert.equal(a.relationships,undefined,'v11.13.4 must not create Relationship state');
-noIssues('affect and responder-score boundary');
+noIssues('affect responder-score boundary');
 
 // Strong social need and only one target must not become a hard blacklist.
 E.reset(31340);st=E.getState();st.tick=2;a=st.agents.zhen;calm(a,{social:96});st.agents.orange.offMap=true;st.agents.zhou.position={x:5,y:6};a.position={x:5,y:5};

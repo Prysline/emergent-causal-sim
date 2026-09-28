@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.34.0-surface-traversal-maneuvers';
+const CURRENT_VERSION='11.35.0-affect-responder-bias';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
 const ROUTE_VERSION='11.34.0-surface-traversal-maneuvers';
@@ -97,7 +97,7 @@ assert.match(relationshipUiSource,/registerInspectorDecorator\('relationship\.vi
 assert.match(relationshipUiSource,/熟悉不等於喜歡/,'player-readable relationship copy must preserve familiarity/affinity semantic separation');
 assert.match(relationshipUiSource,/Talk responder：base/,'Relationship Debug must expose Human responder score decomposition');
 assert.match(relationshipUiSource,/Pet responder：base/,'Relationship Debug must expose animal responder score decomposition');
-assert.match(relationshipUiSource,/Responder score 分解為即時計算的 derived Debug/,'Relationship Debug must identify responder decomposition as derived, not persistent truth');
+assert.match(relationshipUiSource,/Responder score 的 base \/ Affect \/ Relationship \/ final 分解為即時計算的 derived Debug/,'Relationship Debug must identify base/Affect/Relationship/final decomposition as derived, not persistent truth');
 assert.doesNotMatch(relationshipUiSource,/\.relationships\s*=/,'Relationship UI must remain a read-only projection');
 
 const physicalSource=fs.readFileSync(new URL('../src/systems/physical.js',import.meta.url),'utf8');

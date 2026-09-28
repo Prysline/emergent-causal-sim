@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.34.0・Surface traversal maneuvers**（`11.34.0-surface-traversal-maneuvers`）。
+目前 runtime marker：**v11.35.0・Affect responder bias**（`11.35.0-affect-responder-bias`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -78,7 +78,7 @@
 - Social Bid / responder-local observation / requester-private waiting 分離。
 - Human talk response：engage / brief / decline / no response 是不同結果。
 - Pet response：accept / tolerate / avoid 由 responder 自己的 state 決定。
-- **Relationship → Responder Bias**：Human responder 與 animal responder 可讀自己對 requester 的 directional Relationship，形成 bounded responder-specific score modifier；不讀 requester → responder 的反方向關係。
+- **Affect + Relationship → Responder Bias**：Human responder 與 animal responder 先由自己的 Current Affect 派生 `affectResponseSignal = clamp(valence - frustration, -1, +1)`，各以 `±0.12` cap 形成短期 delta，再與自己對 requester 的 directional Relationship `±0.18` delta 並列；不讀 requester Affect 或反方向 Relationship。
 - responder bias 只修正既有 responder policy。Human `talkResponseUtility` 可因 responder-specific response score 改變，但一般 `E.baseUtilityForAction(...,'talk')`、initiator social Action utility、current-intent utility、soft-switch threshold 與 commitment 不變。
 - requester timeout 不會遠端取消 responder-private Intent；late response 與先前 wait-end experience 可以同時成立。
 - 已移除舊 `pendingInteraction / cat_request / accepted / catRequestExpired` responder compatibility bridge。
@@ -100,7 +100,7 @@
 - **v11.15.1 Relationship Target Preference**：`relationshipTargetDelta = 8 × familiarity × affinity`，只影響 `socialize / interactWithAnimal / seekSocialContact` 的「找誰」。`targetPreference = memoryUtilityDelta + relationshipTargetDelta - accessPenalty`；`accessPenalty` 由 `traversalCost` 派生，數值尺度與 v11.17 的舊 weighted-route penalty 保持 parity；action-level `finalUtility` 仍不加入 Relationship。負向 Relationship 不構成 hard ban。
 - **v11.15.2 Relationship Responder Bias**：Relationship 提供單一 directional downstream signal `relationshipSignal = familiarity × affinity`（bounded `[-1,+1]`）；Human talk 與 animal pet responder subsystem 各自將它縮放為 response-score delta。目前兩者各自 cap 為 `±0.18`，但 ownership 分離，未要求未來永遠同係數。
 - Familiarity 本身不是正向意願：`affinity = 0` 時 responder Relationship delta 必為 0。Human 只讀 human responder → requester；animal 只讀 animal responder → human requester。
-- responder score decomposition 不寫入 World Event、不保存 Agent cache；World truth 只保留實際發生的 accept / brief / decline / tolerate / avoid 等結果。Current Affect 與 responder-specific Memory 仍未直接進入 responder scoring。
+- responder score decomposition 不寫入 World Event、不保存 Agent cache；World truth 只保留實際發生的 accept / brief / decline / tolerate / avoid 等結果。Current Affect 只透過 bounded derived signal 影響 responder scoring；`activation` 第一階段保持 decision-neutral，target-specific Memory 仍不直接進入 responder scoring。
 - ordinary successful resource-transfer consequence 是明確 non-episodic outcome；成功 `pour` 仍由來源 action episode 表達，失敗 `spill` 則可作為獨立 observable physical effect。
 
 ### Presentation
@@ -111,7 +111,7 @@
 - Agent Intent label 必須覆蓋 canonical Intent kind，不得用不存在的 presentation-only kind 造成 fallback；Explanation 不應只是重述 Intent。
 - Player Explanation 優先使用可由同一 evidence 直接支持的日常說法，例如「因為肚子餓了」「因為口渴」「因為累了」「因為想睡了」「因為想找人說說話」；不把 engine threshold 翻成「需求已經變得明顯」之類系統語言。精確需求強度仍留在 Needs / Debug；若沒有可靠的具體原因，使用保守抽象描述或省略，不自行補心理敘事。
 - Resident overview 可讀 Relationship 只顯示保守的熟悉／相處趨勢文字；低 Familiarity 時不強行替 Affinity 下結論。Debug 才顯示精確 Familiarity / Affinity / lastUpdatedTick，並可拆解 social target ranking 的 Memory / Relationship / access penalty，以及 route 的 path distance / traversal cost / travel time。
-- Relationship Debug 也可即時計算 responder `base score + Relationship delta → final score / response band`；這只是 authoritative Relationship + responder policy 的 derived observability，不建立 `talkResponseScore / petResponseScore / relationshipResponseDelta` persistent mirror。
+- Relationship Debug 也可即時計算 responder `base score + Affect delta + Relationship delta → final score / response band`；這只是 authoritative Current Affect / Relationship + responder policy 的 derived observability，不建立 `talkResponseScore / petResponseScore / affectResponseDelta / relationshipResponseDelta` persistent mirror。
 - Physical Debug 顯示 authoritative `mass / volume / bodyGeometry` 與所有 supported locomotion mode 的即時 `MovementEnvelope`；UI 不保存 `movementEnvelope` mirror，也不把第一版 coarse geometry 宣稱為 Anatomy 級精度。`posture: standing` 與 locomotion `walk` 在 Debug 文案中保持不同語意。
 - Container / Source / Furniture / Tile / Room / Event 也有玩家可讀投影：優先顯示名稱、位置、內容物、容量、持有人、實際用途／使用者、表面內容、空間中的居民／家具與 canonical event text 等直接可理解資訊。
 - 非居民 Readable View 不直接顯示 raw entity ID、工程座標、Footprint、interaction Port、Surface cell、slot reservation、cause tree 或其他 debug provenance；這些仍留在 Debug Inspector。家具 readable status 只顯示實際使用者，不把 reservation 當成已發生事實或玩家可見心理資訊。
@@ -171,6 +171,7 @@ State regression 目前涵蓋：
 - Memory → Deliberation / requester social outcome；
 - Relationship Foundation 的 directional state、audited evidence gate、exactly-once consolidation、private-outcome boundary、Memory pruning independence 與 boundedness；
 - Relationship Target Preference 的 bounded directional delta、Memory + Relationship + distance decomposition、負向不 hard-ban、action-utility isolation，以及 generic animal affordance target eligibility；
+- Affect Responder Bias 的 Current Affect derived signal、Human / animal `±0.12` bounded delta、requester-Affect isolation、activation neutrality、general Action utility isolation、World Event privacy boundary 與 derived Debug observability；
 - Relationship Responder Bias 的 directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy boundary 與 derived Debug observability；
 - Runtime Hook Pipeline；
 - presentation observability contract，包括 runtime / UI / app shell / README 的 current version consistency、Agent Action / Intent / Explanation semantic boundary、player Explanation 的自然語言原則、Relationship readable/debug 分層、Physical multi-mode Debug derived-state boundary，以及非居民 Entity Readable / Debug 分層。

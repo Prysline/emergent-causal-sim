@@ -14,9 +14,9 @@ const EXPECTED_HOOKS={
   beforeTick:[
     {id:'socialOutcome.capture-events',order:100},
     {id:'memoryDeliberation.capture-idle',order:200},
+    {id:'affect.decay',order:250},
     {id:'humanSocial.prepare',order:300},
     {id:'socialResponse.capture-pet-offers',order:400},
-    {id:'affect.decay',order:500},
     {id:'intent.soft-reconsideration',order:700},
     {id:'intent.replan-preemption',order:800},
     {id:'socialBid.prepare',order:900},
