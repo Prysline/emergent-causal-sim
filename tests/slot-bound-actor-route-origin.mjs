@@ -196,7 +196,7 @@ E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-  quiet(human,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5});
+  quiet(human,{hunger:5,thirst:90,fatigue:5,sleepNeed:5,social:5});
   for(const c of Object.values(st.containers))if(c.canDrinkFrom){c.portable=false;c.contents={};}
   cup.portable=true;cup.canDrinkFrom=true;cup.contents={water:8};
   human.held=cup.id;delete cup.supportId;
