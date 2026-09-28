@@ -30,8 +30,8 @@ function resetOpenGrid(){
   return {st,human,start:floor(st,1,1),middle:floor(st,2,2),goal:floor(st,3,3)};
 }
 
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
-assert.equal(SP.VERSION,'11.32.0-contact-slot-corner');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.1-slot-aware-origin');
+assert.equal(SP.VERSION,'11.32.1-slot-aware-route-origin');
 assert.equal(L.VERSION,'11.30.0-distance-timing');
 
 {

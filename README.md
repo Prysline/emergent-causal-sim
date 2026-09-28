@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.33.3・Place description projection**（`11.33.3-place-description-projection`）。
+目前 runtime marker：**v11.33.4・Slot-aware route origin**（`11.33.4-slot-aware-route-origin`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -34,6 +34,7 @@
 - A* traversal、dynamic blocker、supported contact、surface environment / liquid。
 - Interaction Geometry 依 affordance + target data 決定合法接觸位置；原本允許 local-neighbor 的 `reach / socialReach` 現支援 cardinal + diagonal，但 diagonal 由 Contact 自己的 corner-occlusion 規則判定，不把 Traversal 可行性當成接觸真相。Slot 仍只 author cardinal `approachEdges`，direct diagonal settle / egress 由兩個 incident sides + 當下 Passage / MovementEnvelope 派生，不新增 `approachCorners`。
 - **Action spatial-target consumer correctness**：Action / Deliberation 若目標是 Object / Source / Agent，target discovery、ranking、replan 與 execution 必須消費同一份 Interaction Geometry；不得把 entity coarse `position` 當互動 route target。slot-bound Agent 的 social target 由 Slot approach/contact geometry 派生；Furniture Slot 的使用流程則是 `bestSlotApproachNode → approach → settle`，Slot anchor 不是 ordinary floor destination。客觀 access ranking 使用 canonical `traversalCost`。
+- **Slot-bound actor route origin**：若 actor 目前由 `posture.slotId` 佔用 Furniture Slot，Route / interaction winner / Slot-target ranking 不得從 Slot coarse anchor 起算，而要以當下合法 `slotEgressNodes()` 作為 multi-source route origins；execution 離座時使用同一 target-compatible egress。若目前 Slot 姿勢已直接滿足 Interaction Geometry，cost 為 0 且不強迫離座。Hunger / Drink 的 Decision、Intent 與 `E.buildAction()` 共用 executable-plan feasibility，不能只因世界存在 food / water 就反覆建立無法執行的 Action。
 - Container / Source / Surface Environment 的實體資源 transfer、Serving、Carry Load、Restock、External Supply。
 - **Physical Profile Foundation + PoseEnvelope static fit**：每個 Agent 保存獨立 `mass / volume / bodyGeometry` 與 locomotion capability/profile；Human / Cat 現行模板只提供 coarse MVP default。第一版 sitting / lying `PoseEnvelope` 由 embodiment posture profile 即時計算；Furniture Slot 以 `usableSpace` 提供可容納空間，rest / sleep / meal settle、Initializer 與 Validator 共用同一 static-fit contract。`allowKinds` 仍是獨立門檻，不拿物種類型代替尺寸判定。
 - **Physical / Passage canonical units**：絕對 physical 數值統一採 SI contract：`mass`＝kg、`volume`＝m³；`bodyGeometry`、MovementEnvelope、Furniture `spatial.solids.bounds`、Structure / Boundary clearance、Passage option 的 `clearanceHeight / clearanceWidth` 均使用 m；locomotion factors、`speedFactor` 與 Crowding ratio/weights 保持無量綱。

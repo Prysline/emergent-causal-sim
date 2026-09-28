@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.33.3-place-description-projection';
+const CURRENT_VERSION='11.33.4-slot-aware-route-origin';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -201,7 +201,7 @@ assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Ident
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.33.0-pose-envelope-static-fit');
 assert.equal(P.VERSION,'11.33.0-pose-envelope-static-fit');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.29.0-horizontal-connection-passage');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.0-metric-route');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.30.1-slot-aware-origin');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.30.0-distance-timing');
 assert.equal(L.VERSION,'11.30.0-distance-timing');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');

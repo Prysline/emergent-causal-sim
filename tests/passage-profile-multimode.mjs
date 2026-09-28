@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.33.3-place-description-projection';
+const APP_VERSION='11.33.4-slot-aware-route-origin';
 const PHYSICAL_VERSION='11.33.0-pose-envelope-static-fit';
 const PASSAGE_VERSION='11.29.0-horizontal-connection-passage';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;

@@ -6,11 +6,21 @@
 
 目前 current runtime marker：
 
-`11.33.3-place-description-projection`
+`11.33.4-slot-aware-route-origin`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.33.3`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.0-contact-slot-corner`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.0-metric-route`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Spatial / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.33.4`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.33.0-pose-envelope-static-fit`；Spatial Traversal `11.32.1-slot-aware-route-origin`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.29.0-horizontal-connection-passage`；Route `11.30.1-slot-aware-origin`；Locomotion `11.30.0-distance-timing`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v2`；World Authoring維持 `world-authoring-v7`，Furniture Catalog維持 `furniture-definitions-v11`；未改 contract 的 Physical / Contact / Passage / Locomotion / Relationship / Memory 等 subsystem generation 不跟著 overall patch 假升。
 
-### Current Place Description Projection release
+### Current Slot-aware actor route-origin release
+
+`11.33.4-slot-aware-route-origin` 修正 actor 本身位於 Furniture Slot 時的 Route origin correctness。先前 PR #147 已讓 slot-bound **target** 不再把 Slot anchor 當 interaction destination，但 actor-side `planRoute / pathDistances / bestInteractionPositionResult` 仍從 `agent.position` 起算；對 sitting / lying Slot occupant 而言，該位置是 Furniture Slot coarse anchor，通常被 solid 覆蓋，不是 ordinary locomotion node。因此角色實際可以 `standUp → slotEgressNodes → route`，target ranking 卻會先得到 Infinity。Seed 20260911 的橘子躺在小型寵物床時反覆「決定吃東西 → Action 消失」就是此漂移的玩家可見重現。
+
+Spatial Traversal 現以 `routeOriginsForAgent(...)` 收斂 actor origin：ordinary actor 使用 current locomotion node；slot-bound actor 使用當下合法 `slotEgressNodes()` 作 multi-source route origins。Interaction winner、Slot target、ordinary target、Memory / Decision access queries 因此讀同一組 origin。Action execution 離座時以 `bestSlotEgressNode(..., goal)` 使用與 target ranking 相容的 egress；如果 current Slot posture 已直接滿足 Interaction Geometry，仍保留 0-cost current-contact，不強迫站起。multi-source origins 在同一次 route search 中求 winner，不為每個 egress 重跑完整搜尋。
+
+同一 release 也收斂 Hunger / Drink feasibility parity。Core chooser、Intent utility 與 `E.buildAction()` 共用 executable-plan feasibility：Cat direct eating / drinking 必須有 reachable source；Human eating / drinking 必須有可執行的 dish / vessel / resource chain。世界上單純存在 food / water 不再足以建立 Action；直接進食在執行時失去所有 reachable source 會明確 abort / bounded replan，而不是 silent `finishAction()` 後下一 tick 無限重選。explicit Cat drink target 也必須由該 target 本身通過 availability + interaction reachability。
+
+這個 patch 改變正式 actor-side Route semantics，因此 overall runtime 推進到 `11.33.4-slot-aware-route-origin`、Spatial Traversal 到 `11.32.1-slot-aware-route-origin`、Route Semantics 到 `11.30.1-slot-aware-origin`。Contact仍為 `11.32.0-contact-slot-corner`、Physical仍為 `11.33.0-pose-envelope-static-fit`、Locomotion仍為 `11.30.0-distance-timing`；World Authoring / Furniture Catalog維持 v7 / v11，沒有新增 persistent route cache、Slot schema、Furniture schema或 Surface feature semantics。
+
+### Previous Place Description Projection release
 
 `11.33.3-place-description-projection` 修正 11.33.2 後仍存在的 presentation drift。11.33.2 已讓 canonical `SimSpatial.describePlace()` 不再從 coarse floor + overhead Furniture 推論「餐桌下」，但 `src/ui/spatial/observability.js` 仍會直接讀 `agentObservation.covered / overhead`，在 Action Card / map title 再拼出「餐桌下／餐椅下」；同時 slot-bound Agent 雖然已有精確 `posture.slotId`，`describePlace()` 仍把其 coarse Slot anchor 當一般 floor node描述。
 

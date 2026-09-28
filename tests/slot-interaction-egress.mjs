@@ -34,11 +34,15 @@ human.action={
 };
 
 assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'cupB'},'pickup'),false,'seated Human is not already in pickup reach of the dropped cup');
-assert.equal(SP.bestInteractionPosition(st,human,{kind:'object',id:'cupB'},'pickup'),null,'current regression fixture must reproduce the slot-origin route failure');
+const preEgressGoal=SP.bestInteractionPosition(st,human,{kind:'object',id:'cupB'},'pickup');
+assert.ok(preEgressGoal,'slot-aware target ranking must resolve a reachable pickup goal before the actor leaves the Slot');
+const expectedEgress=SP.bestSlotEgressNode(st,slot,human,preEgressGoal,{mode:'auto',objective:'traversalCost'});
+assert.ok(expectedEgress,'target-aware Slot egress winner must exist');
 
 E.tick();
 
-assert.equal(human.posture.kind,'standing','an interaction action must leave its furniture slot before route selection');
+assert.equal(human.posture.kind,'standing','an interaction action must leave its furniture slot before route execution');
+assert.ok(SP.nodeSame(st,human.position,expectedEgress),'execution must leave through the same target-compatible egress assumed by ranking');
 assert.equal(human.posture.slotId,null);
 assert.equal(human.posture.furnitureId,null);
 assert.equal(human.action?.wait,0,'standing up for interaction must not be recorded as an unreachable-target wait');
@@ -46,7 +50,7 @@ assert.equal(cup.supportId,undefined,'dropped portable cup must remain detached 
 assert.ok(SP.nodeSame(st,cup.position,SP.normalizeNode(st,{x:4,y:5,z:0},'floor')));
 
 const postEgressGoal=SP.bestInteractionPosition(st,human,{kind:'object',id:'cupB'},'pickup');
-assert.ok(postEgressGoal,'after slot egress the same production pickup query must recover a reachable goal');
+assert.ok(postEgressGoal,'after slot egress the same production pickup query must remain reachable');
 
 for(let i=0;i<20&&human.held!=='cupB';i++)E.tick();
 assert.equal(human.held,'cupB','the interaction lifecycle must continue from slot egress to actually picking up the dropped cup');

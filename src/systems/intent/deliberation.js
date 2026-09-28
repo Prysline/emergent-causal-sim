@@ -43,9 +43,9 @@
   function utilityForIntent(st,a,intentKind,{intent=null}={}){
     const bidValue=currentBidUtility(st,a,intent||{kind:intentKind});if(bidValue!=null)return bidValue;
     switch(intentKind){
-      case'satisfyHunger':return foodAmount(st)>.05?canonicalBaseUtility(a,'eat'):0;
-      case'drinkWater':return (a.kind==='cat'?!!drinkableContainer(st,a,'water'):hasHumanDrinkPlan(st,a,'water'))?canonicalBaseUtility(a,'drinkWater'):0;
-      case'drinkAlcohol':return a.kind==='human'&&hasHumanDrinkPlan(st,a,'alcohol')?canonicalBaseUtility(a,'drinkAlcohol'):0;
+      case'satisfyHunger':return E.canSatisfyHunger?.(a)?canonicalBaseUtility(a,'eat'):0;
+      case'drinkWater':return E.canDrinkResource?.(a,'water')?canonicalBaseUtility(a,'drinkWater'):0;
+      case'drinkAlcohol':return a.kind==='human'&&E.canDrinkResource?.(a,'alcohol')?canonicalBaseUtility(a,'drinkAlcohol'):0;
       case'recoverFatigue':return canonicalBaseUtility(a,'rest');
       case'sleep':return canonicalBaseUtility(a,'sleep');
       case'socialize':return a.kind==='human'&&nearestAgent(st,a,'human',{awakeOnly:true})?canonicalBaseUtility(a,'talk'):0;

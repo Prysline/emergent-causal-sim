@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.33.3-place-description-projection';
+const CURRENT_VERSION='11.33.4-slot-aware-route-origin';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
