@@ -157,7 +157,9 @@
     if(snapshot)snapshot.surfaceFits.set(cacheKey,result);return result;
   }
   function surfaceNodeFitsMode(st,node,agent,mode='walk'){
-    if(!agent)return !!surfaceEntry(st,node.surfaceId)&&isSurfaceCell(surfaceEntry(st,node.surfaceId),node);
+    const entry=surfaceEntry(st,node.surfaceId);if(!entry||!isSurfaceCell(entry,node)||entry.surface.traversable===false)return false;
+    if(!agent)return true;
+    if(entry.surface.allowKinds?.length&&!entry.surface.allowKinds.includes(agent.kind))return false;
     const posture=C?.postureForMode?.(mode);if(!posture)return false;
     return surfaceStaticFitResult(st,node,agent,posture).fits;
   }
