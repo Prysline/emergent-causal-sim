@@ -29,19 +29,23 @@
   function ensureSpatialDefs(st){
     for(const furniture of Object.values(st.furniture||{})){
       if(!Array.isArray(furniture.spatial?.solids)||!furniture.spatial.solids.length)throw new Error('Furniture '+furniture.id+' has invalid runtime metric solids.');
-      const surface=furniture.spatial?.surface;
-      if(surface&&(!surface.id||!Array.isArray(surface.cells)||!surface.sourceSolidKey))throw new Error('Furniture '+furniture.id+' has invalid runtime surface geometry.');
+      const surfaces=furniture.spatial?.surfaces;
+      if(!Array.isArray(surfaces))throw new Error('Furniture '+furniture.id+' requires canonical runtime spatial.surfaces.');
+      for(const surface of surfaces){
+        const region=surface?.supportRegion;
+        if(!surface?.id||!Array.isArray(surface.cells)||!surface.sourceSolidKey||surface.face!=='top'||!region||!Number.isFinite(surface.topElevation)||![region.x,region.y,region.width,region.depth].every(Number.isFinite)||region.width<=0||region.depth<=0)throw new Error('Furniture '+furniture.id+' has invalid runtime Surface geometry.');
+      }
     }
     return st;
   }
-  function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>f.spatial?.surface?[{furniture:f,surface:f.spatial.surface}]:[]);}
+  function surfaceEntries(st){return Object.values(st.furniture||{}).flatMap(f=>(f.spatial?.surfaces||[]).map(surface=>({furniture:f,surface})));}
   function surfaceEntry(st,surfaceId){return surfaceEntries(st).find(x=>x.surface.id===surfaceId)||null;}
   function surfaceAt(st,p){return surfaceEntries(st).find(({surface})=>(surface.cells||[]).some(c=>localSame(c,p)))||null;}
   let activeGeometrySnapshot=null;
   function geometrySnapshotFor(st){return activeGeometrySnapshot?.state===st?activeGeometrySnapshot:null;}
   function withGeometrySnapshot(st,fn){
     const current=geometrySnapshotFor(st);if(current)return fn(current);
-    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),horizontalByLayer:new Map(),horizontalRuntimeSnapshots:new Map()};
+    const previous=activeGeometrySnapshot,snapshot={state:st,solidsByLayer:new Map(),floorByTile:new Map(),envelopeFits:new Map(),surfaceFits:new Map(),horizontalByLayer:new Map(),horizontalRuntimeSnapshots:new Map()};
     activeGeometrySnapshot=snapshot;
     try{return fn(snapshot);}finally{activeGeometrySnapshot=previous;}
   }
@@ -110,10 +114,54 @@
     const envelope=movementEnvelopeFor(agent,mode);if(!envelope)return false;
     return floorEnvelopeFits(st,n,envelope);
   }
-  function surfaceWalkable(st,node,agent=null){
-    const entry=surfaceEntry(st,node.surfaceId);if(!entry||!entry.surface.traversable||!isSurfaceCell(entry,node))return false;
-    return !agent||!entry.surface.allowKinds?.length||entry.surface.allowKinds.includes(agent.kind);
+  function axisCandidates(min,max,bounds=[]){
+    const values=[min,max,(min+max)/2];
+    for(const value of bounds)if(Number.isFinite(value)&&value>=min-CONTACT_EPS&&value<=max+CONTACT_EPS)values.push(Math.min(max,Math.max(min,value)));
+    const sorted=[...new Set(values.map(value=>Math.round(value*1e12)/1e12))].sort((a,b)=>a-b),out=[...sorted];
+    for(let i=1;i<sorted.length;i++)if(sorted[i]-sorted[i-1]>CONTACT_EPS)out.push((sorted[i]+sorted[i-1])/2);
+    return [...new Set(out.map(value=>Math.round(value*1e12)/1e12))].sort((a,b)=>a-b);
   }
+  function rectOverlapAtAnchor(anchor,pose,solid){
+    const b=solid.bounds,body={x:anchor.x-pose.width/2,y:anchor.y-pose.length/2,width:pose.width,depth:pose.length};
+    return Math.min(body.x+body.width,b.x+b.width)-Math.max(body.x,b.x)>CONTACT_EPS&&Math.min(body.y+body.depth,b.y+b.depth)-Math.max(body.y,b.y)>CONTACT_EPS;
+  }
+  function surfaceStaticFitResult(st,node,aOrId=null,posture='standing'){
+    const a=agentFor(st,aOrId),n=normalizeNode(st,node),entry=n?surfaceEntry(st,n.surfaceId):null;
+    if(!entry||!isSurfaceCell(entry,n))return {fits:false,reason:'surface',surfaceId:n?.surfaceId||null,witness:null};
+    if(!a)return {fits:true,reason:null,surfaceId:entry.surface.id,witness:null};
+    const P=physicalRuntime(),support=P?.getSupportFootprint?.(a,posture),pose=P?.getPoseEnvelope?.(a,posture);
+    if(!support||!pose)return {fits:false,reason:'postureProfile',surfaceId:entry.surface.id,witness:null};
+    const snapshot=geometrySnapshotFor(st),cacheKey=[entry.surface.id,nodeKey(st,n),a.id||a.kind,posture,support.width,support.length,pose.width,pose.length,pose.height].join('|');
+    if(snapshot?.surfaceFits.has(cacheKey))return snapshot.surfaceFits.get(cacheKey);
+    const region=entry.surface.supportRegion,minX=Math.max(n.x,region.x+support.width/2),maxX=Math.min(n.x+1,region.x+region.width-support.width/2),minY=Math.max(n.y,region.y+support.length/2),maxY=Math.min(n.y+1,region.y+region.depth-support.length/2);
+    if(maxX<minX-CONTACT_EPS||maxY<minY-CONTACT_EPS){
+      const result={fits:false,reason:'support',surfaceId:entry.surface.id,witness:null,supportAnchorRegion:null};
+      if(snapshot)snapshot.surfaceFits.set(cacheKey,result);return result;
+    }
+    const supportAnchorRegion={minX,maxX,minY,maxY},bodyBottom=entry.surface.topElevation,bodyTop=bodyBottom+pose.height;
+    const blockers=furnitureSolids(st,zOf(n)).filter(solid=>{
+      const b=solid.bounds,verticalOverlap=Math.min(bodyTop,b.z+b.height)-Math.max(bodyBottom,b.z);
+      return verticalOverlap>CONTACT_EPS;
+    });
+    const xBounds=[],yBounds=[];
+    for(const solid of blockers){
+      const b=solid.bounds;xBounds.push(b.x-pose.width/2,b.x+b.width+pose.width/2);yBounds.push(b.y-pose.length/2,b.y+b.depth+pose.length/2);
+    }
+    const xs=axisCandidates(minX,maxX,xBounds),ys=axisCandidates(minY,maxY,yBounds);let witness=null;
+    outer:for(const y of ys)for(const x of xs){
+      const anchor={x,y};
+      if(blockers.some(solid=>rectOverlapAtAnchor(anchor,pose,solid)))continue;
+      witness={x,y,topElevation:entry.surface.topElevation};break outer;
+    }
+    const result={fits:!!witness,reason:witness?null:'clearance',surfaceId:entry.surface.id,witness,supportAnchorRegion,blockedSolidKeys:blockers.map(s=>s.key)};
+    if(snapshot)snapshot.surfaceFits.set(cacheKey,result);return result;
+  }
+  function surfaceNodeFitsMode(st,node,agent,mode='walk'){
+    if(!agent)return !!surfaceEntry(st,node.surfaceId)&&isSurfaceCell(surfaceEntry(st,node.surfaceId),node);
+    const posture=C?.postureForMode?.(mode);if(!posture)return false;
+    return surfaceStaticFitResult(st,node,agent,posture).fits;
+  }
+  function surfaceWalkable(st,node,agent=null){return surfaceNodeFitsMode(st,node,agent,'walk');}
   function nodeWalkable(st,p,aOrId=null){const a=agentFor(st,aOrId),n=normalizeNode(st,p);if(!n)return false;return n.surfaceId===FLOOR?floorWalkable(st,n,a):surfaceWalkable(st,n,a);}
 
   function nodeForAgent(st,a){return normalizeNode(st,a?.position);}
@@ -284,7 +332,6 @@
       for(const [dx,dy] of FLOOR_DIRS){const q=normalizeNode(st,localPos(n.x+dx,n.y+dy,zOf(n)),FLOOR),diagonal=dx!==0&&dy!==0,maneuver=maneuverResolver?maneuverResolver(n,q):traversalManeuver(st,n,q),legacyCardinal=!diagonal&&(!SP.getPassageProfile)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,q));if(nodeLocomotionAccessible(st,q,a)&&(maneuver||legacyCardinal))out.set(nodeKey(st,q),q);}
       for(const q of SP.structureNeighborNodes?.(st,n)||[])if(nodeLocomotionAccessible(st,q,a))out.set(nodeKey(st,q),q);
       for(const entry of surfaceEntries(st)){
-        if(entry.surface.allowKinds?.length&&a&&!entry.surface.allowKinds.includes(a.kind))continue;
         for(const cell of entry.surface.cells||[]){
           if(!sameLayer(cell,n)||Math.abs(cell.x-n.x)+Math.abs(cell.y-n.y)!==1||isFootprintCell(entry,n))continue;
           const q=normalizeNode(st,cell,entry.surface.id);if(nodeLocomotionAccessible(st,q,a)&&(!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,n,cell)))out.set(nodeKey(st,q),q);
@@ -659,5 +706,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.30.1-slot-aware-origin',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntry,surfaceAt,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.30.1-slot-aware-origin',TRAVERSAL_PROFILES,STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();
