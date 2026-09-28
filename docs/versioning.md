@@ -14,7 +14,7 @@
 
 `11.33.5-drink-vessel-feasibility` 修正 11.33.4 need-plan parity 中兩個 Human drink 邊界。第一，actor 自己已持有的 portable `canDrinkFrom` vessel 原本會被 `canDrinkResource()` 與 `chooseDrinkVessel()` 當成「已被持有」而整個排除，即使 execution 已具備直接飲用或帶去 refill 的條件；現在 self-held vessel 以 0 pickup burden 參與同一個 executable vessel plan。第二，內容低於直接飲用門檻的 vessel 原本可能在 feasibility 階段被同一 vessel 自己當成 refill source，導致 Action 建立後 execution 用 `excludeId` 排除它才 abort；現在 candidate plan 在成立前就用相同 exclusion 驗證真正可達的外部 source。
 
-Human drink 的 Decision / Intent / `E.buildAction()` 現直接依 `chooseDrinkVessel()` 的 executable plan 判斷；execution 若 winner 已是 `a.held`，直接進入 idempotent take / drink-or-refill lifecycle，不再繞回 pickup 自己手上的容器。這是 observable behavior correctness patch，因此 overall runtime / Presentation marker 升為 `11.33.5-drink-vessel-feasibility`；Spatial Traversal仍為 `11.32.1-slot-aware-route-origin`、Route仍為 `11.30.1-slot-aware-origin`、Contact仍為 `11.32.0-contact-slot-corner`，World Authoring / Furniture Catalog維持 v7 / v11。
+Human drink 的 Decision / Intent / `E.buildAction()` 與 `chooseDrinkVessel()` 共用同一套 vessel access / refill-source feasibility：availability 保留 existence-only short-circuit，不為每次 deliberation 重跑完整 vessel ranking；execution 再在同一 feasibility 上選出實際 winner。若 winner 已是 `a.held`，直接進入 idempotent take / drink-or-refill lifecycle，不再繞回 pickup 自己手上的容器。這是 observable behavior correctness patch，因此 overall runtime / Presentation marker 升為 `11.33.5-drink-vessel-feasibility`；Spatial Traversal仍為 `11.32.1-slot-aware-route-origin`、Route仍為 `11.30.1-slot-aware-origin`、Contact仍為 `11.32.0-contact-slot-corner`，World Authoring / Furniture Catalog維持 v7 / v11。
 
 ### Previous Slot-aware actor route-origin release
 
