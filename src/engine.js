@@ -165,9 +165,9 @@
       if(!desperate&&Object.entries(c.contents||{}).some(([x,v])=>x!==r&&v>.1))continue;
       const held=holder?.id===a.id||a.held===c.id,d=held?0:targetTraversalCost(a,{kind:'object',id:c.id},'pickup');
       if(!Number.isFinite(d))continue;
-      const amount=amountAt(c.id,r),source=amount>=4?null:resourceSources(r,a,{excludeId:c.id});
-      if(amount<4&&!source)continue;
-      plans.push({c,d,held,source});
+      const amount=amountAt(c.id,r);
+      if(amount<4&&!resourceSources(r,a,{excludeId:c.id}))continue;
+      plans.push({c,d});
     }
     plans.sort((x,y)=>{const sx=(x.c.drinkPreference??.5)*45+(amountAt(x.c.id,r)>0?25:sumContents(x.c)<=.1?12:0)-x.d*4,sy=(y.c.drinkPreference??.5)*45+(amountAt(y.c.id,r)>0?25:sumContents(y.c)<=.1?12:0)-y.d*4;return sy-sx||String(x.c.id).localeCompare(String(y.c.id));});
     return plans;
@@ -182,7 +182,6 @@
   function externalSupplyDestination(){return containersByRole('externalSupplyDestination')[0]||null;}
   function sleepChoice(a){const p=sleepProfile(a),bias=circadianSleepBias(a),propensity=sleepPropensity(a);if(a.needs.sleepNeed<p.minimumSleepNeed||propensity<p.sleepOpportunityThreshold||!SP.sleepTargets(state,a).length)return null;return {id:'sleep',score:42+a.needs.sleepNeed*.55+Math.max(-8,bias*.55)+Math.max(0,a.needs.fatigue-65)*.15,why:[`睡眠需求 ${Math.round(a.needs.sleepNeed)}`,`${circadianPatternName(p.circadianPattern)}節律與目前時段共同影響睡眠傾向`]};}
   function firstReachableFoodSource(a,{readyOnly=false}={}){for(const c of edibleFoodContainers(a)){if(readyOnly&&!SP.hasRole(c,'readyFood'))continue;if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'eatFrom')))return c;}return null;}
-  function hasReachableResourceSource(r,a,{excludeId=null}={}){for(const s of Object.values(state.sources)){if(s.id===excludeId||s.resource!==r||amountAt(s.id,r)<=0)continue;if(Number.isFinite(targetTraversalCost(a,{kind:'source',id:s.id},'fill')))return true;}for(const c of Object.values(state.containers)){if(c.id===excludeId||amountAt(c.id,r)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'fill')))return true;}return false;}
   function firstReachableDirectDrinkContainer(r,a){for(const c of Object.values(state.containers)){if(!c.canDrinkFrom||amountAt(c.id,r)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'drinkFrom')))return c;}return null;}
   function canSatisfyHunger(a){
     if(!a)return false;
