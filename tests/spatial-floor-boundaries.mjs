@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 let st=E.getState(),orange=st.agents.orange;
-assert.equal(st.version,'11.35.1-presentation-projection-correctness');
-assert.equal(E.VERSION,'11.35.1-presentation-projection-correctness');
+assert.equal(st.version,'11.35.2-presentation-event-truth');
+assert.equal(E.VERSION,'11.35.2-presentation-event-truth');
 assert.equal(SP.ENVIRONMENT_VERSION,'11.11.3-node-aware-floor-effects');
 
 const under=SP.tileByPos(st,{x:6,y:2});

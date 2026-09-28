@@ -12,7 +12,7 @@ const memories=id=>E.getState().agents[id].episodicMemories;
 
 E.reset(1130);
 let st=E.getState();
-assert.equal(st.version,'11.35.1-presentation-projection-correctness');
+assert.equal(st.version,'11.35.2-presentation-event-truth');
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.13.0-episodic-memory-foundation');
 assert.equal(E.MAX_EPISODIC_MEMORIES,64);
 assert.equal(E.EPISODIC_OBSERVATION_RANGE,4);

@@ -97,3 +97,4 @@ jobs:
       - run: node tests/relationship-responder-bias.mjs
       - run: node tests/runtime-hook-pipeline.mjs
       - run: node tests/presentation-observability.mjs
+      - run: node tests/presentation-event-truth.mjs

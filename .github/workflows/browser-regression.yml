@@ -37,6 +37,10 @@ jobs:
             test: tests/browser-social-outcome-memory-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-social-outcome-memory-qa
+          - suite: presentation-event-truth
+            test: tests/browser-presentation-event-truth-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-presentation-event-truth-qa
           - suite: observability-controls
             test: tests/browser-observability-controls-qa.mjs
             extra_test: ''

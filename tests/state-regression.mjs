@@ -14,7 +14,7 @@ function digest(st){return JSON.stringify({tick:st.tick,day:st.day,minute:st.min
 E.reset(20260911);
 {
   const st=E.getState();
-  assert.equal(st.version,'11.35.1-presentation-projection-correctness');
+  assert.equal(st.version,'11.35.2-presentation-event-truth');
   assert.equal(st.interactionModel,undefined);assert.equal(st.zones,undefined);assert.equal(st.surfaces,undefined);assert.equal(st.debug,undefined);
   assert.equal(st.supply.workerId,undefined,'補給者不得保存第二份 owner truth');
   assert.equal(Object.keys(st.map.rooms).length,1);
@@ -122,7 +122,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),target=st.agents.zhen,actor=st.agents.zhou;target.offMap=true;actor.action={kind:'talk',phase:'move',targetAgent:target.id,started:st.tick,wait:0};E.tick();assert.equal(actor.action,null);assert.ok(st.events.some(e=>e.text.includes(`${target.name}已經離開可互動範圍`)));noIssues('target interruption');
+  const st=E.getState(),target=st.agents.zhen,actor=st.agents.zhou;target.offMap=true;actor.action={kind:'talk',phase:'move',targetAgent:target.id,started:st.tick,wait:0};E.tick();assert.equal(actor.action,null);const abort=st.events.find(e=>e.data?.action==='abort'&&e.data?.actor===actor.id&&e.data?.actionKind==='talk');assert.ok(abort,'target interruption must create a structured abort event');assert.equal(abort.text,`${actor.name}放棄目前的行動。`);assert.ok(!abort.text.includes(target.name),'abort wording must not preserve an unstructured target-unavailability reason');noIssues('target interruption');
 }
 
 E.reset(20260911);

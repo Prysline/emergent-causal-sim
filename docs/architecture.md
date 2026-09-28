@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.35.1-presentation-projection-correctness`。
+目前 runtime marker：`11.35.2-presentation-event-truth`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -525,7 +525,9 @@ Manual batch scheduling 也屬 Presentation / UI ownership，而不是 Engine li
 
 ### Canonical event text
 
-Event producer 自己決定 canonical event text。UI 只能 render，不得攔截 event creator 後改字。
+Event producer 自己決定 canonical event text。UI 只能 render，不得攔截 event creator 後改字。文字只能投影 canonical structured evidence：沒有事件級 posture / movement / gesture / cause / psychological evidence 時，使用保守 wording，不得把敘事修飾寫成已發生的 simulation fact。若產品確實需要目前不存在的細節，應回真正 semantic owner 新增經設計的 structured evidence，而不是把文字或 presentation-only state 當第二份 truth。
+
+Timeline / summary classifier 只能讀正式 event type、structured `data.action` 或其他 canonical metadata；不得解析 `event.text`、Readable copy、regex / substring 來反推 importance、classification、posture、movement、intent 或任何 simulation semantics。
 
 ### Action label
 
