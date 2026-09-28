@@ -25,9 +25,13 @@
       return `<h3>Spatial Node</h3><div class="kv spatial-kv"><div class="k">Space</div><div>${esc(o.spaceLabel)} <small>${esc(o.spaceId)}</small></div><div class="k">Surface</div><div>${esc(o.surfaceLabel)} <small>${esc(o.surfaceId)}</small></div><div class="k">Local Position</div><div>${esc(pos(o))}</div><div class="k">Node Key</div><div class="spatial-mono">${esc(o.nodeKey)}</div><div class="k">承載家具</div><div>${esc(support)}</div><div class="k">局部幾何</div><div>${esc(overheadText(o))}</div></div>`;
     }
     if(type==='Furniture'){
-      const o=SP.furnitureObservation(s,id);if(!o||(!o.surfaceId&&!Number.isFinite(o.clearance)))return'';
-      const cells=o.cells.length?o.cells.map(p=>`(${p.x}, ${p.y}, Z ${SP.zOf?.(p)??p.z??0})`).join('、'):'無';
-      return `<h3>Spatial Geometry</h3><div class="kv spatial-kv"><div class="k">Surface</div><div>${esc(o.surfaceLabel||'無')} ${o.surfaceId?`<small>${esc(o.surfaceId)}</small>`:''}</div><div class="k">可 Traversal</div><div>${o.traversable?'是':'否'}</div><div class="k">Surface Cells</div><div>${esc(cells)}</div><div class="k">允許類型</div><div>${esc(o.allowKinds.join('、')||'—')}</div><div class="k">同格上方最低淨空</div><div>${esc(meters(o.clearance))}</div></div>`;
+      const o=SP.furnitureObservation(s,id);if(!o)return'';
+      const surfaces=o.surfaces?.length?o.surfaces.map(surface=>{
+        const cells=surface.cells.length?surface.cells.map(p=>`(${p.x}, ${p.y}, Z ${SP.zOf?.(p)??p.z??0})`).join('、'):'無';
+        const region=surface.supportRegion?`x ${surface.supportRegion.x.toFixed(2)} / y ${surface.supportRegion.y.toFixed(2)} / ${surface.supportRegion.width.toFixed(2)}×${surface.supportRegion.depth.toFixed(2)} m`:'—';
+        return `<div class="content-item"><div class="content-head"><b>${esc(surface.label)}</b><small>${esc(surface.id)}</small></div><div>source ${esc(surface.sourceSolidKey||'—')}・top ${esc(meters(surface.topElevation))}</div><div>support ${esc(region)}</div><div>cells ${esc(cells)}</div></div>`;
+      }).join(''):'<div>無 derived Surface</div>';
+      return `<h3>Spatial Geometry</h3><div class="kv spatial-kv"><div class="k">Derived Surfaces</div><div>${o.surfaceCount}</div><div class="k">Surface facts</div><div class="content-list">${surfaces}</div><div class="k">Metric solids</div><div>${o.solidCount}</div></div>`;
     }
     return'';
   }
@@ -54,7 +58,7 @@
   function syncFurnitureHandles(s,map){
     for(const f of Object.values(s.furniture||{})){
       const spatial=SP.furnitureObservation?.(s,f.id);
-      map.querySelectorAll(`.furniture-footprint[data-entity="furniture:${f.id}"]`).forEach(seg=>seg.classList.toggle('spatial-traversable-surface',!!spatial?.surfaceId&&!!spatial?.traversable));
+      map.querySelectorAll(`.furniture-footprint[data-entity="furniture:${f.id}"]`).forEach(seg=>seg.classList.toggle('spatial-traversable-surface',(spatial?.surfaceCount||0)>0));
       if(!f.displayAt)continue;
       const tile=map.querySelector(`.sim-tile[data-tile="${SP.key(f.displayAt)}"]`);if(!tile||!tile.querySelector('.tile-entities .map-entity'))continue;
       let handle=tile.querySelector(`.spatial-furniture-handle[data-furniture-id="${f.id}"]`);
