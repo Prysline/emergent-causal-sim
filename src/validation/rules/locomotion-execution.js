@@ -27,6 +27,7 @@
         if(!supported.includes(pending.mode))add('locomotion_step_mode_invalid',`${a.name} 的 pending locomotion step 使用不支援的 mode。`,{agentId:a.id,mode:pending.mode});
         if(!positiveInt(pending.ticksRemaining))add('locomotion_step_ticks_invalid',`${a.name} 的 pending locomotion step ticksRemaining 必須是正整數。`,{agentId:a.id,ticksRemaining:pending.ticksRemaining});
         if(pending.movementCreditAfter!==undefined&&!validMovementCredit(pending.movementCreditAfter))add('locomotion_step_credit_invalid',`${a.name} 的 pending locomotion step movementCreditAfter 必須是 [0,1) 的有限值。`,{agentId:a.id,movementCreditAfter:pending.movementCreditAfter});
+        if(pending.surfaceManeuver!=null&&!L.isSurfaceManeuver?.(pending.surfaceManeuver))add('locomotion_step_surface_maneuver_invalid',`${a.name} 的 pending locomotion step Surface maneuver identity 無效。`,{agentId:a.id,surfaceManeuver:pending.surfaceManeuver});
         if(!pending.to||!Number.isFinite(Number(pending.to.x))||!Number.isFinite(Number(pending.to.y))||!Number.isInteger(Number(pending.to.z??0))||typeof pending.toKey!=='string')add('locomotion_step_target_invalid',`${a.name} 的 pending locomotion step 缺少有效 target node。`,{agentId:a.id});
       }
     }
