@@ -190,4 +190,22 @@ E.reset(20260911);
   assert.equal(E.buildAction(human,{id:'drinkWater'}),null);
 }
 
+
+// If a direct food source disappears after the action has already claimed it, the action must abort explicitly
+// instead of silently finishing and allowing the same unmet need to look like a successful completion.
+E.reset(20260911);
+{
+  const st=E.getState(),cat=st.agents.orange,tray=st.containers.mealTray;
+  st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
+  quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
+  tray.contents.food=68;
+  cat.action={kind:'eat',phase:'eatingDirect',foodSource:'mealTray',container:null,slotId:null,started:st.tick,wait:0};
+  st.reservations['object:mealTray']=cat.id;
+  tray.contents.food=0;
+  E.tick();
+  assert.equal(cat.action,null,'lost direct-food source must terminate the stale eat action');
+  assert.equal(st.reservations['object:mealTray'],undefined,'lost direct-food source must release its reservation');
+  assert.ok(eventBy(st,e=>e.data?.actor==='orange'&&e.data?.action==='abort'&&e.data?.actionKind==='eat'),'lost direct-food source must emit an explicit eat abort event');
+}
+
 console.log('Slot-bound actor route-origin / need-feasibility regression: ok');
