@@ -156,13 +156,21 @@
   function mealSlots(a){return SP.allSlots(state).filter(s=>SP.slotAllows(s,a)&&SP.slotPoseFits?.(s,a,'sitting')&&SP.slotAvailable(state,s.id,a.id)&&(s.mealSeat||s.canRest)).map(s=>{const position=SP.bestSlotApproachNode?.(state,s,a,{mode:'walk',objective:'traversalCost'})||null;return position?{slot:s,position,d:routeBurden(a,position),penalty:s.mealSeat?0:8,noise:SP.noiseAt(state,s.position)}:null;}).filter(x=>x&&Number.isFinite(x.d)).sort((x,y)=>(x.penalty+x.d+x.noise*.15)-(y.penalty+y.d+y.noise*.15));}
   function resourceSources(resource,a,{excludeId=null}={}){const candidates=[];for(const s of Object.values(state.sources)){if(s.id!==excludeId&&s.resource===resource&&amountAt(s.id,resource)>0)candidates.push({id:s.id,kind:'source'});}for(const c of Object.values(state.containers)){if(c.id===excludeId||amountAt(c.id,resource)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;candidates.push({id:c.id,kind:'object'});}return candidates.map(t=>({t,d:targetTraversalCost(a,t,'fill')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.t||null;}
   function directDrinkContainers(resource,a){return Object.values(state.containers).filter(c=>c.canDrinkFrom&&amountAt(c.id,resource)>0&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'drinkFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.c||null;}
-  function hasReachableResourceSource(r,a,{excludeId=null}={}){
+  function drinkVesselAccessCost(a,r,c,desperate=a.needs.thirst>=88){
+    if(!c.portable||!c.canDrinkFrom)return Infinity;
+    const holder=holderOf(c.id);
+    if(holder&&holder.id!==a.id)return Infinity;
+    if(!desperate&&Object.entries(c.contents||{}).some(([x,v])=>x!==r&&v>.1))return Infinity;
+    return holder?.id===a.id||a.held===c.id?0:targetTraversalCost(a,{kind:'object',id:c.id},'pickup');
+  }
+  function hasReachableResourceSourceForVessels(r,a,vesselIds){
+    if(!vesselIds?.length)return false;
     for(const source of Object.values(state.sources)){
-      if(source.id===excludeId||source.resource!==r||amountAt(source.id,r)<=0)continue;
+      if(source.resource!==r||amountAt(source.id,r)<=0)continue;
       if(Number.isFinite(targetTraversalCost(a,{kind:'source',id:source.id},'fill')))return true;
     }
     for(const c of Object.values(state.containers)){
-      if(c.id===excludeId||amountAt(c.id,r)<=0)continue;
+      if(amountAt(c.id,r)<=0||!vesselIds.some(id=>id!==c.id))continue;
       const holder=holderOf(c.id);
       if(holder&&holder.id!==a.id)continue;
       if(Number.isFinite(targetTraversalCost(a,{kind:'object',id:c.id},'fill')))return true;
@@ -172,15 +180,14 @@
   function chooseDrinkVessel(a,r){
     const desperate=a.needs.thirst>=88,candidates=[];
     for(const c of Object.values(state.containers)){
-      if(!c.portable||!c.canDrinkFrom)continue;
-      const holder=holderOf(c.id);
-      if(holder&&holder.id!==a.id)continue;
-      if(!desperate&&Object.entries(c.contents||{}).some(([x,v])=>x!==r&&v>.1))continue;
-      const d=(holder?.id===a.id||a.held===c.id)?0:targetTraversalCost(a,{kind:'object',id:c.id},'pickup');
+      const d=drinkVesselAccessCost(a,r,c,desperate);
       if(Number.isFinite(d))candidates.push({c,d});
     }
     candidates.sort((x,y)=>{const sx=(x.c.drinkPreference??.5)*45+(amountAt(x.c.id,r)>0?25:sumContents(x.c)<=.1?12:0)-x.d*4,sy=(y.c.drinkPreference??.5)*45+(amountAt(y.c.id,r)>0?25:sumContents(y.c)<=.1?12:0)-y.d*4;return sy-sx||String(x.c.id).localeCompare(String(y.c.id));});
-    for(const {c} of candidates)if(amountAt(c.id,r)>=4||hasReachableResourceSource(r,a,{excludeId:c.id}))return c;
+    for(const {c} of candidates){
+      if(amountAt(c.id,r)>=4)return c;
+      if(hasReachableResourceSourceForVessels(r,a,[c.id]))return c;
+    }
     return null;
   }
   function logisticsContainerCanCarry(c,resource){return SP.hasRole(c,'logisticsContainer')&&c.portable&&(!c.transportResources?.length||c.transportResources.includes(resource))&&!Object.entries(c.contents||{}).some(([r,v])=>r!==resource&&v>.05);}
@@ -210,7 +217,14 @@
   function canDrinkResource(a,r){
     if(!a)return false;
     if(a.kind==='cat')return !!firstReachableDirectDrinkContainer(r,a);
-    return !!chooseDrinkVessel(a,r);
+    const desperate=a.needs.thirst>=88,refillVesselIds=[];
+    for(const vessel of Object.values(state.containers)){
+      const d=drinkVesselAccessCost(a,r,vessel,desperate);
+      if(!Number.isFinite(d))continue;
+      if(amountAt(vessel.id,r)>=4)return true;
+      refillVesselIds.push(vessel.id);
+    }
+    return hasReachableResourceSourceForVessels(r,a,refillVesselIds);
   }
 
   function baseUtilityForAction(a,id){
