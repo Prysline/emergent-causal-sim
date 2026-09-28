@@ -195,6 +195,7 @@ E.reset(20260911);
 E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB;
+  st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   quiet(human,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5});
   for(const c of Object.values(st.containers))if(c.canDrinkFrom){c.portable=false;c.contents={};}
   cup.portable=true;cup.canDrinkFrom=true;cup.contents={water:8};
@@ -203,7 +204,13 @@ E.reset(20260911);
   const before=cup.contents.water,action=E.buildAction(human,{id:'drinkWater'});
   assert.equal(action?.kind,'drinkWater');
   human.action=action;
-  for(let i=0;i<12&&cup.contents.water===before;i++)E.tick();
+  E.tick();
+  assert.equal(human.action?.container,cup.id,'self-held vessel must be the selected Human drink container');
+  assert.equal(human.action?.phase,'take','self-held vessel must skip route/pickup and enter the idempotent take phase');
+  E.tick();
+  assert.equal(human.held,cup.id,'idempotent take must preserve the already-held vessel');
+  assert.equal(human.action?.phase,'drink','a sufficiently filled self-held vessel must advance directly to drink');
+  E.tick();
   assert.ok(cup.contents.water<before,'Human must drink directly from the already-held vessel without routing back to pick it up');
 }
 
