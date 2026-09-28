@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
-assert.equal(E.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(st.version,'11.35.0-affect-responder-bias');
+assert.equal(E.VERSION,'11.35.0-affect-responder-bias');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

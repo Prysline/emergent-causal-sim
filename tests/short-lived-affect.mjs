@@ -12,9 +12,9 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1132);
 let st=E.getState();
-assert.equal(st.version,'11.34.0-surface-traversal-maneuvers');
-assert.equal(E.AFFECT_SCHEMA_VERSION,'11.13.2-short-lived-affect');
-assert.equal(st.affects,undefined,'v11.13.2 must not add a global affect registry');
+assert.equal(st.version,'11.35.0-affect-responder-bias');
+assert.equal(E.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
+assert.equal(st.affects,undefined,'Affect must not add a global affect registry');
 for(const a of Object.values(st.agents))assert.deepEqual(a.affect,{valence:0,activation:0,frustration:0,lastUpdatedTick:0,lastDecayTick:0,source:null});
 noIssues('reset');
 
@@ -67,14 +67,14 @@ assert.deepEqual(st.agents.orange.affect.source,null,'fully decayed affect shoul
 assert.equal(st.agents.orange.affect.valence,0);assert.equal(st.agents.orange.affect.activation,0);assert.equal(st.agents.orange.affect.frustration,0);
 noIssues('decay to neutral');
 
-// Affect remains decision-inert in v11.13.2; deliberation influence belongs to later slices.
+// Affect remains directly inert to general deliberation candidate utility; responder-specific influence is covered separately.
 E.reset(3312);st=E.getState();
 st.agents.zhou.position={x:5,y:5};st.agents.zhen.position={x:5,y:6};
 const beforeUtility=E.candidateIntents(st,st.agents.zhen).map(x=>[x.intentKind,x.utility]);
 E.addEvent('老周在阿真旁邊灑了水。','warn',[],{actor:'zhou',action:'spill',position:'5,6',amount:4});
 assert.ok(st.agents.zhen.affect.frustration>0,'scenario must actually create affect before decision-inert assertion');
 const afterUtility=E.candidateIntents(st,st.agents.zhen).map(x=>[x.intentKind,x.utility]);
-assert.deepEqual(afterUtility,beforeUtility,'v11.13.2 affect must not influence candidate utility');
+assert.deepEqual(afterUtility,beforeUtility,'Current Affect must not influence general candidate utility');
 noIssues('decision inert');
 
 // Integration: tick-driven decay and new appraisal updates stay bounded and validator-clean.

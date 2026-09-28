@@ -79,8 +79,10 @@ assert.equal(opened.scenarioValue,'talk-engage');
 assert.ok((await page.title()).includes('因果湧現模擬器'));
 await showFullTimeline();
 await step();
+const desktopStateBeforeDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await openResponderDebug();
 let desktop=await snapshot();
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),desktopStateBeforeDebug,'derived responder Debug must be simulation-state inert');
 fs.writeFileSync(`${outDir}/desktop-state.json`,JSON.stringify(desktop,null,2));
 await page.screenshot({path:`${outDir}/desktop-engage.png`,fullPage:true});
 assert.ok(desktop.offerId,'desktop engage: talkOffer missing after first step');
@@ -92,6 +94,7 @@ assert.equal(desktop.talkResponseEventId,desktop.responseId,'desktop engage: ful
 assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 assert.ok(desktop.timelineText.includes('開口示意想聊幾句'),'desktop full timeline should expose the talk offer');
 assert.ok(desktop.inspectorText.includes('Talk responder：base'),'desktop Debug should expose derived Human responder score decomposition');
+assert.ok(desktop.inspectorText.includes('Affect'),'desktop Debug should identify the Affect contribution');
 assert.ok(desktop.inspectorText.includes('Relationship'),'desktop Debug should identify the Relationship contribution');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);

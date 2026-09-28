@@ -1,8 +1,10 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;
   if(!E||!W?.SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
+  if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/animal-response.js requires systems/affect/runtime.js.');
   const VERSION=W.SOCIAL_RESPONSE_SCHEMA_VERSION||'11.13.2a-social-response-agency';
   const PET_RESPONSE_THRESHOLDS=Object.freeze({avoidMax:.38,acceptMin:.62});
+  const PET_AFFECT_RESPONSE_CAP=.12;
   const PET_RELATIONSHIP_RESPONSE_CAP=.18;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
@@ -10,8 +12,9 @@
   const counterpartId=counterpart=>typeof counterpart==='string'?counterpart:counterpart?.id||null;
 
   function petBaseResponseScore(animal){const social=clamp((Number(animal?.needs?.social)||0)/100,0,1),rawTrait=Number(animal?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1);return round(social*.72+sociability*.28);}
+  function petAffectResponseDelta(animal){const signal=Number(E.affectResponseSignal(animal))||0;return round(clamp(signal*PET_AFFECT_RESPONSE_CAP,-PET_AFFECT_RESPONSE_CAP,PET_AFFECT_RESPONSE_CAP));}
   function petRelationshipResponseDelta(animal,human){const id=counterpartId(human);if(!id)return 0;const signal=Number(E.relationshipSignal?.(animal,id))||0;return round(clamp(signal*PET_RELATIONSHIP_RESPONSE_CAP,-PET_RELATIONSHIP_RESPONSE_CAP,PET_RELATIONSHIP_RESPONSE_CAP));}
-  function petResponseEvaluation(animal,human=null){const baseScore=petBaseResponseScore(animal),relationshipResponseDelta=petRelationshipResponseDelta(animal,human),finalScore=round(clamp(baseScore+relationshipResponseDelta,0,1));const response=finalScore<PET_RESPONSE_THRESHOLDS.avoidMax?'avoid':finalScore>=PET_RESPONSE_THRESHOLDS.acceptMin?'accept':'tolerate';return {baseScore,relationshipResponseDelta,finalScore,response};}
+  function petResponseEvaluation(animal,human=null){const baseScore=petBaseResponseScore(animal),affectResponseDelta=petAffectResponseDelta(animal),relationshipResponseDelta=petRelationshipResponseDelta(animal,human),finalScore=round(clamp(baseScore+affectResponseDelta+relationshipResponseDelta,0,1));const response=finalScore<PET_RESPONSE_THRESHOLDS.avoidMax?'avoid':finalScore>=PET_RESPONSE_THRESHOLDS.acceptMin?'accept':'tolerate';return {baseScore,affectResponseDelta,relationshipResponseDelta,finalScore,response};}
   function petResponseScore(animal,human=null){return petResponseEvaluation(animal,human).finalScore;}
   function petResponseFor(animal,human=null){return petResponseEvaluation(animal,human).response;}
   function originBidForHuman(st,human,animal){const intent=human?.activeIntent;if(intent?.kind!=='respondSocialBid'||intent.source?.type!=='socialBid')return null;const bid=E.bidEvent?.(st,intent.source.bidId);if(!bid||bid.data?.bidFrom!==animal?.id||bid.data?.bidTo!==human.id)return null;return bid.id;}
@@ -59,5 +62,5 @@
   E.registerRuntimeHook('beforeTick','socialResponse.capture-pet-offers',(ctx)=>{ctx.locals.socialResponseV1132a=capturePendingPetOffers(E.getState());},400);
   E.registerRuntimeHook('afterTick','socialResponse.resolve-pet-offers',(ctx)=>settlePendingOffers(E.getState(),ctx.locals.socialResponseV1132a),600);
 
-  Object.assign(E,{SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,PET_RESPONSE_THRESHOLDS,PET_RELATIONSHIP_RESPONSE_CAP,petBaseResponseScore,petRelationshipResponseDelta,petResponseEvaluation,petResponseScore,petResponseFor,preparePetResponseScenario});
+  Object.assign(E,{SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,PET_RESPONSE_THRESHOLDS,PET_AFFECT_RESPONSE_CAP,PET_RELATIONSHIP_RESPONSE_CAP,petBaseResponseScore,petAffectResponseDelta,petRelationshipResponseDelta,petResponseEvaluation,petResponseScore,petResponseFor,preparePetResponseScenario});
 })();

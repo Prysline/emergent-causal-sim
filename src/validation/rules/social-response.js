@@ -8,7 +8,7 @@
     const responseByOffer=new Map(),petByOffer=new Map();
 
     for(const a of Object.values(st?.agents||{})){
-      for(const key of ['petResponseDecision','petOfferDecision','petResponseScore'])if(own(a,key))add('pet_response_private_cache_forbidden',`${a.name} 不應保存 ${key}；撫摸回應第一版需即時計算。`,{agentId:a.id,field:key});
+      for(const key of ['petResponseDecision','petOfferDecision','petResponseScore','affectResponseDelta'])if(own(a,key))add('pet_response_private_cache_forbidden',`${a.name} 不應保存 ${key}；撫摸回應第一版需即時計算。`,{agentId:a.id,field:key});
     }
 
     for(const e of Object.values(st?.causes||{})){
@@ -28,7 +28,7 @@
         if(d.responseToBid){
           const list=responseByOffer.get(d.responseToBid)||[];list.push(e);responseByOffer.set(d.responseToBid,list);
         }
-        for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship'])if(own(d,key))add('pet_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
+        for(const key of ['responseScore','baseResponseScore','finalScore','affectResponseSignal','affectResponseDelta','relationshipResponseDelta','socialNeed','socialTrait','affect','relationship'])if(own(d,key))add('pet_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
       }
       if(d.action==='petAnimal'&&d.petOfferId){
         const offer=E.bidEvent?.(st,d.petOfferId);

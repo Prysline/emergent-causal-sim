@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.34.0-surface-traversal-maneuvers`
+`11.35.0-affect-responder-bias`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.34.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.35.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
 
-### Current Surface traversal maneuvers release
+### Current Affect responder bias release
+
+`11.35.0-affect-responder-bias` 將 Current Affect 第一次接到正式 responder behavior，而不擴大到 general Deliberation。Affect runtime 提供 `affectResponseSignal = clamp(valence - frustration, -1, +1)`；Human talk 與 animal pet responder 各自以 `0.12` cap 形成短期 response delta，再與既有 Relationship `0.18` delta 並列後 clamp final score。只讀 responder 自己的 Current Affect；requester Affect 不滲入，`activation` 第一階段保持 decision-neutral。
+
+為了讓同一 tick 的 Human responder candidate 與 final response 讀到同一個 current-Affect phase，`affect.decay` 從 beforeTick order 500 提前到 250，位於 Memory→Deliberation baseline capture 200 之後、Human Social prepare 300 / Animal Social prepare 400 之前。沒有新增 runtime hook。General `E.baseUtilityForAction(...,'talk')`、initiator target ranking、soft-switch / commitment、Physical / Passage / Route feasibility 都不變；World Event / Agent 不保存 Affect responder decomposition，Debug 只即時計算 `base + Affect + Relationship → final`。
+
+這是新的 simulation semantic slice，因此 overall runtime 與 Affect subsystem generation 推進到 `11.35.0-affect-responder-bias`。Persistent `agent.affect` shape 不變；Relationship、Human Social Response、Animal Social Response、Physical、Spatial Traversal、Passage、Route、Locomotion、Dynamic Congestion、World Authoring / Furniture Catalog generation 都不假升。
+
+### Previous Surface traversal maneuvers release
 
 `11.34.0-surface-traversal-maneuvers` 將 Furniture top traversal 從 Definition 額外 author 一份可走 Surface policy，收斂為客觀幾何／支撐事實到執行 maneuver 的單一路徑。Furniture Catalog 升為 `furniture-definitions-v12`：Definition 只在 canonical solid top face author `faces.top.supportsBodyOccupancy:true` 與可選 `surfaceKey / surfaceLabel`；resolver 從同一 rotated solid bounds 派生 runtime `spatial.surfaces[]` 的 stable `id / sourceSolidKey / supportRegion / topElevation / cells`。legacy singular `spatial.surface` 現在直接拒絕，Surface 不再 author species `allowKinds`、`traversable`、`moveCost / transitionCost` 或 duplicate bounds。World Authoring Instance shape沒有改，仍為 `world-authoring-v7`，但 current document以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin 新 Catalog。
 

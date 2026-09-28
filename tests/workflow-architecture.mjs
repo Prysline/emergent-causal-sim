@@ -26,6 +26,7 @@ const semanticNodeTests=[
   'tests/relationship-foundation.mjs',
   'tests/relationship-target-preference.mjs',
   'tests/relationship-responder-bias.mjs',
+  'tests/affect-responder-bias.mjs',
   'tests/presentation-observability.mjs'
 ];
 for(const path of semanticNodeTests)assert.ok(node.includes(path),'Node regression must cover '+path);

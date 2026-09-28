@@ -15,11 +15,12 @@ async function runScenario(scenario){
   await page.waitForFunction(()=>window.SimEngine?.SOCIAL_RESPONSE_SCHEMA_VERSION==='11.13.2a-social-response-agency');
   await page.click('#step');
   await page.waitForFunction(()=>window.SimEngine.getState().events.some(e=>e.data?.action==='petOffer'));
+  const stateBeforeInspector=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
   await page.evaluate(()=>document.querySelector('[data-entity="agent:orange"]')?.click());
   await page.waitForSelector('[data-v1140-resident-root]');
   await page.click('[data-v1140-mode="debug"]');
   await page.waitForSelector('[data-v1132-affect]');
-  return page.evaluate(()=>{
+  const result=await page.evaluate(()=>{
     const E=window.SimEngine,st=E.getState(),offer=st.events.find(e=>e.data?.action==='petOffer');
     const response=st.events.find(e=>e.data?.responseToBid===offer?.id&&['acceptPet','toleratePet','avoidPet'].includes(e.data?.action));
     const pet=st.events.find(e=>e.data?.action==='petAnimal'&&e.data?.petOfferId===offer?.id);
@@ -34,6 +35,8 @@ async function runScenario(scenario){
       navActive:document.querySelector('.mobile-nav [data-tab="inspector"]')?.classList.contains('active')??false
     };
   });
+  result.inspectorStateStable=stateBeforeInspector===await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+  return result;
 }
 
 assert.ok((await page.goto('http://127.0.0.1:4173/?scenario=pet-accept',{waitUntil:'domcontentloaded'})).ok());
@@ -50,7 +53,9 @@ assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.valida
 assert.equal(desktop.affectVisible,true,'desktop: Current Affect inspector section should be visible');
 assert.ok(desktop.inspectorText.includes('Current Affect'));
 assert.ok(desktop.inspectorText.includes('Pet responder：base'),'desktop Debug should expose derived animal responder score decomposition');
+assert.ok(desktop.inspectorText.includes('Affect'),'desktop Debug should identify the Affect contribution');
 assert.ok(desktop.inspectorText.includes('Relationship'),'desktop Debug should identify the Relationship contribution');
+assert.equal(desktop.inspectorStateStable,true,'desktop derived responder Debug must be simulation-state inert');
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop document overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 await page.screenshot({path:`${outDir}/desktop-accept.png`,fullPage:true});
@@ -69,6 +74,8 @@ assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator
 assert.equal(mobile.inspectorActive,true,'mobile Agent selection should open Inspector');
 assert.equal(mobile.navActive,true,'mobile Inspector nav should be active');
 assert.ok(mobile.inspectorText.includes('Pet responder：base'),'mobile Debug should retain responder score decomposition');
+assert.ok(mobile.inspectorText.includes('Affect'),'mobile Debug should identify the Affect contribution');
+assert.equal(mobile.inspectorStateStable,true,'mobile derived responder Debug must be simulation-state inert');
 assert.ok(mobile.docWidth<=mobile.width+1,`mobile document overflow: ${mobile.docWidth}>${mobile.width}`);
 assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
 await page.screenshot({path:`${outDir}/mobile-avoid.png`,fullPage:true});

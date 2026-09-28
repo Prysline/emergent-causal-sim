@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.34.0-surface-traversal-maneuvers`。
+目前 runtime marker：`11.35.0-affect-responder-bias`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -220,7 +220,7 @@ Responder bias 的正式邊界：
 - `familiarity > 0` 但 `affinity = 0` 時 Relationship response delta 必為 0；熟悉本身不是正向意願。
 - Human `talkResponseUtility` 是 responder-specific candidate utility，因此可隨 final response score bounded 改變；general `E.baseUtilityForAction(...,'talk')` 不讀 Relationship。
 - animal pet response 只改 accept / tolerate / avoid band，不建立另一套一般 Action motivation。
-- Current Affect 與 target-specific Memory influence 仍未直接進 responder scoring。
+- Current Affect 由 Affect subsystem 派生 bounded `affectResponseSignal = clamp(valence - frustration, -1, +1)`；Human / animal responder 各自以 `0.12` cap 形成 response delta。`activation` 第一階段保持 decision-neutral；target-specific Memory 仍不直接進 responder scoring。
 - responder score decomposition 不寫入 World Event、不保存 Agent cache；canonical World Event 只描述實際發生的 response outcome。
 
 ## 5. Memory / Appraisal / Affect / Relationship
@@ -261,7 +261,7 @@ Relationship 必須讀 specialized historical Appraisal 的最終結果，不自
 
 ### Current Affect
 
-Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memory / Relationship 分層。它可以由新 appraisal 更新並隨 tick decay，但目前不直接進入 Human / animal responder scoring。
+Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memory / Relationship 分層。它可以由新 appraisal 更新並隨 tick decay。v11.35.0 起，Affect runtime 另外提供不持久化的 `affectResponseSignal = clamp(valence - frustration, -1, +1)` 給 responder policy；`activation` 第一階段不參與方向性 response score。
 
 ### Memory → Deliberation / Relationship Target Preference
 
@@ -294,18 +294,22 @@ v11.15.2 新增另一個**獨立 consumer**，不是把 target-preference delta 
 ```text
 relationshipSignal = familiarity × affinity
 
+affectResponseSignal = clamp(valence - frustration, -1, +1)
+
 Human finalTalkResponseScore
   = clamp(baseTalkResponseScore
+        + affectResponseSignal × TALK_AFFECT_RESPONSE_CAP
         + relationshipSignal × TALK_RELATIONSHIP_RESPONSE_CAP)
 
 Animal finalPetResponseScore
   = clamp(basePetResponseScore
+        + affectResponseSignal × PET_AFFECT_RESPONSE_CAP
         + relationshipSignal × PET_RELATIONSHIP_RESPONSE_CAP)
 ```
 
-目前兩個 cap 都是 `0.18`，但 constant 與 policy ownership 分開。Relationship subsystem 只輸出 bounded directional signal，不決定 Human / animal response threshold，也不建立 response Action / Intent / Event。
+Affect cap 目前 Human / animal 都是 `0.12`，Relationship cap 都是 `0.18`；constant 與 policy ownership 分開。Affect subsystem 只輸出短期 derived signal，Relationship subsystem 只輸出 bounded directional signal；兩者都不決定 Human / animal response threshold，也不建立 response Action / Intent / Event。
 
-這個 consumer 只在 responder 已經面對特定 requester 時成立；它不回灌一般 social Action utility、不改 initiator target ranking 公式、不改 current-intent utility / switch threshold / commitment。World Event 不保存 `baseResponseScore / relationshipResponseDelta / finalScore` 等 private decomposition；Debug 可從 authoritative Relationship + responder policy 即時計算。
+這個 consumer 只在 responder 已經面對特定 requester 時成立；它不回灌一般 social Action utility、不改 initiator target ranking 公式、不改 current-intent utility / switch threshold / commitment。World Event 不保存 `baseResponseScore / affectResponseSignal / affectResponseDelta / relationshipResponseDelta / finalScore` 等 private decomposition；Debug 可從 authoritative Current Affect / Relationship + responder policy 即時計算。
 
 Initial core chooser 建立的 `system + phase:'plan'` event 是**同 tick provisional private-cognition plan**，以 `data.planLifecycle='initialProvisional'` 明示其 creation payload 尚可能在 afterTick 800 Memory-to-Deliberation Correction 被 normalization。Correction 只能改寫同一 tick、同 actor、`type:'system'`、同 lifecycle marker 且 action 對應 initial pick 的既有 canonical plan event；不得新增第二筆 correction event，也不得回頭改寫較舊 plan 或其他 plan-shaped event。Event ID / cause identity 保持不變，event-created consumer 若讀取 creation payload 必須把它視為 provisional，而不是 immutable final plan。Plan event 仍屬 private cognition / non-episodic，不進 generic Episodic Memory。
 
