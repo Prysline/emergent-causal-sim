@@ -293,8 +293,9 @@
     const passage=SP.getPassageProfile?.(st,a,b);if(!passage)return null;
     const structure=passage.edgeKind==='structure';
     const horizontal=passage.edgeKind==='horizontal';
-    if(!structure&&!horizontal)return null;
-    if(horizontal&&passage.status&&passage.status!=='candidate')return null;
+    const surfaceTransition=passage.edgeKind==='surfaceTransition';
+    if(!structure&&!horizontal&&!surfaceTransition)return null;
+    if((horizontal||surfaceTransition)&&passage.status&&passage.status!=='candidate')return null;
     const dz=zOf(b)-zOf(a),dx=b.x-a.x,dy=b.y-a.y;
     return {
       from:cloneNode(a),to:cloneNode(b),
@@ -306,7 +307,8 @@
         :[cloneNode(a),cloneNode(b)],
       edgeKind:passage.edgeKind,
       horizontalKind:passage.horizontalKind||null,
-      structureId:passage.structureId||null
+      structureId:passage.structureId||null,
+      surfaceTransition:surfaceTransition&&passage.surfaceTransition?JSON.parse(JSON.stringify(passage.surfaceTransition)):null
     };
   }
   function locomotionRuntime(){return window.SimLocomotion||null;}
