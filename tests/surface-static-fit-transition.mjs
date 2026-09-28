@@ -52,6 +52,7 @@ E.reset(20260911);
   assert.equal(feasibility.modes.walk.feasible,true,'Default Human must have at least one legal chair-scale Surface maneuver');
   const kinds=feasibility.modes.walk.maneuverCandidates.map(x=>x.kind);
   assert.ok(kinds.includes('stepUp')||kinds.includes('climbUp'),'Human chair transition must expose a physical step/climb candidate');
+  human.position={...start};human.posture={kind:'standing',slotId:null,furnitureId:null};human.locomotion={mode:null,phase:'idle'};
   const plan=SP.planRoute(st,human,top,{mode:'auto',objective:'traversalCost'}),step=plan.steps[0],selected=L.selectSurfaceManeuver(human,feasibility.modes.walk.maneuverCandidates,'walk',1,0);
   assert.ok(step?.surfaceManeuver,'Route step must carry the selected Surface maneuver identity');
   assert.equal(step.surfaceManeuver.kind,selected.kind,'Route must consume the Locomotion-selected candidate rather than inventing another maneuver');
