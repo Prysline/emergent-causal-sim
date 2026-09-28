@@ -18,7 +18,7 @@
   function clearanceSummaryFor(st,node){const values=elevatedSolidEntries(st,node).map(entry=>entry.bottomZ).filter(Number.isFinite);return values.length?Math.min(...values):null;}
   function locomotionMode(agent){return agent?.locomotion?.mode||window.SimLocomotion?.modeFromPosture?.(agent)||'walk';}
   function movementEnvelope(agent){return agent?(window.SimPhysical?.getMovementEnvelope?.(agent,locomotionMode(agent))??null):null;}
-  function requiredClearance(agent){return agent?(movementEnvelope(agent)?.clearanceHeight??SP.TRAVERSAL_PROFILES?.[agent.kind]?.requiredClearance??null):null;}
+  function requiredClearance(agent){return agent?(movementEnvelope(agent)?.clearanceHeight??null):null;}
   function nodeObservation(st,p,agent=null){
     const node=SP.normalizeNode(st,p);if(!node)return null;
     const overhead=node.surfaceId===FLOOR?(SP.overheadAt?.(st,node)||[]):[];
