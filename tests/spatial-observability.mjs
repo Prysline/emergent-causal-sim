@@ -64,9 +64,11 @@ assert.equal(tray.position.x,5);
 assert.equal(tray.position.y,2);
 
 const table=SP.furnitureObservation(st,'diningTable');
-assert.equal(table.surfaceId,'diningTable:surface');
-assert.equal(table.traversable,true);
-assert.equal(table.cells.length,4);
+assert.equal(table.surfaceCount,1);
+assert.equal(table.surfaces[0].id,'diningTable:surface');
+assert.equal(table.surfaces[0].label,'餐桌桌面');
+assert.equal(table.surfaces[0].cells.length,4);
+assert.equal(table.surfaces[0].sourceSolidKey,'tabletop');
 assert.equal(table.solidCount,5);
 assert.equal(table.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
 
