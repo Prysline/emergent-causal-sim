@@ -4,10 +4,10 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
-  'systems/physical.js','spatial-passage.js','engine.js'
+  'systems/physical.js','spatial-passage.js','systems/locomotion.js','engine.js'
 ]);
 
-const D=globalThis.SimFurnitureDefinitions,E=globalThis.SimEngine,SP=globalThis.SimSpatial;
+const D=globalThis.SimFurnitureDefinitions,E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
 const local=(x,y,z=0)=>({x,y,z});
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
@@ -52,6 +52,11 @@ E.reset(20260911);
   assert.equal(feasibility.modes.walk.feasible,true,'Default Human must have at least one legal chair-scale Surface maneuver');
   const kinds=feasibility.modes.walk.maneuverCandidates.map(x=>x.kind);
   assert.ok(kinds.includes('stepUp')||kinds.includes('climbUp'),'Human chair transition must expose a physical step/climb candidate');
+  const plan=SP.planRoute(st,human,top,{mode:'auto',objective:'traversalCost'}),step=plan.steps[0],selected=L.selectSurfaceManeuver(human,feasibility.modes.walk.maneuverCandidates,'walk',1,0);
+  assert.ok(step?.surfaceManeuver,'Route step must carry the selected Surface maneuver identity');
+  assert.equal(step.surfaceManeuver.kind,selected.kind,'Route must consume the Locomotion-selected candidate rather than inventing another maneuver');
+  assert.equal(step.edgeTraversalCost,L.surfaceManeuverBurden(human,step.surfaceManeuver),'Surface transition objective burden must come from Locomotion ownership');
+  assert.equal(step.movementTicks,L.surfaceManeuverTiming(human,'walk',step.surfaceManeuver,1,0).movementTicks,'Surface transition timing must come from the same Locomotion maneuver policy');
 }
 
 E.reset(20260911);
