@@ -129,7 +129,9 @@
     const a=agentFor(st,aOrId),n=normalizeNode(st,node),entry=n?surfaceEntry(st,n.surfaceId):null;
     if(!entry||!isSurfaceCell(entry,n))return {fits:false,reason:'surface',surfaceId:n?.surfaceId||null,witness:null};
     if(!a)return {fits:true,reason:null,surfaceId:entry.surface.id,witness:null};
-    const P=physicalRuntime(),support=P?.getSupportFootprint?.(a,posture),pose=P?.getPoseEnvelope?.(a,posture);
+    const P=physicalRuntime(),body=a.physical?.bodyGeometry||C?.defaultPhysicalProfile?.(a.kind)?.bodyGeometry||null;
+    const support=P?.getSupportFootprint?.(a,posture)||C?.getSupportFootprintForKind?.(a.kind,body,posture)||null;
+    const pose=P?.getPoseEnvelope?.(a,posture)||C?.getPoseEnvelopeForKind?.(a.kind,body,posture)||null;
     if(!support||!pose)return {fits:false,reason:'postureProfile',surfaceId:entry.surface.id,witness:null};
     const snapshot=geometrySnapshotFor(st),cacheKey=[entry.surface.id,nodeKey(st,n),a.id||a.kind,posture,support.width,support.length,pose.width,pose.length,pose.height].join('|');
     if(snapshot?.surfaceFits.has(cacheKey))return snapshot.surfaceFits.get(cacheKey);
