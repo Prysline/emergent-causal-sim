@@ -110,7 +110,7 @@
   function moveToward(a,goal,reason){
     const L=locomotionRuntime();if(!L)return legacyMoveToward(a,goal,reason);
     if(!goal||a.offMap)return false;
-    if(a.posture?.slotId){if(!standUp(a))return false;return atSpatialPosition(a,goal);}
+    if(a.posture?.slotId){if(!standUp(a,goal))return false;return atSpatialPosition(a,goal);}
     if(atSpatialPosition(a,goal)){if(a.action){delete a.action.locomotionStep;delete a.action.locomotionCredit;}clearLocomotionState(a);return true;}
     const movementCredit=Number.isFinite(Number(a.action?.locomotionCredit))?Math.max(0,Math.min(Number(a.action.locomotionCredit),1-1e-9)):0;
     const plan=SP.planRoute?.(state,a,goal,{mode:'auto',objective:'traversalCost',movementCredit}),step=plan?.steps?.[0];
