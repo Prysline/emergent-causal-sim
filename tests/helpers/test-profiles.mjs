@@ -80,6 +80,8 @@ const SPATIAL_CORE_PROFILE=Object.freeze([
 
 const ENGINE_CORE_PROFILE=Object.freeze([
   ...SPATIAL_CORE_PROFILE,
+  'systems/resources.js',
+  'systems/physical.js',
   'spatial/finalize.js',
   'engine.js',
   'validation/registry.js'
@@ -118,6 +120,8 @@ function ensureAuthoringDependencies(paths){
 
 function ensureRuntimeDependencies(paths){
   ensureAuthoringDependencies(paths);
+  const engineIndex=paths.indexOf('engine.js');
+  if(engineIndex>=0&&!paths.includes('systems/physical.js'))paths.splice(engineIndex,0,'systems/physical.js');
   const consumerIndexes=['systems/physical.js','engine.js']
     .map(path=>paths.indexOf(path))
     .filter(index=>index>=0);

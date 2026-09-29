@@ -89,7 +89,7 @@ E.reset(20260911);
   const a=isolateHuman(st);
   const {tray,pantry,basket}=startIndoorFoodRestock(st,a);
 
-  for(let i=0;i<60&&a.action&&foodOf(basket)<=0;i++)E.tick();
+  for(let i=0;i<35&&foodOf(basket)<=0;i++)E.tick();
   assert.ok(foodOf(basket)>0,'中斷測試前，資源必須已經實際裝進物流容器');
   assert.equal(a.held,basket.id,'中斷測試前，角色必須正在持有物流容器');
 
