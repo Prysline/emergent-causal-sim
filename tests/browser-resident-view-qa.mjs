@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.35.2-presentation-event-truth';
+const CURRENT_VERSION='11.36.0-decision-evidence';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -117,7 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.35.2','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.releaseLabel,'v11.36.0','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -157,8 +157,11 @@ const semanticLayers=await page.evaluate(()=>{
   const destId=dest.id,destName=dest.name;
   const intent=kind=>E.residentIntentLabel({activeIntent:{kind}});
   const explain=(kind,intentKind,{agent={},action={}}={})=>{
-    const probe={id:`qa-${kind}`,kind:'human',activeIntent:{kind:intentKind},...agent,action:{kind,started:66,...action}};
-    const probeState={...st,thoughts:{...st.thoughts,[probe.id]:{tick:66,pick:{id:kind}}}};
+    const defaultNeeds={hunger:60,thirst:60,fatigue:60,sleepNeed:60,social:60,groomingNeed:60},defaultTraits={social:.5,animalAffinity:.5,alcoholLike:.5,curious:.5};
+    const intent={id:`intent:qa-${kind}:66:${intentKind}`,kind:intentKind,createdTick:66,lifecycle:'actionBound',source:{type:'qa',tick:66}};
+    const probe={id:`qa-${kind}`,kind:'human',needs:{...defaultNeeds,...agent.needs},traits:{...defaultTraits,...agent.traits},contacts:{paws:{},...agent.contacts},...agent,activeIntent:intent,action:{kind,started:66,intentId:intent.id,...action}};
+    const probeState={...st,tick:66,agents:{...st.agents,[probe.id]:probe}};
+    E.adoptDecisionEvidence(probeState,probe,probe.action,{source:{type:'qa',tick:66,intentKind},contributors:E.decisionContributorsForAction(probe,kind,probe.action)});
     return E.residentActionExplanation(probeState,probe);
   };
   const restockAction=E.residentActionText(st,{kind:'human',action:{kind:'restockContainer',phase:'toContainer',destinationId:destId,resource:'water'}});
@@ -175,7 +178,7 @@ const semanticLayers=await page.evaluate(()=>{
     restExplanation:explain('rest','recoverFatigue'),sleepExplanation:explain('sleep','sleep'),talkExplanation:explain('talk','socialize'),petAnimalExplanation:explain('petAnimal','interactWithAnimal'),
     seekHumanExplanation:explain('seekHuman','seekSocialContact',{agent:{kind:'cat'}}),groomExplanation:explain('groom','groom',{agent:{kind:'cat',contacts:{paws:{}}}}),
     externalSupplyExplanation:explain('externalSupply','replenishSupply',{action:{resource:'water'}}),
-    wanderExplanation:E.residentActionExplanation(wanderState,wander),restockExplanation:E.residentActionExplanation(restockState,restock)
+    wanderExplanation:explain('wander','explore',{agent:{kind:'human',traits:{curious:0}}}),restockExplanation:explain('restockContainer','restockResource',{action:{phase:'toContainer',destinationId:destId,resource:'water',urgency:5}})
   };
 });
 assert.equal(semanticLayers.drinkWaterIntent,'補充水分');
@@ -195,8 +198,8 @@ assert.equal(semanticLayers.talkExplanation,'因為想找人說說話。');
 assert.equal(semanticLayers.petAnimalExplanation,'因為想找點陪伴，也對動物有親近感。');
 assert.equal(semanticLayers.seekHumanExplanation,'因為想找點陪伴。');
 assert.equal(semanticLayers.groomExplanation,'因為身上有點需要整理了。');
-assert.equal(semanticLayers.externalSupplyExplanation,'因為家裡的水快不夠了。');
-assert.equal(semanticLayers.wanderExplanation,'因為現在沒有更急著要做的事。','Explanation should use natural selection-pressure wording instead of engine terminology');
+assert.equal(semanticLayers.externalSupplyExplanation,'因為家裡的補給庫存已經偏低了。');
+assert.equal(semanticLayers.wanderExplanation,'','Human wander Explanation must stay omitted until formal winner-relative selection evidence exists');
 assert.equal(semanticLayers.restockExplanation,`因為${semanticLayers.destName}裡的水已經不多了。`,'Restock explanation should state the resource pressure rather than repeat the task');
 
 const stateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));

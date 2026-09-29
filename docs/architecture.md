@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.35.2-presentation-event-truth`。
+目前 runtime marker：`11.36.0-decision-evidence`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -168,6 +168,19 @@ Action / Deliberation 的 spatial target 必須依 target 類型消費正式 own
 - Human drink 的 vessel-plan feasibility 也必須與 execution 對齊：actor 自己已持有的 `canDrinkFrom` portable vessel 視為 0-pickup plan；若內容低於直接飲用門檻，source discovery 必須以該 vessel `id` 作 `excludeId`，不能讓 destination vessel 充當自己的 refill source。
 
 這個分工不表示所有 Action 都必須透過 Interaction Geometry；真正的 ordinary floor exact target 仍保留 `moveToExact()` 語意。
+
+### Adopted Decision Evidence
+
+v11.36.0 建立 Deliberation-owned adopted Decision Evidence contract：
+
+- `agent.decisionEvidence` 是 **Agent-private、單筆 current adopted decision snapshot**；不是 World Event、global registry、Presentation mirror，也不是跨 Agent 可讀心理狀態。
+- live Action 只保存 `decisionId` reference。`E.decisionEvidenceMatchesAction(agent)` 必須同時驗證 decision ID、Action kind / started 與 evidence 中已保存的 decision-level target context；因此同 tick / 同 kind但不同 target、同一 Intent 下的 replacement Action 都不能沿用舊 evidence。
+- `state.thoughts[agent]` 繼續是 Recent Decision / candidate snapshot。它可保存 candidate structured contributor，但不是 adopted final truth；Action construction 失敗時不得產生 adopted evidence。
+- initial core choice 在 core tick 後仍可能被 Memory→Deliberation correction 修改，所以 finalization 明確位於 afterTick 850，晚於 correction 800。只有該時點仍存活且與 final `thought.pick` 對齊的 concrete Action 才會被採納成 Decision Evidence。
+- soft reconsideration、emergency preemption 與 hard replan 在各自真正綁定 replacement Action 時立即建立新的 Decision ID。Hard replan 可以保留同一 Intent ID，但必須建立新的 Decision ID；原 motive contributor 可作 frozen provenance 繼承，target-selection evidence 必須對新 Action context重新 freeze。
+- core option / soft candidate 的 structured contributors只描述真正進入既有 utility / trigger 的 authoritative input；capture 本身不得消耗 RNG或改變 winner / target。Memory / Relationship / access 的 social target decomposition只在 final selected target freeze，current Debug recomputation仍標為 derived。
+- responder第一階段保持保守：已有 adopted evidence的 Social Bid response仍不在 Resident View 顯示自主 Explanation；Human / animal responder policy若沒有 adopted decision evidence，更不得由 Current Affect / Relationship score反推 motive。
+- Player-readable Explanation只選少量可自然表達的 frozen contributor；Debug 才顯示完整 structured contributor / source refs。`why[]`、自然語言 event text 與 UI wording都不得被反解析成 decision truth。
 
 ### Canonical decision baseline
 
@@ -543,7 +556,7 @@ Agent readable view 的「現在」固定分成三層 read-only projection：
 
 - **Action＝角色現在具體在做什麼。** 來源是 live Action；Resident 可以把 raw phase ID、工程座標等轉成玩家可讀文字，但 Debug 仍保留完整 Action phase / spatial goal。
 - **Intent＝這個行動服務的短期目的。** 來源是 canonical `activeIntent.kind`；Resident label 必須覆蓋正式 Intent kind，不得另造 `satisfyThirst / cleanEnvironment / restockFood` 之類 presentation-only 假 kind 來猜測目的。
-- **Explanation＝為什麼此刻選擇這個行動。** 只在 final decision evidence 與 live Action 的 decision tick / action kind 對齊時顯示；應描述需求壓力、環境觸發或其他已存在證據，而不是只把 Intent 換句話重述一次。
+- **Explanation＝為什麼此刻選擇這個行動。** 只在 live Action 的 `decisionId` 精確引用 Agent-private adopted `decisionEvidence.id`，且 frozen Action context 仍與 live Action 相符時顯示；應描述該次採納時真正保存的需求壓力、環境觸發或其他 structured contributor，而不是從 Action kind、目前 Inspector recomputation 或 Intent label 反推心理理由。
 - **Explanation wording 優先自然直接。** 若同一份 evidence 可以忠實寫成「因為肚子餓了／因為口渴／因為累了／因為想睡了／因為想找人說說話」，就不要翻成「需求已經變得明顯／比較明顯／累積得比較明顯」等 engine threshold 語言。精確 Need 數值與 qualitative band 屬於 Needs / Debug；Explanation 只做玩家理解用投影。若沒有可靠的具體日常原因，使用保守抽象描述或直接省略，不為了口語化自行補心理敘事。
 
 三層都不能寫回 simulation state，也不能成為 Deliberation / Memory / Affect / Relationship 的輸入。完整 candidate score、utility、switch threshold、commitment cost、Memory delta、raw phase / coordinates 等工程資訊留在 Debug Inspector。

@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.12.4-soft-reconsideration';
+  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.36.0-decision-evidence';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
 
@@ -59,13 +59,13 @@
   }
   function candidateIntents(st,a){
     const out=[];
-    const push=(intentKind,actionKindValue,extra={})=>{const utility=utilityForIntent(st,a,intentKind);if(utility>0)out.push({intentKind,actionKind:actionKindValue,utility,...extra});};
+    const push=(intentKind,actionKindValue,extra={})=>{const utility=utilityForIntent(st,a,intentKind);if(utility>0)out.push({intentKind,actionKind:actionKindValue,utility,decisionContributors:E.decisionContributorsForAction?.(a,actionKindValue)||[],...extra});};
     if(a.kind==='human'){
       push('satisfyHunger','eat');push('drinkWater','drinkWater');push('drinkAlcohol','drinkAlcohol');push('recoverFatigue','rest');push('sleep','sleep');
       const h=nearestAgent(st,a,'human',{awakeOnly:true});if(h)push('socialize','talk',{targetAgent:h.id});
       const animal=nearestPettableAnimal(a);if(animal)push('interactWithAnimal','petAnimal',{targetAgent:animal.id});
       push('removeHazard','cleanFloor');
-      const bidPick=E.newestObservedAnimalBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap&&E.canPetAnimal?.(a,target))out.push({intentKind:'respondSocialBid',actionKind:'petAnimal',utility:72+(a.traits?.animalAffinity||0)*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick});}
+      const bidPick=E.newestObservedAnimalBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap&&E.canPetAnimal?.(a,target))out.push({intentKind:'respondSocialBid',actionKind:'petAnimal',utility:72+(a.traits?.animalAffinity||0)*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,decisionContributors:[{kind:'socialBid',key:'animalAffection',role:'motivation',bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,fromAgent:target.id},{kind:'trait',key:'animalAffinity',role:'modifier',value:a.traits?.animalAffinity||0}]});}
     }else{
       push('satisfyHunger','eat');push('groom','groom');push('recoverFatigue','rest');push('sleep','sleep');
       const h=nearestAgent(st,a,'human');if(E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&h)push('seekSocialContact','seekHuman',{targetAgent:h.id});
@@ -135,9 +135,10 @@
     const eligibility=softEligible(st,a);if(!eligibility.ok)return false;
     const snap=buildReconsiderationSnapshot(st,a,eligibility),c=snap.bestChallenger;if(!c||!Number.isFinite(snap.commitmentCost)||c.utility<=snap.switchThreshold)return false;
     const nextAction=buildAction(st,a,c);if(!nextAction)return false;
-    const priorIntent=a.activeIntent,priorActionKind=actionKind(a),priorIntentId=priorIntent?.id||null,priorIntentKind=priorIntent?.kind||null;
+    const priorIntent=a.activeIntent,priorActionKind=actionKind(a),priorIntentId=priorIntent?.id||null,priorIntentKind=priorIntent?.kind||null,priorDecisionId=E.currentDecisionEvidence?.(a)?.id||null;
     clearAgentReservations(st,a);dropHeld(st,a);a.action=null;a.activeIntent=null;
     const nextIntent=freshIntent(st,a,c,priorIntent);nextAction.intentId=nextIntent.id;a.action=nextAction;a.activeIntent=nextIntent;
+    E.adoptDecisionEvidence?.(st,a,nextAction,{source:{type:'softReconsideration',tick:st.tick,priorIntentId,priorIntentKind,intentKind:c.intentKind,bidId:c.bidId||null},contributors:c.decisionContributors||[],utility:c.utility,priorDecisionId});
     E.addEvent(`${a.name}重新權衡目前狀況，放下「${E.intentLabel?.(priorIntent)||priorIntentKind}」，改先「${E.intentLabel?.(nextIntent)||c.intentKind}」。`,'normal',[],{actor:a.id,action:'intentReconsider',priorIntentId,priorIntentKind,priorActionKind:priorActionKind||null,intentId:nextIntent.id,intentKind:nextIntent.kind,nextActionKind:c.actionKind,challengerIntentKind:c.intentKind,currentUtility:snap.currentUtility,challengerUtility:c.utility,switchMargin:SOFT_SWITCH_MARGIN,commitmentCost:snap.commitmentCost,switchThreshold:snap.switchThreshold,position:E.positionRef(a.position)});
     return true;
   }

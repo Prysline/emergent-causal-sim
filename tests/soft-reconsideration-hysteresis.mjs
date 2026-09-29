@@ -43,8 +43,8 @@ function assertIneligibleApplySkipsCandidateWork(label,expectedReason,setup){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.35.2-presentation-event-truth');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.12.4-soft-reconsideration');
+assert.equal(st.version,'11.36.0-decision-evidence');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.36.0-decision-evidence');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);
 noIssues('reset');

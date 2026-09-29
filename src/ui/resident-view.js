@@ -99,32 +99,25 @@
     return String(E.actionLabel(a)||'').replace(/・目標 \(-?\d+,-?\d+\)/g,'');
   }
   function playerActionExplanation(st,a){
-    const thought=st?.thoughts?.[a?.id],action=a?.action,pick=thought?.pick;
-    if(!thought||!action||!pick)return '';
-    if(thought.tick!==action.started||pick.id!==action.kind)return '';
+    const action=a?.action,evidence=E.currentDecisionEvidence?.(a);
+    if(!action||!evidence)return '';
     if(a?.activeIntent?.kind==='respondSocialBid')return '';
-    switch(pick.id){
-      case 'eat': return '因為肚子餓了。';
-      case 'drinkWater': return '因為口渴。';
-      case 'drinkAlcohol': return '因為口渴，而且現在想喝點酒。';
-      case 'rest': return '因為累了。';
-      case 'sleep': return '因為想睡了。';
-      case 'talk': return '因為想找人說說話。';
-      case 'petAnimal': return '因為想找點陪伴，也對動物有親近感。';
-      case 'seekHuman': return '因為想找點陪伴。';
-      case 'cleanFloor': return '因為附近有濕滑的地面需要處理。';
-      case 'groom': {
-        const residue=Object.values(a?.contacts?.paws||{}).reduce((sum,value)=>sum+(Number(value)||0),0);
-        return residue>.05?'因為腳掌或毛上沾了需要清理的東西。':'因為身上有點需要整理了。';
-      }
-      case 'restockContainer': {
-        const dest=containerName(st,action.destinationId,'室內容器'),resource=resourceName(action.resource);
-        return `因為${dest}裡的${resource}已經不多了。`;
-      }
-      case 'externalSupply': return `因為家裡的${resourceName(action.resource)}快不夠了。`;
-      case 'wander': return '因為現在沒有更急著要做的事。';
-      default: return '';
-    }
+    const contributors=evidence.contributors||[],find=(kind,key)=>contributors.find(c=>c?.kind===kind&&c?.key===key),value=(kind,key)=>Number(find(kind,key)?.value)||0,intentKind=evidence.source?.intentKind||a?.activeIntent?.kind||null;
+    if(value('need','hunger')>0)return '因為肚子餓了。';
+    if(value('need','thirst')>0)return intentKind==='drinkAlcohol'?'因為口渴，而且現在想喝點酒。':'因為口渴。';
+    if(value('need','fatigue')>0&&intentKind==='recoverFatigue')return '因為累了。';
+    if(value('need','sleepNeed')>0&&intentKind==='sleep')return '因為想睡了。';
+    const social=value('need','social'),affinity=value('trait','animalAffinity');
+    if(intentKind==='interactWithAnimal'&&(social>0||affinity>0))return social>0&&affinity>0?'因為想找點陪伴，也對動物有親近感。':'因為想和動物互動。';
+    if(intentKind==='seekSocialContact'&&social>0)return '因為想找點陪伴。';
+    if(intentKind==='socialize'&&social>0)return '因為想找人說說話。';
+    if(find('environment','wetFloorAmount'))return '因為附近有濕滑的地面需要處理。';
+    if(find('body','pawResidue'))return '因為腳掌或毛上沾了需要清理的東西。';
+    if(value('need','groomingNeed')>0)return '因為身上有點需要整理了。';
+    const low=find('environment','resourceLow');if(low){const dest=containerName(st,low.destinationId||action.destinationId,'室內容器'),resource=resourceName(low.resource||action.resource);return `因為${dest}裡的${resource}已經不多了。`;}
+    const supply=find('environment','supplyLow');if(supply)return '因為家裡的補給庫存已經偏低了。';
+    if(value('trait','curious')>0)return '因為想探索附近。';
+    return '';
   }
   function heldText(st,a){
     if(!a?.held)return '';

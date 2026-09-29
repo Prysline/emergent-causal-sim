@@ -11,8 +11,8 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.35.2-presentation-event-truth');
-assert.equal(E.VERSION,'11.35.2-presentation-event-truth');
+assert.equal(st.version,'11.36.0-decision-evidence');
+assert.equal(E.VERSION,'11.36.0-decision-evidence');
 assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
 noIssues('reset');
 

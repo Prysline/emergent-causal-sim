@@ -31,9 +31,9 @@
     W.DATA_ZH.replanCount='Replan 次數';
   }
 
-  const DELIBERATION_VERSION='11.12.4-soft-reconsideration';
+  const DELIBERATION_VERSION='11.36.0-decision-evidence';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
-    
+    for(const a of Object.values(st.agents||{}))a.decisionEvidence=null;
     return st;
   },500);
   W.DELIBERATION_SCHEMA_VERSION=DELIBERATION_VERSION;
@@ -45,5 +45,6 @@
     W.DATA_ZH.switchThreshold='實際切換門檻';
     W.DATA_ZH.challengerIntentKind='挑戰意圖';
     W.DATA_ZH.priorIntentId='原 Intent ID';
+    W.DATA_ZH.decisionId='Decision ID';
   }
 })();
