@@ -1,10 +1,11 @@
 (() => {
   const A=window.SimWorldAuthoring;
   const C=window.SimEmbodimentCapabilities;
+  const I=window.SimWorldInitializer;
   const M=window.SimEditorAuthoringMutations;
   const P=window.SimEditorPreviewBridge;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!M?.setCellTerrain||!M?.setBoundary||!M?.setDoorState||!M?.setCellMaterial||!M?.moveFurniture||!M?.rotateFurniture||!M?.moveObject||!P?.storePreview){
-    throw new Error('World authoring helpers, embodiment capabilities, preview bridge, and editor mutation owner must load before editor-ui.js.');
+  if(!A?.DEFAULT_WORLD_AUTHORING||!A?.validateAuthoring||!A?.serializeAuthoring||!C?.postureLabel||!I?.analyzeRuntimeCompatibility||!M?.setCellTerrain||!M?.setBoundary||!M?.setDoorState||!M?.setCellMaterial||!M?.moveFurniture||!M?.rotateFurniture||!M?.moveObject||!P?.storePreview){
+    throw new Error('World authoring helpers, embodiment capabilities, compatibility initializer, preview bridge, and editor mutation owner must load before editor-ui.js.');
   }
 
   const $=id=>document.getElementById(id);
@@ -766,7 +767,7 @@
       ['Z 層',layerList.map(layer=>layer.z).join(', ')],
       ['家具',furnitureCount],
       ['居民',residentCount],
-      ['水平連通區',topology?topology.components.length:'—'],
+      ['基礎水平連通區',topology?topology.components.length:'—'],
       ['驗證',validation.ok?'通過':`${validation.errors.length} 個錯誤`]
     ].map(([key,value])=>`<div class="key">${esc(key)}</div><div>${esc(value)}</div>`).join('');
 
@@ -794,6 +795,14 @@
           const placementLabel=placement?.mode==='exact'?'自由座標（exact）':placement?.mode==='anchor'?'家具位置綁定（anchor）':placement?.mode||'—';
           details+=`<br>位置模式：${esc(placementLabel)}`;
           if(placement?.mode==='anchor')details+=` · <code>${esc(placement.anchor?.id||'—')}</code>`;
+          if(validation.ok){
+            const compatibility=I.analyzeRuntimeCompatibility(authored),reachability=compatibility.reachabilityByResident?.[entry.id]||null;
+            if(reachability){
+              const labels={exit:'出口',food:'食物',water:'飲水',sleep:'可睡眠位置'};
+              const targets=Object.entries(reachability.targets||{}).map(([type,status])=>`${labels[type]||type}：${status.reachable===null?'無 target':status.reachable?'可達':'不可達'}`).join('、');
+              details+=`<br>居民初始可達性：<code>${esc(reachability.kind)} / default-walk</code> · ${reachability.reachableKeys.length} 格${targets?`<br>default-walk targets：${esc(targets)}`:''}`;
+            }
+          }
         }
       }
     }else if(selection?.kind==='cell'){
@@ -808,13 +817,16 @@
       details+=`<br>材質：${esc(materialDisplay(cell?.material))}`;
       if(furniture.length)details+=`<br>此格家具：${furniture.map(([id,item])=>esc(item.name||id)).join('、')}`;
       if(derived){
-        details+=`<br>推導狀態：<code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>${derived.componentId?` · ${esc(derived.componentId)}`:''}`;
+        details+=`<br>推導狀態：<code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>`;
+        if(derived.componentId)details+=`<br>基礎水平連通區：<code>${esc(derived.componentId)}</code>（cardinal compatibility coarse topology）`;
         if(derived.blockedBy.length)details+=`<br>阻擋來源：${derived.blockedBy.map(esc).join('、')}`;
         const floorGeometry=derived.floorGeometry;
         if(floorGeometry){
           const freeEdges=['north','east','south','west'].filter(edge=>(floorGeometry.edgeIntervals?.[edge]||[]).length);
           details+=`<br>格內 free-space：<code>${floorGeometry.regionCount} region</code>${freeEdges.length?` · 可連通邊：${freeEdges.map(edge=>esc(EDGE_LABELS[edge]||edge)).join('、')}`:''}`;
         }
+        const connections=horizontalConnectionDiagnostics(topology,position);
+        if(connections.length)details+=`<br>八方向幾何：${connections.map(connection=>esc(connection)).join('；')}`;
       }
     }
     if(heading)$('selectionSummary').innerHTML=`<b>${heading}</b>${details}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;
@@ -822,6 +834,26 @@
   }
 
   const EDGE_LABELS={north:'北',east:'東',south:'南',west:'西'};
+  const HORIZONTAL_DIRECTION_LABELS={'0,-1':'北','1,-1':'東北','1,0':'東','1,1':'東南','0,1':'南','-1,1':'西南','-1,0':'西','-1,-1':'西北'};
+  const HORIZONTAL_STATUS_LABELS={candidate:'幾何候選',blocked:'阻擋',unsupported:'保守不支援'};
+  function horizontalConnectionDiagnostics(topology,position){
+    if(!topology||!position)return[];
+    const out=[];
+    for(const connection of topology.horizontalConnections||[]){
+      let other=null;
+      if(connection.from?.x===position.x&&connection.from?.y===position.y&&(connection.from?.z??0)===(position.z??0))other=connection.to;
+      else if(connection.to?.x===position.x&&connection.to?.y===position.y&&(connection.to?.z??0)===(position.z??0))other=connection.from;
+      if(!other)continue;
+      const dx=other.x-position.x,dy=other.y-position.y,direction=HORIZONTAL_DIRECTION_LABELS[`${dx},${dy}`]||`${dx},${dy}`;
+      const constrained=connection.constrainedBy||{},constraints=[];
+      for(const boundary of [constrained.boundary,...(constrained.boundaries||[])])if(boundary&&!constraints.includes('boundary '+boundary))constraints.push('boundary '+boundary);
+      for(const door of constrained.doors||[])constraints.push('door '+door);
+      for(const solid of constrained.solids||[])constraints.push('solid '+solid);
+      if(constrained.explicitPassage)constraints.push('explicit passage');
+      out.push(`${direction} ${connection.kind} · ${HORIZONTAL_STATUS_LABELS[connection.status]||connection.status}${constraints.length?' · '+constraints.join(', '):''}`);
+    }
+    return out.sort();
+  }
   function boundaryEditorMarkup(x,y,z){
     const rows=['north','east','south','west'].map(edge=>{
       const boundaryId=boundaryIdForCellEdge(x,y,edge),info=boundaryInfo(z,boundaryId),kind=info.boundary?.kind||'';
