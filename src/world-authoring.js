@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v7';
+  const VERSION='world-authoring-v8';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -62,14 +62,14 @@
     entities:{
       containers:{
         mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:pos(5,2),supportId:'diningTable',restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}},
-        plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,servingDish:true,canEatFrom:true,position:pos(5,2),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
-        plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,servingDish:true,canEatFrom:true,position:pos(6,3),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
+        plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},servingDish:true,canEatFrom:true,position:pos(5,2),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
+        plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},servingDish:true,canEatFrom:true,position:pos(6,3),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
         foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🗄️',roles:['foodReserve','externalSupplyDestination'],capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1,position:pos(2,2)},
-        basket:{id:'basket',name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,transportResources:['food'],position:pos(3,2),interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}},
-        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,canDrinkFrom:true,drinkPreference:.12,access:1,position:pos(5,5),restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}},
-        cupA:{id:'cupA',name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{alcohol:20},portable:true,canDrinkFrom:true,drinkPreference:.95,position:pos(6,2),supportId:'diningTable'},
-        cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,canDrinkFrom:true,drinkPreference:.95,position:pos(6,3),supportId:'diningTable'},
-        alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,canDrinkFrom:true,drinkPreference:.28,position:pos(5,3),supportId:'diningTable'}
+        basket:{id:'basket',name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2},transportResources:['food'],position:pos(3,2),interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}},
+        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1},canDrinkFrom:true,drinkPreference:.12,access:1,position:pos(5,5),restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}},
+        cupA:{id:'cupA',name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{alcohol:20},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},canDrinkFrom:true,drinkPreference:.95,position:pos(6,2),supportId:'diningTable'},
+        cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},canDrinkFrom:true,drinkPreference:.95,position:pos(6,3),supportId:'diningTable'},
+        alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1},canDrinkFrom:true,drinkPreference:.28,position:pos(5,3),supportId:'diningTable'}
       },
       sources:{
         tap:{id:'tap',name:'水龍頭',icon:'🚰',roles:['resourceSource'],resource:'water',infinite:true,position:pos(6,5),interactions:{fill:{mode:'port'}},interactionPorts:[{id:'tap:west',label:'水龍頭左側',position:pos(5,5),edge:'east',affordances:['fill']}]}
@@ -326,6 +326,18 @@
       const basePath=`entities.containers.${key}`;
       if(!isRecord(container)){errors.push(authoringIssue('authoring_container_invalid',basePath,'Container entry must be an object.'));continue;}
       if(container.id!==undefined&&container.id!==key)errors.push(authoringIssue('authoring_container_id_mismatch',`${basePath}.id`,`Container key ${key} does not match id ${String(container.id)}.`));
+      if(container.portable===true){
+        const handling=container.handling,geometry=handling?.carryGeometry;
+        if(!isRecord(handling))errors.push(authoringIssue('authoring_container_handling_missing',`${basePath}.handling`,'Portable Container must define handling.'));
+        else{
+          if(!isRecord(geometry))errors.push(authoringIssue('authoring_container_carry_geometry_invalid',`${basePath}.handling.carryGeometry`,'Portable Container handling must define carryGeometry.'));
+          else for(const axis of ['width','height','length']){
+            const value=geometry[axis];
+            if(!Number.isFinite(Number(value))||Number(value)<=0)errors.push(authoringIssue('authoring_container_carry_geometry_invalid',`${basePath}.handling.carryGeometry.${axis}`,`Container carryGeometry.${axis} must be a positive number.`));
+          }
+          if(!Number.isInteger(handling.handsRequired)||handling.handsRequired<0)errors.push(authoringIssue('authoring_container_hands_required_invalid',`${basePath}.handling.handsRequired`,'Portable Container handsRequired must be a non-negative integer.'));
+        }
+      }
       if(container.position)validatePosition(container.position,`${basePath}.position`);
       for(let i=0;i<(container.interactionPorts||[]).length;i++)if(container.interactionPorts[i]?.position)validatePosition(container.interactionPorts[i].position,`${basePath}.interactionPorts[${i}].position`);
       if(container.supportId){

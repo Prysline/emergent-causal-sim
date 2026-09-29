@@ -116,6 +116,15 @@ function ensureAuthoringDependencies(paths){
   return paths;
 }
 
+function ensureRuntimeDependencies(paths){
+  ensureAuthoringDependencies(paths);
+  const consumerIndexes=['systems/physical.js','engine.js']
+    .map(path=>paths.indexOf(path))
+    .filter(index=>index>=0);
+  if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
+  return paths;
+}
+
 export function authoringProfilePaths(extra=[]){
   const paths=unique([...AUTHORING_PROFILE,...extra]);
   assertCurrentSources(paths);
@@ -129,7 +138,7 @@ export function spatialCoreProfilePaths(extra=[]){
 }
 
 export function runtimeProfilePaths(paths){
-  const current=ensureAuthoringDependencies(unique([...paths]));
+  const current=ensureRuntimeDependencies(unique([...paths]));
   assertCurrentSources(current);
   const engineIndex=current.indexOf('engine.js');
   if(engineIndex<0)throw new Error('Runtime test profile requires engine.js.');
@@ -143,7 +152,7 @@ export function runtimeProfilePaths(paths){
 }
 
 export function initialStateProfilePaths(paths){
-  const current=ensureAuthoringDependencies(unique([...paths]));
+  const current=ensureRuntimeDependencies(unique([...paths]));
   assertCurrentSources(current);
   if(current.includes('engine.js'))throw new Error('Initial-state profile must not load engine.js.');
   if(!current.includes('world.js'))throw new Error('Initial-state profile requires world.js.');

@@ -1,5 +1,5 @@
 (() => {
-  const V=window.SimValidator,P=window.SimPhysical;if(!V||!P?.getMovementEnvelope)return;
+  const V=window.SimValidator,P=window.SimPhysical,R=window.SimResources;if(!V||!P?.getMovementEnvelope||!R)return;
   const positive=v=>Number.isFinite(Number(v))&&Number(v)>0;
 
   function validateLayer(st,base){
@@ -9,6 +9,8 @@
       if(!p){add('physical_profile_missing',`${a.name} 缺少 authoritative Physical Profile。`,{agentId:a.id});continue;}
       if(!positive(p.mass))add('physical_mass_invalid',`${a.name} 的 mass 必須是正數。`,{agentId:a.id,mass:p.mass});
       if(!positive(p.volume))add('physical_volume_invalid',`${a.name} 的 volume 必須是正數。`,{agentId:a.id,volume:p.volume});
+      if(!Number.isInteger(p.manipulation?.handCapacity)||p.manipulation.handCapacity<0)add('physical_hand_capacity_invalid',`${a.name} 的 manipulation.handCapacity 必須是非負整數。`,{agentId:a.id,handCapacity:p.manipulation?.handCapacity});
+      if(a.held&&st.containers?.[a.held]&&!R.canHoldContainer(st,a,a.held))add('physical_held_container_hand_capacity_exceeded',`${a.name} 沒有足夠 handCapacity 持有 ${a.held}。`,{agentId:a.id,containerId:a.held});
       for(const key of ['height','width','length'])if(!positive(p.bodyGeometry?.[key]))add('physical_geometry_invalid',`${a.name} 的 bodyGeometry.${key} 必須是正數。`,{agentId:a.id,dimension:key,value:p.bodyGeometry?.[key]});
       if(Object.prototype.hasOwnProperty.call(p.locomotionCapabilities||{},'standing')||Object.prototype.hasOwnProperty.call(p.locomotionProfiles||{},'standing'))add('physical_legacy_standing_mode',`${a.name} 仍保存舊 standing locomotion mode；v11.17.0 起 locomotion baseline 為 walk，posture standing 與 locomotion mode 分離。`,{agentId:a.id});
       if(p.locomotionCapabilities?.walk!==true)add('physical_walk_capability_missing',`${a.name} 缺少 baseline walk locomotion capability。`,{agentId:a.id});
@@ -16,6 +18,7 @@
         const envelope=P.getMovementEnvelope(a,mode);
         if(!envelope){add('physical_locomotion_envelope_invalid',`${a.name} 無法推導 ${mode} MovementEnvelope。`,{agentId:a.id,mode});continue;}
         for(const key of ['clearanceHeight','clearanceWidth','clearanceLength','speedFactor'])if(!positive(envelope[key]))add('physical_envelope_invalid',`${a.name} 的 ${mode} MovementEnvelope.${key} 必須是正數。`,{agentId:a.id,mode,field:key,value:envelope[key]});
+        const supportHands=p.locomotionProfiles?.[mode]?.supportHandsRequired;if(!Number.isInteger(supportHands)||supportHands<0)add('physical_locomotion_support_hands_invalid',`${a.name} 的 ${mode} supportHandsRequired 必須是非負整數。`,{agentId:a.id,mode,supportHandsRequired:supportHands});
       }
       for(const [mode,enabled] of Object.entries(p.locomotionCapabilities||{}))if(enabled===true&&!p.locomotionProfiles?.[mode])add('physical_locomotion_profile_missing',`${a.name} 啟用了 ${mode} capability，但缺少同名 locomotion profile。`,{agentId:a.id,mode});
       for(const posture of ['standing','sitting','lying']){
@@ -28,8 +31,10 @@
       for(const family of ['step','climb','jump']){
         const capability=P.getSurfaceManeuverCapability?.(a,family);
         if(!capability||!positive(capability.maxUpHeight)||!positive(capability.maxDownHeight)||!positive(capability.maxHorizontalGap))add('physical_surface_maneuver_capability_invalid',`${a.name} 缺少合法 ${family} Surface maneuver capability。`,{agentId:a.id,family});
+        const supportHands=P.supportHandsRequiredForManeuver?.(a,family);if(!Number.isInteger(supportHands)||supportHands<0)add('physical_surface_maneuver_support_hands_invalid',`${a.name} 的 ${family} supportHandsRequired 必須是非負整數。`,{agentId:a.id,family,supportHandsRequired:supportHands});
       }
       if(Object.prototype.hasOwnProperty.call(p,'movementEnvelope'))add('physical_derived_envelope_persisted',`${a.name} 不應保存 derived movementEnvelope cache。`,{agentId:a.id});
+      if(Object.prototype.hasOwnProperty.call(p,'effectiveTraversalEnvelope'))add('physical_derived_carried_envelope_persisted',`${a.name} 不應保存 derived effectiveTraversalEnvelope cache。`,{agentId:a.id});
       if(Object.prototype.hasOwnProperty.call(p,'poseEnvelope'))add('physical_derived_pose_envelope_persisted',`${a.name} 不應保存 derived poseEnvelope cache。`,{agentId:a.id});
     }
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};

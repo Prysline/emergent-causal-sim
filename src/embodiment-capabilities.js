@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='embodiment-capabilities-v3';
+  const VERSION='embodiment-capabilities-v4';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const deepFreeze=value=>{
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
@@ -12,20 +12,22 @@
     human:{
       mass:70,
       volume:.07,
+      manipulation:{handCapacity:2},
       bodyGeometry:{height:1.65,width:.45,length:.30},
       locomotionCapabilities:{walk:true,kneelCrawl:true,proneCrawl:true},
       locomotionProfiles:{
-        walk:{heightFactor:1,widthFactor:1,lengthFactor:1,speedFactor:1},
-        kneelCrawl:{heightFactor:.55,widthFactor:1.15,lengthFactor:3,speedFactor:.55},
-        proneCrawl:{heightFactor:.30,widthFactor:1.10,lengthFactor:5,speedFactor:.35}
+        walk:{heightFactor:1,widthFactor:1,lengthFactor:1,speedFactor:1,supportHandsRequired:0},
+        kneelCrawl:{heightFactor:.55,widthFactor:1.15,lengthFactor:3,speedFactor:.55,supportHandsRequired:1},
+        proneCrawl:{heightFactor:.30,widthFactor:1.10,lengthFactor:5,speedFactor:.35,supportHandsRequired:1}
       }
     },
     cat:{
       mass:4.5,
       volume:.0045,
+      manipulation:{handCapacity:0},
       bodyGeometry:{height:.32,width:.18,length:.45},
       locomotionCapabilities:{walk:true},
-      locomotionProfiles:{walk:{heightFactor:1,widthFactor:1,lengthFactor:1,speedFactor:1}}
+      locomotionProfiles:{walk:{heightFactor:1,widthFactor:1,lengthFactor:1,speedFactor:1,supportHandsRequired:0}}
     }
   });
   const POSE_PROFILES=deepFreeze({
@@ -70,14 +72,14 @@
   });
   const SURFACE_MANEUVER_PROFILES=deepFreeze({
     human:{
-      step:{upHeightRatio:.30,downHeightRatio:.35,horizontalGapRatio:.25},
-      climb:{upHeightRatio:.60,downHeightRatio:.70,horizontalGapRatio:.50},
-      jump:{upHeightRatio:.40,downHeightRatio:.75,horizontalGapRatio:.60}
+      step:{upHeightRatio:.30,downHeightRatio:.35,horizontalGapRatio:.25,supportHandsRequired:0},
+      climb:{upHeightRatio:.60,downHeightRatio:.70,horizontalGapRatio:.50,supportHandsRequired:1},
+      jump:{upHeightRatio:.40,downHeightRatio:.75,horizontalGapRatio:.60,supportHandsRequired:0}
     },
     cat:{
-      step:{upHeightRatio:.20,downHeightRatio:.30,horizontalGapRatio:.20},
-      climb:{upHeightRatio:1.25,downHeightRatio:1.50,horizontalGapRatio:.75},
-      jump:{upHeightRatio:3.00,downHeightRatio:4.50,horizontalGapRatio:4.00}
+      step:{upHeightRatio:.20,downHeightRatio:.30,horizontalGapRatio:.20,supportHandsRequired:0},
+      climb:{upHeightRatio:1.25,downHeightRatio:1.50,horizontalGapRatio:.75,supportHandsRequired:1},
+      jump:{upHeightRatio:3.00,downHeightRatio:4.50,horizontalGapRatio:4.00,supportHandsRequired:0}
     }
   });
   const ALL_POSTURES=Object.freeze(['standing','sitting','lying','kneeling','prone']);

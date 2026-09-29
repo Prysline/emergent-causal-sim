@@ -11,7 +11,7 @@ const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.36.0-decision-evidence');
+assert.equal(st.version,'11.37.0-carried-container-feasibility');
 assert.equal(st.interactionModel,undefined);
 
 assert.equal(SP.nodeWalkable(st,floor(st,4,2),a),false,'reduced profile must still apply shared Human walk envelope to chair geometry');
@@ -52,7 +52,7 @@ assert.ok(hasNode(st,plateEat.positions,floor(st,6,4)),'plateB 應允許未被�
 assert.ok(!hasNode(st,plateEat.positions,floor(st,7,3)),'chairSE 佔用格不得被當成 Human floor contact');
 assert.ok(hasNode(st,plateEat.positions,table(st,6,3)),'plateB reach 應保留物件所在 tabletop node');
 
-st.containers.testCrate={id:'testCrate',name:'測試箱',portable:true,capacity:10,contents:{},position:{x:3,y:5},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}};
+st.containers.testCrate={id:'testCrate',name:'測試箱',portable:true,capacity:10,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:5},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}};
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'pickup').mode,'occupy');
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'drinkFrom').mode,'reach');
 delete st.containers.testCrate;

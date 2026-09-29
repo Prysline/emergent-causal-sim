@@ -18,7 +18,7 @@ const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
 assert.equal(D.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v7');
+assert.equal(A.VERSION,'world-authoring-v8');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
 
@@ -99,7 +99,7 @@ assert.throws(
   'resolver must reject missing orientation instead of silently assuming north'
 );
 
-// world-authoring-v7 requires orientation and round-trips its facing semantics.
+// world-authoring-v8 requires orientation and round-trips its facing semantics.
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   assert.deepEqual(
@@ -179,7 +179,7 @@ assert.throws(
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.entities.containers.syntheticPort={
-    id:'syntheticPort',name:'Port follower',portable:true,contents:{},
+    id:'syntheticPort',name:'Port follower',portable:true,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},
     position:local(5,2),supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:local(5,3),edge:'east'}]
   };

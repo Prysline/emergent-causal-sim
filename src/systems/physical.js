@@ -1,8 +1,9 @@
 (() => {
-  const W=window.SimWorld,C=window.SimEmbodimentCapabilities;if(!W)return;
+  const W=window.SimWorld,C=window.SimEmbodimentCapabilities,R=window.SimResources;if(!W)return;
+  if(!R?.getCarriedHandlingProfile||!R?.handCapacity)throw new Error('systems/physical.js requires systems/resources.js.');
   if(!C?.defaultPhysicalProfile||!C?.DEFAULT_PHYSICAL_PROFILES||!C?.getPoseEnvelopeForKind||!C?.getSupportFootprintForKind||!C?.surfaceManeuverProfileForKind||!C?.poseEnvelopeFitsUsableSpace)throw new Error('systems/physical.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/physical.js requires world.js initial-state pipeline.');
-  const VERSION='11.34.0-surface-traversal-maneuvers';
+  const VERSION='11.37.0-carried-container-feasibility';
 
   function defaultPhysicalProfile(kind){return C.defaultPhysicalProfile(kind);}
 
@@ -48,6 +49,36 @@
     if(![clearanceHeight,clearanceWidth,clearanceLength].every(finitePositive))return null;
     return {clearanceHeight,clearanceWidth,clearanceLength,speedFactor,sourceMode:mode};
   }
+  function getEffectiveTraversalEnvelope(st,agent,mode='walk'){
+    const body=getMovementEnvelope(agent,mode);
+    if(!body)return null;
+    const carried=R.getCarriedHandlingProfile(st,agent);
+    if(!carried)return {...body};
+    const geometry=carried.carryGeometry;
+    return {
+      ...body,
+      clearanceHeight:Math.max(body.clearanceHeight,geometry.height),
+      clearanceWidth:Math.max(body.clearanceWidth,geometry.width),
+      clearanceLength:Math.max(body.clearanceLength,geometry.length),
+      carriedContainerId:carried.containerId
+    };
+  }
+  function supportHandsRequiredForMode(agent,mode='walk'){
+    const value=Number(getLocomotionProfile(agent,mode)?.supportHandsRequired??0);
+    return Number.isInteger(value)&&value>=0?value:Infinity;
+  }
+  function supportHandsRequiredForManeuver(agent,family){
+    const value=Number(getSurfaceManeuverProfile(agent,family)?.supportHandsRequired??0);
+    return Number.isInteger(value)&&value>=0?value:Infinity;
+  }
+  function locomotionModeHandsFeasible(st,agent,mode='walk'){
+    const carried=R.getCarriedHandlingProfile(st,agent);
+    return !carried||R.handCapacity(agent)>=carried.handsRequired+supportHandsRequiredForMode(agent,mode);
+  }
+  function surfaceManeuverHandsFeasible(st,agent,family){
+    const carried=R.getCarriedHandlingProfile(st,agent);
+    return !carried||R.handCapacity(agent)>=carried.handsRequired+supportHandsRequiredForManeuver(agent,family);
+  }
   function getPoseEnvelope(agent,posture){
     const physical=getPhysicalProfile(agent);if(!physical)return null;
     return C.getPoseEnvelopeForKind(agent?.kind,physical.bodyGeometry,posture);
@@ -73,12 +104,13 @@
     if(![up,down,gap].every(finitePositive))return null;
     return {family,maxUpHeight:height*up,maxDownHeight:height*down,maxHorizontalGap:height*gap,ratios:{upHeightRatio:up,downHeightRatio:down,horizontalGapRatio:gap}};
   }
-  function surfaceManeuverScaleCandidates(agent,transition={}){
+  function surfaceManeuverScaleCandidates(agent,transition={},st=null){
     const verticalDelta=Number(transition.verticalDelta),horizontalGap=Number(transition.horizontalGap);
     if(!Number.isFinite(verticalDelta)||!Number.isFinite(horizontalGap)||horizontalGap<0)return[];
     const EPS=1e-9,direction=verticalDelta>EPS?'up':verticalDelta<-EPS?'down':'level',heightDelta=Math.abs(verticalDelta),out=[];
     for(const family of ['step','climb','jump']){
       const capability=getSurfaceManeuverCapability(agent,family);if(!capability)continue;
+      if(st&&!surfaceManeuverHandsFeasible(st,agent,family))continue;
       const maxHeight=direction==='up'?capability.maxUpHeight:direction==='down'?capability.maxDownHeight:0;
       if(direction!=='level'&&heightDelta>maxHeight+EPS)continue;
       if(horizontalGap>capability.maxHorizontalGap+EPS)continue;
@@ -89,7 +121,7 @@
   }
   function requiredClearance(agent,mode='walk'){return getMovementEnvelope(agent,mode)?.clearanceHeight??null;}
 
-  Object.assign(P,{VERSION,getPhysicalProfile,getLocomotionProfile,supportedLocomotionModes,getMovementEnvelope,getPoseEnvelope,poseEnvelopeFits,agentPoseFitsUsableSpace,getSupportFootprint,getSurfaceManeuverProfile,getSurfaceManeuverCapability,surfaceManeuverScaleCandidates,requiredClearance});
+  Object.assign(P,{VERSION,getPhysicalProfile,getLocomotionProfile,supportedLocomotionModes,getMovementEnvelope,getEffectiveTraversalEnvelope,supportHandsRequiredForMode,supportHandsRequiredForManeuver,locomotionModeHandsFeasible,surfaceManeuverHandsFeasible,getPoseEnvelope,poseEnvelopeFits,agentPoseFitsUsableSpace,getSupportFootprint,getSurfaceManeuverProfile,getSurfaceManeuverCapability,surfaceManeuverScaleCandidates,requiredClearance});
   window.SimPhysical=P;
   W.PHYSICAL_RUNTIME_VERSION=VERSION;
 })();

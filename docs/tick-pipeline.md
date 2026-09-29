@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.36.0-decision-evidence`。
+目前 runtime marker：`11.37.0-carried-container-feasibility`。
 
+> `11.37.0-carried-container-feasibility` 只新增 carried Container 的同步 Resources / Physical / Passage / Route feasibility contract，沒有新增、刪除或重新排序 simulation runtime hooks；Locomotion execution lifecycle 與 same-tick visibility 保持不變。
+>
 > `11.36.0-decision-evidence` 新增 afterTick 850 `deliberation.finalize-decision-evidence`：initial core choice 必須等 800 Memory→Deliberation correction 完成後才把 selected structured contributors freeze 成 Agent-private adopted Decision Evidence。這個 order 是 simulation semantics；850 前仍可能改 final initial Action / target，850 後 Presentation只能讀 frozen evidence，不能重新計算歷史原因。Social Outcome 900 仍在其後處理 requester-private outcome，因此不會回頭改寫本 tick 已採納的 Decision Evidence。
 >
 > `11.35.2-presentation-event-truth` 只修正 canonical event readable wording 與 Presentation-owned timeline summary classification：summary 改讀 structured event metadata，不再 reverse-parse `event.text`；**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**，也不改 Social Bid、wake、Memory、Affect、Relationship 或 same-tick visibility。

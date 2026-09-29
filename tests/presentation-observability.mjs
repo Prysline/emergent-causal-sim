@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.36.0-decision-evidence';
+const CURRENT_VERSION='11.37.0-carried-container-feasibility';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
-const ROUTE_VERSION='11.34.0-surface-traversal-maneuvers';
+const ROUTE_VERSION='11.37.0-carried-container-feasibility';
 const PHYSICAL_VERSION='11.34.0-surface-traversal-maneuvers';
 const PASSAGE_VERSION='11.34.0-surface-traversal-maneuvers';
 const files=[

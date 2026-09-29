@@ -1,5 +1,5 @@
 {
-  "authoringSchema": "world-authoring-v7",
+  "authoringSchema": "world-authoring-v8",
   "doors": {
     "frontDoor": {
       "boundary": {
@@ -34,7 +34,15 @@
         "roles": [
           "drinkSource"
         ],
-        "supportId": "diningTable"
+        "supportId": "diningTable",
+        "handling": {
+          "carryGeometry": {
+            "width": 0.1,
+            "height": 0.3,
+            "length": 0.1
+          },
+          "handsRequired": 1
+        }
       },
       "basket": {
         "capacity": 55,
@@ -65,7 +73,15 @@
         ],
         "transportResources": [
           "food"
-        ]
+        ],
+        "handling": {
+          "carryGeometry": {
+            "width": 0.55,
+            "height": 0.3,
+            "length": 0.4
+          },
+          "handsRequired": 2
+        }
       },
       "cupA": {
         "canDrinkFrom": true,
@@ -87,7 +103,15 @@
         "roles": [
           "drinkVessel"
         ],
-        "supportId": "diningTable"
+        "supportId": "diningTable",
+        "handling": {
+          "carryGeometry": {
+            "width": 0.1,
+            "height": 0.12,
+            "length": 0.1
+          },
+          "handsRequired": 1
+        }
       },
       "cupB": {
         "canDrinkFrom": true,
@@ -107,7 +131,15 @@
         "roles": [
           "drinkVessel"
         ],
-        "supportId": "diningTable"
+        "supportId": "diningTable",
+        "handling": {
+          "carryGeometry": {
+            "width": 0.1,
+            "height": 0.12,
+            "length": 0.1
+          },
+          "handsRequired": 1
+        }
       },
       "foodPantry": {
         "access": 1,
@@ -191,7 +223,15 @@
           "servingDish"
         ],
         "servingDish": true,
-        "supportId": "diningTable"
+        "supportId": "diningTable",
+        "handling": {
+          "carryGeometry": {
+            "width": 0.3,
+            "height": 0.05,
+            "length": 0.3
+          },
+          "handsRequired": 1
+        }
       },
       "plateB": {
         "canEatFrom": true,
@@ -216,7 +256,15 @@
           "servingDish"
         ],
         "servingDish": true,
-        "supportId": "diningTable"
+        "supportId": "diningTable",
+        "handling": {
+          "carryGeometry": {
+            "width": 0.3,
+            "height": 0.05,
+            "length": 0.3
+          },
+          "handsRequired": 1
+        }
       },
       "waterBucket": {
         "access": 1,
@@ -255,7 +303,15 @@
           "waterReserve",
           "refillable",
           "drinkSource"
-        ]
+        ],
+        "handling": {
+          "carryGeometry": {
+            "width": 0.32,
+            "height": 0.35,
+            "length": 0.32
+          },
+          "handsRequired": 1
+        }
       }
     },
     "sources": {

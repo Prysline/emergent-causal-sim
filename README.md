@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.36.0・Decision evidence**（`11.36.0-decision-evidence`）。
+目前 runtime marker：**v11.37.0・Carried container feasibility**（`11.37.0-carried-container-feasibility`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -72,6 +72,7 @@
 - initial `system + phase:'plan'` event 是 private-cognition provisional record；同 tick Memory→Deliberation correction 只會 normalization 同一筆明確標記的 provisional plan，不新增第二筆 correction event。
 - decision-option provider extension point，subsystem 可提出 candidate，但仍由 core chooser 與其他需求共同競爭。
 - adopted Decision Evidence 由 Deliberation final-adoption 邊界持有：Agent-private `decisionEvidence` 是目前 adopted concrete Action 的 structured contributor snapshot，Action 只保存 `decisionId` 引用；`state.thoughts` 仍只是 Recent Decision / candidate snapshot。Initial decision 必須等 Memory→Deliberation correction 完成後才 finalize；soft reconsideration、emergency 與 hard replan 各自建立新的 decision identity。
+- carried Container feasibility 由 Resources / Physical / Passage 維持單一 truth：`Agent.held` 仍是唯一 held relation；portable Container author `carryGeometry / handsRequired`，Resources 派生 carried profile / load，Physical 保持 body-only `MovementEnvelope` 並派生 effective traversal envelope；Passage / Route 使用相同 geometry 與 `handCapacity >= handsRequired + supportHandsRequired`。Planning 不產生 spill/drop。
 - 動物互動使用 canonical `interactWithAnimal` Intent 與 `petAnimal` Action；目前可撫摸目標由 species profile / affordance 判斷，不依 Cat / Dog 等物種名稱拆分平行 Action。
 
 ### Social agency

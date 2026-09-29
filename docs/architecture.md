@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.36.0-decision-evidence`。
+目前 runtime marker：`11.37.0-carried-container-feasibility`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -652,6 +652,18 @@ Furniture Definition solid top eligibility
 - floor ↔ Surface transition 的高度差、水平 gap 與 support-region edge facts 由 Passage 擁有；Physical 依個體 body height × maneuver profile 產生 `step / climb / jump` 候選，上／下方向分開，同一 geometry 可以同時有多個候選。
 - Locomotion 是 maneuver choice、timing、burden 與 execution owner。current baseline 把既有 Human / Cat Surface burden 校準搬到 Locomotion，沒有虛構新的 family-specific timing；Route 把選中的 exact `surfaceManeuver` 放進 route step，Engine pending movement 驗證並執行同一 identity。
 - Contact 不因 Traversal Surface 泛化而改寫自己的 occlusion truth；Surface Environment / liquid 與 `supportId` object resolver 都引用 canonical derived Surface。World Authoring Instance shape 維持 v7；本 slice 不加入 continuous local position、multi-agent / multi-Slot Surface occupancy、turn clearance、sideways traversal或 persistent / cross-tick route cache。
+
+### Carried Container physical feasibility
+
+v11.37.0 建立 carried physical feasibility contract：
+
+- `Agent.held` 仍是唯一 canonical held relation；不得建立 `Agent.carrying` mirror。
+- portable Container 的 `handling.carryGeometry / handsRequired` 由 World Authoring / Resources 持有；contents-derived load 由 Resources canonical formula 派生。
+- `SimPhysical.getMovementEnvelope(agent, mode)` 保持 body-only；`getEffectiveTraversalEnvelope(state, agent, mode)` 才合成 current held Container 的 carried envelope，不回寫 bodyGeometry 或 persistent cache。
+- hand feasibility 使用總需求 `handCapacity >= handsRequired + supportHandsRequired`。Human current handCapacity = 2；crawl / climb 可要求 support hand，但「拿著任何東西」不構成 blanket ban。
+- Passage endpoint fit、clearance 與 Surface maneuver 消費同一份 carried geometry / hand feasibility；Route 因此自然避開 carried-infeasible edge。
+- Crowding 仍只讀 body MovementEnvelope；Locomotion execution/timing 沒有改語意，維持 `11.34.0-surface-traversal-maneuvers`。
+- Slice A 不實作 HandlingRisk、`tilt / impact / oscillation` calibration、spill/drop consequence。
 
 ### Physical Profile + Passage Profile / Multi-mode Feasibility
 

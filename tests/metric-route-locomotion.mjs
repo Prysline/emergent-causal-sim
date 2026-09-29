@@ -30,8 +30,8 @@ function resetOpenGrid(){
   return {st,human,start:floor(st,1,1),middle:floor(st,2,2),goal:floor(st,3,3)};
 }
 
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(SP.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(L.VERSION,'11.34.0-surface-traversal-maneuvers');
 
 {

@@ -32,7 +32,7 @@ const goal=SP.normalizeNode(st,{x:5,y:3},'floor');
 const shortest=SP.planRoute(st,actor,goal,{mode:'walk',objective:'pathDistance'});
 const easiest=SP.planRoute(st,actor,goal,{mode:'walk',objective:'traversalCost'});
 
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(shortest.pathDistance,4,'cardinal-only compatibility profile should still report four meters');
 assert.equal(shortest.stepCount,4);
 assert.equal(shortest.travelTime,4,'current executable travel time is one tick per selected walk edge');
