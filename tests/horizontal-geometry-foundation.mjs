@@ -11,6 +11,10 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const EPS=1e-9;
 
 assert.equal(H.VERSION,'11.29.0-horizontal-geometry-foundation');
+assert.equal(H.clearanceOptionFits({clearanceHeight:1.65,clearanceWidth:.45},{clearanceHeight:2,clearanceWidth:.5}),true,'shared clearance-option helper must accept an envelope that fits both axes');
+assert.equal(H.clearanceOptionFits({clearanceHeight:1.65,clearanceWidth:.55},{clearanceHeight:2,clearanceWidth:.5}),false,'shared clearance-option helper must reject width overflow');
+assert.equal(H.clearanceOptionFits({clearanceHeight:2.1,clearanceWidth:.45},{clearanceHeight:2,clearanceWidth:.5}),false,'shared clearance-option helper must reject height overflow');
+assert.equal(H.clearanceOptionFits({clearanceHeight:.32,clearanceWidth:.18},{clearanceHeight:null,clearanceWidth:null}),true,'null clearance remains unconstrained');
 
 function snapshot({solids=[],boundaries={},passageConstraints={}}={}){
   const cells={};
