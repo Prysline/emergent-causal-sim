@@ -175,7 +175,7 @@
     if(!slot?.position)return[];
     const anchor={x:slot.position.x,y:slot.position.y,z:zOf(slot.position)},topology=topologyFor(authoring,anchor.z,cache),cell=topology.cells[cellKey(anchor)],out=new Map();
     const envelope=defaultWalkEnvelope(kind);
-    if(cell?.open&&envelope&&D.envelopeFitsTile(authoredFurnitureSolids(authoring,anchor.z),anchor.x,anchor.y,anchor.z,envelope.clearanceHeight,envelope.clearanceWidth)){
+    if(cell?.open&&envelope&&D.envelopeFitsTile(authoredFurnitureSolids(authoring,anchor.z,cache),anchor.x,anchor.y,anchor.z,envelope.clearanceHeight,envelope.clearanceWidth)){
       for(const edge of slot.approachEdges||[])if((cell.floorGeometry?.edgeIntervals?.[edge]||[]).length){out.set(posKey(anchor),anchor);break;}
     }
     for(const edge of slot.approachEdges||[]){
