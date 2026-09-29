@@ -119,7 +119,7 @@ assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial m
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
 assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
 const routeSource=fs.readFileSync(new URL('../src/spatial-traversal.js',import.meta.url),'utf8');
-assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.34\.0-surface-traversal-maneuvers'/,'Spatial must expose the current Surface traversal Route Semantics contract marker');
+assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.37\.0-carried-container-feasibility'/,'Spatial must expose the current carried-container Route Semantics contract marker');
 assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expose canonical planRoute');
 assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
 assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must keep pathDistance distinct from traversalCost');
