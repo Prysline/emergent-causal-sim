@@ -1,6 +1,6 @@
 (() => {
-  const A=window.SimWorldAuthoring,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;
-  if(!A?.DEFAULT_WORLD_AUTHORING||!D?.analyzeFloorTile||!D?.envelopeFitsTile)throw new Error('SimWorldAuthoring / SimFurnitureDefinitions must load before world-initializer.js.');
+  const A=window.SimWorldAuthoring,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities,H=window.SimHorizontalGeometry;
+  if(!A?.DEFAULT_WORLD_AUTHORING||!D?.analyzeFloorTile||!D?.envelopeFitsTile||!H?.clearanceOptionFits)throw new Error('SimWorldAuthoring / SimFurnitureDefinitions / SimHorizontalGeometry must load before world-initializer.js.');
   if(!C?.ALL_POSTURES||!C?.defaultPhysicalProfile||!C?.getPoseEnvelopeForKind||!C?.poseEnvelopeFitsUsableSpace)throw new Error('SimEmbodimentCapabilities must load before world-initializer.js.');
   const clone=value=>JSON.parse(JSON.stringify(value));
   const POSTURES=new Set(C.ALL_POSTURES);
@@ -149,8 +149,12 @@
 
   function issue(code,message,data={}){return {code,message,...data};}
 
-  function authoredFurnitureSolids(authoring,z){
-    return Object.values(authoring.furniture||{}).flatMap(instance=>A.resolveFurnitureInstance(instance).spatial?.solids||[]).filter(solid=>solid.layerZ===z);
+  function authoredFurnitureSolids(authoring,z,cache=null){
+    const cacheKey='furniture-solids:'+z;
+    if(cache?.has(cacheKey))return cache.get(cacheKey);
+    const solids=Object.values(authoring.furniture||{}).flatMap(instance=>A.resolveFurnitureInstance(instance).spatial?.solids||[]).filter(solid=>solid.layerZ===z);
+    if(cache)cache.set(cacheKey,solids);
+    return solids;
   }
   function defaultWalkEnvelope(kind){
     const physical=C.defaultPhysicalProfile(kind),profile=physical?.locomotionProfiles?.walk,body=physical?.bodyGeometry;
@@ -164,14 +168,14 @@
     const topology=topologyFor(authoring,zOf(p),cache),cell=topology.cells[cellKey(p)];
     if(!cell?.open)return false;
     const envelope=defaultWalkEnvelope(kind);if(!envelope)return true;
-    return D.envelopeFitsTile(authoredFurnitureSolids(authoring,zOf(p)),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth);
+    return D.envelopeFitsTile(authoredFurnitureSolids(authoring,zOf(p),cache),p.x,p.y,zOf(p),envelope.clearanceHeight,envelope.clearanceWidth);
   }
   const APPROACH_DELTA=Object.freeze({north:[0,-1],east:[1,0],south:[0,1],west:[-1,0]});
   function slotApproachPositions(authoring,slot,kind,cache=null){
     if(!slot?.position)return[];
     const anchor={x:slot.position.x,y:slot.position.y,z:zOf(slot.position)},topology=topologyFor(authoring,anchor.z,cache),cell=topology.cells[cellKey(anchor)],out=new Map();
     const envelope=defaultWalkEnvelope(kind);
-    if(cell?.open&&envelope&&D.envelopeFitsTile(authoredFurnitureSolids(authoring,anchor.z),anchor.x,anchor.y,anchor.z,envelope.clearanceHeight,envelope.clearanceWidth)){
+    if(cell?.open&&envelope&&D.envelopeFitsTile(authoredFurnitureSolids(authoring,anchor.z,cache),anchor.x,anchor.y,anchor.z,envelope.clearanceHeight,envelope.clearanceWidth)){
       for(const edge of slot.approachEdges||[])if((cell.floorGeometry?.edgeIntervals?.[edge]||[]).length){out.set(posKey(anchor),anchor);break;}
     }
     for(const edge of slot.approachEdges||[]){
@@ -350,14 +354,35 @@
     }
     return out;
   }
-  function reachableKeys(authoring,start,cache=null){
+  function horizontalWalkNeighborPositions(authoring,p,kind,cache=null){
+    const envelope=defaultWalkEnvelope(kind),topology=topologyFor(authoring,zOf(p),cache),out=[];
+    if(!envelope||!authoredWalkFits(authoring,p,kind,cache))return out;
+    for(const connection of topology.horizontalConnections||[]){
+      if(connection.status!=='candidate')continue;
+      let q=null;
+      if(sameAuthoredPos(connection.from,p))q=connection.to;
+      else if(sameAuthoredPos(connection.to,p))q=connection.from;
+      if(!q||!authoredWalkFits(authoring,q,kind,cache))continue;
+      if(!(connection.options||[]).some(option=>H.clearanceOptionFits(envelope,option)))continue;
+      out.push({x:q.x,y:q.y,z:zOf(q)});
+    }
+    return out;
+  }
+  function residentNeighborPositions(authoring,p,kind,cache=null){
+    const out=new Map(horizontalWalkNeighborPositions(authoring,p,kind,cache).map(q=>[posKey(q),q]));
+    for(const q of structureConnectionIndex(authoring,cache).get(posKey(p))||[]){
+      if(authoredWalkFits(authoring,q,kind,cache))out.set(posKey(q),{x:q.x,y:q.y,z:q.z});
+    }
+    return [...out.values()];
+  }
+  function reachableKeys(authoring,start,kind,cache=null){
     const seen=new Set(),z=zOf(start);
-    if(!start||!baseWalkable(authoring,start,cache))return seen;
+    if(!start||!authoredWalkFits(authoring,start,kind,cache))return seen;
     const queue=[{x:start.x,y:start.y,z}];
     seen.add(posKey(start));
     while(queue.length){
       const cur=queue.shift();
-      for(const q of neighborPositions(authoring,cur,cache)){
+      for(const q of residentNeighborPositions(authoring,cur,kind,cache)){
         const k=posKey(q);
         if(!seen.has(k)){seen.add(k);queue.push(q);}
       }
@@ -413,7 +438,7 @@
   function analyzeInitialPlacements(authoring){
     runtimeLayers(authoring);
     const topologyCache=new Map();
-    const hardErrors=[],diagnostics=[],resolvedPlacements={},index=slotIndex(authoring);
+    const hardErrors=[],diagnostics=[],resolvedPlacements={},reachabilityByResident={},index=slotIndex(authoring);
     const residentIds=Object.keys(authoring.residents||{}).sort();
     for(const residentId of residentIds){
       const resolved=resolveResidentPlacement(authoring,index,residentId,authoring.residents[residentId],hardErrors);
@@ -448,24 +473,31 @@
       if(!resolved)continue;
       const entry=authoring.residents[residentId];
       const starts=resolved.slotId?slotApproachPositions(authoring,index.get(resolved.slotId)?.[0],entry.kind,topologyCache):[resolved.position];
-      const reachable=new Set();
-      for(const start of starts)for(const key of reachableKeys(authoring,start,topologyCache))reachable.add(key);
+      const reachable=new Set(),targetsByType={};
+      for(const start of starts)for(const key of reachableKeys(authoring,start,entry.kind,topologyCache))reachable.add(key);
       for(const [type,code,label] of [
         ['exit','initial_no_exit_route','出口'],
         ['food','initial_food_unreachable','食物'],
         ['water','initial_water_unreachable','飲水'],
         ['sleep','initial_sleep_unreachable','可睡眠位置']
       ]){
-        const targets=accessTargets(authoring,entry.kind,type,topologyCache);
+        const targets=accessTargets(authoring,entry.kind,type,topologyCache),targetReachable=targets.some(p=>reachable.has(posKey(p)));
+        targetsByType[type]={available:targets.length,reachable:targets.length?targetReachable:null};
         if(!targets.length){
           if(type!=='exit')diagnostics.push(issue(`initial_${type}_unavailable`,`${residentId} 的 authored world沒有可用${label} target。`,{residentId}));
           continue;
         }
-        if(!targets.some(p=>reachable.has(posKey(p))))diagnostics.push(issue(code,`${residentId} 從初始位置 ${posKey(resolved.position)} 無法經 base authored floor connectivity 到達${label}。`,{residentId,position:posKey(resolved.position)}));
+        if(!targetReachable)diagnostics.push(issue(code,`${residentId} 從初始位置 ${posKey(resolved.position)} 無法以 ${entry.kind} default-walk 可達性到達${label}。`,{residentId,position:posKey(resolved.position),kind:entry.kind,mode:'walk'}));
       }
+      reachabilityByResident[residentId]={
+        residentId,kind:entry.kind,mode:'walk',
+        startPositions:clone(starts),
+        reachableKeys:[...reachable].sort(),
+        targets:targetsByType
+      };
     }
 
-    return {ok:hardErrors.length===0,hardErrors,diagnostics,resolvedPlacements};
+    return {ok:hardErrors.length===0,hardErrors,diagnostics,resolvedPlacements,reachabilityByResident};
   }
 
   function assertInitialPlacements(authoring){
@@ -489,7 +521,8 @@
         stage:'runtime',
         hardErrors:clone(placement.hardErrors),
         diagnostics:clone(placement.diagnostics),
-        resolvedPlacements:clone(placement.resolvedPlacements)
+        resolvedPlacements:clone(placement.resolvedPlacements),
+        reachabilityByResident:clone(placement.reachabilityByResident)
       };
     }catch(error){
       return {ok:false,stage:'runtime',hardErrors:[issue(error.code||'runtime_authoring_incompatible',error.message||String(error))],diagnostics:[]};

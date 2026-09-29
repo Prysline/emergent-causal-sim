@@ -32,14 +32,15 @@
       return {ok:false,stage:'schema',issues:[issue(error.code||'preview_authoring_invalid',error.message||String(error))],diagnostics:[]};
     }
     const report=I.analyzeRuntimeCompatibility(canonical);
-    if(!report.ok)return {ok:false,stage:report.stage||'runtime',issues:clone(report.hardErrors||[]),diagnostics:clone(report.diagnostics||[])};
+    if(!report.ok)return {ok:false,stage:report.stage||'runtime',issues:clone(report.hardErrors||[]),diagnostics:clone(report.diagnostics||[]),reachabilityByResident:clone(report.reachabilityByResident||{})};
     return {
       ok:true,
       stage:'ready',
       authoring:canonical,
       fingerprint:A.semanticFingerprint(canonical),
       issues:[],
-      diagnostics:clone(report.diagnostics||[])
+      diagnostics:clone(report.diagnostics||[]),
+      reachabilityByResident:clone(report.reachabilityByResident||{})
     };
   }
 

@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getEffectiveTraversalEnvelope||!P?.locomotionModeHandsFeasible||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry)return;
+  const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getEffectiveTraversalEnvelope||!P?.locomotionModeHandsFeasible||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry||!H?.clearanceOptionFits)return;
   const VERSION='11.37.0-carried-container-feasibility';
   const FLOOR='floor',EPS=1e-9;
   const finitePositive=v=>Number.isFinite(Number(v))&&Number(v)>0;
@@ -172,12 +172,7 @@
     if(passage.edgeKind==='horizontal'&&a.surfaceId===FLOOR&&b.surfaceId===FLOOR&&passage.horizontalConnection&&passage.status!=='candidate')return false;
     return true;
   }
-  function optionFits(envelope,option){
-    if(!envelope||!option)return false;
-    if(option.clearanceHeight!==null&&envelope.clearanceHeight>option.clearanceHeight+EPS)return false;
-    if(option.clearanceWidth!==null&&envelope.clearanceWidth>option.clearanceWidth+EPS)return false;
-    return true;
-  }
+  function optionFits(envelope,option){return H.clearanceOptionFits(envelope,option);}
   function endpointFits(st,node,agent,mode,envelope){
     const n=SP.normalizeNode(st,node);if(!n)return false;
     return n.surfaceId===FLOOR?(SP.floorNodeFitsMode?.(st,n,agent,mode,envelope)??SP.nodeWalkable(st,n,agent)):(SP.surfaceNodeFitsMode?.(st,n,agent,mode,envelope)??SP.nodeWalkable(st,n,agent));

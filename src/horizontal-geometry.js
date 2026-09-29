@@ -9,6 +9,15 @@
   const clone=value=>JSON.parse(JSON.stringify(value));
   const finitePositive=value=>Number.isFinite(Number(value))&&Number(value)>0;
   const constrained=value=>finitePositive(value)?Number(value):null;
+  function clearanceOptionFits(envelope,option){
+    if(!envelope||!option)return false;
+    const height=Number(envelope.clearanceHeight),width=Number(envelope.clearanceWidth);
+    if(!finitePositive(height)||!finitePositive(width))return false;
+    const heightCap=constrained(option.clearanceHeight),widthCap=constrained(option.clearanceWidth);
+    if(heightCap!==null&&height>heightCap+EPS)return false;
+    if(widthCap!==null&&width>widthCap+EPS)return false;
+    return true;
+  }
   const zOf=p=>p?.z??0;
   const cellId=p=>p?`${p.x},${p.y}`:'?';
   const endpointKey=p=>zOf(p)===0?`${p.x},${p.y}`:`${p.x},${p.y},${zOf(p)}`;
@@ -284,6 +293,7 @@
     canonicalEndpoints,
     pairKey,
     boundaryIdBetween,
+    clearanceOptionFits,
     deriveHorizontalGeometry
   });
 })();
