@@ -11,7 +11,7 @@ const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.35.2-presentation-event-truth');
+assert.equal(st.version,'11.36.0-decision-evidence');
 assert.equal(st.interactionModel,undefined);
 
 assert.equal(SP.nodeWalkable(st,floor(st,4,2),a),false,'reduced profile must still apply shared Human walk envelope to chair geometry');

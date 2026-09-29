@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.35.2-presentation-event-truth';
+const APP_VERSION='11.36.0-decision-evidence';
 const PHYSICAL_VERSION='11.34.0-surface-traversal-maneuvers';
 const PASSAGE_VERSION='11.34.0-surface-traversal-maneuvers';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;

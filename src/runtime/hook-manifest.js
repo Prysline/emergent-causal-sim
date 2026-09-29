@@ -23,6 +23,7 @@
       {id:'socialResponse.resolve-pet-offers',order:600},
       {id:'humanSocial.resolve',order:700},
       {id:'memoryDeliberation.correct-initial',order:800},
+      {id:'deliberation.finalize-decision-evidence',order:850},
       {id:'socialOutcome.process',order:900}
     ],
     afterReset:[

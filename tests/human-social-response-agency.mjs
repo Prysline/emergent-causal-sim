@@ -41,7 +41,7 @@ assert.ok(E.talkEngagementScore(responder)<scoreBefore,'negative responder Affec
 responder.affect=neutral;noIssues('response bands');
 
 armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
-assert.equal(st.version,'11.35.2-presentation-event-truth');
+assert.equal(st.version,'11.36.0-decision-evidence');
 const engageOffer=eventBy(e=>e.data?.action==='talkOffer'),accept=eventBy(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer?.id),talk=eventBy(e=>e.data?.action==='talk'&&e.data?.talkOfferId===engageOffer?.id);
 assert.ok(engageOffer?.data?.socialBid);assert.ok(accept);assert.ok(talk);
 assert.equal(talk.data.talkResponseEventId,accept.id);assert.equal(talk.data.talkResponse,'engage');assert.equal(Object.hasOwn(talk.data,'responseToBid'),false,'full talk is an outcome, not a second responder event');

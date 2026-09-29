@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.35.2-presentation-event-truth`。
+目前 runtime marker：`11.36.0-decision-evidence`。
 
+> `11.36.0-decision-evidence` 新增 afterTick 850 `deliberation.finalize-decision-evidence`：initial core choice 必須等 800 Memory→Deliberation correction 完成後才把 selected structured contributors freeze 成 Agent-private adopted Decision Evidence。這個 order 是 simulation semantics；850 前仍可能改 final initial Action / target，850 後 Presentation只能讀 frozen evidence，不能重新計算歷史原因。Social Outcome 900 仍在其後處理 requester-private outcome，因此不會回頭改寫本 tick 已採納的 Decision Evidence。
+>
 > `11.35.2-presentation-event-truth` 只修正 canonical event readable wording 與 Presentation-owned timeline summary classification：summary 改讀 structured event metadata，不再 reverse-parse `event.text`；**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**，也不改 Social Bid、wake、Memory、Affect、Relationship 或 same-tick visibility。
 >
 > `11.35.1-presentation-projection-correctness` 只修正 Presentation projection correctness：canonical release label、posture projection、retired Debug truth、Tile base-blocker wording與 stale Inspector hint；**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**，也不改 same-tick visibility。
@@ -55,7 +57,8 @@ flowchart TD
     A500 --> A600[600 Social Response Resolve]
     A600 --> A700[700 Human Social Resolve]
     A700 --> A800[800 Memory-to-Deliberation Correction]
-    A800 --> A900[900 Private Social Outcome Process]
+    A800 --> A850[850 Adopted Decision Evidence Finalization]
+    A850 --> A900[900 Private Social Outcome Process]
     A900 --> SIMEND[simulation afterTick complete]
     SIMEND -. Presentation observer lifecycle .-> O1000[1000 Mobile Summary Render]
     O1000 --> O1100[1100 Resident View Schedule]
@@ -111,6 +114,7 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 600 | `socialResponse.resolve-pet-offers` | Social Response | settle captured response interaction，建立對應 world events | 非 core-loop event 經 event-created consumer 同步形成 Memory/Appraisal/Relationship/Affect；hook ID 只是目前 implementation owner |
 | 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見 |
 | 800 | `memoryDeliberation.correct-initial` | Memory → Deliberation | 修正本 tick core 初始 social target / utility choice | 因此 600/700 的 psychological update 若延後到 800 之後會改變現況 |
+| 850 | `deliberation.finalize-decision-evidence` | Deliberation | 將 correction 後仍存活的 initial Action 與 selected structured contributors freeze 成 adopted Decision Evidence | 必須晚於 800，否則會把 provisional target誤標成 final；Presentation只能在此之後讀取 final evidence |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
 
 Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前，afterTick schedule 不變。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
@@ -216,6 +220,7 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 8. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
 9. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
 10. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
+11. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
 
 這些變更都應同步更新：
 

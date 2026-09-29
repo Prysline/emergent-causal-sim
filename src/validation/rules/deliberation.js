@@ -5,7 +5,18 @@
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     for(const a of Object.values(st?.agents||{})){
       if(Object.prototype.hasOwnProperty.call(a,'commitmentCost')||Object.prototype.hasOwnProperty.call(a,'currentUtility'))add('derived_deliberation_state_persisted',`${a.name} 不應保存 commitment / utility 的 persistent mirror。`,{agentId:a.id});
-      const intent=a.activeIntent;
+      const intent=a.activeIntent,evidence=a.decisionEvidence,action=a.action;
+      if(evidence!=null){
+        if(typeof evidence.id!=='string'||!evidence.id.startsWith(`decision:${a.id}:`))add('decision_evidence_id_invalid',`${a.name} 的 Decision Evidence ID 無效。`,{agentId:a.id,decisionId:evidence.id});
+        if(!Number.isInteger(evidence.sequence)||evidence.sequence<1)add('decision_evidence_sequence_invalid',`${a.name} 的 Decision Evidence sequence 無效。`,{agentId:a.id,sequence:evidence.sequence});
+        if(!Number.isInteger(evidence.adoptedTick)||evidence.adoptedTick<0||evidence.adoptedTick>st.tick)add('decision_evidence_tick_invalid',`${a.name} 的 Decision Evidence adoptedTick 無效。`,{agentId:a.id,adoptedTick:evidence.adoptedTick});
+        if(!evidence.action?.kind||!Number.isInteger(evidence.action?.started))add('decision_evidence_action_context_missing',`${a.name} 的 Decision Evidence 缺少 Action context。`,{agentId:a.id,decisionId:evidence.id});
+        if(!Array.isArray(evidence.contributors))add('decision_evidence_contributors_invalid',`${a.name} 的 Decision Evidence contributors 必須是 array。`,{agentId:a.id,decisionId:evidence.id});
+      }
+      if(action?.decisionId){
+        if(!evidence||evidence.id!==action.decisionId)add('action_decision_link_missing',`${a.name} 的 Action decisionId 沒有對應目前 Decision Evidence。`,{agentId:a.id,decisionId:action.decisionId});
+        else if(typeof E.decisionEvidenceMatchesAction==='function'&&!E.decisionEvidenceMatchesAction(a))add('action_decision_context_mismatch',`${a.name} 的 Action 與 Decision Evidence context 不一致。`,{agentId:a.id,decisionId:action.decisionId});
+      }
       if(intent&&(Object.prototype.hasOwnProperty.call(intent,'commitmentCost')||Object.prototype.hasOwnProperty.call(intent,'currentUtility')))add('derived_intent_deliberation_state_persisted',`${a.name} 的 Active Intent 不應保存 derived commitment / utility。`,{agentId:a.id,intentId:intent.id});
       if(intent?.source?.type==='softReconsideration'){
         if(!Number.isInteger(intent.source.tick)||intent.source.tick<0||intent.source.tick>st.tick)add('soft_intent_tick_invalid',`${a.name} 的 soft reconsideration tick 無效。`,{agentId:a.id,intentId:intent.id,tick:intent.source.tick});

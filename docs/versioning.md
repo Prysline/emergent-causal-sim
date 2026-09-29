@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.35.2-presentation-event-truth`
+`11.36.0-decision-evidence`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.35.2`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.36.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Deliberation `11.36.0-decision-evidence`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
 
-### Current Presentation event truth release
+### Current Decision Evidence release
+
+`11.36.0-decision-evidence` 將 Resident Explanation 的可信來源從「Recent Decision 的 tick + Action kind 對齊」升格為 Deliberation-owned adopted final evidence。每個 Agent 新增單筆 private `decisionEvidence`；live Action 只保存 `decisionId` reference。Initial core decision 在 afterTick 800 Memory→Deliberation correction 完成後，由新增的 `deliberation.finalize-decision-evidence` order 850 finalize；soft reconsideration、emergency preemption與 hard replan則在 replacement Action 真正採納時建立新的 decision identity。Hard replan仍可保留同一 Intent ID，但 replacement Action不得沿用舊 Decision ID。
+
+Core chooser / soft candidate現在攜帶 structured contributor metadata；Social target 的 Memory / Relationship / access decomposition只在 final selected target freeze。這些 capture不新增 RNG consumption，也不改既有 utility、target ranking、responder policy或 World Event truth。Resident View只從與 live Action精確對齊的 adopted evidence投影原因；Human wander在尚無 formal winner-relative selection evidence前不再輸出「沒有更急的事」；`respondSocialBid` 第一階段仍省略自主 Explanation。Debug Inspector可查看 frozen final contributor snapshot，current-derived diagnostics仍保持 derived。
+
+這是新的 simulation semantic / state contract，因此 overall runtime / Presentation 與 Deliberation generation推進到 `11.36.0-decision-evidence`。Memory Deliberation公式與 generation維持 `11.13.4-memory-deliberation-influence`；Social Bid lifecycle、Affect、Relationship、Human / Animal responder policy、Action、Physical / Spatial / Route / Locomotion、World Authoring / Furniture Catalog均未改語意，不假升。
+
+### Previous Presentation event truth release
 
 `11.35.2-presentation-event-truth` 完成 Presentation Truth Boundary P2：timeline summary classification 不再解析 `event.text` 的自然語句或中文 regex，而改讀 structured event `type / data.action`；Human / animal social producer、core social fallback 與相關 action event wording 移除沒有 canonical evidence 的「走近／蹲下／跑到／蹭／伸手／側身／低頭／手一晃」等 transition / gesture 敘事，並將 initial provisional plan、wait、abort、sleep-start 等文字收斂成現有 structured source 可支持的保守描述。Requester-private no-response truth 仍由既有 private `awaitResponse / socialWaitEnded` ownership 持有，不混入 World disturbance wording。
 
