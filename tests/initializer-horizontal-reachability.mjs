@@ -77,7 +77,14 @@ function runtime(authoring){
   assert.equal(hasKey(humanReport,'2,1'),false,'Human default walk envelope must fail the narrow authored passage');
   assert.equal(hasKey(catReport,'2,1'),true,'Cat default walk envelope must fit the same narrow authored passage');
   const humanState=runtime(humanDoc),catState=runtime(catDoc);
-  assert.equal(SP.planRoute(humanState,humanState.agents.resident,floor(humanState,2,1),{mode:'walk',objective:'pathDistance'}).pathDistance,Infinity);
+  const humanFrom=floor(humanState,1,1),humanTo=floor(humanState,2,1);
+  console.log('initializer-horizontal-debug',JSON.stringify({
+    physical:globalThis.SimPhysical?.getMovementEnvelope?.(humanState.agents.resident,'walk')||null,
+    boundary:humanState.map.boundaries?.['0|v:2,1']||null,
+    passage:SP.getPassageProfile?.(humanState,humanFrom,humanTo)||null,
+    feasibility:SP.traversalFeasibility?.(humanState,humanState.agents.resident,humanFrom,humanTo)||null
+  }));
+  assert.equal(SP.planRoute(humanState,humanState.agents.resident,humanTo,{mode:'walk',objective:'pathDistance'}).pathDistance,Infinity);
   assert.equal(SP.planRoute(catState,catState.agents.resident,floor(catState,2,1),{mode:'walk',objective:'pathDistance'}).pathDistance,1);
 }
 
