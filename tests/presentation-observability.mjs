@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.36.0-decision-evidence';
+const CURRENT_VERSION='11.36.1-map-posture-selection';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
 const ROUTE_VERSION='11.34.0-surface-traversal-maneuvers';
@@ -259,6 +259,13 @@ assert.match(spatialUiSource,/Dynamic Congestion/,'Spatial Debug must expose cur
 assert.doesNotMatch(spatialUiSource,/\['inspector','map','actions'\]/,'spatial DOM observer must no longer own Inspector rendering');
 assert.doesNotMatch(spatialUiSource,/overhead\[0\].*下|name\}下|家具'}下/,'Spatial UI must not reconstruct exact under-furniture wording from coarse covered-node observability');
 assert.match(spatialUiSource,/SP\.describePlace\(s,target\)/,'map titles must consume the canonical place description owner');
+assert.match(spatialUiSource,/POSTURE_MARKS=Object\.freeze\(\{kneeling:'跪',prone:'趴'\}\)/,'map posture marks must project canonical kneeling / prone directly');
+assert.match(spatialUiSource,/btn\.dataset\.posture=posture/,'map Agent DOM must expose the authoritative current posture projection');
+assert.doesNotMatch(spatialUiSource,/spatial-under-cover/,'coarse covered geometry must not be promoted into an under-furniture map state');
+const spatialUiStyleSource=fs.readFileSync(new URL('../styles/spatial-observability.css',import.meta.url),'utf8');
+assert.doesNotMatch(spatialUiStyleSource,/spatial-under-cover/,'Presentation CSS must not dim Agents as if coarse overhead proved exact under-furniture placement');
+assert.match(spatialUiStyleSource,/\.spatial-furniture-handle\{[^}]*z-index:4/,'furniture secondary handle must remain below map entities so it cannot steal Agent hits');
+assert.match(spatialUiStyleSource,/@media\(max-width:720px\)\{\.spatial-furniture-handle\{[^}]*width:18px;[^}]*height:18px/,'mobile furniture secondary handle must expose an expanded hit target');
 const probeEventId=E.addEvent('presentation event tick probe','system',[],{action:'presentationProbe'});
 assert.equal(st.causes[probeEventId]?.tick,st.tick,'canonical events must preserve creation tick for derived presentation recency');
 E.registerActionLabelResolver('qa.presentation-label',(state,a)=>a?.id==='qa-probe'?'QA presentation label':null,10);

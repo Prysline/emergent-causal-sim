@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.36.0-decision-evidence`
+`11.36.1-map-posture-selection`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.36.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Deliberation `11.36.0-decision-evidence`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.36.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Deliberation `11.36.0-decision-evidence`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
 
-### Current Decision Evidence release
+### Current Map posture / mobile selection release
+
+`11.36.1-map-posture-selection` 修正 Simulator runtime map 的 posture / overlap Presentation。Spatial observability 直接讀 authoritative `agent.posture.kind` 投影 `kneeling → 跪`、`prone → 趴` compact marker，並以 `data-posture` 暴露同一 canonical posture 給 Browser QA；不從 Action text、locomotion wording、Furniture overlap 或 route 反推姿勢。
+
+同一 patch 退休把 coarse `covered / overhead` 幾何視覺化成 `.spatial-under-cover` opacity 的作法。Current floor Spatial Node 沒有 tile 內 local offset / region identity，因此 same XY + overhead geometry 仍不足以宣稱角色確定位於家具下方；真正 under-furniture occlusion 必須等待 semantic owner 提供足夠 local-position / region truth。
+
+Mobile 同格選取維持單一 `SimUI` selection truth：Agent 的 map entity layer 保持高於 `spatial-furniture-handle`，因此家具 secondary handle 不得遮住可見角色的直接 hit target；家具 handle 本身提高可見度並在 ≤720px viewport 擴為 18×18px，仍只屬 Presentation affordance，不成為 Furniture / Spatial truth。這是玩家可見 Presentation interaction / observability patch，因此只推進 overall runtime / `SimUI.PRESENTATION_VERSION` 到 `11.36.1-map-posture-selection`；Deliberation維持 `11.36.0-decision-evidence`，Physical / Spatial / Passage / Route / Locomotion、World Authoring、Furniture Catalog與其他未改 subsystem generation都不假升。
+
+### Previous Decision Evidence release
 
 `11.36.0-decision-evidence` 將 Resident Explanation 的可信來源從「Recent Decision 的 tick + Action kind 對齊」升格為 Deliberation-owned adopted final evidence。每個 Agent 新增單筆 private `decisionEvidence`；live Action 只保存 `decisionId` reference。Initial core decision 在 afterTick 800 Memory→Deliberation correction 完成後，由新增的 `deliberation.finalize-decision-evidence` order 850 finalize；soft reconsideration、emergency preemption與 hard replan則在 replacement Action 真正採納時建立新的 decision identity。Hard replan仍可保留同一 Intent ID，但 replacement Action不得沿用舊 Decision ID。
 
