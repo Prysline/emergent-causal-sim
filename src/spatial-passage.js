@@ -1,6 +1,6 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getMovementEnvelope||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry)return;
-  const VERSION='11.34.0-surface-traversal-maneuvers';
+  const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getEffectiveTraversalEnvelope||!P?.locomotionModeHandsFeasible||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry)return;
+  const VERSION='11.37.0-carried-container-feasibility';
   const FLOOR='floor',EPS=1e-9;
   const finitePositive=v=>Number.isFinite(Number(v))&&Number(v)>0;
   const constrained=v=>finitePositive(v)?Number(v):null;
@@ -178,18 +178,22 @@
     if(option.clearanceWidth!==null&&envelope.clearanceWidth>option.clearanceWidth+EPS)return false;
     return true;
   }
-  function endpointFits(st,node,agent,mode){
+  function endpointFits(st,node,agent,mode,envelope){
     const n=SP.normalizeNode(st,node);if(!n)return false;
-    return n.surfaceId===FLOOR?(SP.floorNodeFitsMode?.(st,n,agent,mode)??SP.nodeWalkable(st,n,agent)):(SP.surfaceNodeFitsMode?.(st,n,agent,mode)??SP.nodeWalkable(st,n,agent));
+    return n.surfaceId===FLOOR?(SP.floorNodeFitsMode?.(st,n,agent,mode,envelope)??SP.nodeWalkable(st,n,agent)):(SP.surfaceNodeFitsMode?.(st,n,agent,mode,envelope)??SP.nodeWalkable(st,n,agent));
   }
   function modeFeasibility(st,agent,mode,passage,edgeOpen){
-    const envelope=P.getMovementEnvelope(agent,mode),failedAxes=[];
+    const envelope=P.getEffectiveTraversalEnvelope(st,agent,mode),failedAxes=[];
     if(!envelope)return {feasible:false,failedAxes:['envelope'],effectiveOption:null,effectiveClearanceWidth:null};
+    if(!P.locomotionModeHandsFeasible(st,agent,mode))failedAxes.push('hands');
     if(passage.edgeKind==='surfaceTransition'){
       if(mode!=='walk')failedAxes.push('surfacePosture');
-      if(!endpointFits(st,passage.from,agent,mode)||!endpointFits(st,passage.to,agent,mode))failedAxes.push('nodeFit');
-      const transition=passage.surfaceTransition||{},maneuverCandidates=mode==='walk'?(P.surfaceManeuverScaleCandidates?.(agent,{verticalDelta:transition.heightDelta,horizontalGap:transition.horizontalGap})||[]):[];
-      if(!maneuverCandidates.length)failedAxes.push('maneuver');
+      if(!endpointFits(st,passage.from,agent,mode,envelope)||!endpointFits(st,passage.to,agent,mode,envelope))failedAxes.push('nodeFit');
+      const transition=passage.surfaceTransition||{},baseManeuverCandidates=mode==='walk'?(P.surfaceManeuverScaleCandidates?.(agent,{verticalDelta:transition.heightDelta,horizontalGap:transition.horizontalGap})||[]):[],maneuverCandidates=mode==='walk'?(P.surfaceManeuverScaleCandidates?.(agent,{verticalDelta:transition.heightDelta,horizontalGap:transition.horizontalGap},st)||[]):[];
+      if(!maneuverCandidates.length){
+        if(baseManeuverCandidates.length&&baseManeuverCandidates.some(candidate=>!P.surfaceManeuverHandsFeasible(st,agent,candidate.family)))failedAxes.push('hands');
+        else failedAxes.push('maneuver');
+      }
       const effectiveOption=passage.options?.[0]||null;
       return {
         feasible:edgeOpen&&failedAxes.length===0,
@@ -201,7 +205,7 @@
       };
     }
     if(passage.edgeKind==='structure'&&passage.structureKind==='stair'&&mode!=='walk')failedAxes.push('structureMode');
-    if(!endpointFits(st,passage.from,agent,mode)||!endpointFits(st,passage.to,agent,mode))failedAxes.push('nodeFit');
+    if(!endpointFits(st,passage.from,agent,mode,envelope)||!endpointFits(st,passage.to,agent,mode,envelope))failedAxes.push('nodeFit');
     const feasibleOptions=(passage.options||[]).filter(option=>optionFits(envelope,option));
     if(!feasibleOptions.length){
       const widths=(passage.options||[]).map(x=>x.clearanceWidth).filter(Number.isFinite),heights=(passage.options||[]).map(x=>x.clearanceHeight).filter(Number.isFinite);

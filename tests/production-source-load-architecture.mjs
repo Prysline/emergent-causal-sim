@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.36.1-map-posture-selection';
+const CURRENT_VERSION='11.37.0-carried-container-feasibility';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -30,6 +30,7 @@ const capabilityIndex=indexOf('src/embodiment-capabilities.js');
 const initializerIndex=indexOf('src/world-initializer.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
+const resourcesIndex=indexOf('src/systems/resources.js');
 const engineIndex=indexOf('src/engine.js');
 const initialManifestIndex=indexOf('src/world/initial-state-manifest.js');
 const physicalIndex=indexOf('src/systems/physical.js');
@@ -54,8 +55,9 @@ assert.ok(authoringIndex<worldIndex,'current authoring owner must load before wo
 assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production must not load the retired legacy-named authoring asset');
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
 assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
+assert.equal(resourcesIndex,releaseIndex+1,'Resources owner must load immediately after release.js');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
-assert.ok(physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Physical -> Passage -> Locomotion -> Crowding');
+assert.ok(resourcesIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Resources -> Physical -> Passage -> Locomotion -> Crowding');
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every simulation hook registrant');
@@ -179,6 +181,7 @@ const FD=globalThis.SimFurnitureDefinitions;
 const A=globalThis.SimWorldAuthoring;
 const EC=globalThis.SimEmbodimentCapabilities;
 const R=globalThis.SimRelease;
+const Resources=globalThis.SimResources;
 const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
 const P=globalThis.SimPhysical;
@@ -188,20 +191,22 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v7');
+assert.equal(A.VERSION,'world-authoring-v8');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
-assert.equal(EC.VERSION,'embodiment-capabilities-v3');
+assert.equal(EC.VERSION,'embodiment-capabilities-v4');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
+assert.equal(Resources.VERSION,CURRENT_VERSION);
+assert.equal(W.RESOURCES_RUNTIME_VERSION,CURRENT_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(P.VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(P.VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(L.VERSION,'11.34.0-surface-traversal-maneuvers');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
@@ -261,6 +266,8 @@ const sortHooks=list=>list.sort((a,b)=>a.phase.localeCompare(b.phase)||a.order-b
 assert.deepEqual(sortHooks(manifestHooks),sortHooks(registeredHooks),'runtime-hook manifest must exactly cover every production hook registration');
 
 const releaseVersionWriters=scripts.filter(path=>/W\.VERSION\s*=|st\.version\s*=/.test(readRepoFile(path)));
+const resourceLoadFormulaOwners=scripts.filter(path=>path==='src/systems/resources.js'&&/loadPerUnit/.test(readRepoFile(path)));
+assert.deepEqual(resourceLoadFormulaOwners,['src/systems/resources.js'],'Resources must own the canonical resource-load formula');
 assert.deepEqual(releaseVersionWriters,['src/release.js'],'current runtime release marker must have exactly one production writer');
 
 const retiredSpatialAssets=[

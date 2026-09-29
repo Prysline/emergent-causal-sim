@@ -22,8 +22,8 @@ function openSquare(){
   return {st,human,a:floor(st,1,1),b:floor(st,2,2),east:floor(st,2,1)};
 }
 
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(SP.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.VERSION,'11.37.0-carried-container-feasibility');
 
 {
   const {st,human,a,b,east}=openSquare();

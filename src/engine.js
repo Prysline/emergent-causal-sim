@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial;if(!W||!SP)return;
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources;if(!W||!SP||!R)return;
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6;
   const CIRCADIAN_PATTERN_ZH={diurnal:'日行性',nocturnal:'夜行性',crepuscular:'晨昏性'};
@@ -60,9 +60,9 @@
   function takeResource(id,r,amount){const ep=endpoint(id);if(!ep||amount<=0)return 0;if(ep.kind==='source'){if(ep.obj.resource!==r)return 0;if(ep.obj.infinite)return amount;const m=Math.min(amount,ep.obj.amount||0);ep.obj.amount-=m;return m;}const have=ep.contents[r]||0,m=Math.min(amount,have);ep.contents[r]=Math.max(0,have-m);if(ep.contents[r]<.001)delete ep.contents[r];return m;}
   function putResource(id,r,amount){const ep=endpoint(id);if(!ep||amount<=0||ep.kind==='source')return 0;const m=Math.min(amount,capacityLeft(id));ep.contents[r]=(ep.contents[r]||0)+m;return m;}
   function transferResource(r,from,to,amount){const available=amountAt(from,r),room=capacityLeft(to),m=Math.max(0,Math.min(amount,available,room));if(!isFinite(m)||m<=0)return 0;return putResource(to,r,takeResource(from,r,m));}
-  function resourceLoad(r,amount){return Math.max(0,Number(amount)||0)*(RESOURCE_TYPES[r]?.loadPerUnit||0);}
-  function containerLoad(idOrObj){const c=typeof idOrObj==='string'?state.containers[idOrObj]:idOrObj;if(!c)return 0;return Math.max(0,c.emptyLoad||0)+Object.entries(c.contents||{}).reduce((sum,[r,v])=>sum+resourceLoad(r,v),0);}
-  function effectiveCarryLoad(a){return a?.held?containerLoad(a.held):0;}
+  function resourceLoad(r,amount){return R.resourceLoad(r,amount);}
+  function containerLoad(idOrObj){return R.containerLoad(state,idOrObj);}
+  function effectiveCarryLoad(a){return R.effectiveCarryLoad(state,a);}
   function movementExertion(load){return .10+Math.min(.18,Math.max(0,load)*.012);}
   function targetForEndpoint(id){return state.sources[id]?{kind:'source',id}:state.containers[id]?{kind:'object',id}:null;}
   function actorCanTransfer(a,fromId,toId,affordance='fill'){if(!a||a.offMap)return false;const fromTarget=targetForEndpoint(fromId),toTarget=state.containers[toId]?{kind:'object',id:toId}:null;if(!fromTarget||!toTarget)return false;const sourceHolder=state.containers[fromId]?holderOf(fromId):null;if(sourceHolder&&sourceHolder.id!==a.id)return false;return SP.isAtInteraction(state,a,fromTarget,affordance)&&(a.held===toId||SP.isAtInteraction(state,a,toTarget,'receive'));}
@@ -78,7 +78,7 @@
   function releaseReservation(key,a){if(state.reservations[key]===a.id)delete state.reservations[key];}
   function releaseAgentReservations(a,prefix=null){for(const [k,id] of Object.entries({...state.reservations}))if(id===a.id&&(!prefix||k.startsWith(prefix)))delete state.reservations[k];}
   function holderOf(id){return SP.holderOf(state,id);}
-  function holdContainer(a,id){const c=state.containers[id];if(!c?.portable)return false;const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;if(a.held&&a.held!==id)releaseHeld(a);a.held=id;delete c.supportId;return true;}
+  function holdContainer(a,id){const c=state.containers[id];if(!R.canHoldContainer(state,a,c))return false;const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;if(a.held&&a.held!==id)releaseHeld(a);a.held=id;delete c.supportId;return true;}
   function releaseHeld(a){if(!a.held)return;const c=state.containers[a.held];if(c)c.position={...a.position};a.held=null;}
   function locomotionRuntime(){return window.SimLocomotion||null;}
   function setLocomotionState(a,mode=null,phase='idle'){const L=locomotionRuntime();return L?.setState?.(a,mode,phase)||null;}
@@ -154,12 +154,12 @@
   function edibleFoodContainers(a){return Object.values(state.containers).filter(c=>c.canEatFrom&&(c.contents?.food||0)>.05&&(!holderOf(c.id)||holderOf(c.id)?.id===a?.id));}
   function availableFoodAmount(a){return edibleFoodContainers(a).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
   function chooseFoodSource(a,{readyOnly=false}={}){const source=edibleFoodContainers(a).filter(c=>!readyOnly||SP.hasRole(c,'readyFood')).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'eatFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d||(x.c.servingDish?0:1)-(y.c.servingDish?0:1));return source[0]?.c||null;}
-  function servingDishes(a){return Object.values(state.containers).filter(c=>c.servingDish&&c.portable&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)&&!Object.entries(c.contents||{}).some(([r,v])=>r!=='food'&&v>.05)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'pickup'),filled:(c.contents?.food||0)>.05})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>(y.filled?1:0)-(x.filled?1:0)||x.d-y.d).map(x=>x.c);}
+  function servingDishes(a){return Object.values(state.containers).filter(c=>c.servingDish&&c.portable&&R.canHoldContainer(state,a,c)&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)&&!Object.entries(c.contents||{}).some(([r,v])=>r!=='food'&&v>.05)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'pickup'),filled:(c.contents?.food||0)>.05})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>(y.filled?1:0)-(x.filled?1:0)||x.d-y.d).map(x=>x.c);}
   function mealSlots(a){return SP.allSlots(state).filter(s=>SP.slotAllows(s,a)&&SP.slotPoseFits?.(s,a,'sitting')&&SP.slotAvailable(state,s.id,a.id)&&(s.mealSeat||s.canRest)).map(s=>{const position=SP.bestSlotApproachNode?.(state,s,a,{mode:'walk',objective:'traversalCost'})||null;return position?{slot:s,position,d:routeBurden(a,position),penalty:s.mealSeat?0:8,noise:SP.noiseAt(state,s.position)}:null;}).filter(x=>x&&Number.isFinite(x.d)).sort((x,y)=>(x.penalty+x.d+x.noise*.15)-(y.penalty+y.d+y.noise*.15));}
   function resourceSources(resource,a,{excludeId=null}={}){const candidates=[];for(const s of Object.values(state.sources)){if(s.id!==excludeId&&s.resource===resource&&amountAt(s.id,resource)>0)candidates.push({id:s.id,kind:'source'});}for(const c of Object.values(state.containers)){if(c.id===excludeId||amountAt(c.id,resource)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;candidates.push({id:c.id,kind:'object'});}return candidates.map(t=>({t,d:targetTraversalCost(a,t,'fill')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.t||null;}
   function directDrinkContainers(resource,a){return Object.values(state.containers).filter(c=>c.canDrinkFrom&&amountAt(c.id,resource)>0&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'drinkFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.c||null;}
   function drinkVesselAccessCost(a,r,c,desperate=a.needs.thirst>=88){
-    if(!c.portable||!c.canDrinkFrom)return Infinity;
+    if(!c.portable||!c.canDrinkFrom||!R.canHoldContainer(state,a,c))return Infinity;
     const holder=holderOf(c.id);
     if(holder&&holder.id!==a.id)return Infinity;
     if(!desperate&&Object.entries(c.contents||{}).some(([x,v])=>x!==r&&v>.1))return Infinity;
@@ -193,7 +193,7 @@
     return null;
   }
   function logisticsContainerCanCarry(c,resource){return SP.hasRole(c,'logisticsContainer')&&c.portable&&(!c.transportResources?.length||c.transportResources.includes(resource))&&!Object.entries(c.contents||{}).some(([r,v])=>r!==resource&&v>.05);}
-  function logisticsContainers(resource,a){return Object.values(state.containers).filter(c=>logisticsContainerCanCarry(c,resource)&&capacityLeft(c.id)>.05).filter(c=>{const holder=holderOf(c.id),reserved=reservationOwner(`object:${c.id}`);return (!holder||holder.id===a.id)&&(!reserved||reserved.id===a.id);}).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'pickup'),empty:sumContents(c)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.empty-y.empty||x.d-y.d).map(x=>x.c);}
+  function logisticsContainers(resource,a){return Object.values(state.containers).filter(c=>logisticsContainerCanCarry(c,resource)&&R.canHoldContainer(state,a,c)&&capacityLeft(c.id)>.05).filter(c=>{const holder=holderOf(c.id),reserved=reservationOwner(`object:${c.id}`);return (!holder||holder.id===a.id)&&(!reserved||reserved.id===a.id);}).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'pickup'),empty:sumContents(c)})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.empty-y.empty||x.d-y.d).map(x=>x.c);}
   function sourceForRestock(job,a){if(job.sourceRole==='resourceSource'){const sources=SP.entitiesWithRole(state,job.sourceRole,['sources']).filter(s=>s.resource===job.resource&&amountAt(s.id,job.resource)>0);return sources.map(s=>({id:s.id,kind:'source',d:targetTraversalCost(a,{kind:'source',id:s.id},'fill')})).sort((x,y)=>x.d-y.d)[0]||null;}const sources=containersByRole(job.sourceRole).filter(c=>amountAt(c.id,job.resource)>0);return sources.map(c=>({id:c.id,kind:'object',d:targetTraversalCost(a,{kind:'object',id:c.id},'takeResource')})).sort((x,y)=>x.d-y.d)[0]||null;}
   function restockJobs(a){const jobs=[];for(const c of Object.values(state.containers)){const r=c.restock;if(!r)continue;const current=amountAt(c.id,r.resource);if(current>=r.low)continue;const source=sourceForRestock(r,a);if(!source)continue;const carrier=r.strategy==='logisticsContainer'?logisticsContainers(r.resource,a)[0]:null;if(r.strategy==='logisticsContainer'&&!carrier)continue;jobs.push({destinationId:c.id,sourceId:source.id,sourceKind:source.kind,resource:r.resource,strategy:r.strategy,carrierId:carrier?.id||null,urgency:r.low-current,score:38+(r.low-current)});}return jobs.sort((x,y)=>y.score-x.score);}
   function activeSupplyActor(){return Object.values(state.agents).find(a=>a.action?.kind==='externalSupply')||null;}
@@ -207,7 +207,7 @@
     if(a.kind==='cat'||a.needs.hunger>=82)return !!firstReachableFoodSource(a);
     let reachableDish=false;
     for(const dish of Object.values(state.containers)){
-      if(!dish.servingDish||!dish.portable)continue;
+      if(!dish.servingDish||!dish.portable||!R.canHoldContainer(state,a,dish))continue;
       const holder=holderOf(dish.id);if(holder&&holder.id!==a.id)continue;
       if(Object.entries(dish.contents||{}).some(([r,v])=>r!=='food'&&v>.05))continue;
       if(!Number.isFinite(targetTraversalCost(a,{kind:'object',id:dish.id},'pickup')))continue;

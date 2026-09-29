@@ -13,8 +13,8 @@ const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(A.VERSION,'world-authoring-v7');
-assert.equal(C.VERSION,'embodiment-capabilities-v3');
+assert.equal(A.VERSION,'world-authoring-v8');
+assert.equal(C.VERSION,'embodiment-capabilities-v4');
 
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -86,7 +86,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v3');
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.entities.containers.syntheticPort={
-    id:'syntheticPort',name:'Port follower',portable:true,contents:{},position:{x:5,y:2,z:0},supportId:'diningTable',
+    id:'syntheticPort',name:'Port follower',portable:true,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:5,y:2,z:0},supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:{x:5,y:3,z:0}}]
   };
   doc.entities.containers.basket.position={x:5,y:2,z:0};
@@ -152,7 +152,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v3');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  doc.entities.containers.syntheticPort={id:'syntheticPort',name:'Port object',portable:true,contents:{},position:{x:3,y:3,z:0},interactionPorts:[{id:'syntheticPort:port',position:{x:4,y:3,z:0}}]};
+  doc.entities.containers.syntheticPort={id:'syntheticPort',name:'Port object',portable:true,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:3,z:0},interactionPorts:[{id:'syntheticPort:port',position:{x:4,y:3,z:0}}]};
   let result=M.moveObject(doc,{entityType:'container',entityId:'syntheticPort',target:{x:4,y:4,z:0}});
   assert.equal(result.ok,true);
   assert.deepEqual(result.candidate.entities.containers.syntheticPort.interactionPorts[0].position,{x:5,y:4,z:0});

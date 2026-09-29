@@ -10,7 +10,7 @@ function quiet(a){for(const k of ['hunger','thirst','fatigue','sleepNeed','socia
 
 E.reset(3600);
 let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.36.1-map-posture-selection');
+assert.equal(st.version,'11.37.0-carried-container-feasibility');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.36.0-decision-evidence');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.36.0-decision-evidence');
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;

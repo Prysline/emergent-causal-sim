@@ -31,6 +31,10 @@ const engineCore=runtimeProfilePaths([
   'engine.js','validation/registry.js'
 ]);
 assert.equal(engineCore.includes('src/spatial-traversal.js'),false,'engine-core profile must not implicitly load traversal');
+assert.ok(engineCore.includes('src/systems/resources.js'),'Engine runtime profiles must include the canonical Resources owner');
+assert.ok(engineCore.includes('src/systems/physical.js'),'Engine runtime profiles must include the canonical Physical owner for held-container hand feasibility');
+assert.ok(engineCore.indexOf('src/systems/resources.js')<engineCore.indexOf('src/systems/physical.js'),'Resources must load before Physical in Engine runtime profiles');
+assert.ok(engineCore.indexOf('src/systems/physical.js')<engineCore.indexOf('src/spatial/finalize.js'),'Physical initial-state registration must happen before the Spatial finalizer');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/engine.js'),'runtime profile must finalize initial state before Engine captures factories');
 
 const initialState=initialStateProfilePaths([
@@ -44,7 +48,7 @@ assert.throws(
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
-  'spatial/finalize.js','engine.js','validation/registry.js'
+  'systems/resources.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
 const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');

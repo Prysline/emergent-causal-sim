@@ -9,8 +9,8 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.36.1-map-posture-selection';
-const ROUTE_VERSION='11.34.0-surface-traversal-maneuvers';
+const APP_VERSION='11.37.0-carried-container-feasibility';
+const ROUTE_VERSION='11.37.0-carried-container-feasibility';
 const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

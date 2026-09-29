@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.34.0-surface-traversal-maneuvers';
+  const VERSION='11.37.0-carried-container-feasibility';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -85,13 +85,13 @@
   function floorWalkable(st,p,agent=null){
     if(fixedFloorBlocker(st,p))return false;
     if(agent){
-      const envelope=movementEnvelopeFor(agent,'walk');
+      const envelope=movementEnvelopeFor(st,agent,'walk');
       if(!envelope||!floorEnvelopeFits(st,p,envelope))return false;
     }
     return true;
   }
-  function movementEnvelopeFor(agent,mode='walk'){
-    const runtime=physicalRuntime()?.getMovementEnvelope?.(agent,mode);
+  function movementEnvelopeFor(st,agent,mode='walk'){
+    const runtime=physicalRuntime()?.getEffectiveTraversalEnvelope?.(st,agent,mode)||physicalRuntime()?.getMovementEnvelope?.(agent,mode);
     if(runtime)return runtime;
     const physical=C?.defaultPhysicalProfile?.(agent?.kind),body=physical?.bodyGeometry,profile=physical?.locomotionProfiles?.[mode];
     if(!body||!profile||physical?.locomotionCapabilities?.[mode]!==true)return null;
@@ -102,10 +102,10 @@
       speedFactor:profile.speedFactor??1
     };
   }
-  function floorNodeFitsMode(st,p,agent,mode='walk'){
+  function floorNodeFitsMode(st,p,agent,mode='walk',envelopeOverride=null){
     const n=normalizeNode(st,p,FLOOR);if(!n||fixedFloorBlocker(st,n))return false;
     if(!agent)return true;
-    const envelope=movementEnvelopeFor(agent,mode);if(!envelope)return false;
+    const envelope=envelopeOverride||movementEnvelopeFor(st,agent,mode);if(!envelope)return false;
     return floorEnvelopeFits(st,n,envelope);
   }
   function axisCandidates(min,max,bounds=[]){
@@ -119,14 +119,15 @@
     const b=solid.bounds,body={x:anchor.x-pose.width/2,y:anchor.y-pose.length/2,width:pose.width,depth:pose.length};
     return Math.min(body.x+body.width,b.x+b.width)-Math.max(body.x,b.x)>CONTACT_EPS&&Math.min(body.y+body.depth,b.y+b.depth)-Math.max(body.y,b.y)>CONTACT_EPS;
   }
-  function surfaceStaticFitResult(st,node,aOrId=null,posture='standing'){
+  function surfaceStaticFitResult(st,node,aOrId=null,posture='standing',traversalEnvelope=null){
     const a=agentFor(st,aOrId),n=normalizeNode(st,node),entry=n?surfaceEntry(st,n.surfaceId):null;
     if(!entry||!isSurfaceCell(entry,n))return {fits:false,reason:'surface',surfaceId:n?.surfaceId||null,witness:null};
     if(!a)return {fits:true,reason:null,surfaceId:entry.surface.id,witness:null};
     const P=physicalRuntime(),body=a.physical?.bodyGeometry||C?.defaultPhysicalProfile?.(a.kind)?.bodyGeometry||null;
     const support=P?.getSupportFootprint?.(a,posture)||C?.getSupportFootprintForKind?.(a.kind,body,posture)||null;
-    const pose=P?.getPoseEnvelope?.(a,posture)||C?.getPoseEnvelopeForKind?.(a.kind,body,posture)||null;
-    if(!support||!pose)return {fits:false,reason:'postureProfile',surfaceId:entry.surface.id,witness:null};
+    const staticPose=P?.getPoseEnvelope?.(a,posture)||C?.getPoseEnvelopeForKind?.(a.kind,body,posture)||null;
+    const pose=traversalEnvelope?{height:Number(traversalEnvelope.clearanceHeight),width:Number(traversalEnvelope.clearanceWidth),length:Number(traversalEnvelope.clearanceLength)}:staticPose;
+    if(!support||!pose||![pose.height,pose.width,pose.length].every(value=>Number.isFinite(value)&&value>0))return {fits:false,reason:'postureProfile',surfaceId:entry.surface.id,witness:null};
     const snapshot=geometrySnapshotFor(st),cacheKey=[entry.surface.id,nodeKey(st,n),a.id||a.kind,posture,support.width,support.length,pose.width,pose.length,pose.height].join('|');
     if(snapshot?.surfaceFits.has(cacheKey))return snapshot.surfaceFits.get(cacheKey);
     const region=entry.surface.supportRegion,minX=Math.max(n.x,region.x+support.width/2),maxX=Math.min(n.x+1,region.x+region.width-support.width/2),minY=Math.max(n.y,region.y+support.length/2),maxY=Math.min(n.y+1,region.y+region.depth-support.length/2);
@@ -152,11 +153,12 @@
     const result={fits:!!witness,reason:witness?null:'clearance',surfaceId:entry.surface.id,witness,supportAnchorRegion,blockedSolidKeys:blockers.map(s=>s.key)};
     if(snapshot)snapshot.surfaceFits.set(cacheKey,result);return result;
   }
-  function surfaceNodeFitsMode(st,node,agent,mode='walk'){
+  function surfaceNodeFitsMode(st,node,agent,mode='walk',envelopeOverride=null){
     const entry=surfaceEntry(st,node.surfaceId);if(!entry||!isSurfaceCell(entry,node))return false;
     if(!agent)return true;
     const posture=C?.postureForMode?.(mode);if(!posture)return false;
-    return surfaceStaticFitResult(st,node,agent,posture).fits;
+    const envelope=envelopeOverride||movementEnvelopeFor(st,agent,mode);if(!envelope)return false;
+    return surfaceStaticFitResult(st,node,agent,posture,envelope).fits;
   }
   function surfaceWalkable(st,node,agent=null){return surfaceNodeFitsMode(st,node,agent,'walk');}
   function nodeWalkable(st,p,aOrId=null){const a=agentFor(st,aOrId),n=normalizeNode(st,p);if(!n)return false;return n.surfaceId===FLOOR?floorWalkable(st,n,a):surfaceWalkable(st,n,a);}
@@ -730,5 +732,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.34.0-surface-traversal-maneuvers',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.37.0-carried-container-feasibility',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();

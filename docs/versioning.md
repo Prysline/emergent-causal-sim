@@ -6,11 +6,17 @@
 
 目前 current runtime marker：
 
-`11.36.1-map-posture-selection`
+`11.37.0-carried-container-feasibility`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.36.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Deliberation `11.36.0-decision-evidence`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Physical `11.34.0-surface-traversal-maneuvers`；Spatial Traversal `11.34.0-surface-traversal-maneuvers`；Contact `11.32.0-contact-slot-corner`；Spatial Passage `11.34.0-surface-traversal-maneuvers`；Route `11.34.0-surface-traversal-maneuvers`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v3`；World Authoring維持 `world-authoring-v7`，Furniture Catalog推進到 `furniture-definitions-v12`；未改 contract 的 Contact / Dynamic Congestion / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.37.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.37.0-carried-container-feasibility`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.37.0-carried-container-feasibility`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.37.0-carried-container-feasibility`；Deliberation `11.36.0-decision-evidence`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v8`，Furniture Catalog = `furniture-definitions-v12`；未改 contract 的 Locomotion / Contact / Dynamic Congestion / Deliberation / Affect / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
 
-### Current Map posture / mobile selection release
+### Current Carried Container feasibility release
+
+`11.37.0-carried-container-feasibility` 建立 P1 Slice A carried physical feasibility：portable Container author `carryGeometry / handsRequired`；Resources 成為 canonical carried-load / handling-profile owner；Physical 保持 body-only MovementEnvelope 並派生 effective carried envelope；Passage / Route 使用相同 geometry 與總 hand-demand gate。basket 0.55m / 2 hands 作為 body-fits-carried-does-not reference fixture，cup / plate / bucket / bottle 保留一手攜帶的非 blanket-ban 行為。
+
+這是 simulation semantic / authoring contract 變更，因此 overall、Resources、Physical、Spatial Traversal、Spatial Passage、Route 推進到 `11.37.0-carried-container-feasibility`；World Authoring → `world-authoring-v8`，Embodiment Capabilities → `embodiment-capabilities-v4`。Locomotion、Crowding、Deliberation、Affect、Contact 等未改語意，不假升。PR #157 的 Map posture / mobile selection Presentation 行為保留；Presentation projection 仍由 canonical release owner顯示 current overall marker。HandlingRisk、`tilt / impact / oscillation` calibration、spill/drop consequence 尚未實作。
+
+### Previous Map posture / mobile selection release
 
 `11.36.1-map-posture-selection` 修正 Simulator runtime map 的 posture / overlap Presentation。Spatial observability 直接讀 authoritative `agent.posture.kind` 投影 `kneeling → 跪`、`prone → 趴` compact marker，並以 `data-posture` 暴露同一 canonical posture 給 Browser QA；不從 Action text、locomotion wording、Furniture overlap 或 route 反推姿勢。
 
