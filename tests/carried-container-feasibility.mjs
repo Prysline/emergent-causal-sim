@@ -143,14 +143,16 @@ assert.equal(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizonta
 human.held='cupA';
 assert.ok(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGap:.61},st).some(candidate=>candidate.kind==='climbUp'),'one-hand cup must keep climb feasible');
 
-st.containers.threeHand={id:'threeHand',name:'Three-hand probe',portable:true,capacity:1,emptyLoad:0,contents:{},position:{...human.position},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:3}};
-assert.equal(R.canHoldContainer(st,human,'threeHand'),false);
-human.held='threeHand';
-assert.equal(P.locomotionModeHandsFeasible(st,human,'walk'),false,'total hand demand must reject an over-capacity held Container even when walk needs no support hand');
-let validation=V.validateState(st);
+E.reset(11711);
+const validationState=E.getState(),validationHuman=validationState.agents.zhen;
+validationState.containers.threeHand={id:'threeHand',name:'Three-hand probe',portable:true,capacity:1,emptyLoad:0,contents:{},position:{...validationHuman.position},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:3}};
+assert.equal(R.canHoldContainer(validationState,validationHuman,'threeHand'),false);
+validationHuman.held='threeHand';
+assert.equal(P.locomotionModeHandsFeasible(validationState,validationHuman,'walk'),false,'total hand demand must reject an over-capacity held Container even when walk needs no support hand');
+let validation=V.validateState(validationState);
 assert.ok(validation.issues.some(issue=>issue.code==='physical_held_container_hand_capacity_exceeded'));
-human.held=null;delete st.containers.threeHand;
-validation=V.validateState(st);
+validationHuman.held=null;delete validationState.containers.threeHand;
+validation=V.validateState(validationState);
 assert.equal(validation.issueCount,0,validation.issues.map(issue=>issue.code+': '+issue.message).join(' | '));
 
 console.log('carried container physical feasibility regression: ok');
