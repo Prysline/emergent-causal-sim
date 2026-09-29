@@ -78,6 +78,9 @@ snapshot=await page.evaluate(()=>({
 assert.deepEqual(snapshot.session.selection,{kind:'cell',x:1,y:1,z:0});
 assert.equal(snapshot.materialValue,'wood');
 assert.match(snapshot.selectionText,/材質：木材（wood）/);
+assert.match(snapshot.selectionText,/基礎水平連通區/,'Cell Inspector must label componentId as coarse cardinal compatibility topology');
+assert.match(snapshot.selectionText,/八方向幾何/,'Cell Inspector must expose contextual cardinal/diagonal HorizontalConnection diagnostics');
+assert.match(snapshot.selectionText,/幾何候選/,'candidate HorizontalConnection must be presented as geometry status rather than universal resident passability');
 await page.fill('[data-cell-material-input]','woven-rug');
 await page.click('[data-editor-action="apply-cell-material"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
@@ -434,6 +437,9 @@ assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:6,y:2,
 assert.equal(snapshot.document.entities.containers.basket.supportId,'diningTable');
 
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
+let residentReachability=await page.evaluate(()=>document.querySelector('#selectionSummary')?.textContent||'');
+assert.match(residentReachability,/居民初始可達性：human \/ default-walk/,'Resident Inspector must expose resident-specific default-walk reachability context');
+assert.match(residentReachability,/default-walk targets/);
 await page.click('[data-editor-action="move-resident"]');
 snapshot=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
@@ -550,7 +556,9 @@ layeredPreviewDocument.furniture.sofa.orientation='east';
 layeredPreviewDocument.doors.frontDoor.state='closed';
 layeredPreviewDocument.map.layers.push({z:1,cells:{
   '2,2':{terrain:'floor',material:'wood'},
-  '3,2':{terrain:'floor',material:'wood'}
+  '3,2':{terrain:'floor',material:'wood'},
+  '2,3':{terrain:'floor',material:'wood'},
+  '3,3':{terrain:'floor',material:'wood'}
 },boundaries:{}});
 layeredPreviewDocument.structures={
   stairA:{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:2,y:2,z:1},clearanceWidth:.8,clearanceHeight:2}
@@ -558,6 +566,12 @@ layeredPreviewDocument.structures={
 layeredPreviewDocument.residents.orange.initial.placement={mode:'exact',node:{x:2,y:2,z:1}};
 layeredPreviewDocument.residents.orange.initial.posture={kind:'standing'};
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),layeredPreviewDocument);
+const diagonalPreflight=await page.evaluate(()=>{
+  const report=window.SimEditorPreviewBridge.preflight(window.SimWorldEditor.getDocument());
+  return {ok:report.ok,orange:report.reachabilityByResident?.orange||null};
+});
+assert.equal(diagonalPreflight.ok,true);
+assert.ok(diagonalPreflight.orange?.reachableKeys.includes('3,3,1'),'canonical Preview preflight must include the legal z=1 diagonal destination for orange default-walk');
 let structureEditor=await page.evaluate(()=>({
   scene:document.querySelectorAll('#sceneList [data-scene-type="structure"][data-scene-id="stairA"]').length,
   lower:document.querySelectorAll('#editorMap [data-entity-type="structure"][data-structure-endpoint="lower"]').length,
@@ -603,7 +617,8 @@ let runtimePreview=await page.evaluate(()=>{
     ui:{currentZ:window.SimUI?.getCurrentZ?.(),options:[...document.querySelectorAll('#runtimeLayerSelect option')].map(o=>o.value),orangeMarkers:document.querySelectorAll('#map [data-entity="agent:orange"]').length,mapZ:document.querySelector('#map')?.dataset.z||'',boundaryEdges:document.querySelectorAll('#map .runtime-boundary-edge').length,wallEdges:document.querySelectorAll('#map .runtime-boundary-wall').length,closedDoorEdges:document.querySelectorAll('#map [data-door-id="frontDoor"][data-door-state="closed"]').length,ordinaryOpeningEdges:document.querySelectorAll('#map [data-boundary-id="v:4,4"]').length},
     opening:{kind:state.map.boundaries['0|v:4,4']?.kind||null,derivedAdjacent:topology.cells['3,4'].adjacent.includes('4,4'),runtimeEdgeOpen:window.SimSpatial.edgeStructurallyOpen(state,{x:3,y:4,z:0},{x:4,y:4,z:0})},
     under:{authored:window.SimWorldAuthoring.resolveFurnitureInstance(active.authoring.furniture.diningTable).spatial?.under?.clearance,runtime:state.furniture.diningTable.spatial?.under?.clearance},
-    stair:{runtime:state.structures?.stairA||null,edge:window.SimSpatial.structureBetween(state,{x:8,y:4,z:0,surfaceId:'floor'},{x:2,y:2,z:1,surfaceId:'floor'})?.id||null,route:window.SimSpatial.planRoute(state,state.agents.zhen,{x:2,y:2,z:1},{mode:'walk',objective:'pathDistance'}).pathDistance}
+    stair:{runtime:state.structures?.stairA||null,edge:window.SimSpatial.structureBetween(state,{x:8,y:4,z:0,surfaceId:'floor'},{x:2,y:2,z:1,surfaceId:'floor'})?.id||null,route:window.SimSpatial.planRoute(state,state.agents.zhen,{x:2,y:2,z:1},{mode:'walk',objective:'pathDistance'}).pathDistance},
+    diagonal:{orangeRoute:window.SimSpatial.planRoute(state,state.agents.orange,{x:3,y:3,z:1},{mode:'walk',objective:'pathDistance'}).pathDistance}
   };
 });
 assert.equal(runtimePreview.previewMode,true);
@@ -637,6 +652,7 @@ assert.equal(runtimePreview.under.runtime,runtimePreview.under.authored,'under-c
 assert.equal(runtimePreview.stair.runtime?.id,'stairA','Preview must compile authored Structure truth into runtime state');
 assert.equal(runtimePreview.stair.edge,'stairA','runtime Spatial must resolve the preview stair edge');
 assert.equal(runtimePreview.stair.route,1,'Preview resident at the lower endpoint must route across the authored stair');
+assert.ok(Math.abs(runtimePreview.diagonal.orangeRoute-Math.SQRT2)<1e-9,'runtime Preview must accept the same legal diagonal that canonical Initializer preflight reported reachable');
 
 await page.selectOption('#runtimeLayerSelect','1');
 await page.waitForTimeout(30);
