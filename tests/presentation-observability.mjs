@@ -83,12 +83,12 @@ assert.match(residentUiSource,/removeHazard:'處理濕滑地面'/,'removeHazard 
 assert.doesNotMatch(residentUiSource,/satisfyThirst:|cleanEnvironment:|restockFood:|restockWater:/,'Resident labels must not keep obsolete/non-canonical Intent keys');
 assert.match(residentUiSource,/function residentActionText\(st,a\)/,'Resident View must own a player-readable Action projection');
 assert.match(residentUiSource,/replace\(\/・目標 \\?/,'Resident Action projection must remove raw spatial-goal coordinates');
-assert.match(residentUiSource,/function playerActionExplanation\\(st,a\\)/,'Resident View must derive player-readable explanations at render time');
-assert.match(residentUiSource,/E\\.currentDecisionEvidence\\?\\.\\(a\\)/,'player explanation must read the adopted Decision Evidence owner');
-assert.match(residentUiSource,/activeIntent\\?\\.kind==='respondSocialBid'\\)return ''/,'responder actions must not be mislabeled as autonomous motives');
-assert.doesNotMatch(residentUiSource,/thought\\.tick!==action\\.started|switch\\(pick\\.id\\)/,'player explanation must not use Recent Decision tick/kind or action-kind hardcoding as final truth');
-assert.match(residentUiSource,/find\\('environment','resourceLow'\\)/,'resource explanation must project structured contributor evidence');
-assert.match(residentUiSource,/value\\('need','hunger'\\)>0/,'hunger explanation must require structured hunger evidence');
+assert.match(residentUiSource,/function playerActionExplanation\(st,a\)/,'Resident View must derive player-readable explanations at render time');
+assert.match(residentUiSource,/E\.currentDecisionEvidence\?\.\(a\)/,'player explanation must read the adopted Decision Evidence owner');
+assert.match(residentUiSource,/activeIntent\?\.kind==='respondSocialBid'\)return ''/,'responder actions must not be mislabeled as autonomous motives');
+assert.doesNotMatch(residentUiSource,/thought\.tick!==action\.started|switch\(pick\.id\)/,'player explanation must not use Recent Decision tick/kind or action-kind hardcoding as final truth');
+assert.match(residentUiSource,/find\('environment','resourceLow'\)/,'resource explanation must project structured contributor evidence');
+assert.match(residentUiSource,/value\('need','hunger'\)>0/,'hunger explanation must require structured hunger evidence');
 assert.doesNotMatch(residentUiSource,/現在沒有更急著要做的事/,'wander must not invent winner-relative selection pressure without formal evidence');
 assert.doesNotMatch(residentUiSource,/飢餓感已經變得明顯|活動疲勞累積得比較明顯|睡眠需求已經變得明顯|社交需求已經變得比較明顯|理毛需求累積得比較明顯/,'Player Explanation must not leak need-threshold wording when a natural reason is available');
 assert.match(residentUiSource,/data-v1140-player-explanation/,'trusted explanation must render only as a Resident presentation element');
