@@ -5,6 +5,7 @@
   const meters=v=>Number.isFinite(v)?`${v.toFixed(2)} m`:'—';
   const nodeText=o=>o?`${o.spaceLabel}・${o.surfaceLabel} ${pos(o)}`:'無';
   const overheadText=o=>o?.covered?`同格上方幾何：${o.overhead.map(x=>`${x.name}（最低淨空 ${meters(x.clearance)}）`).join('、')}`:(o?.surfaceId!=='floor'?'家具表面':'一般地板');
+  const POSTURE_MARKS=Object.freeze({kneeling:'跪',prone:'趴'});
   let pending=false;
 
   function normalizedInspectorType(type){return ({agent:'Agent',container:'Container',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
@@ -54,7 +55,7 @@
     if(section.innerHTML!==html)section.innerHTML=html;
   }
 
-  function markerFor(){return'';}
+  function markerFor(type,o){return type==='agent'?(POSTURE_MARKS[o?.currentPosture]||''):'';}
   function syncFurnitureHandles(s,map){
     for(const f of Object.values(s.furniture||{})){
       const spatial=SP.furnitureObservation?.(s,f.id);
@@ -71,9 +72,9 @@
     map.querySelectorAll('.map-entity[data-entity]').forEach(btn=>{
       const [type,id]=(btn.dataset.entity||'').split(':',2);let o=null;
       if(type==='agent')o=SP.agentObservation(s,id);else if(type==='container'||type==='source')o=SP.objectObservation(s,id);
-      const mark=markerFor(type,o),onSurface=!!o&&o.surfaceId!=='floor',underCover=type==='agent'&&!!o?.covered;
+      const mark=markerFor(type,o),onSurface=!!o&&o.surfaceId!=='floor';
       if(btn.classList.contains('spatial-on-surface')!==onSurface)btn.classList.toggle('spatial-on-surface',onSurface);
-      if(btn.classList.contains('spatial-under-cover')!==underCover)btn.classList.toggle('spatial-under-cover',underCover);
+      if(type==='agent'){const posture=o?.currentPosture||'unknown';if(btn.dataset.posture!==posture)btn.dataset.posture=posture;}else btn.removeAttribute('data-posture');
       let badge=btn.querySelector('.spatial-node-mark');
       if(mark){if(!badge){badge=document.createElement('span');badge.className='spatial-node-mark';btn.append(badge);}if(badge.textContent!==mark)badge.textContent=mark;}else badge?.remove();
       if(o){if(!Object.prototype.hasOwnProperty.call(btn.dataset,'baseTitle'))btn.dataset.baseTitle=btn.title||'';const target=type==='agent'?(s.agents?.[id]||o.node):o.node,extra=`${o.spaceLabel}・${SP.describePlace(s,target)}`;const title=`${btn.dataset.baseTitle}・${extra}`;if(btn.title!==title)btn.title=title;}

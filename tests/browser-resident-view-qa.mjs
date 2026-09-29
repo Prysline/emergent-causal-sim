@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.36.0-decision-evidence';
+const CURRENT_VERSION='11.36.1-map-posture-selection';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -117,7 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.36.0','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.releaseLabel,'v11.36.1','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -317,6 +317,64 @@ await page.setViewportSize({width:390,height:844});
 await openStory();
 let mobile=await snapshot();
 assert.equal(mobile.activeMode,'resident');assert.equal(mobile.residentVisible,true);assert.equal(mobile.inspectorActive,true,'mobile Agent selection should open inspector view');assert.equal(mobile.navActive,true,'mobile inspector nav should be active');assert.ok(mobile.residentText.includes('疲勞')&&mobile.residentText.includes('睡意'));assert.ok(mobile.residentText.includes('關係'));
+
+const mobileMapTruthBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+await page.click('.mobile-nav [data-tab="map"]');
+const mobileMapFixture=await page.evaluate(()=>{
+  const E=window.SimEngine,UI=window.SimUI,st=E.getState(),a=st.agents.zhou;
+  const furniture=Object.values(st.furniture).find(f=>f.kind==='table'&&f.displayAt);
+  if(!furniture)throw new Error('mobile map QA requires a table fixture');
+  window.__mobileMapQaRestore={position:structuredClone(a.position),posture:structuredClone(a.posture)};
+  a.position=structuredClone(furniture.displayAt);
+  a.posture={kind:'kneeling',slotId:null,furnitureId:null};
+  UI.setCurrentZ(Number(furniture.displayAt.z??0));
+  return {agentId:a.id,furnitureId:furniture.id};
+});
+await page.waitForFunction(({agentId})=>{const btn=document.querySelector(`#map [data-entity="agent:${agentId}"]`);return btn?.dataset.posture==='kneeling'&&btn.querySelector('.spatial-node-mark')?.textContent==='跪';},mobileMapFixture);
+let mobileMapProjection=await page.evaluate(({agentId,furnitureId})=>{
+  const st=window.SimEngine.getState(),a=st.agents[agentId],btn=document.querySelector(`#map [data-entity="agent:${agentId}"]`),handle=document.querySelector(`#map .spatial-furniture-handle[data-furniture-id="${furnitureId}"]`);
+  const handleBox=handle?.getBoundingClientRect();
+  return {covered:window.SimSpatial.agentObservation(st,a)?.covered??false,posture:btn?.dataset.posture||'',marker:btn?.querySelector('.spatial-node-mark')?.textContent||'',underCoverClass:btn?.classList.contains('spatial-under-cover')??false,handleWidth:handleBox?.width||0,handleHeight:handleBox?.height||0,handleZ:handle?getComputedStyle(handle).zIndex:''};
+},mobileMapFixture);
+assert.equal(mobileMapProjection.covered,true,'fixture must exercise same-cell overhead geometry');
+assert.equal(mobileMapProjection.posture,'kneeling');assert.equal(mobileMapProjection.marker,'跪','map must project kneeling directly from canonical posture');
+assert.equal(mobileMapProjection.underCoverClass,false,'coarse overhead geometry must not become an under-furniture visual claim');
+assert.ok(mobileMapProjection.handleWidth>=18&&mobileMapProjection.handleHeight>=18,'mobile furniture secondary handle must have an expanded usable target');
+assert.equal(mobileMapProjection.handleZ,'4','furniture secondary handle must stay below the map entity layer');
+
+await page.evaluate(({agentId})=>{const a=window.SimEngine.getState().agents[agentId];a.posture={kind:'prone',slotId:null,furnitureId:null};window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());},mobileMapFixture);
+await page.waitForFunction(({agentId})=>{const btn=document.querySelector(`#map [data-entity="agent:${agentId}"]`);return btn?.dataset.posture==='prone'&&btn.querySelector('.spatial-node-mark')?.textContent==='趴';},mobileMapFixture);
+await page.evaluate(({agentId})=>{const a=window.SimEngine.getState().agents[agentId];a.posture={kind:'kneeling',slotId:null,furnitureId:null};window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());},mobileMapFixture);
+await page.waitForFunction(({agentId})=>document.querySelector(`#map [data-entity="agent:${agentId}"]`)?.dataset.posture==='kneeling',mobileMapFixture);
+await page.screenshot({path:`${outDir}/mobile-map-posture-overlap.png`,fullPage:true});
+
+const mobileMapStateBeforeSelection=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+const mobileAgentBox=await page.locator(`#map [data-entity="agent:${mobileMapFixture.agentId}"]`).boundingBox();
+assert.ok(mobileAgentBox,'mobile agent marker must have browser geometry');
+await page.mouse.click(mobileAgentBox.x+mobileAgentBox.width/2,mobileAgentBox.y+mobileAgentBox.height/2);
+await page.waitForFunction(({agentId})=>{const s=window.SimUI.getInspectorSelection?.();return s?.type==='agent'&&s.id===agentId;},mobileMapFixture);
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileMapStateBeforeSelection,'mobile agent selection must not mutate simulation state');
+
+await page.click('.mobile-nav [data-tab="map"]');
+const furnitureHit=await page.evaluate(({furnitureId})=>{
+  const handle=document.querySelector(`#map .spatial-furniture-handle[data-furniture-id="${furnitureId}"]`);if(!handle)return null;
+  const r=handle.getBoundingClientRect(),points=[[r.left+2,r.top+2],[r.right-2,r.top+2],[r.left+2,r.bottom-2],[r.right-2,r.bottom-2]];
+  for(const [x,y] of points){const hit=document.elementFromPoint(x,y);if(hit===handle||hit?.closest?.('.spatial-furniture-handle')===handle)return{x,y};}
+  return null;
+},mobileMapFixture);
+assert.ok(furnitureHit,'mobile furniture handle must retain at least one real hittable point beside an overlapping Agent');
+await page.mouse.click(furnitureHit.x,furnitureHit.y);
+await page.waitForFunction(({furnitureId})=>{const s=window.SimUI.getInspectorSelection?.();return s?.type==='furniture'&&s.id===furnitureId;},mobileMapFixture);
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileMapStateBeforeSelection,'mobile furniture selection must not mutate simulation state');
+
+await page.evaluate(({agentId})=>{
+  const a=window.SimEngine.getState().agents[agentId],restore=window.__mobileMapQaRestore;
+  a.position=restore.position;a.posture=restore.posture;delete window.__mobileMapQaRestore;
+  window.SimUI.setCurrentZ(window.SimUI.getCurrentZ());
+},mobileMapFixture);
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileMapTruthBefore,'temporary map overlap fixture must restore the canonical simulation state');
+await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.click());await page.waitForSelector('[data-v1140-resident-root]');
+
 const mobileStateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1140-mode="debug"]');await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
 const mobileDebug=await snapshot();const mobileStateAfterDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
@@ -348,5 +406,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.17.0 browser readable entity QA: Passage Profile + multi-mode Physical Debug + Relationship + readable/debug state-inert pass');
+console.log('v11.36.1 browser readable entity QA: map posture + mobile overlap selection + readable/debug state-inert pass');
 await browser.close();

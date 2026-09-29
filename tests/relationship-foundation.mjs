@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.36.0-decision-evidence';
+const APP_VERSION='11.36.1-map-posture-selection';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,V=globalThis.SimValidator,W=globalThis.SimWorld;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
