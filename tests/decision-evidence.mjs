@@ -63,7 +63,7 @@ assert.equal(a.decisionEvidence?.priorDecisionId,priorEmergency);
 assert.ok(a.decisionEvidence?.contributors.some(c=>c.kind==='need'&&c.key==='thirst'&&c.role==='emergency'));
 noIssues('emergency adopted evidence');
 
-E.reset(3604);st=E.getState();a=st.agents.zhen;quiet(a);a.needs.social=95;a.traits.social=1;st.agents.orange.offMap=true;st.agents.mei.offMap=true;const zhou=st.agents.zhou;zhou.offMap=false;zhou.action=null;zhou.activeIntent=null;
+E.reset(3604);st=E.getState();a=st.agents.zhen;quiet(a);a.needs.social=95;a.traits.social=1;st.agents.orange.offMap=true;const zhou=st.agents.zhou;zhou.offMap=false;zhou.action=null;zhou.activeIntent=null;
 E.tick();st=E.getState();a=st.agents.zhen;
 assert.equal(a.action?.kind,'talk','focused social setup should choose talk');
 const targetEvidence=a.decisionEvidence?.contributors.find(c=>c.kind==='socialTarget');
