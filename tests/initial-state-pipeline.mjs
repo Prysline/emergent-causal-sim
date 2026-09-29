@@ -10,7 +10,7 @@ const lifecyclePaths=productionScripts.filter(path=>
 );
 const lifecycleFiles=lifecyclePaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/release.js','src/systems/resources.js','src/spatial.js']);
+loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/systems/resources.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(lifecyclePaths);
