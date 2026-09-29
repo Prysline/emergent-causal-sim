@@ -117,7 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.36.0','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.releaseLabel,'v11.37.0','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
