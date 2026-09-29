@@ -70,9 +70,9 @@ function runtime(authoring){
 }
 
 {
-  const passageConstraints={'1,1<->2,1':{clearanceWidth:.30,clearanceHeight:2}};
-  const humanDoc=authoredFixture({kind:'human',passageConstraints});
-  const catDoc=authoredFixture({kind:'cat',passageConstraints});
+  const boundaries={'v:2,1':{kind:'opening',material:'wood',clearanceWidth:.30,clearanceHeight:2}};
+  const humanDoc=authoredFixture({kind:'human',boundaries});
+  const catDoc=authoredFixture({kind:'cat',boundaries});
   const humanReport=I.analyzeRuntimeCompatibility(humanDoc),catReport=I.analyzeRuntimeCompatibility(catDoc);
   assert.equal(hasKey(humanReport,'2,1'),false,'Human default walk envelope must fail the narrow authored passage');
   assert.equal(hasKey(catReport,'2,1'),true,'Cat default walk envelope must fit the same narrow authored passage');
