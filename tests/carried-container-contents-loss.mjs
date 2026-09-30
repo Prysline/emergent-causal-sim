@@ -9,7 +9,7 @@ const APP_VERSION='11.39.0-carried-contents-loss';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const near=(actual,expected,eps=1e-9,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
 const eventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&(e.data?.action==='spill'||e.data?.action==='contentsDrop'));
-const armWander=(st,a,goal)=>{a.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...goal},oneShot:true};};
+const armWander=(st,a,goal)=>{const intent={id:`intent:${a.id}:${st.tick}:execution-contents-loss-test`,kind:'explore',createdTick:st.tick,lifecycle:'actionBound',source:{type:'emergency',reason:'execution-contents-loss-test-fixture'}};a.activeIntent=intent;a.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...goal},oneShot:true,intentId:intent.id};};
 
 assert.equal(E.VERSION,APP_VERSION);
 assert.equal(R.VERSION,APP_VERSION);
