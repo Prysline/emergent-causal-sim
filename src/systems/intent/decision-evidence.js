@@ -1,5 +1,5 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld;if(!E||!W?.DELIBERATION_SCHEMA_VERSION)return;
+  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W?.DELIBERATION_SCHEMA_VERSION)return;
   const VERSION=W.DELIBERATION_SCHEMA_VERSION;
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const SOCIAL_TARGET_INTENTS=new Set(['socialize','interactWithAnimal','seekSocialContact']);
@@ -48,8 +48,24 @@
     }
   }
   function currentDecisionEvidence(a){return decisionEvidenceMatchesAction(a)?a.decisionEvidence:null;}
+  function routePathsSame(st,left,right){const a=left?.path||[],b=right?.path||[];return a.length===b.length&&a.every((node,index)=>SP?.nodeSame?SP.nodeSame(st,node,b[index]):sameValue(node,b[index]));}
+  function handlingRouteMetrics(route,score){return {pathDistance:Number(route?.pathDistance),traversalCost:Number(route?.traversalCost),travelTime:Number(route?.travelTime),handlingRisk:{contentsLoss:Number(route?.handlingRisk?.contentsLoss)||0,containerDrop:Number(route?.handlingRisk?.containerDrop)||0},decisionScore:Number(score)};}
+  function handlingRouteContributor(st,a,selected,baseline,preference){
+    const weights=clone(preference?.weights)||{},contentsWeight=Math.max(0,Number(weights.contentsRiskWeight)||0),dropWeight=Math.max(0,Number(weights.dropRiskWeight)||0),selectedScore=SP?.routeDecisionScore?.(selected,weights),baselineScore=SP?.routeDecisionScore?.(baseline,weights);
+    const selectedRisk=(Number(selected?.handlingRisk?.contentsLoss)||0)*contentsWeight+(Number(selected?.handlingRisk?.containerDrop)||0)*dropWeight,baselineRisk=(Number(baseline?.handlingRisk?.contentsLoss)||0)*contentsWeight+(Number(baseline?.handlingRisk?.containerDrop)||0)*dropWeight;
+    if(!a?.held||!Number.isFinite(selectedScore)||!Number.isFinite(baselineScore)||routePathsSame(st,selected,baseline)||selectedScore>=baselineScore-1e-9||selectedRisk>=baselineRisk-1e-9)return null;
+    return {kind:'handlingRisk',key:'routeSelection',role:'routeSelection',containerId:a.held,weights,selected:handlingRouteMetrics(selected,selectedScore),baseline:handlingRouteMetrics(baseline,baselineScore),sources:clone(preference?.contributors)||[]};
+  }
+  function appendHandlingRouteContributor(list,contributor){const out=clone(list||[]);if(!contributor||out.some(c=>c?.kind==='handlingRisk'&&c?.key==='routeSelection'))return out;out.push(contributor);return out;}
+  function captureHandlingRouteDecisionEvidence(st,a,selected,baseline,preference){
+    const contributor=handlingRouteContributor(st,a,selected,baseline,preference);if(!contributor)return null;
+    const evidence=currentDecisionEvidence(a);if(evidence){evidence.contributors=appendHandlingRouteContributor(evidence.contributors,contributor);return contributor;}
+    const thought=st?.thoughts?.[a?.id],pick=thought?.pick;
+    if(thought?.tick===st?.tick&&pick?.id===a?.action?.kind&&a?.action?.started===st?.tick){pick.decisionContributors=appendHandlingRouteContributor(pick.decisionContributors,contributor);return contributor;}
+    return null;
+  }
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/decision-evidence.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','deliberation.finalize-decision-evidence',()=>finalizeInitialDecisionEvidence(E.getState()),850);
-  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,finalizeInitialDecisionEvidence});
+  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
 })();

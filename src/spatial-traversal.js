@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,D=window.SimFurnitureDefinitions,C=window.SimEmbodimentCapabilities;if(!W||!SP||!D)return;
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
-  const VERSION='11.37.0-carried-container-feasibility';
+  const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
@@ -332,6 +332,20 @@
   }
   function locomotionRuntime(){return window.SimLocomotion||null;}
   function physicalRuntime(){return window.SimPhysical||null;}
+  function resourcesRuntime(){return window.SimResources||null;}
+  function normalizedRouteWeights(weights={}){
+    const bounded=(value,max)=>Math.max(0,Math.min(max,Number(value)||0));
+    return {timeWeight:bounded(weights.timeWeight,4),contentsRiskWeight:bounded(weights.contentsRiskWeight,12),dropRiskWeight:bounded(weights.dropRiskWeight,12)};
+  }
+  function edgeHandlingFacts(st,a,mode,distanceMeters,surfaceManeuver,maneuver){
+    const exposure=locomotionRuntime()?.handlingExposureForEdge?.({mode,distanceMeters,surfaceManeuver,traversalManeuver:maneuver})||{tilt:0,impact:0,oscillation:0};
+    const risk=resourcesRuntime()?.getCarriedHandlingRisk?.(st,a,exposure)||{contentsLoss:0,containerDrop:0};
+    return {exposure:{tilt:Number(exposure.tilt)||0,impact:Number(exposure.impact)||0,oscillation:Number(exposure.oscillation)||0},risk:{contentsLoss:Number(risk.contentsLoss)||0,containerDrop:Number(risk.containerDrop)||0}};
+  }
+  function routeDecisionScore(metrics,weights={}){
+    const w=normalizedRouteWeights(weights),traversal=Number(metrics?.traversalCost)||0,time=Number(metrics?.travelTime)||0,contents=Number(metrics?.handlingRisk?.contentsLoss)||0,drop=Number(metrics?.handlingRisk?.containerDrop)||0;
+    return traversal+time*w.timeWeight+contents*w.contentsRiskWeight+drop*w.dropRiskWeight;
+  }
   function resolvedRequestedMode(mode){return mode||(locomotionRuntime()?'auto':'walk');}
   function availableModes(a,requestedMode){
     const requested=resolvedRequestedMode(requestedMode),supported=physicalRuntime()?.supportedLocomotionModes?.(a);
@@ -390,8 +404,9 @@
   function routeStateSearch(st,start,aOrId=null,options={}){
     return withGeometrySnapshot(st,()=>routeStateSearchWithin(st,start,aOrId,options));
   }
-  function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,trackPath=false,onSettle=null}={}){
-    if(objective!=='traversalCost'&&objective!=='pathDistance')throw new RangeError(`Unsupported route objective: ${objective}`);
+  function routeStateSearchWithin(st,start,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,weights=null,trackPath=false,onSettle=null}={}){
+    if(!['traversalCost','pathDistance','weighted'].includes(objective))throw new RangeError(`Unsupported route objective: ${objective}`);
+    const routeWeights=objective==='weighted'?normalizedRouteWeights(weights):null;
     const a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode),modes=availableModes(a,requested),startMode=currentLocomotionMode(a),came={},score={},states={},feasibilityByEdge=new Map(),maneuverByEdge=new Map();
     const starts=[...(Array.isArray(start)?start:[start])].map(value=>normalizeNode(st,value)).filter(node=>node&&nodeLocomotionAccessible(st,node,a)).filter((node,index,list)=>list.findIndex(other=>nodeSame(st,node,other))===index).sort((x,y)=>nodeKey(st,x).localeCompare(nodeKey(st,y)));
     const s=starts[0]||null;
@@ -425,8 +440,10 @@
           const maneuver=edgeManeuver(cur.node,q),distanceMeters=maneuver?.distanceMeters??1,modeFeasibility=feasibility?.modes?.[nextMode]||null;
           const transition=transitionTicks(cur.mode,nextMode),movementCreditBefore=transition>0?0:best.movementCredit,surfaceManeuver=maneuver?.edgeKind==='surfaceTransition'?selectedSurfaceManeuver(a,modeFeasibility,nextMode,distanceMeters,movementCreditBefore):null,crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility,maneuver)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,movementCreditBefore,maneuver,surfaceManeuver),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding,maneuver,surfaceManeuver);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks)||!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
+          const handling=(objective==='weighted'||trackPath)?edgeHandlingFacts(st,a,nextMode,distanceMeters,surfaceManeuver,maneuver):{exposure:{tilt:0,impact:0,oscillation:0},risk:{contentsLoss:0,containerDrop:0}},edgeTime=transition+moveTicks;
+          const weightedEdge=edgeCost+edgeTime*(routeWeights?.timeWeight||0)+handling.risk.contentsLoss*(routeWeights?.contentsRiskWeight||0)+handling.risk.containerDrop*(routeWeights?.dropRiskWeight||0);
           const nextScore={
-            primary:best.primary+(objective==='pathDistance'?distanceMeters:edgeCost),
+            primary:best.primary+(objective==='pathDistance'?distanceMeters:objective==='weighted'?weightedEdge:edgeCost),
             time:best.time+transition+moveTicks,
             transitions:best.transitions+(transition>0?1:0),
             modeRank:best.modeRank+modeRank(nextMode),
@@ -435,7 +452,7 @@
           const qk=routeStateKey(st,q,nextMode);
           if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
           if(trackPath){
-            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,surfaceManeuver:surfaceManeuver?JSON.parse(JSON.stringify(surfaceManeuver)):null,edgeTraversalCost:edgeCost,congestion:crowding};
+            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,surfaceManeuver:surfaceManeuver?JSON.parse(JSON.stringify(surfaceManeuver)):null,handlingExposure:{...handling.exposure},handlingRisk:{...handling.risk},edgeTraversalCost:edgeCost,congestion:crowding};
             came[qk]={prev:ck,step};
           }
           score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
@@ -444,12 +461,12 @@
     }
     return {a,start:s,starts,startMode,requestedMode:requested,came,score,states,settledKey:null};
   }
-  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0}={}){
+  function routeSearch(st,start,goal,aOrId=null,{objective='traversalCost',mode=null,movementCredit=0,weights=null}={}){
     const a=agentFor(st,aOrId),s=normalizeNode(st,start),g=normalizeNode(st,goal),requested=resolvedRequestedMode(mode),startMode=currentLocomotionMode(a);
     availableModes(a,requested);
     if(!s||!g||!nodeLocomotionAccessible(st,s,a)||!nodeLocomotionAccessible(st,g,a))return {path:[],steps:[],startMode,requestedMode:requested};
     if(nodeSame(st,s,g))return {path:[cloneNode(s)],steps:[],startMode,requestedMode:requested};
-    const search=routeStateSearch(st,s,a,{objective,mode:requested,movementCredit,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
+    const search=routeStateSearch(st,s,a,{objective,mode:requested,movementCredit,weights,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
     if(!search.settledKey)return {path:[],steps:[],startMode:search.startMode,requestedMode:search.requestedMode};
     const steps=[];let k=search.settledKey;
     while(search.came[k]){steps.unshift(search.came[k].step);k=search.came[k].prev;}
@@ -482,21 +499,27 @@
   }
 
   function routeMetrics(st,a,route){
-    if(!route?.path?.length)return {pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
-    let pathDistance=0,traversalCost=0,travelTime=0,transitions=0;
-    for(const step of route.steps||[]){pathDistance+=Number.isFinite(step.distanceMeters)?step.distanceMeters:(traversalManeuver(st,step.from,step.to)?.distanceMeters??1);traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode,step.fromMode??step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;}
-    return {pathDistance,stepCount:(route.steps||[]).length,traversalCost,travelTime,transitionTicks:transitions};
+    if(!route?.path?.length)return {pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity,handlingExposure:{tilt:Infinity,impact:Infinity,oscillation:Infinity},handlingRisk:{contentsLoss:Infinity,containerDrop:Infinity}};
+    let pathDistance=0,traversalCost=0,travelTime=0,transitions=0;const handlingExposure={tilt:0,impact:0,oscillation:0},handlingRisk={contentsLoss:0,containerDrop:0};
+    for(const step of route.steps||[]){
+      const distance=Number.isFinite(step.distanceMeters)?step.distanceMeters:(traversalManeuver(st,step.from,step.to)?.distanceMeters??1);
+      const facts=step.handlingExposure&&step.handlingRisk?{exposure:step.handlingExposure,risk:step.handlingRisk}:edgeHandlingFacts(st,a,step.mode,distance,step.surfaceManeuver,traversalManeuver(st,step.from,step.to));
+      pathDistance+=distance;traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode,step.fromMode??step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;
+      for(const key of ['tilt','impact','oscillation'])handlingExposure[key]+=Math.max(0,Number(facts.exposure?.[key])||0);
+      for(const key of ['contentsLoss','containerDrop'])handlingRisk[key]+=Math.max(0,Number(facts.risk?.[key])||0);
+    }
+    return {pathDistance,stepCount:(route.steps||[]).length,traversalCost,travelTime,transitionTicks:transitions,handlingExposure,handlingRisk};
   }
-  function bestRouteFromOrigins(st,a,origins,goal,{mode=null,objective='traversalCost',movementCredit=0}={}){
+  function bestRouteFromOrigins(st,a,origins,goal,{mode=null,objective='traversalCost',movementCredit=0,weights=null}={}){
     const requested=resolvedRequestedMode(mode),g=normalizeNode(st,goal);
     if(!a||!g||!nodeLocomotionAccessible(st,g,a)||!origins?.length)return null;
-    const search=routeStateSearch(st,origins,a,{objective,mode:requested,movementCredit,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
+    const search=routeStateSearch(st,origins,a,{objective,mode:requested,movementCredit,weights,trackPath:true,onSettle:(node)=>nodeSame(st,node,g)});
     if(!search.settledKey)return null;
     const steps=[];let k=search.settledKey;
     while(search.came[k]){steps.unshift(search.came[k].step);k=search.came[k].prev;}
     const origin=search.states[k]?.node;if(!origin)return null;
     const route={path:[cloneNode(origin),...steps.map(step=>cloneNode(step.to))],steps,startMode:search.startMode,requestedMode:search.requestedMode};
-    const metrics=routeMetrics(st,a,route),value=metrics[objective]??Infinity;
+    const metrics=routeMetrics(st,a,route),value=objective==='weighted'?routeDecisionScore(metrics,weights):metrics[objective]??Infinity;
     return Number.isFinite(value)?{origin:cloneNode(origin),route,metrics,value}:null;
   }
   function bestSlotEgressNode(st,slotOrId,aOrId,goal,{mode=null,objective='traversalCost'}={}){
@@ -504,14 +527,14 @@
     if(!goal)return egress[0];
     return bestRouteFromOrigins(st,a,egress,goal,{mode,objective,movementCredit:0})?.origin||null;
   }
-  function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost',movementCredit=0}={}){
+  function planRoute(st,aOrId,goal,{mode=null,objective='traversalCost',movementCredit=0,weights=null}={}){
     const a=agentFor(st,aOrId),requested=resolvedRequestedMode(mode);
-    if(!a)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity};
-    const origins=routeOriginsForAgent(st,a,'walk'),credit=a.posture?.slotId?0:movementCredit,winner=bestRouteFromOrigins(st,a,origins,goal,{mode:requested,objective,movementCredit:credit});
-    if(!winner)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity,routeOrigin:null};
+    if(!a)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity,handlingExposure:{tilt:Infinity,impact:Infinity,oscillation:Infinity},handlingRisk:{contentsLoss:Infinity,containerDrop:Infinity},decisionScore:Infinity};
+    const origins=routeOriginsForAgent(st,a,'walk'),credit=a.posture?.slotId?0:movementCredit,winner=bestRouteFromOrigins(st,a,origins,goal,{mode:requested,objective,movementCredit:credit,weights});
+    if(!winner)return {path:[],steps:[],mode:requested,requestedMode:requested,objective,pathDistance:Infinity,stepCount:Infinity,traversalCost:Infinity,travelTime:Infinity,transitionTicks:Infinity,handlingExposure:{tilt:Infinity,impact:Infinity,oscillation:Infinity},handlingRisk:{contentsLoss:Infinity,containerDrop:Infinity},decisionScore:Infinity,routeOrigin:null};
     const route=winner.route,metrics=winner.metrics,used=[...new Set((route.steps||[]).map(step=>step.mode))];
     const selectedMode=used.length===1?used[0]:used.length>1?'mixed':route.startMode||requested;
-    return {path:route.path,steps:route.steps,mode:selectedMode,requestedMode:requested,objective,startMode:route.startMode,...metrics};
+    return {path:route.path,steps:route.steps,mode:selectedMode,requestedMode:requested,objective,startMode:route.startMode,...metrics,objectiveWeights:objective==='weighted'?normalizedRouteWeights(weights):null,decisionScore:objective==='weighted'?winner.value:metrics.traversalCost};
   }
   function astar(st,start,goal,agentId=null){const a=agentFor(st,agentId),requested=locomotionRuntime()?'auto':'walk';return routeSearch(st,start,goal,a,{objective:'traversalCost',mode:requested}).path;}
   function traversalCost(st,aOrId,p){return planRoute(st,aOrId,p,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}).traversalCost;}
@@ -732,5 +755,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.37.0-carried-container-feasibility',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();
