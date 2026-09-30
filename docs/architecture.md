@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.38.1-carried-risk-curve`。
+目前 runtime marker：`11.39.0-carried-contents-loss`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -77,7 +77,9 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 `Agent.held` 仍是唯一 held relation。Slice A 的 `carryGeometry / handsRequired` 與 effective traversal envelope / hand-demand feasibility 不變；Slice B 在同一 portable Container `handling` contract 新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{lowRiskExposure,highRiskExposure}`。這些是 Resources-owned authored object facts；`fillRatio`、HandlingExposure 與 HandlingRisk 都保持 derived，不另存 mirror。
 
-Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface maneuver family/direction、vertical movement direction 與 metric distance 派生 coarse `tilt / impact / oscillation`。相同 movement facts 對所有 Agent / Container 產生相同 exposure；trait、Need、Memory 不得改寫 exposure。Resources 再以 exposure + containment + contentRetention + derived fillRatio + resource phase / contents facts 產生 objective `HandlingRisk { contentsLoss, containerDrop }`。每個 retention dimension 的 `lowRiskExposure / highRiskExposure` 只校準 raw retention severity；第一版暫定分別對應 1% / 80%，低錨點以下仍可有低風險，高錨點以上則單調漸近 100%，有限 exposure 不因跨過 anchor 直接成為必然 outcome。這仍是 planning metric，不代表 consequence 已發生。
+Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface maneuver family/direction、vertical movement direction 與 metric distance 派生 coarse `tilt / impact / oscillation`。相同 movement facts 對所有 Agent / Container 產生相同 exposure；trait、Need、Memory 不得改寫 exposure。Resources 再以 exposure + containment + contentRetention + derived fillRatio + resource phase / contents facts 產生 objective `HandlingRisk { contentsLoss, containerDrop }`。每個 retention dimension 的 `lowRiskExposure / highRiskExposure` 只校準 raw retention severity；第一版暫定分別對應 1% / 80%，低錨點以下仍可有低風險，高錨點以上則單調漸近 100%，有限 exposure 不因跨過 anchor 直接成為必然 outcome。這仍是 planning metric，本身不代表 consequence 已發生。
+
+Slice C 的 execution boundary 仍由 core `moveToward()` 持有：只有 movement edge 真正完成、position 已 commit 後才 evaluate 一次 contents-loss consequence；posture transition tick、multi-tick edge 中途、完成前 interruption、replan / planning query 都不得 consume consequence RNG。execution 以 Locomotion 同一 `handlingExposureForEdge(...)` 由實際 completed edge facts 派生 exposure，再以 Resources 同一 objective `HandlingRisk.contentsLoss` 做一次 seeded occurrence roll；`careful` 等 subjective weight 不重算 probability。若 occurrence 成功，Resources 的 C2 deterministic amount curve 使用 `amountSeverity = 0.28 × sqrt(raw retention severity)`、`fillModifier = 0.5 + 0.5 × fillRatio`、`lossFraction = clamp01(amountSeverity × fillModifier)`；同一 Container 所有 nonzero contents 共用該 fraction，不再逐 resource 抽 RNG。Engine 將每個實際 amount 從 Container 精確轉移到 `resolveEffectNode(...)` 對應的 Spatial Environment endpoint；liquid 建立 `spill`、solid 建立 `contentsDrop` canonical World Event，Event 只保存 transfer / completed-edge / exposure / risk provenance，不另存 competing resource truth。若同 completed edge 的既有 on-enter hazard 已實際造成 carried-content consequence，normal handling 明確跳過，避免 double consequence。Container Drop 仍屬 Slice D。
 
 Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor 可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
 

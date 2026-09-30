@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.38.1-carried-risk-curve`
+`11.39.0-carried-contents-loss`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.38.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.38.1-carried-risk-curve`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改自身 contract，不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.39.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改自身 contract，不跟著 overall patch 假升。
 
-### Current Carried Container risk-curve correction
+### Current Carried Container execution contents-loss release
+
+`11.39.0-carried-contents-loss` 完成 P1 Slice C｜Execution Contents Loss。planning 仍只產生 objective HandlingExposure / HandlingRisk，不修改 contents、Environment、Events，也不消耗 consequence RNG；execution 只有在 core movement edge 真正完成、position commit 後才 evaluate 一次。posture transition、multi-tick edge 中途、完成前 interruption與 replan 都不觸發 consequence。
+
+Occurrence 直接使用 Resources-owned objective `HandlingRisk.contentsLoss` + canonical seeded RNG，沒有 trait / careful 二次調整。成功後 amount 與 occurrence 分離，採已核准 C2 deterministic calibration：`amountSeverity = 0.28 × sqrt(raw retention severity)`、`fillModifier = 0.5 + 0.5 × fillRatio`、`lossFraction = clamp01(amountSeverity × fillModifier)`；同一 Container 的所有 nonzero contents 共用該 fraction，不再抽第二個 amount / per-resource RNG。每個實際 loss 以 exact conservation 從 source Container 轉移到 current Spatial Environment `effectNode` endpoint；liquid 記錄 `spill`，solid 記錄 `contentsDrop` canonical World Event。既有 on-enter hazard 若已在同 completed edge 造成 carried-content consequence，normal handling 會明確跳過，避免 double consequence。
+
+Version impact：overall / Presentation、Resources → `11.39.0-carried-contents-loss`。Locomotion HandlingExposure、Spatial Traversal / Route weighted-search、Deliberation weights、Physical / Spatial Passage、Surface Environment contract、World Authoring `world-authoring-v10`、Furniture Catalog `furniture-definitions-v12`、Embodiment Capabilities `embodiment-capabilities-v4` 均未改自身 contract，不假升。Slice D Container Drop 仍未實作。
+
+### Previous Carried Container risk-curve correction
 
 `11.38.1-carried-risk-curve` 修正 P1 Slice B 的 retention-risk 語意，使 planning 的 objective `contentsLoss` 與後續 execution occurrence probability 能共用同一風險解讀，而不再把 authored calibration anchor 誤作 0% / 100% outcome threshold。
 
