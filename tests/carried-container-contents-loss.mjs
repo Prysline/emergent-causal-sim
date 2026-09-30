@@ -103,8 +103,9 @@ try{
     assert.ok(SP.nodeSame(st,a.position,top),'Surface edge must complete before consequence transfer');
     near(6-(plate.contents.water||0),expectedEach,1e-8);
     near(6-(plate.contents.food||0),expectedEach,1e-8);
-    near(SP.environmentResourceAmount(st,top,'water'),expectedEach,1e-8);
-    near(SP.environmentResourceAmount(st,top,'food'),expectedEach,1e-8);
+    const surfaceWater=SP.environmentResourceAmount(st,top,'water'),feetWater=a.contacts?.feet?.water||0;
+    near(surfaceWater+feetWater,expectedEach,1e-8,'same-tick Surface contact may move spill onward, but total realized water must remain conserved');
+    near(SP.environmentResourceAmount(st,top,'food'),expectedEach,1e-8,'solid loss remains on the Surface effectNode');
     assert.equal(SP.environmentResourceAmount(st,under,'water'),0,'Surface effectNode must not collapse to same-XY floor');
     assert.equal(SP.environmentResourceAmount(st,under,'food'),0,'solid loss must use same Surface effectNode');
     const events=eventsFor(st,plate.id);
@@ -112,6 +113,7 @@ try{
     assert.deepEqual(events.map(e=>e.data.action).sort(),['contentsDrop','spill']);
     for(const event of events){
       near(event.data.lossFraction,facts.lossFraction,1e-12);
+      near(event.data.amount,expectedEach,1e-8,'canonical consequence event records the exact Container -> Environment transfer amount before later contact effects');
       assert.equal(event.data.to,SP.environmentEndpointId(st,top));
       assert.equal(event.data.effectNode,SP.nodeKey(st,top));
     }
