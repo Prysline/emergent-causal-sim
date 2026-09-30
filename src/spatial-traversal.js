@@ -503,7 +503,7 @@
     let pathDistance=0,traversalCost=0,travelTime=0,transitions=0;const handlingExposure={tilt:0,impact:0,oscillation:0},handlingRisk={contentsLoss:0,containerDrop:0};
     for(const step of route.steps||[]){
       const distance=Number.isFinite(step.distanceMeters)?step.distanceMeters:(traversalManeuver(st,step.from,step.to)?.distanceMeters??1);
-      const facts=step.handlingExposure&&step.handlingRisk?{exposure:step.handlingExposure,risk:step.handlingRisk}:edgeHandlingFacts(st,a,step.mode,distance,step.surfaceManeuver,traversalManeuver(st,step.from,step.to));
+      const facts=step.handlingExposure&&step.handlingRisk?{exposure:step.handlingExposure,risk:step.handlingRisk}:edgeHandlingFacts(st,a,step.mode,distance,step.surfaceManeuver,{directionVector:{z:zOf(step.to)-zOf(step.from)}});
       pathDistance+=distance;traversalCost+=Number.isFinite(step.edgeTraversalCost)?step.edgeTraversalCost:traversalEdgeCost(st,step.from,step.to,a,step.mode,step.fromMode??step.mode);travelTime+=step.transitionTicks+step.moveTicks;transitions+=step.transitionTicks;
       for(const key of ['tilt','impact','oscillation'])handlingExposure[key]+=Math.max(0,Number(facts.exposure?.[key])||0);
       for(const key of ['contentsLoss','containerDrop'])handlingRisk[key]+=Math.max(0,Number(facts.risk?.[key])||0);
