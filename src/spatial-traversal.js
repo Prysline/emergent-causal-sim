@@ -440,8 +440,8 @@
           const maneuver=edgeManeuver(cur.node,q),distanceMeters=maneuver?.distanceMeters??1,modeFeasibility=feasibility?.modes?.[nextMode]||null;
           const transition=transitionTicks(cur.mode,nextMode),movementCreditBefore=transition>0?0:best.movementCredit,surfaceManeuver=maneuver?.edgeKind==='surfaceTransition'?selectedSurfaceManeuver(a,modeFeasibility,nextMode,distanceMeters,movementCreditBefore):null,crowding=crowdingRuntime()?.getCrowdingProfile?.(st,a,cur.node,q,nextMode,feasibility,maneuver)||null,timing=edgeMoveTiming(st,a,cur.node,q,nextMode,crowding,movementCreditBefore,maneuver,surfaceManeuver),moveTicks=timing.moveTicks,edgeCost=traversalEdgeCost(st,cur.node,q,a,nextMode,cur.mode,crowding,maneuver,surfaceManeuver);
           if(!Number.isFinite(edgeCost)||!Number.isFinite(moveTicks)||!Number.isFinite(distanceMeters)||distanceMeters<=0)continue;
-          const handling=(objective==='weighted'||trackPath)?edgeHandlingFacts(st,a,nextMode,distanceMeters,surfaceManeuver,maneuver):{exposure:{tilt:0,impact:0,oscillation:0},risk:{contentsLoss:0,containerDrop:0}},edgeTime=transition+moveTicks;
-          const weightedEdge=edgeCost+edgeTime*(routeWeights?.timeWeight||0)+handling.risk.contentsLoss*(routeWeights?.contentsRiskWeight||0)+handling.risk.containerDrop*(routeWeights?.dropRiskWeight||0);
+          const handling=objective==='weighted'?edgeHandlingFacts(st,a,nextMode,distanceMeters,surfaceManeuver,maneuver):null,edgeTime=transition+moveTicks;
+          const weightedEdge=edgeCost+edgeTime*(routeWeights?.timeWeight||0)+(handling?.risk.contentsLoss||0)*(routeWeights?.contentsRiskWeight||0)+(handling?.risk.containerDrop||0)*(routeWeights?.dropRiskWeight||0);
           const nextScore={
             primary:best.primary+(objective==='pathDistance'?distanceMeters:objective==='weighted'?weightedEdge:edgeCost),
             time:best.time+transition+moveTicks,
@@ -452,7 +452,7 @@
           const qk=routeStateKey(st,q,nextMode);
           if(score[qk]&&compareRouteScore(nextScore,score[qk])>=0)continue;
           if(trackPath){
-            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,surfaceManeuver:surfaceManeuver?JSON.parse(JSON.stringify(surfaceManeuver)):null,handlingExposure:{...handling.exposure},handlingRisk:{...handling.risk},edgeTraversalCost:edgeCost,congestion:crowding};
+            const step={from:cloneNode(cur.node),to:cloneNode(q),fromMode:cur.mode,mode:nextMode,distanceMeters,transitionTicks:transition,movementTicks:timing.movementTicks,moveTicks,movementCreditBefore,movementCreditAfter:timing.movementCreditAfter,crowdingDelayTicks:timing.delayTicks,speedFactor:physicalRuntime()?.getMovementEnvelope?.(a,nextMode)?.speedFactor??1,modeTraversalBurden:locomotionRuntime()?.modeTraversalBurden?.(a,nextMode)??0,modeTransitionBurden:locomotionRuntime()?.modeTransitionBurden?.(a,cur.mode,nextMode)??0,surfaceManeuver:surfaceManeuver?JSON.parse(JSON.stringify(surfaceManeuver)):null,handlingExposure:handling?{...handling.exposure}:null,handlingRisk:handling?{...handling.risk}:null,edgeTraversalCost:edgeCost,congestion:crowding};
             came[qk]={prev:ck,step};
           }
           score[qk]=nextScore;states[qk]={node:q,mode:nextMode};open.add(qk);
