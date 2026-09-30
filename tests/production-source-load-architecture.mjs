@@ -9,7 +9,8 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.39.0-carried-contents-loss';
+const CURRENT_VERSION='11.39.1-surface-boundary-transition';
+const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -198,14 +199,14 @@ assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
-assert.equal(Resources.VERSION,CURRENT_VERSION);
-assert.equal(W.RESOURCES_RUNTIME_VERSION,CURRENT_VERSION);
+assert.equal(Resources.VERSION,RESOURCES_VERSION);
+assert.equal(W.RESOURCES_RUNTIME_VERSION,RESOURCES_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(P.VERSION,'11.37.0-carried-container-feasibility');
-assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.38.0-carried-handling-risk');
 assert.equal(L.VERSION,'11.38.0-carried-handling-risk');

@@ -8,9 +8,10 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.39.0-carried-contents-loss';
+const APP_VERSION='11.39.1-surface-boundary-transition';
+const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
-const PASSAGE_VERSION='11.37.0-carried-container-feasibility';
+const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const A=globalThis.SimWorldAuthoring;
 const C=globalThis.SimEmbodimentCapabilities;
@@ -25,7 +26,7 @@ const coords=path=>path.map(node=>[node.x,node.y]);
 
 assert.equal(A.VERSION,'world-authoring-v10');
 assert.equal(C.VERSION,'embodiment-capabilities-v4');
-assert.equal(R.VERSION,APP_VERSION);
+assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
 assert.equal(SP.PASSAGE_PROFILE_VERSION,PASSAGE_VERSION);
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);

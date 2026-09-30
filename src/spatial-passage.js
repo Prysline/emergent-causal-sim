@@ -1,6 +1,6 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,P=window.SimPhysical,D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;if(!W||!SP?.normalizeNode||!P?.getEffectiveTraversalEnvelope||!P?.locomotionModeHandsFeasible||!D?.edgeClearanceOptions||!H?.deriveHorizontalGeometry||!H?.clearanceOptionFits)return;
-  const VERSION='11.37.0-carried-container-feasibility';
+  const VERSION='11.39.1-surface-boundary-transition';
   const FLOOR='floor',EPS=1e-9;
   const finitePositive=v=>Number.isFinite(Number(v))&&Number(v)>0;
   const constrained=v=>finitePositive(v)?Number(v):null;
@@ -127,15 +127,16 @@
   function surfaceTransitionProfile(st,a,b){
     const aFloor=a.surfaceId===FLOOR,bFloor=b.surfaceId===FLOOR;if(aFloor===bFloor||!edgeAdjacent(st,a,b))return null;
     const surfaceNode=aFloor?b:a,entry=SP.surfaceEntry?.(st,surfaceNode.surfaceId);if(!entry)return null;
+    const boundary=SP.boundaryBetween?.(st,a,b)||null,boundaryOpen=!SP.edgeStructurallyOpen||SP.edgeStructurallyOpen(st,a,b);
     const region=entry.surface.supportRegion,floorNode=aFloor?a:b;
     const horizontalGap=rectGap({x:floorNode.x,y:floorNode.y,width:1,depth:1},region);
     const fromElevation=aFloor?0:entry.surface.topElevation,toElevation=bFloor?0:entry.surface.topElevation;
     const heightDelta=toElevation-fromElevation;
     return {
-      from:a,to:b,edgeKind:'surfaceTransition',horizontalKind:null,status:'candidate',
+      from:a,to:b,edgeKind:'surfaceTransition',horizontalKind:null,status:boundaryOpen?'candidate':'blocked',
       structureId:null,structureKind:null,
-      options:[{interval:null,clearanceWidth:null,clearanceHeight:null,constrainedBy:{surface:entry.surface.id}}],
-      constrainedBy:{structure:null,boundary:null,explicitEdge:false,surface:entry.surface.id},
+      options:boundaryOpen?[{interval:null,clearanceWidth:null,clearanceHeight:null,constrainedBy:{surface:entry.surface.id,boundary:boundary?.id||null}}]:[],
+      constrainedBy:{structure:null,boundary:boundary?.id||null,explicitEdge:false,surface:entry.surface.id},
       resource:'surface:'+entry.surface.id,distanceMeters:1,horizontalConnection:null,
       surfaceTransition:{
         surfaceId:entry.surface.id,sourceSolidKey:entry.surface.sourceSolidKey,

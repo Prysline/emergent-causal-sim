@@ -62,6 +62,44 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
+  const st=E.getState(),human=st.agents.zhen,chair=st.furniture.chairNW;
+  const surface=chair.spatial.surfaces.find(s=>s.sourceSolidKey==='seat'),entry=SP.surfaceEntry(st,surface.id);
+  const top=SP.normalizeNode(st,surface.cells[0],surface.id),outside=outsideFloorFor(st,entry,human);
+  assert.ok(outside,'chair fixture must expose an adjacent floor node for boundary transition regression');
+  const boundaryId=SP.boundaryIdBetween(top,outside),boundaryKey=(SP.zOf(top)??0)+'|'+boundaryId;
+  assert.ok(boundaryId,'Surface/floor cardinal transition must resolve the separating canonical boundary');
+
+  st.map.boundaries[boundaryKey]={id:boundaryId,kind:'wall',material:'stone'};
+  for(const [from,to,label] of [[top,outside,'Surface → floor'],[outside,top,'floor → Surface']]){
+    const passage=SP.getPassageProfile(st,from,to);
+    assert.equal(passage?.edgeKind,'surfaceTransition',label+' must remain a Surface-transition profile when blocked');
+    assert.equal(passage.status,'blocked',label+' must preserve wall blockage in Passage truth');
+    assert.equal(passage.constrainedBy.boundary,boundaryId,label+' must expose the canonical boundary constraint');
+    assert.deepEqual(passage.options,[],label+' must expose no traversable option across a wall');
+    const feasibility=SP.traversalFeasibility(st,human,from,to);
+    assert.equal(feasibility.edgeOpen,false,label+' must be closed for traversal feasibility');
+    assert.equal(feasibility.modes.walk.feasible,false,label+' must not expose a walk maneuver through a wall');
+    assert.equal(SP.traversalManeuver(st,from,to),null,label+' must not become an executable traversal maneuver');
+  }
+
+  st.map.boundaries[boundaryKey]={id:boundaryId,kind:'opening',material:'wood'};
+  for(const [from,to,label] of [[top,outside,'Surface → floor'],[outside,top,'floor → Surface']]){
+    const passage=SP.getPassageProfile(st,from,to);
+    assert.equal(passage.status,'candidate',label+' must remain available through an open boundary');
+    assert.equal(passage.constrainedBy.boundary,boundaryId);
+    assert.equal(SP.traversalFeasibility(st,human,from,to).modes.walk.feasible,true,label+' must preserve legal chair-scale transition through an opening');
+  }
+
+  st.doors.surfaceBoundaryDoor={id:'surfaceBoundaryDoor',boundary:{z:SP.zOf(top)??0,id:boundaryId},state:'closed'};
+  for(const [from,to,label] of [[top,outside,'Surface → floor'],[outside,top,'floor → Surface']]){
+    const passage=SP.getPassageProfile(st,from,to);
+    assert.equal(passage.status,'blocked',label+' must respect a closed Door on the same canonical boundary');
+    assert.equal(SP.traversalFeasibility(st,human,from,to).edgeOpen,false);
+  }
+}
+
+E.reset(20260911);
+{
   const st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
   const definition={
     id:'test-low-overhead-platform',name:'低頂空測試平台',icon:'▱',kind:'platform',
