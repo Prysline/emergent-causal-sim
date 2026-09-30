@@ -12,8 +12,8 @@ const table=(st,x,y)=>SP.normalizeNode(st,{x,y},'diningTable:surface');
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen,zhou=st.agents.zhou;
-assert.equal(st.version,'11.37.0-carried-container-feasibility');
-assert.equal(SP.VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(st.version,'11.38.0-carried-handling-risk');
+assert.equal(SP.VERSION,'11.38.0-carried-handling-risk');
 assert.ok(st.furniture.diningTable.spatial.surfaces.some(surface=>surface.id==='diningTable:surface'),'default dining table must expose the canonical derived Surface identity');
 
 assert.equal(SP.nodeWalkable(st,floor(st,5,2),orange),true,'橘子可使用餐桌 footprint 所在格的合法剩餘 floor');

@@ -31,7 +31,7 @@
     W.DATA_ZH.replanCount='Replan 次數';
   }
 
-  const DELIBERATION_VERSION='11.36.0-decision-evidence';
+  const DELIBERATION_VERSION='11.38.0-carried-handling-risk';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
     for(const a of Object.values(st.agents||{}))a.decisionEvidence=null;
     return st;

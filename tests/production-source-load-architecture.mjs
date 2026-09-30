@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.37.0-carried-container-feasibility';
+const CURRENT_VERSION='11.38.0-carried-handling-risk';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -191,7 +191,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v8');
+assert.equal(A.VERSION,'world-authoring-v9');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v4');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
@@ -206,9 +206,9 @@ assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Ident
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(P.VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.37.0-carried-container-feasibility');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.37.0-carried-container-feasibility');
-assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.34.0-surface-traversal-maneuvers');
-assert.equal(L.VERSION,'11.34.0-surface-traversal-maneuvers');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk');
+assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.38.0-carried-handling-risk');
+assert.equal(L.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');

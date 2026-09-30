@@ -1,7 +1,13 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.36.0-decision-evidence';
+  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.38.0-carried-handling-risk';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
+  const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
+  function routePreferenceForAction(st,a,action=a?.action){
+    const careful=Math.max(0,Math.min(1,Number(a?.traits?.careful)||0));
+    const contentsRiskWeight=careful*ROUTE_CONTENTS_RISK_WEIGHT_MAX,dropRiskWeight=careful*ROUTE_DROP_RISK_WEIGHT_MAX;
+    return {weights:{timeWeight:0,contentsRiskWeight,dropRiskWeight},contributors:[{kind:'trait',key:'careful',role:'routeWeight',value:careful,actionKind:action?.kind||null,contentsRiskWeight,dropRiskWeight}]};
+  }
   const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
 
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
@@ -147,5 +153,5 @@
   if(!E.registerRuntimeHook)throw new Error('systems/intent/deliberation.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
 
-  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
+  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
 })();

@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.37.0-carried-container-feasibility`。
+目前 runtime marker：`11.38.0-carried-handling-risk`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -31,9 +31,9 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v8"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v9"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
-Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v8 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v9 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
 `src/horizontal-geometry.js` 現在是 Authoring／後續 Runtime 共同使用的 **pure horizontal geometry kernel**。它只消費 adapter 提供的 Cell、Boundary／Door、fixed blocker、Furniture metric solids 與低階 Passage constraint snapshot，不讀 `SimWorld / SimSpatial / Agent / Crowding / Route` mutable state。kernel 產生 canonical endpoint order 的無向 `HorizontalConnection`：`kind:'cardinal'|'diagonal'`、`distanceMeters`、`status:'candidate'|'blocked'|'unsupported'`、位置化 `options[]`、constraint provenance 與 stable edge／corner resource。第一版 diagonal 使用 B+ conservative local geometry；同 tile 多個 disconnected free-space regions或無法安全證明 corner-continuous corridor 時回 `unsupported`，而不是猜測可通。
 
@@ -72,6 +72,16 @@ World v4 / Door-Opening-Exit slice 將 Grid / Wall decision gate 落成正式 co
 Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
 
 Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**。`SimEditorPreviewBridge` 只在明確 `?preview=editor` 時讀取同 origin `sessionStorage` handoff；沒有 query flag 的一般 simulator load 永遠使用 `DEFAULT_WORLD_AUTHORING`。`world.js` 的 `createInitialStateFromAuthoring(authoring, seed)` 與既有 `createInitialState(seed)` 共用同一 canonical named initializer pipeline；Engine 在頁面啟動時只捕捉一次有效 preview snapshot，因此 Reset deterministic 重建同一 snapshot，不形成可持久污染 default world 的 hidden override。
+
+### Carried Container handling-risk boundary
+
+`Agent.held` 仍是唯一 held relation。Slice A 的 `carryGeometry / handsRequired` 與 effective traversal envelope / hand-demand feasibility 不變；Slice B 在同一 portable Container `handling` contract 新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{safe,failure}`。這些是 Resources-owned authored object facts；`fillRatio`、HandlingExposure 與 HandlingRisk 都保持 derived，不另存 mirror。
+
+Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface maneuver family/direction、vertical movement direction 與 metric distance 派生 coarse `tilt / impact / oscillation`。相同 movement facts 對所有 Agent / Container 產生相同 exposure；trait、Need、Memory 不得改寫 exposure。Resources 再以 exposure + containment + contentRetention + derived fillRatio + resource phase / contents facts 產生 objective `HandlingRisk { contentsLoss, containerDrop }`。這仍是 planning metric，不代表 consequence 已發生。
+
+Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor 可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
+
+Engine 每次開始下一 movement edge 前仍重新 query current Route，沒有 persistent path truth。若 handling risk 確實改變 route winner，Decision Evidence 只 freeze Container identity、subjective weights、selected/baseline objective metrics與 score；不保存 path nodes。initial core choice 在既有 afterTick 850 finalization 前，route contributor可先附著於同 tick provisional pick，再由原本的 Decision Evidence finalizer收斂；不新增 hook或改 hook ordering。
 
 ### Furniture Orientation / Shared Local Transform
 

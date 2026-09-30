@@ -6,17 +6,27 @@
 
 目前 current runtime marker：
 
-`11.37.0-carried-container-feasibility`
+`11.38.0-carried-handling-risk`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.37.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.37.0-carried-container-feasibility`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.37.0-carried-container-feasibility`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.37.0-carried-container-feasibility`；Deliberation `11.36.0-decision-evidence`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.34.0-surface-traversal-maneuvers`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v8`，Furniture Catalog = `furniture-definitions-v12`；未改 contract 的 Locomotion / Contact / Dynamic Congestion / Deliberation / Affect / Relationship / Memory / Surface Environment 等 subsystem generation 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.38.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.38.0-carried-handling-risk`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v9`，Furniture Catalog = `furniture-definitions-v12`。Physical / Spatial Passage / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改 contract，不跟著 overall minor 假升。
+
+### Current Carried Container handling-risk release
+
+`11.38.0-carried-handling-risk` 完成 P1 Slice B｜Objective Handling Risk + Route / Deliberation。World Authoring 升為 `world-authoring-v9`：portable Container 的 generic `handling` contract 在既有 `carryGeometry / handsRequired` 之外新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{safe,failure}`；`fillRatio` 繼續由 `contents / capacity` derived，不建立 serialized mirror。這些欄位已由 Resources handling-risk consumer直接使用，不是 dead schema。
+
+Locomotion 由 current mode / Surface maneuver / vertical direction / metric distance派生 objective `HandlingExposure { tilt, impact, oscillation }`；Resources 由 exposure + Container / contents facts派生 objective `HandlingRisk { contentsLoss, containerDrop }`。Route 新增 query-scoped weighted objective，在 search 期間直接消費 objective metrics與 caller weights，因此能真正發現「短而危險」與「較長但安全」兩條 route；canonical `traversalCost` 不吸收 handling risk。Deliberation 目前把 bounded `careful` contributor轉成 contents/drop weights；Route 不讀 trait / Need / Memory來源，也沒有 personality hard-ban。
+
+若 handling risk 真正改變 winner，既有 Agent-private Decision Evidence freeze Container identity、使用的 weights、selected/baseline route metrics與 decision score，不保存 path nodes。planning-only query 不修改 Container contents / Spatial Environment / Events，亦不消耗 consequence RNG。Slice C contents loss、Slice D container drop、spill / environment consequence均未實作。
+
+Version impact：overall / Presentation、Resources、Spatial Traversal / Route、Locomotion、Deliberation → `11.38.0-carried-handling-risk`；World Authoring → `world-authoring-v9`。Physical與Spatial Passage維持 `11.37.0-carried-container-feasibility`；Embodiment Capabilities維持 `embodiment-capabilities-v4`、Furniture Catalog維持 `furniture-definitions-v12`，Contact / Crowding / Affect / Relationship / Memory均不假升。
 
 ### Current derived Initializer / Editor reachability integration
 
 8-direction Slice 6 將 Initializer resident opening diagnostics 從 legacy cardinal `cells[].adjacent` BFS 遷移到 shared `HorizontalConnection` + resident kind body-only `default-walk` envelope；Runtime Passage 與 Initializer共用 pure clearance-option fit seam。Editor 將 legacy component明確標為「基礎水平連通區」，並在選取情境投影 cardinal / diagonal `candidate / blocked / unsupported` 與 resident-specific default-walk reachability；Preview preflight仍只走 canonical Initializer，Simulator Preview仍使用真正 Runtime Spatial，沒有第二套 traversal truth。
 
-這個 integration **不改 serialized World Authoring shape、不改 HorizontalConnection derived output、不改 Runtime Passage / Route / Locomotion execution semantics，也不建立 persistent resident reachability state**。因此 current overall marker仍為 `11.37.0-carried-container-feasibility`；World Authoring維持 `world-authoring-v8`、Furniture Catalog維持 `furniture-definitions-v12`、Embodiment Capabilities維持 `embodiment-capabilities-v4`，Horizontal Geometry / Physical / Spatial Passage / Route / Locomotion等 generation均不因 derived consumer migration假升。換言之，未來同類變更若 serialized authoring shape不變，也不得只因 consumer migration機械提升 World Authoring schema generation。
+這個 integration **本身不改 serialized World Authoring shape、不改 HorizontalConnection derived output、不改 Runtime Passage / Route / Locomotion execution semantics，也不建立 persistent resident reachability state**。它在完成時沒有造成版本提升；目前 overall / World Authoring 已因後續 Carried Containers Slice B 推進到 `11.38.0-carried-handling-risk` / `world-authoring-v9`。Furniture Catalog仍為 `furniture-definitions-v12`、Embodiment Capabilities仍為 `embodiment-capabilities-v4`，Slice 6 consumer migration本身仍不得被誤算成這些 generation 的升級理由。
 
-### Current Carried Container feasibility release
+### Previous Carried Container feasibility release
 
 `11.37.0-carried-container-feasibility` 建立 P1 Slice A carried physical feasibility：portable Container author `carryGeometry / handsRequired`；Resources 成為 canonical carried-load / handling-profile owner；Physical 保持 body-only MovementEnvelope 並派生 effective carried envelope；Passage / Route 使用相同 geometry 與總 hand-demand gate。basket 0.55m / 2 hands 作為 body-fits-carried-does-not reference fixture，cup / plate / bucket / bottle 保留一手攜帶的非 blanket-ban 行為。
 

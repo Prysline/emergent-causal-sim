@@ -113,7 +113,9 @@
     if(a.posture?.slotId){if(!standUp(a,goal))return false;return atSpatialPosition(a,goal);}
     if(atSpatialPosition(a,goal)){if(a.action){delete a.action.locomotionStep;delete a.action.locomotionCredit;}clearLocomotionState(a);return true;}
     const movementCredit=Number.isFinite(Number(a.action?.locomotionCredit))?Math.max(0,Math.min(Number(a.action.locomotionCredit),1-1e-9)):0;
-    const plan=SP.planRoute?.(state,a,goal,{mode:'auto',objective:'traversalCost',movementCredit}),step=plan?.steps?.[0];
+    const preference=a.held?window.SimEngine?.routePreferenceForAction?.(state,a,a.action):null,weights=preference?.weights||null,useWeighted=!!weights&&((Number(weights.timeWeight)||0)>0||(Number(weights.contentsRiskWeight)||0)>0||(Number(weights.dropRiskWeight)||0)>0);
+    const plan=SP.planRoute?.(state,a,goal,{mode:'auto',objective:useWeighted?'weighted':'traversalCost',weights,movementCredit}),step=plan?.steps?.[0];
+    if(useWeighted&&plan?.path?.length&&window.SimEngine?.captureHandlingRouteDecisionEvidence){const baseline=SP.planRoute?.(state,a,goal,{mode:'auto',objective:'traversalCost',movementCredit});window.SimEngine.captureHandlingRouteDecisionEvidence(state,a,plan,baseline,preference);}
     if(!step||!plan?.path?.length){if(a.action){delete a.action.locomotionStep;delete a.action.locomotionCredit;}clearLocomotionState(a);return false;}
     a.action.lastMoveReason=reason;a.action.lastPath=plan.path.map(p=>({...p}));
     if(adoptLocomotionPosture(a,step.mode)){delete a.action.locomotionStep;delete a.action.locomotionCredit;setLocomotionState(a,step.mode,'transition');return false;}

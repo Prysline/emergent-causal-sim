@@ -49,7 +49,8 @@
     current.currentPosture=a.posture?.kind||null;
     current.currentLocomotion=a.locomotion?{...a.locomotion}:null;
     current.spatialGoal=a.action?.spatialGoal?nodeObservation(st,a.action.spatialGoal,a):null;
-    current.routePlan=a.action?.spatialGoal&&SP.planRoute?SP.planRoute(st,a,a.action.spatialGoal,{mode:'auto',objective:'traversalCost'}):null;
+    const preference=a.held?window.SimEngine?.routePreferenceForAction?.(st,a,a.action):null,weights=preference?.weights||null,useWeighted=!!weights&&((Number(weights.timeWeight)||0)>0||(Number(weights.contentsRiskWeight)||0)>0||(Number(weights.dropRiskWeight)||0)>0);
+    current.routePlan=a.action?.spatialGoal&&SP.planRoute?SP.planRoute(st,a,a.action.spatialGoal,{mode:'auto',objective:useWeighted?'weighted':'traversalCost',weights}):null;
     current.nextCongestion=current.routePlan?.steps?.[0]?.congestion||null;
     current.lastPath=(a.action?.lastPath||[]).map(p=>nodeObservation(st,p,a)).filter(Boolean);
     return current;

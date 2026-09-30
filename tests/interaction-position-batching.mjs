@@ -8,7 +8,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-assert.equal(SP.VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.VERSION,'11.38.0-carried-handling-risk');
 
 function zOf(p){return SP.zOf?SP.zOf(p):(p?.z??0);}
 function localSame(a,b){return !!a&&!!b&&a.x===b.x&&a.y===b.y&&zOf(a)===zOf(b);}

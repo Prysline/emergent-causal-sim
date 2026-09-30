@@ -11,8 +11,8 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.37.0-carried-container-feasibility');
-assert.equal(E.VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(st.version,'11.38.0-carried-handling-risk');
+assert.equal(E.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(E.INTENT_SCHEMA_VERSION,'11.12.1-active-intent-foundation');
 for(const a of Object.values(st.agents))assert.equal(a.activeIntent,null,'reset should start without an Active Intent');
 noIssues('reset');

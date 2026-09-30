@@ -1,5 +1,5 @@
 {
-  "authoringSchema": "world-authoring-v8",
+  "authoringSchema": "world-authoring-v9",
   "doors": {
     "frontDoor": {
       "boundary": {
@@ -41,7 +41,22 @@
             "height": 0.3,
             "length": 0.1
           },
-          "handsRequired": 1
+          "handsRequired": 1,
+          "containment": "sealed",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.06,
+              "failure": 0.34
+            },
+            "impact": {
+              "safe": 0.1,
+              "failure": 0.52
+            },
+            "oscillation": {
+              "safe": 0.14,
+              "failure": 0.66
+            }
+          }
         }
       },
       "basket": {
@@ -80,7 +95,22 @@
             "height": 0.3,
             "length": 0.4
           },
-          "handsRequired": 2
+          "handsRequired": 2,
+          "containment": "open",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.24,
+              "failure": 0.78
+            },
+            "impact": {
+              "safe": 0.24,
+              "failure": 0.82
+            },
+            "oscillation": {
+              "safe": 0.36,
+              "failure": 1.25
+            }
+          }
         }
       },
       "cupA": {
@@ -110,7 +140,22 @@
             "height": 0.12,
             "length": 0.1
           },
-          "handsRequired": 1
+          "handsRequired": 1,
+          "containment": "open",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.06,
+              "failure": 0.34
+            },
+            "impact": {
+              "safe": 0.1,
+              "failure": 0.52
+            },
+            "oscillation": {
+              "safe": 0.14,
+              "failure": 0.66
+            }
+          }
         }
       },
       "cupB": {
@@ -138,7 +183,22 @@
             "height": 0.12,
             "length": 0.1
           },
-          "handsRequired": 1
+          "handsRequired": 1,
+          "containment": "open",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.06,
+              "failure": 0.34
+            },
+            "impact": {
+              "safe": 0.1,
+              "failure": 0.52
+            },
+            "oscillation": {
+              "safe": 0.14,
+              "failure": 0.66
+            }
+          }
         }
       },
       "foodPantry": {
@@ -230,7 +290,22 @@
             "height": 0.05,
             "length": 0.3
           },
-          "handsRequired": 1
+          "handsRequired": 1,
+          "containment": "open",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.1,
+              "failure": 0.48
+            },
+            "impact": {
+              "safe": 0.16,
+              "failure": 0.7
+            },
+            "oscillation": {
+              "safe": 0.24,
+              "failure": 0.95
+            }
+          }
         }
       },
       "plateB": {
@@ -263,7 +338,22 @@
             "height": 0.05,
             "length": 0.3
           },
-          "handsRequired": 1
+          "handsRequired": 1,
+          "containment": "open",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.1,
+              "failure": 0.48
+            },
+            "impact": {
+              "safe": 0.16,
+              "failure": 0.7
+            },
+            "oscillation": {
+              "safe": 0.24,
+              "failure": 0.95
+            }
+          }
         }
       },
       "waterBucket": {
@@ -310,7 +400,22 @@
             "height": 0.35,
             "length": 0.32
           },
-          "handsRequired": 1
+          "handsRequired": 1,
+          "containment": "open",
+          "contentRetention": {
+            "tilt": {
+              "safe": 0.08,
+              "failure": 0.44
+            },
+            "impact": {
+              "safe": 0.14,
+              "failure": 0.64
+            },
+            "oscillation": {
+              "safe": 0.2,
+              "failure": 0.82
+            }
+          }
         }
       }
     },

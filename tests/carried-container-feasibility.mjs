@@ -8,10 +8,10 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.37.0-carried-container-feasibility';
+const APP_VERSION='11.38.0-carried-handling-risk';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
 const PASSAGE_VERSION='11.37.0-carried-container-feasibility';
-const ROUTE_VERSION='11.37.0-carried-container-feasibility';
+const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const A=globalThis.SimWorldAuthoring;
 const C=globalThis.SimEmbodimentCapabilities;
 const E=globalThis.SimEngine;
@@ -23,7 +23,7 @@ const V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=path=>path.map(node=>[node.x,node.y]);
 
-assert.equal(A.VERSION,'world-authoring-v8');
+assert.equal(A.VERSION,'world-authoring-v9');
 assert.equal(C.VERSION,'embodiment-capabilities-v4');
 assert.equal(R.VERSION,APP_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
@@ -39,7 +39,7 @@ const expectedHandling={
   cupB:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},
   alcoholBottle:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1}
 };
-for(const [id,handling] of Object.entries(expectedHandling))assert.deepEqual(A.DEFAULT_WORLD_AUTHORING.entities.containers[id].handling,handling,id+' must use the Slice A carried calibration');
+for(const [id,handling] of Object.entries(expectedHandling)){const actual=A.DEFAULT_WORLD_AUTHORING.entities.containers[id].handling;assert.deepEqual({carryGeometry:actual.carryGeometry,handsRequired:actual.handsRequired},handling,id+' must preserve the Slice A carried calibration');assert.ok(['open','covered','sealed'].includes(actual.containment),id+' must expose Slice B containment');assert.deepEqual(Object.keys(actual.contentRetention||{}).sort(),['impact','oscillation','tilt'],id+' must expose Slice B contentRetention dimensions');}
 
 {
   const invalid=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
