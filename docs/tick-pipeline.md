@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.38.1-carried-risk-curve`。
+目前 runtime marker：`11.39.0-carried-contents-loss`。
 
+> `11.39.0-carried-contents-loss` 新增 Slice C execution consequence，但**沒有新增、刪除或重新排序 runtime hook**：normal handling 在 core `moveToward()` 的 completed-edge position commit 後同步 evaluate；先執行既有 `onEnterTile` hazard，只有該 hazard 未造成 carried-content consequence 時才做一次 normal contents-loss roll。planning / replan 仍不消耗 consequence RNG。
+>
 > `11.38.0-carried-handling-risk` 新增 Carried Containers Slice B 的同步 planning chain：Locomotion HandlingExposure → Resources HandlingRisk → weighted Route query → Deliberation weights；risk 確實改變 route winner 時，Decision Evidence沿用既有 adoption/finalization owner收斂 contributor。**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**；afterTick 850 finalization順序不變，planning不消耗 consequence RNG。
 >
 > `11.37.0-carried-container-feasibility` 只新增 carried Container 的同步 Resources / Physical / Passage / Route feasibility contract；**沒有新增、刪除或重新排序 simulation runtime hooks / Presentation observers**，Locomotion execution lifecycle 與 same-tick visibility保持不變。

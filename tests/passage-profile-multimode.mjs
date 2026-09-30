@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.38.1-carried-risk-curve';
+const APP_VERSION='11.39.0-carried-contents-loss';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
 const PASSAGE_VERSION='11.37.0-carried-container-feasibility';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
