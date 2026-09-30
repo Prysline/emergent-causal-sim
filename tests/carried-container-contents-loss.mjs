@@ -120,26 +120,28 @@ try{
   }
 
   {
-    let trial=null;
-    for(let seed=13903;seed<14003&&!trial;seed++){
-      E.reset(seed);
-      const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
-      for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
-      for(const tile of Object.values(st.map.tiles||{})){tile.terrain='wall';tile.walkable=false;tile.furnitureIds=[];tile.surface={contents:{}};}
-      for(const [x,y] of [[1,1],[2,1]]){const tile=st.map.tiles[`${x},${y}`];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];}
-      st.furniture={};st.map.passageConstraints={};
-      const start=floor(st,1,1),goal=floor(st,2,1);
-      a.position={...start};a.posture={kind:'standing',slotId:null,furnitureId:null};a.locomotion={mode:null,phase:'idle'};a.traits.careful=0;
-      a.held=cup.id;delete cup.supportId;cup.contents={water:35};
-      SP.putEnvironmentResource(st,goal,'water',100);
-      armWander(st,a,goal);
-      E.tick();
-      if(!SP.nodeSame(st,a.position,goal))continue;
-      const slip=st.events.find(event=>event.data?.action==='tileSlip'&&event.data?.actor===a.id&&event.data?.position===SP.nodeKey(st,goal));
-      if(slip)trial={st,a,cup,goal,slip};
-    }
-    assert.ok(trial,'deterministic seed sweep must find a completed wet-floor edge with tileSlip');
-    const {st,cup,goal,slip}=trial,spills=eventsFor(st,cup.id);
+    E.reset(13903);
+    const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
+    for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+    for(const tile of Object.values(st.map.tiles||{})){tile.terrain='wall';tile.walkable=false;tile.furnitureIds=[];tile.surface={contents:{}};}
+    for(const [x,y] of [[1,1],[2,1]]){const tile=st.map.tiles[`${x},${y}`];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];}
+    st.furniture={};st.map.passageConstraints={};
+    const start=floor(st,1,1),goal=floor(st,2,1);
+    a.position={...start};a.posture={kind:'standing',slotId:null,furnitureId:null};a.locomotion={mode:null,phase:'idle'};a.traits.careful=0;
+    a.held=cup.id;delete cup.supportId;cup.contents={water:35};
+    SP.putEnvironmentResource(st,goal,'water',100);
+    armWander(st,a,goal);
+    const originalSetState=L.setState;
+    L.setState=(agent,mode,phase)=>{
+      const result=originalSetState(agent,mode,phase);
+      if(agent?.id===a.id&&phase==='moving')st.rngState=0;
+      return result;
+    };
+    try{E.tick();}finally{L.setState=originalSetState;}
+    assert.ok(SP.nodeSame(st,a.position,goal),'wet-floor fixture must complete the movement edge');
+    const slip=st.events.find(event=>event.data?.action==='tileSlip'&&event.data?.actor===a.id&&event.data?.position===SP.nodeKey(st,goal));
+    assert.ok(slip,'known seeded RNG state must trigger the wet-floor tileSlip');
+    const spills=eventsFor(st,cup.id);
     assert.equal(spills.length,1,'legacy on-enter carried spill must suppress normal same-edge handling consequence');
     assert.ok(spills[0].causeIds.includes(slip.id),'legacy spill must preserve canonical tileSlip cause linkage');
     assert.equal(spills[0].data.completedEdge,undefined,'surviving event must be legacy hazard, not second normal-handling event');
