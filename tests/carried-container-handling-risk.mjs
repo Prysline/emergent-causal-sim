@@ -5,24 +5,30 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.38.0-carried-handling-risk';
+const APP_VERSION='11.38.1-carried-risk-curve';
+const ROUTE_VERSION='11.38.0-carried-handling-risk';
+const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
+const DELIBERATION_VERSION='11.38.0-carried-handling-risk';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=route=>(route?.path||[]).map(node=>[node.x,node.y,node.z??0,node.surfaceId||'floor']);
 const objectiveFacts=route=>({traversalCost:route.traversalCost,travelTime:route.travelTime,handlingExposure:route.handlingExposure,handlingRisk:route.handlingRisk});
 const highExposure={tilt:.8,impact:.7,oscillation:.6};
 
 assert.equal(E.VERSION,APP_VERSION);
-assert.equal(A.VERSION,'world-authoring-v9');
+assert.equal(A.VERSION,'world-authoring-v10');
 assert.equal(R.VERSION,APP_VERSION);
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,APP_VERSION);
-assert.equal(L.VERSION,APP_VERSION);
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,APP_VERSION);
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,APP_VERSION);
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
+assert.equal(L.VERSION,LOCOMOTION_VERSION);
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,DELIBERATION_VERSION);
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
 
 {
   const authored=A.DEFAULT_WORLD_AUTHORING,cup=authored.entities.containers.cupA,bottle=authored.entities.containers.alcoholBottle;
   assert.equal(cup.handling.containment,'open');
   assert.deepEqual(Object.keys(cup.handling.contentRetention).sort(),['impact','oscillation','tilt']);
+  assert.deepEqual(Object.keys(cup.handling.contentRetention.tilt).sort(),['highRiskExposure','lowRiskExposure']);
+  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'safe'),false,'legacy safe threshold must not survive world-authoring-v10');
+  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'failure'),false,'legacy failure threshold must not survive world-authoring-v10');
   assert.equal(bottle.handling.containment,'sealed');
   assert.equal(Object.hasOwn(cup,'fillRatio'),false,'fillRatio must remain derived instead of authored');
   const invalid=A.cloneAuthoring(authored);
@@ -30,6 +36,11 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,APP_VERSION);
   const report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
+  const legacy=A.cloneAuthoring(authored);
+  legacy.entities.containers.cupA.handling.contentRetention.tilt={safe:.06,failure:.34};
+  const legacyReport=A.validateAuthoring(legacy);
+  assert.equal(legacyReport.ok,false,'world-authoring-v10 must reject legacy safe/failure retention fields');
+  assert.ok(legacyReport.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
 }
 
 {
@@ -50,6 +61,21 @@ E.reset(13800);
   const st=E.getState(),basket=st.containers.basket,cup=st.containers.cupA,bottle=st.containers.alcoholBottle,plate=st.containers.plateA;
   basket.contents={};
   assert.equal(R.handlingRiskForContainer(st,basket,highExposure).contentsLoss,0,'empty basket may carry burden but cannot lose nonexistent contents');
+
+  cup.contents={water:35};
+  const band=cup.handling.contentRetention.tilt,span=band.highRiskExposure-band.lowRiskExposure;
+  const tiltRisk=value=>R.handlingRiskForContainer(st,cup,{tilt:value,impact:0,oscillation:0}).contentsLoss;
+  const near=(actual,expected,eps=1e-9)=>assert.ok(Math.abs(actual-expected)<=eps,`expected ${expected}, got ${actual}`);
+  near(tiltRisk(0),0);
+  near(tiltRisk(band.lowRiskExposure/2),.005);
+  near(tiltRisk(band.lowRiskExposure),.01);
+  near(tiltRisk((band.lowRiskExposure+band.highRiskExposure)/2),.405);
+  near(tiltRisk(band.highRiskExposure),.80);
+  near(tiltRisk(band.highRiskExposure+span),.90);
+  assert.ok(tiltRisk(band.highRiskExposure+span*20)<1,'finite exposure must approach but not hard-clamp to 100%');
+  const walkExposure=L.handlingExposureForEdge({mode:'walk',distanceMeters:1});
+  const walkRisk=R.handlingRiskForContainer(st,cup,walkExposure).contentsLoss;
+  assert.ok(walkRisk>0&&walkRisk<.01,'normal walk below lowRiskExposure should remain low-risk, not hard-zero');
 
   cup.contents={water:17.5};
   const half=R.handlingRiskForContainer(st,cup,highExposure);

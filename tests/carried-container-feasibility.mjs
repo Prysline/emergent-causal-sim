@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.38.0-carried-handling-risk';
+const APP_VERSION='11.38.1-carried-risk-curve';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
 const PASSAGE_VERSION='11.37.0-carried-container-feasibility';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
@@ -23,7 +23,7 @@ const V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=path=>path.map(node=>[node.x,node.y]);
 
-assert.equal(A.VERSION,'world-authoring-v9');
+assert.equal(A.VERSION,'world-authoring-v10');
 assert.equal(C.VERSION,'embodiment-capabilities-v4');
 assert.equal(R.VERSION,APP_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);

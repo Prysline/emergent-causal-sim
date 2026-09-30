@@ -1,5 +1,5 @@
 {
-  "authoringSchema": "world-authoring-v9",
+  "authoringSchema": "world-authoring-v10",
   "doors": {
     "frontDoor": {
       "boundary": {
@@ -45,16 +45,16 @@
           "containment": "sealed",
           "contentRetention": {
             "tilt": {
-              "safe": 0.06,
-              "failure": 0.34
+              "lowRiskExposure": 0.06,
+              "highRiskExposure": 0.34
             },
             "impact": {
-              "safe": 0.1,
-              "failure": 0.52
+              "lowRiskExposure": 0.1,
+              "highRiskExposure": 0.52
             },
             "oscillation": {
-              "safe": 0.14,
-              "failure": 0.66
+              "lowRiskExposure": 0.14,
+              "highRiskExposure": 0.66
             }
           }
         }
@@ -99,16 +99,16 @@
           "containment": "open",
           "contentRetention": {
             "tilt": {
-              "safe": 0.24,
-              "failure": 0.78
+              "lowRiskExposure": 0.24,
+              "highRiskExposure": 0.78
             },
             "impact": {
-              "safe": 0.24,
-              "failure": 0.82
+              "lowRiskExposure": 0.24,
+              "highRiskExposure": 0.82
             },
             "oscillation": {
-              "safe": 0.36,
-              "failure": 1.25
+              "lowRiskExposure": 0.36,
+              "highRiskExposure": 1.25
             }
           }
         }
@@ -144,16 +144,16 @@
           "containment": "open",
           "contentRetention": {
             "tilt": {
-              "safe": 0.06,
-              "failure": 0.34
+              "lowRiskExposure": 0.06,
+              "highRiskExposure": 0.34
             },
             "impact": {
-              "safe": 0.1,
-              "failure": 0.52
+              "lowRiskExposure": 0.1,
+              "highRiskExposure": 0.52
             },
             "oscillation": {
-              "safe": 0.14,
-              "failure": 0.66
+              "lowRiskExposure": 0.14,
+              "highRiskExposure": 0.66
             }
           }
         }
@@ -187,16 +187,16 @@
           "containment": "open",
           "contentRetention": {
             "tilt": {
-              "safe": 0.06,
-              "failure": 0.34
+              "lowRiskExposure": 0.06,
+              "highRiskExposure": 0.34
             },
             "impact": {
-              "safe": 0.1,
-              "failure": 0.52
+              "lowRiskExposure": 0.1,
+              "highRiskExposure": 0.52
             },
             "oscillation": {
-              "safe": 0.14,
-              "failure": 0.66
+              "lowRiskExposure": 0.14,
+              "highRiskExposure": 0.66
             }
           }
         }
@@ -294,16 +294,16 @@
           "containment": "open",
           "contentRetention": {
             "tilt": {
-              "safe": 0.1,
-              "failure": 0.48
+              "lowRiskExposure": 0.1,
+              "highRiskExposure": 0.48
             },
             "impact": {
-              "safe": 0.16,
-              "failure": 0.7
+              "lowRiskExposure": 0.16,
+              "highRiskExposure": 0.7
             },
             "oscillation": {
-              "safe": 0.24,
-              "failure": 0.95
+              "lowRiskExposure": 0.24,
+              "highRiskExposure": 0.95
             }
           }
         }
@@ -342,16 +342,16 @@
           "containment": "open",
           "contentRetention": {
             "tilt": {
-              "safe": 0.1,
-              "failure": 0.48
+              "lowRiskExposure": 0.1,
+              "highRiskExposure": 0.48
             },
             "impact": {
-              "safe": 0.16,
-              "failure": 0.7
+              "lowRiskExposure": 0.16,
+              "highRiskExposure": 0.7
             },
             "oscillation": {
-              "safe": 0.24,
-              "failure": 0.95
+              "lowRiskExposure": 0.24,
+              "highRiskExposure": 0.95
             }
           }
         }
@@ -404,16 +404,16 @@
           "containment": "open",
           "contentRetention": {
             "tilt": {
-              "safe": 0.08,
-              "failure": 0.44
+              "lowRiskExposure": 0.08,
+              "highRiskExposure": 0.44
             },
             "impact": {
-              "safe": 0.14,
-              "failure": 0.64
+              "lowRiskExposure": 0.14,
+              "highRiskExposure": 0.64
             },
             "oscillation": {
-              "safe": 0.2,
-              "failure": 0.82
+              "lowRiskExposure": 0.2,
+              "highRiskExposure": 0.82
             }
           }
         }
