@@ -34,11 +34,6 @@ assert.equal(ranked[0].id,'bed:right','bounded preference must not beat a huge o
 ranked=U.rankSleepTargets(st,a,[target('bed:right',4),target('bed:left',4)]);
 assert.equal(ranked[0].id,'bed:left','stable canonical target identity must settle a full tie deterministically');
 
-const sleepUtilityBefore=E.baseUtilityForAction(a,'sleep');
-st.usageAssignments.push({id:'extra-right',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:right'}});
-assert.equal(E.baseUtilityForAction(a,'sleep'),sleepUtilityBefore,'target preference must not feed back into action-level sleep utility');
-st.usageAssignments.pop();
-
 const left=SP.getSlot(st,'bed:left');
 b.position={...left.position};b.posture={kind:'lying',slotId:left.id,furnitureId:left.furnitureId};
 assert.equal(SP.sleepTargets(st,a).some(x=>x.id==='bed:left'),false,'occupied assigned bed must stay physically unavailable');
@@ -58,6 +53,10 @@ assert.equal(U.activeClaims(st,'sleep').length,1,'temporary offMap must not rele
 noIssues(st,'claim state');
 
 E.reset(4042);st=E.getState();a=st.agents.zhen;
+const sleepUtilityBefore=E.baseUtilityForAction(a,'sleep');
+st.usageAssignments.push({id:'extra-right',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:right'}});
+assert.equal(E.baseUtilityForAction(a,'sleep'),sleepUtilityBefore,'target preference must not feed back into action-level sleep utility');
+st.usageAssignments.pop();
 assert.equal(E.usageHabit(st,a,'sleep',{kind:'slot',id:'bed:left'}),null);
 const ev1=E.addEvent('usage proof','normal',[],{actor:a.id,action:'sleep',phase:'start',slot:'bed:left',furniture:'bed',position:E.positionRef(a.position)});
 const h1=E.usageHabit(st,a,'sleep',{kind:'slot',id:'bed:left'});
