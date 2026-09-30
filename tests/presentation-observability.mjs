@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.37.0-carried-container-feasibility';
+const CURRENT_VERSION='11.38.0-carried-handling-risk';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
-const LOCOMOTION_VERSION='11.34.0-surface-traversal-maneuvers';
-const ROUTE_VERSION='11.37.0-carried-container-feasibility';
+const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
+const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
 const PASSAGE_VERSION='11.37.0-carried-container-feasibility';
 const files=[
@@ -119,7 +119,7 @@ assert.match(passageSource,/function getPassageProfile\(st,from,to\)/,'Spatial m
 assert.match(passageSource,/function traversalFeasibility\(st,agent,from,to\)/,'Spatial must expose multi-mode physical traversal feasibility');
 assert.doesNotMatch(passageSource,/bestMode|recommendedMode|relationship|memory|affinity|goalPressure/i,'Passage feasibility must not choose modes or read psychological state');
 const routeSource=fs.readFileSync(new URL('../src/spatial-traversal.js',import.meta.url),'utf8');
-assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\.37\.0-carried-container-feasibility'/,'Spatial must expose the current carried-container Route Semantics contract marker');
+assert.match(routeSource,/ROUTE_SEMANTICS_VERSION:'11\\.38\\.0-carried-handling-risk'/,'Spatial must expose the current carried-container Route Semantics contract marker');
 assert.match(routeSource,/function planRoute\(st,aOrId,goal/,'Spatial must expose canonical planRoute');
 assert.match(routeSource,/function traversalCost\(st,aOrId,p\)/,'Spatial must expose standalone traversalCost');
 assert.match(routeSource,/function pathDistance\(st,aOrId,p\)/,'Spatial must keep pathDistance distinct from traversalCost');
