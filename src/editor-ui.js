@@ -816,18 +816,7 @@
       details+=`<br>位置：<code>(${position.x}, ${position.y}, ${z})</code><br>地形：${esc(terrainLabel(terrain))} <code>${esc(terrain)}</code>`;
       details+=`<br>材質：${esc(materialDisplay(cell?.material))}`;
       if(furniture.length)details+=`<br>此格家具：${furniture.map(([id,item])=>esc(item.name||id)).join('、')}`;
-      if(derived){
-        details+=`<br>推導狀態：<code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code>`;
-        if(derived.componentId)details+=`<br>基礎水平連通區：<code>${esc(derived.componentId)}</code>（cardinal compatibility coarse topology）`;
-        if(derived.blockedBy.length)details+=`<br>阻擋來源：${derived.blockedBy.map(esc).join('、')}`;
-        const floorGeometry=derived.floorGeometry;
-        if(floorGeometry){
-          const freeEdges=['north','east','south','west'].filter(edge=>(floorGeometry.edgeIntervals?.[edge]||[]).length);
-          details+=`<br>格內 free-space：<code>${floorGeometry.regionCount} region</code>${freeEdges.length?` · 可連通邊：${freeEdges.map(edge=>esc(EDGE_LABELS[edge]||edge)).join('、')}`:''}`;
-        }
-        const connections=horizontalConnectionDiagnostics(topology,position);
-        if(connections.length)details+=`<br>八方向幾何：${connections.map(connection=>esc(connection)).join('；')}`;
-      }
+      if(derived)details+=spatialDiagnosticsMarkup(derived,topology,position);
     }
     if(heading)$('selectionSummary').innerHTML=`<b>${heading}</b>${details}${transientMessage?`<br><br><span>${esc(transientMessage)}</span>`:''}`;
     else $('selectionSummary').textContent=transientMessage||'尚未選取。';
@@ -835,6 +824,8 @@
 
   const EDGE_LABELS={north:'北',east:'東',south:'南',west:'西'};
   const HORIZONTAL_DIRECTION_LABELS={'0,-1':'北','1,-1':'東北','1,0':'東','1,1':'東南','0,1':'南','-1,1':'西南','-1,0':'西','-1,-1':'西北'};
+  const HORIZONTAL_DIRECTION_GLYPHS={'0,-1':'↑','1,-1':'↗','1,0':'→','1,1':'↘','0,1':'↓','-1,1':'↙','-1,0':'←','-1,-1':'↖'};
+  const HORIZONTAL_DIRECTION_ORDER={'0,-1':0,'1,-1':1,'1,0':2,'1,1':3,'0,1':4,'-1,1':5,'-1,0':6,'-1,-1':7};
   const HORIZONTAL_STATUS_LABELS={candidate:'幾何候選',blocked:'阻擋',unsupported:'保守不支援'};
   function horizontalConnectionDiagnostics(topology,position){
     if(!topology||!position)return[];
@@ -844,15 +835,45 @@
       if(connection.from?.x===position.x&&connection.from?.y===position.y&&(connection.from?.z??0)===(position.z??0))other=connection.to;
       else if(connection.to?.x===position.x&&connection.to?.y===position.y&&(connection.to?.z??0)===(position.z??0))other=connection.from;
       if(!other)continue;
-      const dx=other.x-position.x,dy=other.y-position.y,direction=HORIZONTAL_DIRECTION_LABELS[`${dx},${dy}`]||`${dx},${dy}`;
+      const dx=other.x-position.x,dy=other.y-position.y,directionKey=`${dx},${dy}`;
       const constrained=connection.constrainedBy||{},constraints=[];
       for(const boundary of [constrained.boundary,...(constrained.boundaries||[])])if(boundary&&!constraints.includes('boundary '+boundary))constraints.push('boundary '+boundary);
       for(const door of constrained.doors||[])constraints.push('door '+door);
       for(const solid of constrained.solids||[])constraints.push('solid '+solid);
       if(constrained.explicitPassage)constraints.push('explicit passage');
-      out.push(`${direction} ${connection.kind} · ${HORIZONTAL_STATUS_LABELS[connection.status]||connection.status}${constraints.length?' · '+constraints.join(', '):''}`);
+      out.push({
+        directionKey,
+        direction:HORIZONTAL_DIRECTION_LABELS[directionKey]||directionKey,
+        glyph:HORIZONTAL_DIRECTION_GLYPHS[directionKey]||'•',
+        order:HORIZONTAL_DIRECTION_ORDER[directionKey]??99,
+        kind:connection.kind,
+        status:connection.status,
+        statusLabel:HORIZONTAL_STATUS_LABELS[connection.status]||connection.status,
+        constraints
+      });
     }
-    return out.sort();
+    return out.sort((a,b)=>a.order-b.order||a.direction.localeCompare(b.direction));
+  }
+  function horizontalGeometryMarkup(connections){
+    if(!connections.length)return'';
+    const counts={candidate:0,blocked:0,unsupported:0};
+    for(const connection of connections)if(Object.hasOwn(counts,connection.status))counts[connection.status]++;
+    const summary=Object.entries(counts).filter(([,count])=>count>0).map(([status,count])=>`${HORIZONTAL_STATUS_LABELS[status]} ${count}`).join(' · ');
+    const rows=connections.map(connection=>`<div class="selection-geometry-row"><div class="selection-geometry-head"><b>${esc(connection.glyph)} ${esc(connection.direction)}</b><span><code>${esc(connection.kind)}</code> · ${esc(connection.statusLabel)}</span></div><small>${connection.constraints.length?`約束來源：${connection.constraints.map(esc).join('、')}`:'約束來源：無'}</small></div>`).join('');
+    return `<details class="selection-diagnostics selection-geometry" data-selection-diagnostics="geometry"><summary>八方向幾何${summary?` · ${esc(summary)}`:''}</summary><div class="selection-diagnostics-body selection-geometry-list">${rows}</div></details>`;
+  }
+  function spatialDiagnosticsMarkup(derived,topology,position){
+    const rows=[];
+    rows.push(`<div><span>推導狀態</span><strong><code>${derived.structuralOpen?'structural-open':'structural-closed'}</code> · <code>${derived.open?'connected-open':'blocked'}</code></strong></div>`);
+    if(derived.componentId)rows.push(`<div><span>基礎水平連通區</span><strong><code>${esc(derived.componentId)}</code></strong><small>cardinal compatibility coarse topology</small></div>`);
+    if(derived.blockedBy.length)rows.push(`<div><span>阻擋來源</span><strong>${derived.blockedBy.map(esc).join('、')}</strong></div>`);
+    const floorGeometry=derived.floorGeometry;
+    if(floorGeometry){
+      const freeEdges=['north','east','south','west'].filter(edge=>(floorGeometry.edgeIntervals?.[edge]||[]).length);
+      rows.push(`<div><span>格內 free-space</span><strong><code>${floorGeometry.regionCount} region</code></strong>${freeEdges.length?`<small>可連通邊：${freeEdges.map(edge=>esc(EDGE_LABELS[edge]||edge)).join('、')}</small>`:''}</div>`);
+    }
+    const connections=horizontalConnectionDiagnostics(topology,position);
+    return `<details class="selection-diagnostics selection-space" data-selection-diagnostics="space"><summary>空間詳情</summary><div class="selection-diagnostics-body"><div class="selection-diagnostics-grid">${rows.join('')}</div>${horizontalGeometryMarkup(connections)}</div></details>`;
   }
   function boundaryEditorMarkup(x,y,z){
     const rows=['north','east','south','west'].map(edge=>{
