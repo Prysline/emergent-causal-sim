@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.38.0-carried-handling-risk`。
+目前 runtime marker：`11.38.1-carried-risk-curve`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -31,7 +31,7 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v9"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v10"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
 Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v9 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
@@ -75,9 +75,9 @@ Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**�
 
 ### Carried Container handling-risk boundary
 
-`Agent.held` 仍是唯一 held relation。Slice A 的 `carryGeometry / handsRequired` 與 effective traversal envelope / hand-demand feasibility 不變；Slice B 在同一 portable Container `handling` contract 新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{safe,failure}`。這些是 Resources-owned authored object facts；`fillRatio`、HandlingExposure 與 HandlingRisk 都保持 derived，不另存 mirror。
+`Agent.held` 仍是唯一 held relation。Slice A 的 `carryGeometry / handsRequired` 與 effective traversal envelope / hand-demand feasibility 不變；Slice B 在同一 portable Container `handling` contract 新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{lowRiskExposure,highRiskExposure}`。這些是 Resources-owned authored object facts；`fillRatio`、HandlingExposure 與 HandlingRisk 都保持 derived，不另存 mirror。
 
-Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface maneuver family/direction、vertical movement direction 與 metric distance 派生 coarse `tilt / impact / oscillation`。相同 movement facts 對所有 Agent / Container 產生相同 exposure；trait、Need、Memory 不得改寫 exposure。Resources 再以 exposure + containment + contentRetention + derived fillRatio + resource phase / contents facts 產生 objective `HandlingRisk { contentsLoss, containerDrop }`。這仍是 planning metric，不代表 consequence 已發生。
+Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface maneuver family/direction、vertical movement direction 與 metric distance 派生 coarse `tilt / impact / oscillation`。相同 movement facts 對所有 Agent / Container 產生相同 exposure；trait、Need、Memory 不得改寫 exposure。Resources 再以 exposure + containment + contentRetention + derived fillRatio + resource phase / contents facts 產生 objective `HandlingRisk { contentsLoss, containerDrop }`。每個 retention dimension 的 `lowRiskExposure / highRiskExposure` 只校準 raw retention severity；第一版暫定分別對應 1% / 80%，低錨點以下仍可有低風險，高錨點以上則單調漸近 100%，有限 exposure 不因跨過 anchor 直接成為必然 outcome。這仍是 planning metric，不代表 consequence 已發生。
 
 Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor 可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
 

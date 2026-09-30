@@ -6,11 +6,21 @@
 
 目前 current runtime marker：
 
-`11.38.0-carried-handling-risk`
+`11.38.1-carried-risk-curve`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.38.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.38.0-carried-handling-risk`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v9`，Furniture Catalog = `furniture-definitions-v12`。Physical / Spatial Passage / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改 contract，不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.38.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.38.1-carried-risk-curve`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改自身 contract，不跟著 overall patch 假升。
 
-### Current Carried Container handling-risk release
+### Current Carried Container risk-curve correction
+
+`11.38.1-carried-risk-curve` 修正 P1 Slice B 的 retention-risk 語意，使 planning 的 objective `contentsLoss` 與後續 execution occurrence probability 能共用同一風險解讀，而不再把 authored calibration anchor 誤作 0% / 100% outcome threshold。
+
+World Authoring 升為 `world-authoring-v10`：portable Container 的 `contentRetention.{tilt,impact,oscillation}` 將舊 `safe / failure` 正名為 `lowRiskExposure / highRiskExposure`。兩者只表示風險曲線校準位置。第一版 raw retention severity 暫定：`exposure = 0 → 0`、`lowRiskExposure → 0.01`、`highRiskExposure → 0.80`；低錨點前與兩錨點間線性遞增，高錨點以上持續單調增加並漸近 1，有限 exposure 不因跨過 anchor 直接變成必然失敗。這組 1% / 80% 是 calibration，可依 reference fixtures 與實測調整，不是永久產品常數。
+
+Resources generation 推進到 `11.38.1-carried-risk-curve`，並繼續以 retention severity × containment × derived fillRatio × resource phase / contents facts 派生每個 movement edge 的 objective `contentsLoss`。空內容與 sealed normal movement 等 canonical facts 仍可使 risk 精確為 0。Locomotion 的 HandlingExposure calibration、Route weighted-search contract、Deliberation weights 與 Decision Evidence ownership均未改自身 contract，因此維持 `11.38.0-carried-handling-risk`。
+
+Version impact：overall / Presentation、Resources → `11.38.1-carried-risk-curve`；World Authoring → `world-authoring-v10`。Spatial Traversal / Route / Locomotion / Deliberation 維持 `11.38.0-carried-handling-risk`；Physical / Spatial Passage維持 `11.37.0-carried-container-feasibility`；Furniture Catalog / Embodiment Capabilities與其他未改 subsystem generation均不假升。Slice C execution contents loss / resource transfer仍未實作。
+
+### Previous Carried Container handling-risk release
 
 `11.38.0-carried-handling-risk` 完成 P1 Slice B｜Objective Handling Risk + Route / Deliberation。World Authoring 升為 `world-authoring-v9`：portable Container 的 generic `handling` contract 在既有 `carryGeometry / handsRequired` 之外新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{safe,failure}`；`fillRatio` 繼續由 `contents / capacity` derived，不建立 serialized mirror。這些欄位已由 Resources handling-risk consumer直接使用，不是 dead schema。
 
