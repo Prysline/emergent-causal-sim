@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.39.1-surface-boundary-transition`。
+目前 runtime marker：`11.40.0-usage-preference-sleep`。
 
+> `11.40.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
+>
 > `11.39.1-surface-boundary-transition` 修正同步 Passage Surface-transition boundary correctness：Surface ↔ floor 的 candidate / blocked 狀態改為服從 canonical Boundary / Door permeability；**沒有新增、刪除或重新排序 runtime hook**，也不改 same-tick visibility 或 RNG ordering。
 >
 > `11.39.0-carried-contents-loss` 新增 Slice C execution consequence，但**沒有新增、刪除或重新排序 runtime hook**：normal handling 在 core `moveToward()` 的 completed-edge position commit 後同步 evaluate；先執行既有 `onEnterTile` hazard，只有該 hazard 未造成 carried-content consequence 時才做一次 normal contents-loss roll。planning / replan 仍不消耗 consequence RNG。

@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.39.1-surface-boundary-transition';
+const APP_VERSION='11.40.0-usage-preference-sleep';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const near=(actual,expected,eps=1e-9,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);

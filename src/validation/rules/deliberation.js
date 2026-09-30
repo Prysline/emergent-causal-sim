@@ -13,10 +13,22 @@
         if(!evidence.action?.kind||!Number.isInteger(evidence.action?.started))add('decision_evidence_action_context_missing',`${a.name} 的 Decision Evidence 缺少 Action context。`,{agentId:a.id,decisionId:evidence.id});
         if(!Array.isArray(evidence.contributors))add('decision_evidence_contributors_invalid',`${a.name} 的 Decision Evidence contributors 必須是 array。`,{agentId:a.id,decisionId:evidence.id});
       }
+      if(!Array.isArray(a.targetSelectionEvidence))add('target_selection_evidence_missing',`${a.name} 缺少 targetSelectionEvidence array。`,{agentId:a.id});
+      else{
+        const ids=new Set();
+        for(const item of a.targetSelectionEvidence){
+          if(!item||typeof item.id!=='string'||!item.id.startsWith(`target-decision:${a.id}:`))add('target_selection_evidence_id_invalid',`${a.name} 的 Target Selection Evidence ID 無效。`,{agentId:a.id,targetDecisionId:item?.id});
+          else if(ids.has(item.id))add('target_selection_evidence_id_duplicate',`${a.name} 有重複 Target Selection Evidence ID。`,{agentId:a.id,targetDecisionId:item.id});else ids.add(item.id);
+          if(!item?.parentDecisionId||item.activity!=='sleep'||item.selectedTarget?.kind!=='slot'||!item.selectedTarget?.id)add('target_selection_evidence_context_invalid',`${a.name} 的 Target Selection Evidence 缺少 parent/activity/target context。`,{agentId:a.id,targetDecisionId:item?.id});
+          for(const key of ['objectiveScore','preferenceDelta','effectiveScore'])if(!Number.isFinite(item?.[key]))add('target_selection_evidence_score_invalid',`${a.name} 的 Target Selection Evidence ${key} 必須是 finite number。`,{agentId:a.id,targetDecisionId:item?.id,key});
+          if(!Array.isArray(item?.contributors))add('target_selection_evidence_contributors_invalid',`${a.name} 的 Target Selection Evidence contributors 必須是 array。`,{agentId:a.id,targetDecisionId:item?.id});
+        }
+      }
       if(action?.decisionId){
         if(!evidence||evidence.id!==action.decisionId)add('action_decision_link_missing',`${a.name} 的 Action decisionId 沒有對應目前 Decision Evidence。`,{agentId:a.id,decisionId:action.decisionId});
         else if(typeof E.decisionEvidenceMatchesAction==='function'&&!E.decisionEvidenceMatchesAction(a))add('action_decision_context_mismatch',`${a.name} 的 Action 與 Decision Evidence context 不一致。`,{agentId:a.id,decisionId:action.decisionId});
       }
+      if(action?.targetSelectionDecisionId&&typeof E.currentTargetSelectionEvidence==='function'&&!E.currentTargetSelectionEvidence(a))add('action_target_selection_link_invalid',`${a.name} 的 Action targetSelectionDecisionId 沒有對應目前 Target Selection Evidence。`,{agentId:a.id,targetDecisionId:action.targetSelectionDecisionId});
       if(intent&&(Object.prototype.hasOwnProperty.call(intent,'commitmentCost')||Object.prototype.hasOwnProperty.call(intent,'currentUtility')))add('derived_intent_deliberation_state_persisted',`${a.name} 的 Active Intent 不應保存 derived commitment / utility。`,{agentId:a.id,intentId:intent.id});
       if(intent?.source?.type==='softReconsideration'){
         if(!Number.isInteger(intent.source.tick)||intent.source.tick<0||intent.source.tick>st.tick)add('soft_intent_tick_invalid',`${a.name} 的 soft reconsideration tick 無效。`,{agentId:a.id,intentId:intent.id,tick:intent.source.tick});

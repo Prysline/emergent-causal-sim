@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.39.1-surface-boundary-transition';
+const CURRENT_VERSION='11.40.0-usage-preference-sleep';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -378,7 +378,7 @@ await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.cl
 const mobileStateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1140-mode="debug"]');await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
 const mobileDebug=await snapshot();const mobileStateAfterDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('MovementEnvelopes'),'mobile Debug should retain multi-mode Physical Profile observability');
+assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('MovementEnvelopes'),'mobile Debug should retain multi-mode Physical Profile observability');assert.ok(mobileDebug.debugText.includes('Usage Habit')&&mobileDebug.debugText.includes('私人'),'mobile Agent Debug must render private Usage Habit observability');assert.ok(mobileDebug.debugText.includes('Target Selection Evidence（私人）'),'mobile Agent Debug must render private Target Selection Evidence observability');
 await page.click('[data-v1140-mode="resident"]');await page.click('[data-v1140-tab="memory"]');mobile=await snapshot();
 const mobileStateAfterMemory=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 assert.equal(mobileStateAfterMemory,mobileStateBefore,'mobile Resident tab switch must not mutate simulation state');assert.ok(mobile.residentText.includes('當時沒有得到回應'));assert.ok(!mobile.residentText.includes('故意忽略'));assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>${mobile.width}`);assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);

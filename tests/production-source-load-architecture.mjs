@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.39.1-surface-boundary-transition';
+const CURRENT_VERSION='11.40.0-usage-preference-sleep';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -40,6 +40,7 @@ const locomotionIndex=indexOf('src/systems/locomotion.js');
 const crowdingIndex=indexOf('src/crowding-runtime-v1200.js');
 const pipelineIndex=indexOf('src/runtime-hook-pipeline.js');
 const hookManifestIndex=indexOf('src/runtime/hook-manifest.js');
+const usageIndex=indexOf('src/systems/usage/runtime.js');
 const validatorIndex=indexOf('src/validation/registry.js');
 const manifestIndex=indexOf('src/validation/manifest.js');
 const uiIndex=indexOf('src/ui/core.js');
@@ -62,6 +63,7 @@ assert.ok(resourcesIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every simulation hook registrant');
+assert.ok(usageIndex>engineIndex&&usageIndex<hookManifestIndex,'Usage preference runtime must load after Engine/Evidence and before hook-manifest finalization');
 assert.ok(hookManifestIndex<validatorIndex,'simulation hook manifest must finalize before validation/UI composition');
 assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independently of the runtime-hook manifest');
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
@@ -147,7 +149,8 @@ const engineDependentSubsystemRuntimes=[
   'src/systems/memory/retention.js',
   'src/systems/social/human-response.js',
   'src/systems/memory/deliberation.js',
-  'src/systems/memory/social-outcome.js'
+  'src/systems/memory/social-outcome.js',
+  'src/systems/usage/runtime.js'
 ];
 
 for(const path of engineDependentSubsystemSchemas){
@@ -170,7 +173,7 @@ const validatorRules=fs.readdirSync(validationRulesDir)
   .filter(name=>name.endsWith('.js'))
   .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.equal(validatorRules.length,18,'architecture guard must discover every semantic validator rule');
+assert.equal(validatorRules.length,19,'architecture guard must discover every semantic validator rule');
 for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
@@ -192,7 +195,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v10');
+assert.equal(A.VERSION,'world-authoring-v11');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v4');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
@@ -213,6 +216,10 @@ assert.equal(L.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
+assert.equal(W.MEMORY_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(W.DELIBERATION_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(E.USAGE_PREFERENCE_VERSION,CURRENT_VERSION);
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
 assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless production prefix must be complete without Presentation observers');

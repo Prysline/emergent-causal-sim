@@ -13,7 +13,7 @@ const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(A.VERSION,'world-authoring-v10');
+assert.equal(A.VERSION,'world-authoring-v11');
 assert.equal(C.VERSION,'embodiment-capabilities-v4');
 
 {
@@ -223,6 +223,23 @@ assert.equal(C.VERSION,'embodiment-capabilities-v4');
   assert.ok(result.issues.some(x=>x.code==='authoring_position_out_of_bounds'));
   assert.deepEqual(result.meta.preview.footprint,[{x:11,y:7,z:0},{x:12,y:7,z:0},{x:11,y:8,z:0},{x:12,y:8,z:0}]);
   assert.ok(result.meta.preview.followerPositions.length>0);
+}
+
+// World-level usage references must block Furniture deletion until explicitly unlinked.
+{
+  const usageDoc=clone(A.DEFAULT_WORLD_AUTHORING);
+  usageDoc.usageAssignments=[{id:'assigned-bed',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
+  let result=M.deleteFurniture(usageDoc,{furnitureId:'bed'});
+  assert.equal(result.ok,false);
+  assert.ok(result.meta.blockers.some(x=>x.ownerType==='usageAssignment'));
+  usageDoc.usageAssignments=[];
+  usageDoc.claimEligibility=[{id:'claimable-bed',activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
+  result=M.deleteFurniture(usageDoc,{furnitureId:'bed'});
+  assert.equal(result.ok,false);
+  assert.ok(result.meta.blockers.some(x=>x.ownerType==='claimEligibility'));
+  usageDoc.claimEligibility=[];
+  result=M.deleteFurniture(usageDoc,{furnitureId:'bed'});
+  assert.equal(result.ok,true);
 }
 
 console.log('editor authoring mutations: ok');

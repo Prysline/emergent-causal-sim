@@ -4,12 +4,12 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.39.1-surface-boundary-transition';
+const CURRENT_VERSION='11.40.0-usage-preference-sleep';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
-const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
+const PASSAGE_VERSION='11.40.0-usage-preference-sleep';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',
@@ -171,6 +171,11 @@ assert.doesNotMatch(entityUiSource,/\.(?:playerContents|readableFurnitureState|e
 assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readable View must expose the canonical presentation version');
 assert.match(entityUiSource,/fact\('基礎阻擋',SP\.walkable\(st,t\)\?'無':'有'\)/,'Tile Readable must expose only base blocker semantics');
 assert.doesNotMatch(entityUiSource,/fact\('通行',SP\.walkable/,'Tile Readable must not claim complete per-Agent traversal feasibility');
+const memoryUiSource=fs.readFileSync(new URL('../src/ui/inspectors/memory.js',import.meta.url),'utf8');
+assert.match(memoryUiSource,/Usage Habit（私人）|<b>私人<\\/b>/,'Agent Debug Memory Inspector must label Usage Habit as private');
+assert.match(memoryUiSource,/effectiveUsageHabitStrength/,'Usage Habit Inspector must derive effective strength from the Memory owner');
+const intentUiSource=fs.readFileSync(new URL('../src/ui/inspectors/intent.js',import.meta.url),'utf8');
+assert.match(intentUiSource,/Target Selection Evidence（私人）/,'Agent Debug Intent Inspector must expose private Target Selection Evidence');
 const appraisalUiSource=fs.readFileSync(new URL('../src/ui/inspectors/appraisal.js',import.meta.url),'utf8');
 assert.doesNotMatch(appraisalUiSource,/尚不產生情緒/,'Appraisal hint must not contradict the current Appraisal → Affect pipeline');
 assert.match(appraisalUiSource,/historical appraisal 更新 Affect/,'Appraisal hint must describe the current downstream Affect boundary without recomputing it');

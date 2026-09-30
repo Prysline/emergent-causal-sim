@@ -42,7 +42,7 @@ function idleAgent(agent,node){
 }
 
 E.reset(20260926);
-assert.equal(E.getState().version,'11.39.1-surface-boundary-transition');
+assert.equal(E.getState().version,'11.40.0-usage-preference-sleep');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 
