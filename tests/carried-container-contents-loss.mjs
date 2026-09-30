@@ -125,23 +125,26 @@ try{
       E.reset(seed);
       const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
       for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
-      const surface=st.furniture.diningTable.spatial.surfaces.find(x=>x.id==='diningTable:surface');
-      const top=SP.normalizeNode(st,surface.cells[0],surface.id),start=floor(st,5,1),under=floor(st,top.x,top.y);
+      for(const tile of Object.values(st.map.tiles||{})){tile.terrain='wall';tile.walkable=false;tile.furnitureIds=[];tile.surface={contents:{}};}
+      for(const [x,y] of [[1,1],[2,1]]){const tile=st.map.tiles[`${x},${y}`];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];}
+      st.furniture={};st.map.passageConstraints={};
+      const start=floor(st,1,1),goal=floor(st,2,1);
       a.position={...start};a.posture={kind:'standing',slotId:null,furnitureId:null};a.locomotion={mode:null,phase:'idle'};a.traits.careful=0;
       a.held=cup.id;delete cup.supportId;cup.contents={water:35};
-      SP.putEnvironmentResource(st,under,'water',100);
-      armWander(st,a,top);
+      SP.putEnvironmentResource(st,goal,'water',100);
+      armWander(st,a,goal);
       E.tick();
-      const slip=st.events.find(event=>event.data?.action==='tileSlip'&&event.data?.actor===a.id);
-      if(slip)trial={st,a,cup,top,under,slip};
+      if(!SP.nodeSame(st,a.position,goal))continue;
+      const slip=st.events.find(event=>event.data?.action==='tileSlip'&&event.data?.actor===a.id&&event.data?.position===SP.nodeKey(st,goal));
+      if(slip)trial={st,a,cup,goal,slip};
     }
-    assert.ok(trial,'deterministic seed sweep must find a wet-floor tileSlip trial');
-    const {st,cup,top,under,slip}=trial,spills=eventsFor(st,cup.id);
+    assert.ok(trial,'deterministic seed sweep must find a completed wet-floor edge with tileSlip');
+    const {st,cup,goal,slip}=trial,spills=eventsFor(st,cup.id);
     assert.equal(spills.length,1,'legacy on-enter carried spill must suppress normal same-edge handling consequence');
     assert.ok(spills[0].causeIds.includes(slip.id),'legacy spill must preserve canonical tileSlip cause linkage');
     assert.equal(spills[0].data.completedEdge,undefined,'surviving event must be legacy hazard, not second normal-handling event');
-    assert.ok(SP.environmentResourceAmount(st,under,'water')>100,'legacy hazard keeps current floor transfer behavior');
-    assert.equal(SP.environmentResourceAmount(st,top,'water'),0,'normal Surface consequence must not run after legacy carried-content loss');
+    assert.ok(SP.environmentResourceAmount(st,goal,'water')>100,'legacy hazard must transfer spilled water into the wet floor Environment');
+    assert.equal(spills[0].data.position,SP.nodeKey(st,goal),'legacy spill must remain located at the completed floor edge destination');
   }
 }finally{
   L.handlingExposureForEdge=originalExposure;
