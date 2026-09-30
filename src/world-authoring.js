@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v10';
+  const VERSION='world-authoring-v11';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -44,6 +44,8 @@
     scenario:{startDay:1,startMinute:12*60},
     map:{width:12,height:8,cellSizeMeters:CELL_SIZE_METERS,layers:[{z:0,cells:buildDefaultCells(),boundaries:buildDefaultBoundaries()}]},
     structures:{},
+    usageAssignments:[],
+    claimEligibility:[],
     furniture:{
       diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2),orientation:'south'},
       chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),orientation:'east',name:'餐椅 A'},
@@ -312,6 +314,46 @@
       errors.push(authoringIssue('authoring_slot_id_duplicate',paths[1],`Derived Furniture slot id ${slotId} is duplicated.`,{slotId,count:paths.length}));
     }
 
+    const validateUsageTarget=(target,path,{slotOnly=false}={})=>{
+      if(!isRecord(target)){errors.push(authoringIssue('authoring_usage_target_invalid',path,'Usage target must be a TargetRef object.'));return false;}
+      if(target.kind==='slot'){
+        const paths=slotIds.get(target.id)||[];
+        if(paths.length!==1){errors.push(authoringIssue(paths.length?'authoring_usage_target_ambiguous':'authoring_usage_target_missing',path,`Usage Slot target ${String(target.id)} must resolve to exactly one Slot.`,{targetId:target.id,count:paths.length}));return false;}
+        return true;
+      }
+      if(!slotOnly&&target.kind==='furniture'){
+        if(!authoring.furniture?.[target.id]){errors.push(authoringIssue('authoring_usage_target_missing',path,`Usage Furniture target ${String(target.id)} does not exist.`,{targetId:target.id}));return false;}
+        return true;
+      }
+      errors.push(authoringIssue('authoring_usage_target_kind_invalid',path,slotOnly?'Current claim eligibility target must be Slot.':'Usage target kind must be furniture or slot.',{kind:target.kind}));return false;
+    };
+    const assignmentIds=new Set(),assignmentSemantics=new Set();
+    if(authoring.usageAssignments!==undefined&&!Array.isArray(authoring.usageAssignments))errors.push(authoringIssue('authoring_usage_assignments_invalid','usageAssignments','usageAssignments must be an array when present.'));
+    for(let i=0;i<(authoring.usageAssignments||[]).length;i++){
+      const relation=authoring.usageAssignments[i],path=`usageAssignments[${i}]`;
+      if(!isRecord(relation)){errors.push(authoringIssue('authoring_usage_assignment_invalid',path,'Usage Assignment must be an object.'));continue;}
+      if(typeof relation.id!=='string'||!relation.id)errors.push(authoringIssue('authoring_usage_relation_id_invalid',path+'.id','Usage Assignment id must be a non-empty string.'));
+      else if(assignmentIds.has(relation.id))errors.push(authoringIssue('authoring_usage_relation_id_duplicate',path+'.id',`Usage Assignment id ${relation.id} is duplicated.`,{id:relation.id}));else assignmentIds.add(relation.id);
+      const principal=relation.principal;
+      if(!isRecord(principal)||principal.kind!=='agent'||typeof principal.id!=='string'||!authoring.residents?.[principal.id])errors.push(authoringIssue('authoring_usage_principal_invalid',path+'.principal','First-slice Usage Assignment principal must reference an existing Agent.',{principal:clone(principal)}));
+      if(relation.activity!=='sleep')errors.push(authoringIssue('authoring_usage_activity_invalid',path+'.activity','First-slice Usage Assignment activity must be sleep.',{activity:relation.activity}));
+      const targetOk=validateUsageTarget(relation.target,path+'.target');
+      if(isRecord(principal)&&principal.kind==='agent'&&typeof principal.id==='string'&&relation.activity==='sleep'&&targetOk){
+        const semantic=`${principal.id}|sleep|${relation.target.kind}:${relation.target.id}`;
+        if(assignmentSemantics.has(semantic))errors.push(authoringIssue('authoring_usage_assignment_duplicate',path,'Exact duplicate Usage Assignment is not allowed.',{semantic}));else assignmentSemantics.add(semantic);
+      }
+    }
+    const eligibilityIds=new Set(),eligibilitySemantics=new Set();
+    if(authoring.claimEligibility!==undefined&&!Array.isArray(authoring.claimEligibility))errors.push(authoringIssue('authoring_claim_eligibility_invalid','claimEligibility','claimEligibility must be an array when present.'));
+    for(let i=0;i<(authoring.claimEligibility||[]).length;i++){
+      const relation=authoring.claimEligibility[i],path=`claimEligibility[${i}]`;
+      if(!isRecord(relation)){errors.push(authoringIssue('authoring_claim_eligibility_relation_invalid',path,'Claim eligibility must be an object.'));continue;}
+      if(typeof relation.id!=='string'||!relation.id)errors.push(authoringIssue('authoring_usage_relation_id_invalid',path+'.id','Claim eligibility id must be a non-empty string.'));
+      else if(eligibilityIds.has(relation.id))errors.push(authoringIssue('authoring_usage_relation_id_duplicate',path+'.id',`Claim eligibility id ${relation.id} is duplicated.`,{id:relation.id}));else eligibilityIds.add(relation.id);
+      if(relation.activity!=='sleep')errors.push(authoringIssue('authoring_usage_activity_invalid',path+'.activity','First-slice claim eligibility activity must be sleep.',{activity:relation.activity}));
+      const targetOk=validateUsageTarget(relation.target,path+'.target',{slotOnly:true});
+      if(relation.activity==='sleep'&&targetOk){const semantic=`sleep|${relation.target.kind}:${relation.target.id}`;if(eligibilitySemantics.has(semantic))errors.push(authoringIssue('authoring_claim_eligibility_duplicate',path,'Exact duplicate claim eligibility relation is not allowed.',{semantic}));else eligibilitySemantics.add(semantic);}
+    }
     const resolvedSolids=Object.values(resolvedFurniture).flatMap(f=>f.spatial?.solids||[]);
     for(const layer of authoring.map?.layers||[])for(const [cellId,authoredCell] of Object.entries(layer.cells||{})){
       if(authoredCell?.terrain!=='floor')continue;
@@ -576,6 +618,8 @@
   function canonicalizeAuthoring(authoring){
     const copy=clone(authoring);
     if(Array.isArray(copy?.map?.layers))copy.map.layers.sort((a,b)=>(a?.z??0)-(b?.z??0));
+    if(Array.isArray(copy?.usageAssignments))copy.usageAssignments.sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
+    if(Array.isArray(copy?.claimEligibility))copy.claimEligibility.sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
     return copy;
   }
 
