@@ -23,7 +23,7 @@ function openSquare(){
 }
 
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.37.0-carried-container-feasibility');
-assert.equal(SP.VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(SP.VERSION,'11.38.0-carried-handling-risk');
 
 {
   const {st,human,a,b,east}=openSquare();
