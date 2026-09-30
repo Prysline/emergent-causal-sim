@@ -2,7 +2,7 @@
   const W=window.SimWorld,P=window.SimPhysical,C=window.SimEmbodimentCapabilities;if(!W||!P?.getMovementEnvelope)return;
   if(!C?.postureForMode||!C?.modeFromPosture)throw new Error('systems/locomotion.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/locomotion.js requires world.js initial-state pipeline.');
-  const VERSION='11.34.0-surface-traversal-maneuvers';
+  const VERSION='11.38.0-carried-handling-risk';
 
   W.registerInitialStateInitializer('locomotion.schema',(st)=>{
     for(const a of Object.values(st.agents||{})){
@@ -20,6 +20,9 @@
   const SURFACE_MANEUVER_BURDEN_BY_KIND=Object.freeze({human:9,cat:1.6});
   const SURFACE_MANEUVER_FAMILIES=new Set(['step','climb','jump']);
   const SURFACE_MANEUVER_DIRECTIONS=new Set(['up','down','level']);
+  const HANDLING_EXPOSURE_BY_MODE=Object.freeze({walk:Object.freeze({tilt:.04,impact:.03,oscillation:.08}),kneelCrawl:Object.freeze({tilt:.12,impact:.04,oscillation:.12}),proneCrawl:Object.freeze({tilt:.20,impact:.05,oscillation:.15})});
+  const HANDLING_EXPOSURE_BY_MANEUVER=Object.freeze({stepUp:Object.freeze({tilt:.08,impact:.04,oscillation:.02}),stepDown:Object.freeze({tilt:.10,impact:.10,oscillation:.02}),climbUp:Object.freeze({tilt:.22,impact:.08,oscillation:.08}),climbDown:Object.freeze({tilt:.26,impact:.12,oscillation:.09}),jumpUp:Object.freeze({tilt:.12,impact:.20,oscillation:.03}),jumpDown:Object.freeze({tilt:.14,impact:.32,oscillation:.03})});
+  const HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION=Object.freeze({up:Object.freeze({tilt:.05,impact:.03,oscillation:.03}),down:Object.freeze({tilt:.06,impact:.07,oscillation:.03}),level:Object.freeze({tilt:0,impact:0,oscillation:0})});
 
   function postureForMode(mode){return C.postureForMode(mode);}
   function modeFromPosture(agentOrPosture){
@@ -70,6 +73,12 @@
     }
     return best?.maneuver||null;
   }
+  function handlingExposureForEdge({mode='walk',distanceMeters=1,surfaceManeuver=null,traversalManeuver=null}={}){
+    const base=HANDLING_EXPOSURE_BY_MODE[mode]||HANDLING_EXPOSURE_BY_MODE.walk,extra=HANDLING_EXPOSURE_BY_MANEUVER[surfaceManeuver?.kind]||{tilt:0,impact:0,oscillation:0};
+    const dz=Number(traversalManeuver?.directionVector?.z)||0,vertical=surfaceManeuver?HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION.level:HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION[dz>0?'up':dz<0?'down':'level'];
+    const distance=Number.isFinite(Number(distanceMeters))&&Number(distanceMeters)>0?Number(distanceMeters):1;
+    return {tilt:Math.max(0,base.tilt+extra.tilt+vertical.tilt),impact:Math.max(0,base.impact+extra.impact+vertical.impact),oscillation:Math.max(0,(base.oscillation+extra.oscillation+vertical.oscillation)*distance)};
+  }
   function executeSurfaceManeuver(agent,maneuver){return isSurfaceManeuver(maneuver)?{...maneuver}:null;}
   function modeLabel(mode){return C.modeLabel(mode);}
   function setState(agent,mode=null,phase='idle'){
@@ -79,5 +88,5 @@
   }
   function clearState(agent){return setState(agent,null,'idle');}
 
-  window.SimLocomotion={VERSION,POSTURE_BY_MODE,MODE_BY_POSTURE,MODE_TRAVERSAL_BURDEN,MODE_TRANSITION_BURDEN,SURFACE_TRAVERSAL_BURDEN_BY_KIND,SURFACE_MANEUVER_BURDEN_BY_KIND,postureForMode,modeFromPosture,transitionTicks,movementTiming,edgeMoveTicks,modeTraversalBurden,modeTransitionBurden,isSurfaceManeuver,surfaceManeuverKey,surfaceTraversalBurden,surfaceManeuverBurden,surfaceManeuverTiming,selectSurfaceManeuver,executeSurfaceManeuver,modeLabel,setState,clearState};
+  window.SimLocomotion={VERSION,POSTURE_BY_MODE,MODE_BY_POSTURE,MODE_TRAVERSAL_BURDEN,MODE_TRANSITION_BURDEN,SURFACE_TRAVERSAL_BURDEN_BY_KIND,SURFACE_MANEUVER_BURDEN_BY_KIND,postureForMode,modeFromPosture,transitionTicks,movementTiming,edgeMoveTicks,modeTraversalBurden,modeTransitionBurden,isSurfaceManeuver,surfaceManeuverKey,surfaceTraversalBurden,surfaceManeuverBurden,surfaceManeuverTiming,selectSurfaceManeuver,HANDLING_EXPOSURE_BY_MODE,HANDLING_EXPOSURE_BY_MANEUVER,HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION,handlingExposureForEdge,executeSurfaceManeuver,modeLabel,setState,clearState};
 })();

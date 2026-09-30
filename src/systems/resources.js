@@ -1,8 +1,12 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.RESOURCE_TYPES)throw new Error('systems/resources.js requires world.js.');
-  const VERSION='11.37.0-carried-container-feasibility';
+  const VERSION='11.38.0-carried-handling-risk';
   const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
+  const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
+  const CONTAINMENT_CONTENTS_FACTOR=Object.freeze({open:1,covered:.25,sealed:0});
+  const RESOURCE_PHASE_CONTENTS_FACTOR=Object.freeze({liquid:1,solid:.45});
+  const RETENTION_DIMENSIONS=Object.freeze(['tilt','impact','oscillation']);
 
   function resourceLoad(resourceId,amount){
     return Math.max(0,Number(amount)||0)*(W.RESOURCE_TYPES[resourceId]?.loadPerUnit||0);
@@ -45,6 +49,47 @@
       effectiveCarryLoad:containerLoad(st,container)
     };
   }
+  function fillRatio(st,idOrObject){
+    const container=resolveContainer(st,idOrObject),capacity=Math.max(0,Number(container?.capacity)||0);
+    if(!container||capacity<=0)return 0;
+    const used=Object.values(container.contents||{}).reduce((sum,amount)=>sum+Math.max(0,Number(amount)||0),0);
+    return clamp01(used/capacity);
+  }
+  function handlingRiskContract(container){
+    const handling=container?.handling,retention=handling?.contentRetention;
+    if(!handling||!Object.prototype.hasOwnProperty.call(CONTAINMENT_CONTENTS_FACTOR,handling.containment)||!retention)throw new Error('Held Container '+String(container?.id||'?')+' is missing a valid handling-risk contract.');
+    for(const dimension of RETENTION_DIMENSIONS){
+      const band=retention[dimension],safe=Number(band?.safe),failure=Number(band?.failure);
+      if(!Number.isFinite(safe)||safe<0||!Number.isFinite(failure)||failure<=safe)throw new Error('Held Container '+String(container?.id||'?')+' has invalid '+dimension+' contentRetention thresholds.');
+    }
+    return handling;
+  }
+  function retentionRisk(exposureValue,band){
+    const value=Math.max(0,Number(exposureValue)||0),safe=Number(band.safe),failure=Number(band.failure);
+    if(value<=safe)return 0;
+    if(value>=failure)return 1;
+    return (value-safe)/(failure-safe);
+  }
+  function contentsPhaseFactor(container){
+    let total=0,weighted=0;
+    for(const [resourceId,raw] of Object.entries(container?.contents||{})){
+      const amount=Math.max(0,Number(raw)||0);if(amount<=0)continue;
+      total+=amount;weighted+=amount*(RESOURCE_PHASE_CONTENTS_FACTOR[W.RESOURCE_TYPES[resourceId]?.phase]??.65);
+    }
+    return total>0?weighted/total:0;
+  }
+  function handlingRiskForContainer(st,idOrObject,exposure={}){
+    const container=resolveContainer(st,idOrObject);if(!container)return {contentsLoss:0,containerDrop:0};
+    const handling=handlingRiskContract(container),fill=fillRatio(st,container),contentsTotal=Object.values(container.contents||{}).reduce((sum,amount)=>sum+Math.max(0,Number(amount)||0),0);
+    const dimensionRisk=Math.max(...RETENTION_DIMENSIONS.map(dimension=>retentionRisk(exposure[dimension],handling.contentRetention[dimension])));
+    const contentsLoss=contentsTotal<=0?0:clamp01(dimensionRisk*CONTAINMENT_CONTENTS_FACTOR[handling.containment]*fill*contentsPhaseFactor(container));
+    const impact=Math.max(0,Number(exposure.impact)||0),tilt=Math.max(0,Number(exposure.tilt)||0),oscillation=Math.max(0,Number(exposure.oscillation)||0),loadFactor=Math.min(1,containerLoad(st,container)/12);
+    const containerDrop=clamp01((impact*.62+tilt*.18+oscillation*.12)*(.75+.25*loadFactor));
+    return {contentsLoss,containerDrop};
+  }
+  function getCarriedHandlingRisk(st,agent,exposure){
+    const container=heldContainer(st,agent);return container?handlingRiskForContainer(st,container,exposure):{contentsLoss:0,containerDrop:0};
+  }
   function effectiveCarryLoad(st,agent){
     return agent?.held?containerLoad(st,agent.held):0;
   }
@@ -55,7 +100,7 @@
 
   window.SimResources=Object.freeze({
     VERSION,resourceLoad,containerLoad,heldContainer,handCapacity,canHoldContainer,
-    getCarriedHandlingProfile,effectiveCarryLoad,availableSupportHands
+    getCarriedHandlingProfile,fillRatio,handlingRiskForContainer,getCarriedHandlingRisk,effectiveCarryLoad,availableSupportHands
   });
   W.RESOURCES_RUNTIME_VERSION=VERSION;
 })();
