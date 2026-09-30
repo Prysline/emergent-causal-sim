@@ -133,6 +133,23 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
 .summary-grid{display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px 10px;font-size:12px}
 .summary-grid .key{color:var(--muted)}
 .selection-card{font-size:12px;line-height:1.55;padding:9px;border:1px solid #2c343d;border-radius:8px;background:#14191e;word-break:break-word}
+.selection-diagnostics{margin-top:8px;padding-top:7px;border-top:1px solid #29313a}
+.selection-diagnostics>summary{cursor:pointer;color:#cdd8e3;font-weight:700;line-height:1.4}
+.selection-diagnostics-body{display:flex;flex-direction:column;gap:7px;margin-top:7px}
+.selection-diagnostics-grid{display:flex;flex-direction:column;gap:6px;padding:7px;border:1px solid #29333d;border-radius:7px;background:#11171c}
+.selection-diagnostics-grid>div{display:grid;grid-template-columns:minmax(92px,.8fr) minmax(0,1.2fr);gap:2px 8px;align-items:start}
+.selection-diagnostics-grid span{color:var(--muted)}
+.selection-diagnostics-grid strong{min-width:0;font-weight:600}
+.selection-diagnostics-grid small{grid-column:2;color:var(--muted);font-size:10px;line-height:1.4}
+.selection-geometry{margin-top:0;padding-top:0;border-top:0}
+.selection-geometry>summary{font-size:11px;color:#b9c7d5}
+.selection-geometry-list{gap:0;border:1px solid #29333d;border-radius:7px;background:#11171c;overflow:hidden}
+.selection-geometry-row{padding:7px;border-top:1px solid #25303a}
+.selection-geometry-row:first-child{border-top:0}
+.selection-geometry-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.selection-geometry-head b{white-space:nowrap}
+.selection-geometry-head span{color:var(--muted);text-align:right}
+.selection-geometry-row small{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4;overflow-wrap:anywhere}
 .validation-list{display:flex;flex-direction:column;gap:6px}
 .validation-item{padding:7px 8px;border-radius:7px;background:#20191a;border:1px solid #54373b;color:#ffc2c2;font-size:11px;line-height:1.45;word-break:break-word}
 .validation-ok{padding:8px;border-radius:7px;background:#16251d;border:1px solid #2f5b40;color:#a9e4bc;font-size:12px}
@@ -193,4 +210,8 @@ h2{font-size:13px;margin:0 0 10px;color:#cdd8e3;letter-spacing:.03em}
   .layer-nav button,.layer-nav select,.layer-create button,.layer-create input,
   .scene-item,.action-row button,.selection-actions>button,.pending-operation>button,
   .operation-field select,.operation-field input{min-height:44px}
+  .selection-diagnostics-grid>div{grid-template-columns:1fr}
+  .selection-diagnostics-grid small{grid-column:1}
+  .selection-geometry-head{align-items:flex-start;flex-direction:column;gap:2px}
+  .selection-geometry-head span{text-align:left}
 }

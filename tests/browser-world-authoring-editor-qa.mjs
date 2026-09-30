@@ -73,14 +73,28 @@ snapshot=await page.evaluate(()=>({
   session:window.SimWorldEditor.getSession(),
   document:window.SimWorldEditor.getDocument(),
   selectionText:document.querySelector('#selectionSummary')?.textContent||'',
+  selectionVisibleText:document.querySelector('#selectionSummary')?.innerText||'',
+  selectionDiagnostics:[...document.querySelectorAll('#selectionSummary [data-selection-diagnostics]')].map(node=>({kind:node.dataset.selectionDiagnostics,open:node.open})),
   materialValue:document.querySelector('[data-cell-material-input]')?.value||''
 }));
 assert.deepEqual(snapshot.session.selection,{kind:'cell',x:1,y:1,z:0});
 assert.equal(snapshot.materialValue,'wood');
 assert.match(snapshot.selectionText,/材質：木材（wood）/);
-assert.match(snapshot.selectionText,/基礎水平連通區/,'Cell Inspector must label componentId as coarse cardinal compatibility topology');
-assert.match(snapshot.selectionText,/八方向幾何/,'Cell Inspector must expose contextual cardinal/diagonal HorizontalConnection diagnostics');
-assert.match(snapshot.selectionText,/幾何候選/,'candidate HorizontalConnection must be presented as geometry status rather than universal resident passability');
+assert.match(snapshot.selectionText,/基礎水平連通區/,'Cell Inspector must retain componentId as coarse cardinal compatibility diagnostics');
+assert.match(snapshot.selectionText,/八方向幾何/,'Cell Inspector must retain contextual cardinal/diagonal HorizontalConnection diagnostics');
+assert.match(snapshot.selectionText,/幾何候選/,'candidate HorizontalConnection must remain a geometry status rather than universal resident passability');
+assert.deepEqual(snapshot.selectionDiagnostics,[{kind:'space',open:false},{kind:'geometry',open:false}],'derived spatial diagnostics must be collapsed by default');
+assert.match(snapshot.selectionVisibleText,/空間詳情/,'collapsed Inspector must expose an explicit diagnostics entry point');
+assert.doesNotMatch(snapshot.selectionVisibleText,/基礎水平連通區|八方向幾何|solid /,'engineering diagnostics must not dominate the default selection summary');
+await page.locator('#selectionSummary [data-selection-diagnostics="space"] > summary').click();
+let expandedDiagnostics=await page.locator('#selectionSummary').innerText();
+assert.match(expandedDiagnostics,/基礎水平連通區/,'space details must reveal coarse topology diagnostics on demand');
+assert.match(expandedDiagnostics,/八方向幾何/,'space details must expose the nested geometry diagnostics entry point');
+assert.doesNotMatch(expandedDiagnostics,/solid /,'raw geometry provenance must remain hidden until geometry diagnostics are explicitly expanded');
+await page.locator('#selectionSummary [data-selection-diagnostics="geometry"] > summary').click();
+expandedDiagnostics=await page.locator('#selectionSummary').innerText();
+assert.match(expandedDiagnostics,/幾何候選/);
+assert.match(expandedDiagnostics,/約束來源：/,'expanded geometry diagnostics must retain canonical constraint provenance');
 await page.fill('[data-cell-material-input]','woven-rug');
 await page.click('[data-editor-action="apply-cell-material"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
@@ -541,6 +555,11 @@ for(const target of mobile.touchTargets)assert.ok(target.height>=44,`mobile touc
 assert.equal(mobile.session.validation.ok,true);
 await page.click('[data-tool="select"]');
 await page.click('[data-cell="1,1"]');
+await page.locator('#selectionSummary [data-selection-diagnostics="space"] > summary').click();
+await page.locator('#selectionSummary [data-selection-diagnostics="geometry"] > summary').click();
+const mobileExpandedDiagnostics=await page.evaluate(()=>({width:innerWidth,docWidth:document.documentElement.scrollWidth,bodyWidth:document.body.scrollWidth}));
+assert.ok(mobileExpandedDiagnostics.docWidth<=mobileExpandedDiagnostics.width+1,`expanded mobile diagnostics overflow: ${mobileExpandedDiagnostics.docWidth}>${mobileExpandedDiagnostics.width}`);
+assert.ok(mobileExpandedDiagnostics.bodyWidth<=mobileExpandedDiagnostics.width+1,`expanded mobile diagnostics body overflow: ${mobileExpandedDiagnostics.bodyWidth}>${mobileExpandedDiagnostics.width}`);
 await page.fill('[data-cell-material-input]','stone');
 await page.click('[data-editor-action="apply-cell-material"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
