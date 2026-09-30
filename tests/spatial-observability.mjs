@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.38.1-carried-risk-curve');
-assert.equal(E.VERSION,'11.38.1-carried-risk-curve');
+assert.equal(st.version,'11.39.0-carried-contents-loss');
+assert.equal(E.VERSION,'11.39.0-carried-contents-loss');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
