@@ -139,14 +139,14 @@ try{
     };
     try{E.tick();}finally{L.setState=originalSetState;}
     assert.ok(SP.nodeSame(st,a.position,goal),'wet-floor fixture must complete the movement edge');
-    const slip=st.events.find(event=>event.data?.action==='tileSlip'&&event.data?.actor===a.id&&event.data?.position===SP.nodeKey(st,goal));
+    const goalTile=SP.tileByPos(st,goal),slip=st.events.find(event=>event.data?.action==='tileSlip'&&event.data?.actor===a.id&&event.data?.position===goalTile?.id);
     assert.ok(slip,'known seeded RNG state must trigger the wet-floor tileSlip');
     const spills=eventsFor(st,cup.id);
     assert.equal(spills.length,1,'legacy on-enter carried spill must suppress normal same-edge handling consequence');
     assert.ok(spills[0].causeIds.includes(slip.id),'legacy spill must preserve canonical tileSlip cause linkage');
     assert.equal(spills[0].data.completedEdge,undefined,'surviving event must be legacy hazard, not second normal-handling event');
     assert.ok(SP.environmentResourceAmount(st,goal,'water')>100,'legacy hazard must transfer spilled water into the wet floor Environment');
-    assert.equal(spills[0].data.position,SP.nodeKey(st,goal),'legacy spill must remain located at the completed floor edge destination');
+    assert.equal(spills[0].data.position,goalTile.id,'legacy spill must retain the legacy tile-id position representation');
   }
 }finally{
   L.handlingExposureForEdge=originalExposure;
