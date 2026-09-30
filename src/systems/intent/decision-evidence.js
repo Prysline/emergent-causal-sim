@@ -48,6 +48,21 @@
     }
   }
   function currentDecisionEvidence(a){return decisionEvidenceMatchesAction(a)?a.decisionEvidence:null;}
+  function captureTargetSelectionEvidence(st,a,action,{activity,selectedTarget,objectiveScore,preferenceDelta,effectiveScore,contributors=[],priorTargetDecisionId=null}={}){
+    const parentDecisionId=action?.decisionId;
+    if(!st||!a||!action||!parentDecisionId||!activity||!selectedTarget?.kind||!selectedTarget?.id)return null;
+    if(!Array.isArray(a.targetSelectionEvidence))a.targetSelectionEvidence=[];
+    const sequence=a.targetSelectionEvidence.reduce((max,e)=>Math.max(max,Number(e?.sequence)||0),0)+1;
+    const id=`target-decision:${a.id}:${st.tick}:${sequence}`;
+    const evidence={id,sequence,parentDecisionId,activity,selectedTarget:clone(selectedTarget),evaluatedTick:st.tick,objectiveScore:Number(objectiveScore),preferenceDelta:Number(preferenceDelta)||0,effectiveScore:Number(effectiveScore),contributors:clone(contributors||[])};
+    if(priorTargetDecisionId)evidence.priorTargetDecisionId=priorTargetDecisionId;
+    a.targetSelectionEvidence.push(evidence);action.targetSelectionDecisionId=id;return evidence;
+  }
+  function currentTargetSelectionEvidence(a){
+    const id=a?.action?.targetSelectionDecisionId;if(!id||!Array.isArray(a?.targetSelectionEvidence))return null;
+    const evidence=a.targetSelectionEvidence.find(item=>item?.id===id)||null;
+    return evidence&&evidence.parentDecisionId===a.action?.decisionId?evidence:null;
+  }
   function routePathsSame(st,left,right){const a=left?.path||[],b=right?.path||[];return a.length===b.length&&a.every((node,index)=>SP?.nodeSame?SP.nodeSame(st,node,b[index]):sameValue(node,b[index]));}
   function handlingRouteMetrics(route,score){return {pathDistance:Number(route?.pathDistance),traversalCost:Number(route?.traversalCost),travelTime:Number(route?.travelTime),handlingRisk:{contentsLoss:Number(route?.handlingRisk?.contentsLoss)||0,containerDrop:Number(route?.handlingRisk?.containerDrop)||0},decisionScore:Number(score)};}
   function handlingRouteContributor(st,a,selected,baseline,preference){
@@ -67,5 +82,5 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/decision-evidence.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','deliberation.finalize-decision-evidence',()=>finalizeInitialDecisionEvidence(E.getState()),850);
-  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
+  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
 })();
