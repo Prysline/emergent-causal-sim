@@ -83,6 +83,17 @@ for(const relativePath of stateTests){
   if(handLoadsEngine&&!productionDerived){
     assert.ok(source.includes('loadRuntimeProfile'),relativePath+' must compose handwritten Engine stacks through loadRuntimeProfile()');
   }
+  const handFinalizesValidation=/['"](?:src\/)?validation\/manifest\.js['"]/.test(source);
+  if(handFinalizesValidation&&!productionDerived){
+    assert.ok(
+      /['"](?:src\/)?systems\/usage\/runtime\.js['"]/.test(source),
+      relativePath+' must load systems/usage/runtime.js before finalizing the current validation manifest'
+    );
+    assert.ok(
+      /['"](?:src\/)?validation\/rules\/usage-preference\.js['"]/.test(source),
+      relativePath+' must load validation/rules/usage-preference.js before finalizing the current validation manifest'
+    );
+  }
   if(/\bW\.createInitialState(?:FromAuthoring)?\s*\(/.test(source)&&!productionDerived){
     assert.ok(
       source.includes('loadInitialStateProfile')||source.includes('loadRuntimeProfile'),
