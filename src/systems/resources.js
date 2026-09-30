@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.RESOURCE_TYPES)throw new Error('systems/resources.js requires world.js.');
-  const VERSION='11.38.1-carried-risk-curve';
+  const VERSION='11.39.0-carried-contents-loss';
   const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
   const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
   const CONTAINMENT_CONTENTS_FACTOR=Object.freeze({open:1,covered:.25,sealed:0});
@@ -9,6 +9,7 @@
   const RETENTION_DIMENSIONS=Object.freeze(['tilt','impact','oscillation']);
   const LOW_RISK_RETENTION_SEVERITY=.01;
   const HIGH_RISK_RETENTION_SEVERITY=.80;
+  const CONTENTS_LOSS_AMOUNT_SEVERITY_SCALE=.28;
 
   function resourceLoad(resourceId,amount){
     return Math.max(0,Number(amount)||0)*(W.RESOURCE_TYPES[resourceId]?.loadPerUnit||0);
@@ -85,14 +86,32 @@
     }
     return total>0?weighted/total:0;
   }
+  function retentionSeverityForContainer(container,exposure={},handling=handlingRiskContract(container)){
+    return Math.max(...RETENTION_DIMENSIONS.map(dimension=>retentionSeverity(exposure[dimension],handling.contentRetention[dimension])));
+  }
   function handlingRiskForContainer(st,idOrObject,exposure={}){
     const container=resolveContainer(st,idOrObject);if(!container)return {contentsLoss:0,containerDrop:0};
     const handling=handlingRiskContract(container),fill=fillRatio(st,container),contentsTotal=Object.values(container.contents||{}).reduce((sum,amount)=>sum+Math.max(0,Number(amount)||0),0);
-    const retentionSeverityValue=Math.max(...RETENTION_DIMENSIONS.map(dimension=>retentionSeverity(exposure[dimension],handling.contentRetention[dimension])));
+    const retentionSeverityValue=retentionSeverityForContainer(container,exposure,handling);
     const contentsLoss=contentsTotal<=0?0:clamp01(retentionSeverityValue*CONTAINMENT_CONTENTS_FACTOR[handling.containment]*fill*contentsPhaseFactor(container));
     const impact=Math.max(0,Number(exposure.impact)||0),tilt=Math.max(0,Number(exposure.tilt)||0),oscillation=Math.max(0,Number(exposure.oscillation)||0),loadFactor=Math.min(1,containerLoad(st,container)/12);
     const containerDrop=clamp01((impact*.62+tilt*.18+oscillation*.12)*(.75+.25*loadFactor));
     return {contentsLoss,containerDrop};
+  }
+  function contentsLossExecutionFactsForContainer(st,idOrObject,exposure={}){
+    const container=resolveContainer(st,idOrObject);
+    if(!container)return {occurrenceProbability:0,containerDropProbability:0,retentionSeverity:0,amountSeverity:0,fillRatio:0,fillModifier:.5,lossFraction:0};
+    const handling=handlingRiskContract(container),fill=fillRatio(st,container),retentionSeverityValue=retentionSeverityForContainer(container,exposure,handling),risk=handlingRiskForContainer(st,container,exposure);
+    const amountSeverity=clamp01(CONTENTS_LOSS_AMOUNT_SEVERITY_SCALE*Math.sqrt(retentionSeverityValue)),fillModifier=.5+.5*fill;
+    return {
+      occurrenceProbability:risk.contentsLoss,
+      containerDropProbability:risk.containerDrop,
+      retentionSeverity:retentionSeverityValue,
+      amountSeverity,
+      fillRatio:fill,
+      fillModifier,
+      lossFraction:risk.contentsLoss>0?clamp01(amountSeverity*fillModifier):0
+    };
   }
   function getCarriedHandlingRisk(st,agent,exposure){
     const container=heldContainer(st,agent);return container?handlingRiskForContainer(st,container,exposure):{contentsLoss:0,containerDrop:0};
@@ -107,7 +126,7 @@
 
   window.SimResources=Object.freeze({
     VERSION,resourceLoad,containerLoad,heldContainer,handCapacity,canHoldContainer,
-    getCarriedHandlingProfile,fillRatio,handlingRiskForContainer,getCarriedHandlingRisk,effectiveCarryLoad,availableSupportHands
+    getCarriedHandlingProfile,fillRatio,handlingRiskForContainer,getCarriedHandlingRisk,contentsLossExecutionFactsForContainer,effectiveCarryLoad,availableSupportHands
   });
   W.RESOURCES_RUNTIME_VERSION=VERSION;
 })();
