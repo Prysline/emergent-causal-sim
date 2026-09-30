@@ -11,7 +11,7 @@ page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());}
 page.on('pageerror',err=>pageErrors.push(String(err)));
 
 await page.goto('http://127.0.0.1:4173/?scenario=talk-brief',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>window.SimRelease?.VERSION==='11.39.0-carried-contents-loss');
+await page.waitForFunction(()=>window.SimRelease?.VERSION==='11.39.1-surface-boundary-transition');
 await page.click('#step');
 
 let snap=await page.evaluate(()=>{
@@ -23,7 +23,7 @@ let snap=await page.evaluate(()=>{
     timeline:document.getElementById('timeline')?.innerText||''
   };
 });
-assert.equal(snap.release,'11.39.0-carried-contents-loss');
+assert.equal(snap.release,'11.39.1-surface-boundary-transition');
 assert.equal(snap.label,'v11.39.0');
 assert.ok(snap.offer,'production talkOffer missing');
 assert.equal(snap.offer.text,'老周向阿真發出聊天邀請。');

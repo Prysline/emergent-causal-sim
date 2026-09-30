@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.39.0-carried-contents-loss`。
+目前 runtime marker：`11.39.1-surface-boundary-transition`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -661,7 +661,7 @@ Furniture Definition solid top eligibility
 
 - Definition 只 author `spatial.solids[].faces.top.supportsBodyOccupancy` 與可選 stable `surfaceKey / surfaceLabel`；legacy singular `spatial.surface` 被明確拒絕。resolver 由 canonical solid bounds 派生 `id / sourceSolidKey / supportRegion / topElevation / cells`，因此不存在第二份 top bounds truth。`supportsObjects:true` 的 Furniture 必須能解析到唯一 support Surface。
 - Surface candidate 存在不等於 Agent 能站上去。`SimPhysical.getSupportFootprint(agent, posture)` 與完整 body / pose clearance 分開；standing support footprint 不重用 MovementEnvelope width/depth。
-- floor ↔ Surface transition 的高度差、水平 gap 與 support-region edge facts 由 Passage 擁有；Physical 依個體 body height × maneuver profile 產生 `step / climb / jump` 候選，上／下方向分開，同一 geometry 可以同時有多個候選。
+- floor ↔ Surface transition 的高度差、水平 gap、support-region edge facts與兩個 coarse Cell 之間的 canonical Boundary / Door permeability 由 Passage 擁有；`wall` 或 closed Door 必須在 Surface → floor 與 floor → Surface 兩方向都封閉同一 transition，不能因 Surface identity 繞過 boundary truth。Physical 依個體 body height × maneuver profile 產生 `step / climb / jump` 候選，上／下方向分開，同一 geometry 可以同時有多個候選。
 - Locomotion 是 maneuver choice、timing、burden 與 execution owner。current baseline 把既有 Human / Cat Surface burden 校準搬到 Locomotion，沒有虛構新的 family-specific timing；Route 把選中的 exact `surfaceManeuver` 放進 route step，Engine pending movement 驗證並執行同一 identity。
 - Contact 不因 Traversal Surface 泛化而改寫自己的 occlusion truth；Surface Environment / liquid 與 `supportId` object resolver 都引用 canonical derived Surface。World Authoring Instance shape 維持 v8；本 slice 不加入 continuous local position、multi-agent / multi-Slot Surface occupancy、turn clearance、sideways traversal或 persistent / cross-tick route cache。
 

@@ -6,11 +6,19 @@
 
 目前 current runtime marker：
 
-`11.39.0-carried-contents-loss`
+`11.39.1-surface-boundary-transition`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.39.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.37.0-carried-container-feasibility`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改自身 contract，不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.39.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。只有 Spatial Passage 的 own contract 因 Surface-transition boundary correctness 換代；Resources / Physical / Spatial Traversal / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改自身 contract，不跟著 overall patch 假升。
 
-### Current Carried Container execution contents-loss release
+### Current Surface boundary transition correctness patch
+
+`11.39.1-surface-boundary-transition` 修正 floor ↔ derived Furniture Surface 的 Passage boundary correctness。先前 `surfaceTransitionProfile()` 只驗證相鄰與 Surface geometry，沒有把兩個 coarse Cell 之間的 canonical Boundary / Door permeability 納入 profile；因此 Surface → floor 方向可在 `wall` 或 closed Door 上產生 executable transition，造成角色從椅面等家具頂面直接跨牆落到另一側地板。
+
+Current contract：Surface transition 仍由 Passage 產生 objective elevation / gap / support geometry，但同一 profile 必須引用 separating canonical boundary，並在 `wall` 或 closed Door 時回 `status:'blocked'` + 空 `options`；Surface → floor 與 floor → Surface 必須對稱服從同一 permeability。合法 opening 保留既有 maneuver feasibility。這不改 Physical maneuver calibration、Route scoring、Locomotion timing / execution、Contact corner semantics、World Authoring schema 或 Furniture Catalog。
+
+Version impact：overall / Presentation → `11.39.1-surface-boundary-transition`；Spatial Passage → `11.39.1-surface-boundary-transition`。Resources 維持 `11.39.0-carried-contents-loss`，Spatial Traversal / Route / Locomotion / Deliberation 維持 `11.38.0-carried-handling-risk`，Physical 維持 `11.37.0-carried-container-feasibility`；其他 subsystem generation 不假升。
+
+### Previous Carried Container execution contents-loss release
 
 `11.39.0-carried-contents-loss` 完成 P1 Slice C｜Execution Contents Loss。planning 仍只產生 objective HandlingExposure / HandlingRisk，不修改 contents、Environment、Events，也不消耗 consequence RNG；execution 只有在 core movement edge 真正完成、position commit 後才 evaluate 一次。posture transition、multi-tick edge 中途、完成前 interruption與 replan 都不觸發 consequence。
 

@@ -5,7 +5,8 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.39.0-carried-contents-loss';
+const APP_VERSION='11.39.1-surface-boundary-transition';
+const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const DELIBERATION_VERSION='11.38.0-carried-handling-risk';
@@ -16,7 +17,7 @@ const highExposure={tilt:.8,impact:.7,oscillation:.6};
 
 assert.equal(E.VERSION,APP_VERSION);
 assert.equal(A.VERSION,'world-authoring-v10');
-assert.equal(R.VERSION,APP_VERSION);
+assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
 assert.equal(L.VERSION,LOCOMOTION_VERSION);
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,DELIBERATION_VERSION);
