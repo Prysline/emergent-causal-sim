@@ -117,7 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.38.0','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.releaseLabel,'v11.38.1','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -406,5 +406,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.38.0 browser readable entity QA: map posture + mobile overlap selection + readable/debug state-inert pass');
+console.log('v11.38.1 browser readable entity QA: map posture + mobile overlap selection + readable/debug state-inert pass');
 await browser.close();
