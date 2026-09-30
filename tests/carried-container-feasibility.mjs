@@ -24,7 +24,7 @@ const V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=path=>path.map(node=>[node.x,node.y]);
 
-assert.equal(A.VERSION,'world-authoring-v10');
+assert.equal(A.VERSION,'world-authoring-v11');
 assert.equal(C.VERSION,'embodiment-capabilities-v4');
 assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
