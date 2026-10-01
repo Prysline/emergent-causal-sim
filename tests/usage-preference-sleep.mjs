@@ -7,9 +7,9 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage;
 
 assert.equal(A.VERSION,'world-authoring-v11');
-assert.equal(E.USAGE_PREFERENCE_VERSION,'11.40.0-usage-preference-sleep');
-assert.equal(E.MEMORY_SCHEMA_VERSION,'11.40.0-usage-preference-sleep');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.40.0-usage-preference-sleep');
+assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 authored.usageAssignments=[{id:'zhen-sleep-left',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];

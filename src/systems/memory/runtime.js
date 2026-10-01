@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.MEMORY_SCHEMA_VERSION||'11.40.0-usage-preference-sleep';
+  const VERSION=W.MEMORY_SCHEMA_VERSION||'11.42.0-usage-preference-sleep';
   const MAX_EPISODIC_MEMORIES=W.MAX_EPISODIC_MEMORIES||64;
   const EPISODIC_OBSERVATION_RANGE=W.EPISODIC_OBSERVATION_RANGE||4;
   const NON_EPISODIC_ACTIONS=new Set(['wait','abort','restReroute','intentReconsider','socialWaitEnded','catRequestExpired']);

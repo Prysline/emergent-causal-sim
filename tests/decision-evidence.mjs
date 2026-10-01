@@ -10,9 +10,9 @@ function quiet(a){for(const k of ['hunger','thirst','fatigue','sleepNeed','socia
 
 E.reset(3600);
 let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.40.0-usage-preference-sleep');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.40.0-usage-preference-sleep');
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.40.0-usage-preference-sleep');
+assert.equal(st.version,'11.42.0-usage-preference-sleep');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.38.0-carried-handling-risk');
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.38.0-carried-handling-risk');
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
 quiet(a);a.needs.hunger=95;
 const rngBefore=st.rngState;E.decisionContributorsForAction(a,'eat');assert.equal(st.rngState,rngBefore,'capturing structured contributors must not consume chooser RNG');

@@ -9,7 +9,7 @@ for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-au
 
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
 assert.equal(D.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v11');
+assert.equal(A.VERSION,'world-authoring-v10');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,D.VERSION);
@@ -52,9 +52,9 @@ assert.equal(authored.furniture.frontDoor,undefined,'Door must no longer exist a
 assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open'});
 assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:'offMap',boundary:{z:0,id:'v:1,6'},access:{x:1,y:6,z:0}});
 
-const st=I.createInitialState(authored,{seed:20260911,version:'11.40.0-usage-preference-sleep'});
+const st=I.createInitialState(authored,{seed:20260911,version:'11.42.0-usage-preference-sleep'});
 assert.equal(JSON.stringify(authored),authoredBefore,'compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.40.0-usage-preference-sleep');
+assert.equal(st.version,'11.42.0-usage-preference-sleep');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);
@@ -97,9 +97,9 @@ assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must
 assert.ok(serialized.includes('"structures"')&&serialized.includes('"boundaries"')&&serialized.includes('"doors"')&&serialized.includes('"exits"'),'v6 structural truth must serialize explicitly');
 assert.ok(!serialized.includes('"canExit"'),'v6 must not serialize legacy furniture exit compatibility');
 
-const again=I.createInitialState(authored,{seed:20260911,version:'11.40.0-usage-preference-sleep'});
+const again=I.createInitialState(authored,{seed:20260911,version:'11.42.0-usage-preference-sleep'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
-const otherSeed=I.createInitialState(authored,{seed:7,version:'11.40.0-usage-preference-sleep'});
+const otherSeed=I.createInitialState(authored,{seed:7,version:'11.42.0-usage-preference-sleep'});
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 

@@ -2,7 +2,7 @@
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('systems/memory/state.js requires world.js initial-state pipeline.');
 
-  const MEMORY_VERSION='11.40.0-usage-preference-sleep';
+  const MEMORY_VERSION='11.42.0-usage-preference-sleep';
   W.registerInitialStateInitializer('memory.schema',(st)=>{
     for(const a of Object.values(st.agents||{}))a.usageHabits={};
     return st;

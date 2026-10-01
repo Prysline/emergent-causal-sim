@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.40.0-usage-preference-sleep');
-assert.equal(E.VERSION,'11.40.0-usage-preference-sleep');
+assert.equal(st.version,'11.42.0-usage-preference-sleep');
+assert.equal(E.VERSION,'11.42.0-usage-preference-sleep');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
