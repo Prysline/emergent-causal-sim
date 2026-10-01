@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -134,6 +134,15 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
 
 通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+
+### Sleep preferred Slot conflict boundary
+
+fixed-Slot sleep conflict 不建立第二份 occupancy / ownership truth。`SP.sleepTargets()` 仍只回傳當下 objective legal sleep targets，被 Agent 佔用的 preferred Slot 不會因 assignment / claim / Habit 而重新變成 legal candidate。Usage Preference 只提供可獨立查詢的 bounded Association Reason；Deliberation 才將 preferred Slot、canonical occupancy、shared Agent-context Observation 與可行 resolution candidates 組合成決策。
+
+occupant-specific reasoning 必須消費 Engine `observeAgentContext(st, observer, target)` 的 snapshot；不可直接把 World 裡完整 occupant Agent object 當作 requester 已知資訊。第一版 resolution candidates 包含 alternate legal sleep target、Agent-private occupancy wait、generic attention，以及 observed Human 的 yield request / nonphysical shoo。Animal occupant 不取得 Human-only shortcut。Occupancy wait 使用 `source.type = sleepSlotOccupancyWait`，不是 Social `awaitResponse`；有限期內可被較高 utility soft reconsideration或 emergency preemption 中斷，到期或 Slot 重新可用後回到既有 sleep replan。
+
+Conflict Resolution Evidence 由既有 Decision Evidence owner 保存為 Agent-private downstream snapshot，連回 `parentDecisionId`，並保存 preferred Slot、Association Reason、decision-time occupant Observation、evaluated candidates、selected resolution 與 `priorConflictDecisionId`。後續 responder 狀態不得回填舊 evidence。request / understood / accepted-or-declined / actual Slot leave / Slot available 是不同 lifecycle facts；requester 只可建立可觀察 interaction，不能直接修改 responder 的 posture、position、Action、Intent 或其他 private state。
 
 ### Agent-private Truth
 
