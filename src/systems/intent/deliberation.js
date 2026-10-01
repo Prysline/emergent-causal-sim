@@ -26,7 +26,7 @@
       if(!reasons.length)continue;
       const occupant=SP.slotOccupant(st,slot.id,a.id);if(!occupant)continue;
       const observation=E.observeAgentContext?.(st,a,occupant)||Object.freeze({observable:false,reason:'observation-unavailable'});
-      out.push({slot,target,reasons,strength:sleepAssociationStrength(reasons),occupantId:occupant.id,observation});
+      out.push({slot,target,reasons,strength:sleepAssociationStrength(reasons),observation});
     }
     return out.sort((x,y)=>y.strength-x.strength||String(x.slot.id).localeCompare(String(y.slot.id)));
   }
