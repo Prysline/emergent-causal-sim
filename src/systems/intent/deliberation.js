@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.42.0-usage-preference-sleep';
+  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.44.0-sleep-slot-conflict';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
   function routePreferenceForAction(st,a,action=a?.action){
@@ -83,7 +83,7 @@
   }
   function reservationCount(st,a){return Object.values(st.reservations||{}).filter(owner=>owner===a.id).length;}
   function derivedCommitmentCost(st,a){
-    const kind=actionKind(a),p=a.action;if(!kind)return a.activeIntent?.kind==='awaitResponse'?2:0;
+    const kind=actionKind(a),p=a.action;if(!kind)return a.activeIntent?.kind==='awaitResponse'?2:0;if(kind==='sleep'&&['conflictWait','conflictAwaitResponse'].includes(p?.phase))return 2;
     let cost=0;
     switch(kind){
       case'wander':cost=0;break;
@@ -113,8 +113,8 @@
     const intent=a.activeIntent;if(!intent)return {ok:false,reason:'no-intent'};
     if(intent.source?.type==='emergency')return {ok:false,reason:'emergency-intent'};
     if(E.emergencyChoice?.(st,a))return {ok:false,reason:'emergency-priority'};
-    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse';
-    if(!openWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
+    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse',sleepConflictWait=kind==='sleep'&&['conflictWait','conflictAwaitResponse'].includes(a.action?.phase);
+    if(!openWait&&!sleepConflictWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
     const age=Math.max(0,st.tick-(intent.createdTick||0));
     if(age<MIN_INTENT_HOLD_TICKS)return {ok:false,reason:'minimum-hold',holdRemaining:MIN_INTENT_HOLD_TICKS-age};
     return {ok:true,reason:'eligible'};
