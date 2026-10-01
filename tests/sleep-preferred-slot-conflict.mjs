@@ -101,6 +101,42 @@ assert.equal(interrupted,true,'higher-priority need must be able to interrupt oc
 assert.notEqual(a.action?.kind,'sleep','interrupted occupancy wait must yield to the stronger challenger');
 
 E.reset(11444);
+st=E.getState();a=st.agents.zhen;human=st.agents.zhou;animal=st.agents.orange;left=SP.getSlot(st,'bed:left');
+quiet(a);quiet(human,{sleepNeed:8});if(animal)animal.offMap=true;
+a.position={x:left.position.x,y:Math.max(0,left.position.y-1)};occupy(human,left);human.action=null;human.activeIntent=null;human.traits.social=1;
+const acceptBidId=E.addEvent('yield request fixture','normal',[],{actor:a.id,target:human.id,action:'sleepSlotYieldRequest',slot:left.id,socialBid:true,bidKind:'sleepSlotYieldRequest',interactionKind:'sleepSlotConflict',expectsResponse:true,bidFrom:a.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef(a.position)});
+st.causes[acceptBidId].data.bidId=acceptBidId;E.addObservedBid(st,human,st.causes[acceptBidId],st.tick);
+const requesterPostureBefore=structuredClone(a.posture),responderPostureBefore=structuredClone(human.posture);
+E.tick();
+const accepted=st.events.find(e=>e.data?.action==='sleepSlotRequestAccepted'&&e.data?.responseToBid===acceptBidId),understood=st.events.find(e=>e.data?.action==='sleepSlotRequestUnderstood'&&e.data?.responseToBid===acceptBidId),completed=st.events.find(e=>e.data?.action==='sleepSlotRequestCompleted'&&e.data?.responseToBid===acceptBidId);
+assert.ok(understood,'Human responder must emit an understood outcome from responder-local processing');
+assert.ok(accepted,'cooperative Human fixture must be able to accept the request');
+assert.deepEqual(a.posture,requesterPostureBefore,'requester must not move itself or directly mutate responder through the request path');
+assert.notDeepEqual(human.posture,responderPostureBefore,'accepted responder must leave through its own movement execution');
+assert.ok(completed,'completed must be separate from accepted and require actual Slot release');
+assert.notEqual(accepted.id,completed.id);
+assert.equal(human.posture.slotId===left.id,false,'acceptance completion requires canonical Slot release');
+
+E.reset(11445);
+st=E.getState();a=st.agents.zhen;human=st.agents.zhou;animal=st.agents.orange;left=SP.getSlot(st,'bed:left');quiet(a);quiet(human,{sleepNeed:8});if(animal)animal.offMap=true;occupy(human,left);human.action=null;human.activeIntent=null;human.traits.social=0;
+const refuseBidId=E.addEvent('yield request refusal fixture','normal',[],{actor:a.id,target:human.id,action:'sleepSlotYieldRequest',slot:left.id,socialBid:true,bidKind:'sleepSlotYieldRequest',interactionKind:'sleepSlotConflict',expectsResponse:true,bidFrom:a.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef(a.position)});st.causes[refuseBidId].data.bidId=refuseBidId;E.addObservedBid(st,human,st.causes[refuseBidId],st.tick);E.tick();
+assert.ok(st.events.find(e=>e.data?.action==='sleepSlotRequestRefused'&&e.data?.responseToBid===refuseBidId),'Human responder must be able to refuse');
+assert.equal(human.posture.slotId,left.id,'refusal must not release the occupied Slot');
+
+E.reset(11446);
+st=E.getState();a=st.agents.zhen;human=st.agents.zhou;animal=st.agents.orange;left=SP.getSlot(st,'bed:left');quiet(a);quiet(human,{sleepNeed:8});if(animal)animal.offMap=true;occupy(human,left);human.action=null;human.activeIntent=null;human.traits.social=.5;
+const delayBidId=E.addEvent('yield request delay fixture','normal',[],{actor:a.id,target:human.id,action:'sleepSlotYieldRequest',slot:left.id,socialBid:true,bidKind:'sleepSlotYieldRequest',interactionKind:'sleepSlotConflict',expectsResponse:true,bidFrom:a.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef(a.position)});st.causes[delayBidId].data.bidId=delayBidId;E.addObservedBid(st,human,st.causes[delayBidId],st.tick);E.tick();
+assert.ok(st.events.find(e=>e.data?.action==='sleepSlotRequestDelayed'&&e.data?.responseToBid===delayBidId),'Human responder must be able to delay');
+assert.equal(human.posture.slotId,left.id,'delay must not imply Slot release');
+assert.equal(st.events.some(e=>e.data?.action==='sleepSlotRequestCompleted'&&e.data?.responseToBid===delayBidId),false,'delay must not masquerade as completion');
+
+E.reset(11447);
+st=E.getState();a=st.agents.zhen;human=st.agents.zhou;animal=st.agents.orange;left=SP.getSlot(st,'bed:left');quiet(a);quiet(human,{sleepNeed:8});if(animal)animal.offMap=true;occupy(human,left,{sleeping:true});
+const silentBidId=E.addEvent('yield request no-response fixture','normal',[],{actor:a.id,target:human.id,action:'sleepSlotYieldRequest',slot:left.id,socialBid:true,bidKind:'sleepSlotYieldRequest',interactionKind:'sleepSlotConflict',expectsResponse:true,bidFrom:a.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef(a.position)});st.causes[silentBidId].data.bidId=silentBidId;E.addObservedBid(st,human,st.causes[silentBidId],st.tick);E.tick();
+assert.equal(st.events.some(e=>e.data?.responseToBid===silentBidId&&['sleepSlotRequestUnderstood','sleepSlotRequestAccepted','sleepSlotRequestRefused','sleepSlotRequestDelayed'].includes(e.data?.action)),false,'sleeping responder may produce perceived no-response without inferred refusal');
+assert.equal(human.posture.slotId,left.id,'no-response must not release the Slot');
+
+E.reset(11448);
 st=E.getState();
 assert.equal(V.validateState(st).issueCount,0,'fresh state must remain validator-clean');
 for(const agent of Object.values(st.agents))assert.ok(Array.isArray(agent.conflictResolutionEvidence));
