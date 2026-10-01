@@ -9,7 +9,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.39.1-surface-boundary-transition';
+const APP_VERSION='11.41.0-carried-container-drop';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
