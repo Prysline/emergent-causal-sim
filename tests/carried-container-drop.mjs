@@ -97,6 +97,31 @@ try{
   }
 
   {
+    E.reset(14104);
+    const st=E.getState(),a=st.agents.zhen,plate=st.containers.plateA;
+    for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+    plate.contents={food:6};delete plate.supportId;plate.position={...a.position};a.held=null;
+    a.action={kind:'eat',phase:'eatingPlate',container:plate.id,started:st.tick,wait:0};
+    const before=plate.contents.food;
+    E.tick();
+    assert.equal(a.action,null,'carried-dependent eat action must abort after the canonical held relation is lost');
+    assert.equal(plate.contents.food,before,'lost held relation must not permit remote consumption from a dropped plate');
+    assert.ok(st.events.some(e=>e.data?.actor===a.id&&e.data?.action==='abort'),'lost held dependency must enter normal action-abort lifecycle');
+  }
+
+  {
+    E.reset(14105);
+    const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
+    for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+    cup.contents={water:8};delete cup.supportId;cup.position={...a.position};a.held=null;
+    a.action={kind:'drinkWater',phase:'drink',container:cup.id,resource:'water',started:st.tick,wait:0};
+    const before=cup.contents.water;
+    E.tick();
+    assert.equal(a.action,null,'carried-dependent drink action must abort after the canonical held relation is lost');
+    assert.equal(cup.contents.water,before,'lost held relation must not permit remote drinking from a dropped vessel');
+  }
+
+  {
     E.reset(14103);
     const st=E.getState(),a=st.agents.zhen,bottle=st.containers.alcoholBottle,goal=floor(st,6,4);
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
