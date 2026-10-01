@@ -2,7 +2,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.44.0-sleep-slot-conflict`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。\n\n> `11.44.0 sleep preferred Slot conflict` 沿用既有 hook ordering；preferred-slot conflict resolution 在 core sleep state machine 的 `chooseSurface` / conflict phases 內委派給 Deliberation，Human responder response 仍由既有 `humanSocial.prepare` / `humanSocial.resolve` hook lifecycle 處理，沒有新增隱式 script-order 語意。
 
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
