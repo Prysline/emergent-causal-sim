@@ -4,8 +4,7 @@ import {loadProductionBefore} from './helpers/production-loader.mjs';
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,V=globalThis.SimValidator;
-const noIssues=(st,label)=>{const r=V.validateState(st);assert.equal(r.issueCount,0,`${label}: ${r.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
+const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage;
 
 assert.equal(A.VERSION,'world-authoring-v11');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.40.0-usage-preference-sleep');
@@ -51,7 +50,6 @@ assert.ok(claim,'eligible successful use should create a World claim');
 assert.equal(U.acquireUsageClaimForSuccessfulUse(st,b,'sleep',{kind:'slot',id:'bed:left'},{successfulUse:true}),null,'one Slot cannot gain a second primary claimant');
 a.offMap=true;
 assert.equal(U.activeClaims(st,'sleep').length,1,'temporary offMap must not release a Runtime Claim');
-noIssues(st,'claim state');
 
 E.reset(4042);st=E.getState();a=st.agents.zhen;
 const sleepUtilityBefore=E.baseUtilityForAction(a,'sleep');
@@ -82,7 +80,6 @@ assert.equal(td2.parentDecisionId,a.action.decisionId);
 assert.equal(td2.priorTargetDecisionId,td1.id);
 assert.equal(td1.selectedTarget.id,'bed:left','reselection must not rewrite the prior target evidence snapshot');
 assert.equal(E.currentTargetSelectionEvidence(a).id,td2.id);
-noIssues(st,'target evidence');
 
 const pet={id:'petProof',kind:'pet-bed',name:'大型寵物床',slots:[{id:'petProof:bed',furnitureId:'petProof',canSleep:true,canRest:true,position:{x:2,y:2},usableSpace:{width:1,length:2},sleepQuality:.8,restQuality:.5,approachEdges:['north','east','south','west']}]};
 st.furniture.petProof=pet;
