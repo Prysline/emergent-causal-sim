@@ -33,14 +33,12 @@ orange.position=originalOrangeContextPosition;
 orange.offMap=true;
 assert.equal(SP.observeAgentContext(st,zhen,orange),null,'off-map target must not be observable');
 orange.offMap=false;
-const roomSamples=new Map();
-for(let y=0;y<st.map.height;y++)for(let x=0;x<st.map.width;x++){const room=SP.roomAt?.(st,{x,y,z:0});if(room&&!roomSamples.has(room))roomSamples.set(room,{x,y,z:0});}
-assert.ok(roomSamples.size>=2,'default world should expose at least two Rooms for observability boundary regression');
-const [roomA,roomB]=[...roomSamples.values()];
-const originalZhenRoomPosition={...zhen.position},originalOrangeRoomPosition={...orange.position};
-zhen.position={...SP.normalizeNode(st,roomA,'floor')};orange.position={...SP.normalizeNode(st,roomB,'floor')};
+const zhenRoomTile=SP.tileByPos(st,zhen.position),orangeRoomTile=SP.tileByPos(st,orange.position);
+assert.ok(zhenRoomTile&&orangeRoomTile&&zhenRoomTile!==orangeRoomTile,'Room observability fixture requires two current floor tiles');
+const priorZhenRoom=zhenRoomTile.roomId,priorOrangeRoom=orangeRoomTile.roomId;
+zhenRoomTile.roomId='observation-room-a';orangeRoomTile.roomId='observation-room-b';
 assert.equal(SP.observeAgentContext(st,zhen,orange),null,'different known Rooms must remain outside responder-context observation');
-zhen.position=originalZhenRoomPosition;orange.position=originalOrangeRoomPosition;
+zhenRoomTile.roomId=priorZhenRoom;orangeRoomTile.roomId=priorOrangeRoom;
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');
