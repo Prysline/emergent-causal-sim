@@ -88,7 +88,7 @@
     return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>['sleepSlotYieldRequest','sleepSlotDriveAway'].includes(x.bid?.data?.bidKind)&&x.bid?.data?.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;
   }
   function sleepSlotResponseEvaluation(human,requester,bidKind='sleepSlotYieldRequest'){
-    const base=bidKind==='sleepSlotDriveAway'?.34:.54,affect=talkAffectResponseDelta(human),relationship=talkRelationshipResponseDelta(human,requester),finalScore=round(clamp(base+affect+relationship,0,1));
+    const base=bidKind==='sleepSlotDriveAway' ? .34 : .54,affect=talkAffectResponseDelta(human),relationship=talkRelationshipResponseDelta(human,requester),finalScore=round(clamp(base+affect+relationship,0,1));
     const response=finalScore<SLEEP_SLOT_RESPONSE_THRESHOLDS.declineMax?'decline':finalScore>=SLEEP_SLOT_RESPONSE_THRESHOLDS.acceptMin?'accept':'delay';
     return {baseScore:base,affectResponseDelta:affect,relationshipResponseDelta:relationship,finalScore,response};
   }
@@ -115,10 +115,7 @@
       const c=sleepSlotResponseCandidate(st,responder);if(!c)continue;
       const {pick,requester,evaluation}=c,bid=pick.bid;
       if(evaluation.response==='delay')continue;
-      if(responder.action||responder.activeIntent){
-        const snap=E.reconsiderationSnapshot?.(st,responder);if(!snap?.ok||!Number.isFinite(snap.commitmentCost)||68<=snap.switchThreshold)continue;
-        clearAgentReservations(st,responder);dropHeld(st,responder);responder.action=null;responder.activeIntent=null;
-      }
+      if(responder.action||responder.activeIntent)continue;
       if(evaluation.response==='decline'){emitSleepSlotResponse(st,responder,requester,bid,'decline');settleObservedBid(responder,bid.id);continue;}
       bindSleepSlotYield(st,responder,requester,bid);
     }
