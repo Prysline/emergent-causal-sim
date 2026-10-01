@@ -6,6 +6,7 @@
       {id:'socialOutcome.capture-events',order:100},
       {id:'memoryDeliberation.capture-idle',order:200},
       {id:'affect.decay',order:250},
+      {id:'sleepSlotConflict.responses',order:250},
       {id:'humanSocial.prepare',order:300},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
@@ -16,6 +17,7 @@
     ],
     afterTick:[
       {id:'spatial.effects',order:100},
+      {id:'sleepSlotConflict.yield-completion',order:150},
       {id:'intent.reconcile-after',order:200},
       {id:'socialBid.settle',order:300},
       {id:'intent.recover-aborts',order:400},
@@ -31,7 +33,8 @@
       {id:'socialBid.normalize-reset',order:200},
       {id:'memory.normalize-reset',order:300},
       {id:'affect.normalize-reset',order:400},
-      {id:'memoryRetention.normalize-reset',order:500}
+      {id:'memoryRetention.normalize-reset',order:500},
+      {id:'sleepSlotConflict.normalize',order:650}
     ],
     episodicMemoryCreated:[
       {id:'appraisal.base',order:100},
