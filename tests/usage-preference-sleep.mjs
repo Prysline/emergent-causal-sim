@@ -42,7 +42,8 @@ b.posture={kind:'standing',slotId:null,furnitureId:null};
 
 const claimAuth=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 claimAuth.claimEligibility=[{id:'left-claimable',activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
-st=W.createInitialStateFromAuthoring(claimAuth,4041);a=st.agents.zhen;b=st.agents.zhou;
+E.configureResetStateSource('usage-claim-fixture',seed=>W.createInitialStateFromAuthoring(claimAuth,seed));
+E.reset(4041);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;
 assert.equal(U.agentClaimDecision(st,a,'sleep',{kind:'slot',id:'bed:right'}).reason,'worldIneligible','missing World eligibility must default to not claimable');
 assert.equal(U.acquireUsageClaimForSuccessfulUse(st,a,'sleep',{kind:'slot',id:'bed:left'},{successfulUse:false}),null,'claim acquisition must require successful use');
 const claim=U.acquireUsageClaimForSuccessfulUse(st,a,'sleep',{kind:'slot',id:'bed:left'},{successfulUse:true,sourceEventId:'e-proof'});
@@ -52,6 +53,7 @@ a.offMap=true;
 assert.equal(U.activeClaims(st,'sleep').length,1,'temporary offMap must not release a Runtime Claim');
 noIssues(st,'claim state');
 
+E.configureResetStateSource('usage-default-fixture',seed=>W.createInitialState(seed));
 E.reset(4042);st=E.getState();a=st.agents.zhen;
 const sleepUtilityBefore=E.baseUtilityForAction(a,'sleep');
 st.usageAssignments.push({id:'extra-right',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:right'}});
