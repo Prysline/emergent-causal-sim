@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimCrowding;
-const CURRENT_VERSION='11.39.1-surface-boundary-transition';
+const CURRENT_VERSION='11.41.0-carried-container-drop';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.39.1-surface-boundary-transition';
+const APP_VERSION='11.41.0-carried-container-drop';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';

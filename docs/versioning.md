@@ -6,9 +6,21 @@
 
 目前 current runtime marker：
 
-`11.39.1-surface-boundary-transition`
+`11.41.0-carried-container-drop`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.39.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。只有 Spatial Passage 的 own contract 因 Surface-transition boundary correctness 換代；Resources / Physical / Spatial Traversal / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 未改自身 contract，不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.41.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。Slice D 只新增 Engine completed-edge consequence execution，直接重用既有 Resources-owned `HandlingRisk.containerDrop`；因此 overall / Presentation 升為 `11.41.0-carried-container-drop`，Resources / Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、World Authoring、Furniture Catalog 與 Embodiment Capabilities 都不假升。
+
+### Current Carried Container Drop release
+
+`11.41.0-carried-container-drop` 完成 P1 Slice D｜Container Drop。它不新增新的 planning risk；execution 直接重用 Slice B 已存在的 Resources-owned objective `HandlingRisk.containerDrop`。只有真正完成的 movement edge 才進入 consequence：posture transition、multi-tick edge 中途、完成前 interruption、Route / maneuver planning與 replan 都不會 drop Container，也不消耗 drop occurrence RNG。
+
+同一 completed edge 在 position commit 後先 snapshot movement 的 HandlingExposure / HandlingRisk，接著保留既有 `onEnterTile` 與 Slice C contents-loss ordering，最後才對 `containerDrop` 做一次獨立 seeded occurrence roll。成功時建立 canonical `containerDrop` World Event、`Agent.held = null`，Container actual position = completed-edge canonical destination node。Furniture Surface destination 保留 Surface identity，不降格成 same-XY floor。
+
+Slice D v1 **沒有**新增 drop-impact contents-loss model。若同一 movement edge 本身已依 Slice C 發生 `spill` / `contentsDrop`，它先完成；Container drop 本身不再額外造成第二段 resource transfer，也不建立假的 parent-child 因果。未來若增加 drop-impact spill，必須另有客觀 exposure / amount contract，並由 `containerDrop` Event 作 parent cause。這一版同樣不做 Surface→floor 墜落、Container breakage / damage、bounce、collision response、continuous rigid-body / fluid physics。
+
+一般持有 lifecycle 明確不是 accidental consequence：`releaseHeld()`、Action finish / abort、sleep settle 與 soft-reconsideration cleanup 仍只把 Container 留在角色當下 canonical position並清除 held relation；不建立 `containerDrop` Event、不讀 drop probability，也不消耗 consequence RNG。反過來，若 accidental drop 讓 `eat` / `drink` 等 execution phase 失去其 required held Container，phase 以 `Agent.held` canonical truth 判定失效並進入既有 abort lifecycle；本版不自動撿回、不自動 retry，也沒有專用 recovery planner。
+
+Version impact：overall / Presentation → `11.41.0-carried-container-drop`。Resources 維持 `11.39.0-carried-contents-loss`；Spatial Passage 維持 `11.39.1-surface-boundary-transition`；Spatial Traversal / Route / Locomotion / Deliberation 維持 `11.38.0-carried-handling-risk`；Physical 維持 `11.37.0-carried-container-feasibility`；World Authoring `world-authoring-v10`、Furniture Catalog `furniture-definitions-v12`、Embodiment Capabilities `embodiment-capabilities-v4` 均不變。
 
 ### Current Surface boundary transition correctness patch
 
