@@ -33,7 +33,7 @@
 
   const DELIBERATION_VERSION='11.44.0-sleep-slot-conflict';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
-    for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];a.conflictResolutionEvidence=[];}
+    for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];a.conflictResolutionEvidence=[];a.sleepSlotYieldResponse=null;}
     return st;
   },500);
   W.DELIBERATION_SCHEMA_VERSION=DELIBERATION_VERSION;
