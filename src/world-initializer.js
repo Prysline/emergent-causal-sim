@@ -576,6 +576,7 @@
       version,tick:0,day:authoring.scenario?.startDay??1,minute:authoring.scenario?.startMinute??12*60,seed:n,rngState:n,
       map,
       structures:buildStructures(authoring),furniture,doors:buildDoors(authoring),exits:buildExits(authoring),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
+      usageAssignments:clone(authoring.usageAssignments||[]),claimEligibility:clone(authoring.claimEligibility||[]),usageClaims:[],
       supply:{trigger:supplyTrigger,trips:0,totalProduced:0},
       containers:buildContainers(authoring),
       sources:buildSources(authoring),

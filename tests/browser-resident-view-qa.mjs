@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.41.0-carried-container-drop';
+const CURRENT_VERSION='11.42.0-usage-preference-sleep';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -117,7 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.41.0','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.releaseLabel,'v11.42.0','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -378,7 +378,7 @@ await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.cl
 const mobileStateBefore=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1140-mode="debug"]');await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
 const mobileDebug=await snapshot();const mobileStateAfterDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('MovementEnvelopes'),'mobile Debug should retain multi-mode Physical Profile observability');
+assert.equal(mobileStateAfterDebug,mobileStateBefore,'mobile Resident → Debug must not mutate simulation state');assert.equal(mobileDebug.activeMode,'debug');assert.equal(mobileDebug.debugVisible,true);assert.ok(mobileDebug.debugText.includes('Agent・zhou'),'mobile Debug should retain original Inspector');assert.ok(mobileDebug.debugText.includes('Relationship'));assert.ok(mobileDebug.debugText.includes('Physical Profile')&&mobileDebug.debugText.includes('MovementEnvelopes'),'mobile Debug should retain multi-mode Physical Profile observability');assert.ok(mobileDebug.debugText.includes('Usage Habit')&&mobileDebug.debugText.includes('私人'),'mobile Agent Debug must render private Usage Habit observability');assert.ok(mobileDebug.debugText.includes('Target Selection Evidence（私人）'),'mobile Agent Debug must render private Target Selection Evidence observability');
 await page.click('[data-v1140-mode="resident"]');await page.click('[data-v1140-tab="memory"]');mobile=await snapshot();
 const mobileStateAfterMemory=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 assert.equal(mobileStateAfterMemory,mobileStateBefore,'mobile Resident tab switch must not mutate simulation state');assert.ok(mobile.residentText.includes('當時沒有得到回應'));assert.ok(!mobile.residentText.includes('故意忽略'));assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>${mobile.width}`);assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
@@ -406,5 +406,5 @@ await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPag
 
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
-console.log('v11.41.0 browser readable entity QA: map posture + mobile overlap selection + readable/debug state-inert pass');
+console.log('v11.42.0 browser readable entity QA: map posture + mobile overlap selection + readable/debug state-inert pass');
 await browser.close();

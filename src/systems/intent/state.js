@@ -31,9 +31,9 @@
     W.DATA_ZH.replanCount='Replan 次數';
   }
 
-  const DELIBERATION_VERSION='11.38.0-carried-handling-risk';
+  const DELIBERATION_VERSION='11.42.0-usage-preference-sleep';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
-    for(const a of Object.values(st.agents||{}))a.decisionEvidence=null;
+    for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];}
     return st;
   },500);
   W.DELIBERATION_SCHEMA_VERSION=DELIBERATION_VERSION;
@@ -46,5 +46,6 @@
     W.DATA_ZH.challengerIntentKind='挑戰意圖';
     W.DATA_ZH.priorIntentId='原 Intent ID';
     W.DATA_ZH.decisionId='Decision ID';
+    W.DATA_ZH.targetSelectionDecisionId='Target Selection Decision ID';
   }
 })();

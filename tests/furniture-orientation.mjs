@@ -18,7 +18,7 @@ const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
 assert.equal(D.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v10');
+assert.equal(A.VERSION,'world-authoring-v11');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
 
@@ -99,7 +99,7 @@ assert.throws(
   'resolver must reject missing orientation instead of silently assuming north'
 );
 
-// world-authoring-v10 requires orientation and round-trips its facing semantics.
+// world-authoring-v11 requires orientation and round-trips its facing semantics.
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   assert.deepEqual(

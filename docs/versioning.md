@@ -6,11 +6,29 @@
 
 目前 current runtime marker：
 
-`11.41.0-carried-container-drop`
+`11.42.0-usage-preference-sleep`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.41.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation `11.38.0-carried-handling-risk`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v10`，Furniture Catalog = `furniture-definitions-v12`。Slice D 只新增 Engine completed-edge consequence execution，直接重用既有 Resources-owned `HandlingRisk.containerDrop`；因此 overall / Presentation 升為 `11.41.0-carried-container-drop`，Resources / Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Deliberation / Contact / Dynamic Congestion / Affect / Relationship / Memory / Surface Environment、World Authoring、Furniture Catalog 與 Embodiment Capabilities 都不假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.42.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation / Decision Evidence `11.42.0-usage-preference-sleep`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 不跟著 overall minor 假升。
 
-### Current Carried Container Drop release
+### Version-marker synchronization rule
+
+任何 current runtime marker、subsystem generation、schema version、catalog generation 或其他硬編碼 current marker 的變更，在執行完整 regression 前都必須先做 repo-wide stale-marker audit。檢查範圍至少包含 production source、fixtures、Node regressions、Browser regressions、Presentation projection 與 current docs；不得只更新 production marker 後等待 CI 逐一暴露 stale assertion。
+
+測試或 fixture 中的硬編碼版本值必須先判斷其語意再更新：若它是在驗證「current contract / current release / current schema」，則應與本次換代同步；若它是在驗證未變更 subsystem 的 own generation，則必須保留原值，不得因 overall marker 改變而形式性假升版。換言之，stale-marker audit 是**語意核對**，不是 repo-wide blind replace。
+
+完成 marker / generation 變更後，PR 驗證記錄應能明確區分：哪些 marker 本次有換代、哪些 subsystem 明確未換代，以及 Node / Browser regression 中對應 current expectation 是否已同步。
+
+### Current Usage preference sleep release
+
+`11.42.0-usage-preference-sleep` 完成家具／空間慣用與歸屬偏好的第一個 `sleep` implementation slice。World Authoring 升為 `world-authoring-v11`，新增獨立 `usageAssignments[]` 與 explicit `claimEligibility[]`；沒有 eligibility relation 的 Slot 預設不可形成 Runtime Claim。Runtime `usageClaims[]` 與 occupancy / reservation 分離，第一版每 Agent × sleep 最多一個 active primary claim、每 Slot × sleep 最多一個 primary claimant；temporary `offMap` 不釋放 claim。
+
+Action-level sleep utility 不讀 target preference；`SP.sleepTargets()` 仍只產生 objective legal candidates。Sleep target selection 另組合 bounded assignment / claim / Memory-owned Usage Habit / species-activity contributor，使用 `effectiveScore = objectiveScore - boundedPreferenceDelta`，最後以 stable TargetRef fallback。Target Selection Evidence 是既有 Decision Evidence 的 downstream Agent-private immutable record，以 `parentDecisionId` 連回 action decision，reselection 用 `priorTargetDecisionId` 串接。
+
+Memory generation 同步換代：角色自己的 structured sleep-start experience 以 saturation gain 整併 `usageHabits`，並以 lazy temporal decay 派生 effective strength；stale Habit 可保留，但不存在的 target 不會成為 live candidate。Presentation 只在 Agent Debug context 顯示 Usage Habit / Target Selection Evidence 並標示「私人」。
+
+Version impact：overall / Presentation、Deliberation / Decision Evidence、Memory、Usage Preference → `11.42.0-usage-preference-sleep`；World Authoring → `world-authoring-v11`。Spatial Passage 維持 `11.39.1-surface-boundary-transition`；Resources 維持 `11.39.0-carried-contents-loss`；Spatial Traversal / Route / Locomotion 維持 `11.38.0-carried-handling-risk`；Physical 維持 `11.37.0-carried-container-feasibility`；Furniture Catalog 維持 `furniture-definitions-v12`。
+
+### Previous Carried Container Drop release
 
 `11.41.0-carried-container-drop` 完成 P1 Slice D｜Container Drop。它不新增新的 planning risk；execution 直接重用 Slice B 已存在的 Resources-owned objective `HandlingRisk.containerDrop`。只有真正完成的 movement edge 才進入 consequence：posture transition、multi-tick edge 中途、完成前 interruption、Route / maneuver planning與 replan 都不會 drop Container，也不消耗 drop occurrence RNG。
 

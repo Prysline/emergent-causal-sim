@@ -1,14 +1,31 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.MEMORY_SCHEMA_VERSION||'11.13.0-episodic-memory-foundation';
+  const VERSION=W.MEMORY_SCHEMA_VERSION||'11.42.0-usage-preference-sleep';
   const MAX_EPISODIC_MEMORIES=W.MAX_EPISODIC_MEMORIES||64;
   const EPISODIC_OBSERVATION_RANGE=W.EPISODIC_OBSERVATION_RANGE||4;
   const NON_EPISODIC_ACTIONS=new Set(['wait','abort','restReroute','intentReconsider','socialWaitEnded','catRequestExpired']);
   const deferredCoreEvents=[];
+  const USAGE_HABIT_GAIN=Object.freeze({sleep:.30}),USAGE_HABIT_HALF_LIFE=Object.freeze({sleep:720});
+  const usageHabitKey=(activity,target)=>`${activity}|${target?.kind||'unknown'}:${target?.id||''}`;
+  function effectiveUsageHabitStrength(st,a,activity,target){
+    const h=a?.usageHabits?.[usageHabitKey(activity,target)];if(!h)return 0;
+    const halfLife=USAGE_HABIT_HALF_LIFE[activity];
+    if(!Number.isFinite(halfLife)||halfLife<=0)return Math.max(0,Math.min(1,Number(h.strength)||0));
+    const age=Math.max(0,(Number(st?.tick)||0)-(Number(h.lastUsedTick)||0));
+    return Math.max(0,Math.min(1,(Number(h.strength)||0)*Math.pow(.5,age/halfLife)));
+  }
+  function usageHabit(st,a,activity,target){const h=a?.usageHabits?.[usageHabitKey(activity,target)];return h?{...h,effectiveStrength:effectiveUsageHabitStrength(st,a,activity,target)}:null;}
+  function consolidateUsageHabit(st,a,activity,target,{usedTick=st?.tick,sourceMemoryId=null}={}){
+    if(!a||activity!=='sleep'||target?.kind!=='slot'||!target.id)return null;
+    a.usageHabits??={};const key=usageHabitKey(activity,target),current=a.usageHabits[key],effective=current?effectiveUsageHabitStrength(st,a,activity,target):0,gain=USAGE_HABIT_GAIN[activity]||.2,next=Math.max(0,Math.min(1,effective+gain*(1-effective)));
+    const summary={activity,target:{kind:target.kind,id:target.id},strength:next,lastUsedTick:Number(usedTick)||0,useCount:(Number(current?.useCount)||0)+1,lastSourceMemoryId:sourceMemoryId||null};
+    a.usageHabits[key]=summary;return summary;
+  }
 
   function normalizeMemoryState(st){
     for(const a of Object.values(st?.agents||{})){
       if(!Array.isArray(a.episodicMemories))a.episodicMemories=[];
+      if(!a.usageHabits||typeof a.usageHabits!=='object'||Array.isArray(a.usageHabits))a.usageHabits={};
       const seen=new Set(),clean=[];
       for(const m of a.episodicMemories){if(!m||!m.sourceEventId||seen.has(m.sourceEventId))continue;seen.add(m.sourceEventId);clean.push(m);}
       a.episodicMemories=clean;pruneAgentMemories(st,a);
@@ -53,7 +70,10 @@
   function observableProjection(st,e){
     const d=e?.data||{},p=eventPosition(st,e);let positionRef=null;
     if(typeof d.position==='string')positionRef=d.position;else if(d.position&&typeof d.position==='object')positionRef=E.positionRef?.(d.position)||SP.key(d.position);else if(p)positionRef=E.positionRef?.(p)||SP.key(p);
-    return {action:String(d.action||''),actorId:d.actor||null,targetId:d.target||null,positionRef:positionRef||null};
+    const observed={action:String(d.action||''),actorId:d.actor||null,targetId:d.target||null,positionRef:positionRef||null};
+    if(d.slot!=null)observed.slotId=d.slot;
+    if(d.furniture!=null)observed.furnitureId=d.furniture;
+    return observed;
   }
   function pruneAgentMemories(st,a){
     if(!Array.isArray(a?.episodicMemories))return [];
@@ -64,7 +84,9 @@
     if(!canObserveEvent(st,a,e))return null;if(!Array.isArray(a.episodicMemories))a.episodicMemories=[];
     const existing=a.episodicMemories.find(m=>m.sourceEventId===e.id);if(existing){existing.lastObservedTick=Math.max(existing.lastObservedTick??existing.observedTick??0,observedTick);return existing;}
     const memory={id:`memory:${a.id}:${e.id}`,kind:'episodic',sourceEventId:e.id,observedTick,lastObservedTick:observedTick,observed:observableProjection(st,e)};
-    a.episodicMemories.push(memory);if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);pruneAgentMemories(st,a);return memory;
+    a.episodicMemories.push(memory);
+    if(a.id===e.data?.actor&&e.data?.action==='sleep'&&e.data?.phase==='start'&&e.data?.slot)consolidateUsageHabit(st,a,'sleep',{kind:'slot',id:e.data.slot},{usedTick:e.tick,sourceMemoryId:memory.id});
+    if(typeof E.onEpisodicMemoryCreated==='function')E.onEpisodicMemoryCreated(st,a,memory);pruneAgentMemories(st,a);return memory;
   }
   function observeEventForMemories(st,e,observedTick=st.tick){if(!episodicPolicyForEvent(st,e).episodic)return [];const out=[];for(const a of Object.values(st?.agents||{})){const m=rememberObservedEvent(st,a,e,observedTick);if(m)out.push({agentId:a.id,memory:m});}return out;}
   function onEventCreated({state:st,event,duringCoreTick}){if(!st||!event)return;if(duringCoreTick){deferredCoreEvents.push(event);return;}observeEventForMemories(st,event,event.tick);}
@@ -78,5 +100,5 @@
   E.registerRuntimeHook('afterTick','memory.process-events',()=>flushDeferredCoreEvents(E.getState()),500);
   E.registerRuntimeHook('afterReset','memory.normalize-reset',()=>resetMemoryRuntime(E.getState()),300);
 
-  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isSuccessfulResourceTransferConsequence,episodicPolicyForEvent,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories,flushDeferredMemoryEvents:flushDeferredCoreEvents});
+  Object.assign(E,{MEMORY_SCHEMA_VERSION:VERSION,MAX_EPISODIC_MEMORIES,EPISODIC_OBSERVATION_RANGE,NON_EPISODIC_ACTIONS,USAGE_HABIT_GAIN,USAGE_HABIT_HALF_LIFE,usageHabitKey,usageHabit,effectiveUsageHabitStrength,consolidateUsageHabit,parseMemoryPositionRef:parsePositionRef,eventPositionForMemory:eventPosition,isSuccessfulResourceTransferConsequence,episodicPolicyForEvent,isWorldObservableEvent,canObserveEvent,observableMemoryProjection:observableProjection,rememberObservedEvent,observeEventForMemories,pruneAgentMemories,flushDeferredMemoryEvents:flushDeferredCoreEvents});
 })();

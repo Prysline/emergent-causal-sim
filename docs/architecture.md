@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.41.0-carried-container-drop`。
+目前 runtime marker：`11.42.0-usage-preference-sleep`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -31,7 +31,7 @@ Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或�
 
 ### World Authoring / Initialization boundary
 
-Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v10"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v11"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
 
 Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v9 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
 
@@ -120,6 +120,14 @@ Physical / Passage contract 同樣遵守 single-source rule：Agent 保存 Physi
 Furniture Definition 的 Slot 持有 `usableSpace`，表示該使用位置可容納的靜態身體空間；它不是 Furniture solid、Surface、footprint 或 Contact geometry。Spatial / Engine consumer 透過 Physical-owned fit query 串接「activity affordance + static fit + `allowKinds` + Slot occupancy/reservation + approach/settle/egress」等獨立 gate。缺少必要 usable-space 資料不得默認 fit。第一版軸向直接對齊 Furniture local frame，不自動嘗試 90° 旋轉。
 
 Initializer 與 Validator 也消費同一 contract，避免 authored opening state 與 runtime state 使用兩套姿勢尺寸規則。Slot occupancy truth 仍只有 `agent.posture.slotId`；本 slice 不把 slot-bound Agent 重新算成 ordinary floor occupant，也不建立 multi-slot / usable-surface packing 或 dynamic body obstruction。
+
+### Usage Assignment / Runtime Claim / Usage Habit
+
+World Authoring v11 以獨立 `usageAssignments[]` 保存正式使用指派，以 `claimEligibility[]` 明確 author 哪些 `sleep` Slot 允許在成功使用後形成長期 Runtime Claim；沒有 eligibility relation 時預設不可認領。Runtime `usageClaims[]` 是 World-level stable relation，第一版每 Agent × sleep 最多一個 active primary claim、每 Slot × sleep 最多一個 primary claimant。temporary reservation、occupancy 與 `offMap` 都不是 claim，也不會自動釋放 claim。
+
+`SP.sleepTargets()` 保持 objective legal candidate query，不讀 assignment / claim / habit。Usage preference runtime 只在 legal candidates 上組合 bounded assignment / claim / Memory-owned habit / species-activity contributors；因此「是否要睡」與「要睡哪裡」維持不同層。Association Reason 可獨立查詢已被 occupancy / reservation 排除的 target，不把 legal candidate list 當作歸屬真相。
+
+Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-private record；每次 reselection 建立新 record，保留 `parentDecisionId` 與 `priorTargetDecisionId`，不覆寫舊 evidence。Memory 只在 actor 自己實際形成 structured sleep-start experience 時更新 `usageHabits` persistent summary；habit strength 採 saturation gain + lazy decay。Inspector 只在 Agent Debug context 投影 Habit / Target Selection Evidence，並明確標示「私人」；World / Furniture presentation 不得把它翻成公共「這是某人的床」。
 
 ### Agent-private Truth
 

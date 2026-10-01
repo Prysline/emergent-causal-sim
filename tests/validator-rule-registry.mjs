@@ -8,7 +8,7 @@ const EXPECTED=[
   ['physical.profile',90],['locomotion.execution',95],['spatial.node',100],['spatial.environment',200],['action.canonical-type',300],['intent.active',400],['social-bid',500],
   ['interruption',600],['deliberation',700],['memory.episodic',800],['appraisal',900],['affect',1000],
   ['social-response',1100],['memory-retention',1200],['human-social-response',1300],['memory-deliberation',1400],['social-outcome-memory',1500],
-  ['relationship',1600]
+  ['relationship',1600],['usage-preference',1850]
 ];
 const scripts=productionScriptPaths();
 const manifestIndex=scripts.indexOf('src/validation/manifest.js');

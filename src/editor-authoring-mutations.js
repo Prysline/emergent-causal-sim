@@ -135,6 +135,14 @@
     for(const [id,container] of Object.entries(authoring.entities?.containers||{})){
       if(container.supportId===furnitureId)blockers.push({ownerType:'container',ownerId:id,ownerName:container.name||id,referenceKind:'supportId',referenceValue:furnitureId});
     }
+    for(const relation of authoring.usageAssignments||[]){
+      const target=relation?.target;
+      if((target?.kind==='furniture'&&target.id===furnitureId)||(target?.kind==='slot'&&slotIds.has(target.id)))blockers.push({ownerType:'usageAssignment',ownerId:relation.id,ownerName:relation.id,referenceKind:'target',referenceValue:target.id});
+    }
+    for(const relation of authoring.claimEligibility||[]){
+      const target=relation?.target;
+      if(target?.kind==='slot'&&slotIds.has(target.id))blockers.push({ownerType:'claimEligibility',ownerId:relation.id,ownerName:relation.id,referenceKind:'target',referenceValue:target.id});
+    }
     for(const [id,resident] of Object.entries(authoring.residents||{})){
       const placement=resident.initial?.placement,posture=resident.initial?.posture||{};
       if(placement?.mode==='anchor'&&placement.anchor?.kind==='furnitureSlot'&&slotIds.has(placement.anchor.id)){

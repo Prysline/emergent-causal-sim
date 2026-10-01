@@ -4,6 +4,8 @@
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),owners=new WeakMap();
     for(const a of Object.values(st?.agents||{})){
+      if(!a.usageHabits||typeof a.usageHabits!=='object'||Array.isArray(a.usageHabits))add('usage_habits_missing',`${a.name} 缺少 usageHabits object。`,{agentId:a.id});
+      else for(const [key,h] of Object.entries(a.usageHabits)){if(h?.activity!=='sleep'||h?.target?.kind!=='slot'||!h.target.id||!Number.isFinite(h.strength)||h.strength<0||h.strength>1||!Number.isInteger(h.lastUsedTick)||h.lastUsedTick<0||h.lastUsedTick>st.tick)add('usage_habit_invalid',`${a.name} 的 Usage Habit 無效。`,{agentId:a.id,key,habit:h});}
       const memories=a.episodicMemories;
       if(!Array.isArray(memories)){add('episodic_memories_missing',`${a.name} 缺少 episodicMemories array。`,{agentId:a.id});continue;}
       if(memories.length>E.MAX_EPISODIC_MEMORIES)add('episodic_memory_cap_exceeded',`${a.name} 的 episodic memory 超過固定上限。`,{agentId:a.id,count:memories.length,max:E.MAX_EPISODIC_MEMORIES});
