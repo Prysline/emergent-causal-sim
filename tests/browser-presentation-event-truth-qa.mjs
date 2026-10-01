@@ -24,7 +24,7 @@ let snap=await page.evaluate(()=>{
   };
 });
 assert.equal(snap.release,'11.43.0-attention-observation');
-assert.equal(snap.label,'v11.42.0');
+assert.equal(snap.label,'v11.43.0');
 assert.ok(snap.offer,'production talkOffer missing');
 assert.equal(snap.offer.text,'老周向阿真發出聊天邀請。');
 assert.deepEqual(snap.offer.data,{action:'talkOffer',bidKind:'talkOffer',interactionKind:'talk',socialBid:true});
