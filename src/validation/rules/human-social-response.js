@@ -2,6 +2,7 @@
   const V=window.SimValidator,E=window.SimEngine;if(!V||!E?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION)return;
   const own=(o,k)=>Object.prototype.hasOwnProperty.call(o||{},k);
   const RESPONSE_ACTION={acceptTalk:'engage',briefTalkReply:'brief',declineTalk:'decline'};
+  const SLEEP_SLOT_RESPONSE_ACTION={sleepSlotRequestAccepted:'accept',sleepSlotRequestRefused:'refuse',sleepSlotRequestDelayed:'delay'};
 
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
@@ -33,6 +34,23 @@
         else if(offer.data.bidFrom!==d.target||offer.data.bidTo!==d.actor)add('talk_response_direction_mismatch',`事件 ${e.id} 的 responder/requester 方向與 talkOffer 不一致。`,{eventId:e.id,bidId:offer.id});
         if(d.responseToBid){const list=responsesByOffer.get(d.responseToBid)||[];list.push(e);responsesByOffer.set(d.responseToBid,list);}
         for(const key of ['responseScore','baseResponseScore','finalScore','affectResponseSignal','affectResponseDelta','relationshipResponseDelta','socialNeed','socialTrait','affect','relationship','intentionalIgnore'])if(own(d,key))add('talk_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
+      }
+      if(d.action==='sleepSlotRequestUnderstood'){
+        const bid=E.bidEvent?.(st,d.responseToBid);
+        if(!bid||!['sleepSlotYieldRequest','sleepSlotDisplaceRequest'].includes(bid.data?.bidKind))add('sleep_slot_understood_bid_invalid',`事件 ${e.id} 必須回應有效的 sleep-slot request。`,{eventId:e.id,bidId:d.responseToBid});
+        if(bid&&d.actor!==bid.data.bidTo||bid&&d.target!==bid.data.bidFrom)add('sleep_slot_understood_direction_mismatch',`事件 ${e.id} 的 responder/requester 方向錯誤。`,{eventId:e.id,bidId:d.responseToBid});
+      }
+      if(SLEEP_SLOT_RESPONSE_ACTION[d.action]){
+        const expected=SLEEP_SLOT_RESPONSE_ACTION[d.action],bid=E.bidEvent?.(st,d.responseToBid);
+        if(d.sleepSlotResponse!==expected)add('sleep_slot_response_label_mismatch',`事件 ${e.id} 的 ${d.action} 與 sleepSlotResponse=${d.sleepSlotResponse} 不一致。`,{eventId:e.id});
+        if(!bid||!['sleepSlotYieldRequest','sleepSlotDisplaceRequest'].includes(bid.data?.bidKind))add('sleep_slot_response_bid_invalid',`事件 ${e.id} 必須回應有效的 sleep-slot request。`,{eventId:e.id,bidId:d.responseToBid});
+        if(bid&&d.actor!==bid.data.bidTo||bid&&d.target!==bid.data.bidFrom)add('sleep_slot_response_direction_mismatch',`事件 ${e.id} 的 responder/requester 方向錯誤。`,{eventId:e.id,bidId:d.responseToBid});
+        for(const key of ['responseScore','baseResponseScore','finalScore','affectResponseSignal','affectResponseDelta','relationshipResponseDelta','intentionalIgnore'])if(own(d,key))add('sleep_slot_response_private_payload_leak',`事件 ${e.id} 不應洩漏 responder-private ${key}。`,{eventId:e.id,field:key});
+      }
+      if(d.action==='sleepSlotRequestCompleted'){
+        const bid=E.bidEvent?.(st,d.responseToBid),accepted=Object.values(st?.causes||{}).find(x=>x?.data?.action==='sleepSlotRequestAccepted'&&x.data.responseToBid===d.responseToBid);
+        if(!bid||!accepted)add('sleep_slot_completion_without_acceptance',`事件 ${e.id} 必須連回同一 request 的 accepted response。`,{eventId:e.id,bidId:d.responseToBid});
+        if(bid&&d.actor!==bid.data.bidTo||bid&&d.target!==bid.data.bidFrom)add('sleep_slot_completion_direction_mismatch',`事件 ${e.id} 的 responder/requester 方向錯誤。`,{eventId:e.id,bidId:d.responseToBid});
       }
       if(d.action==='talk'&&d.talkOfferId){
         const offer=E.bidEvent?.(st,d.talkOfferId),response=st.causes?.[d.talkResponseEventId];
