@@ -32,7 +32,7 @@ try{
   assert.equal(snapshot.resetOwned,true,'all browser/UI scripts must leave E.reset owned by the runtime pipeline');
   assert.equal(snapshot.finalized,true,'simulation runtime schedule must already be finalized in the browser');
   assert.equal(snapshot.after.at(-1)?.id,'socialOutcome.process','simulation afterTick manifest must end before Presentation observers');
-  assert.equal(snapshot.reset.at(-1)?.id,'memoryRetention.normalize-reset','simulation afterReset manifest must end before Presentation observers');
+  assert.equal(snapshot.reset.at(-1)?.id,'sleepSlotConflict.normalize','simulation afterReset manifest must include Sleep Slot conflict normalization before Presentation observers');
   assert.deepEqual(snapshot.afterObservers.map(x=>x.id),['uiObservability.render-mobile-summary','residentView.schedule','relationshipView.schedule'],'Presentation observers must retain explicit relative order after simulation hooks');
   assert.deepEqual(snapshot.resetObservers.map(x=>x.id),['uiObservability.reset','residentView.reset','relationshipView.reset'],'Presentation reset observers must retain explicit relative order after simulation normalization');
 
