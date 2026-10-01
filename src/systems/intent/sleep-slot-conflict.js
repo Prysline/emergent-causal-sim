@@ -37,7 +37,8 @@
 
   function priorConflictDecisionId(a,parentDecisionId,slotId){
     const all=Array.isArray(a?.conflictResolutionEvidence)?a.conflictResolutionEvidence:[];
-    return [...all].reverse().find(e=>e?.parentDecisionId===parentDecisionId&&e?.preferredSlot?.id===slotId)?.id||null;
+    return [...all].reverse().find(e=>e?.id&&e?.preferredSlot?.id===slotId&&e?.parentDecisionId!==parentDecisionId)?.id
+      ||[...all].reverse().find(e=>e?.id&&e?.preferredSlot?.id===slotId)?.id||null;
   }
   function resolutionCandidates(st,a,action,legalCandidates=[]){
     const conflict=preferredSleepConflict(st,a);if(!conflict)return {conflict:null,candidates:[]};
