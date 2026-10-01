@@ -12,12 +12,20 @@
   const round=v=>Math.round(v*1000)/1000;
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
 
-  function selfAssociationContributors(st,a,slotId){
-    return U.preferenceContributors(st,a,'sleep',{kind:'slot',id:slotId})
-      .filter(c=>c?.direction==='self'&&['assignment','claim','habit'].includes(c.kind)&&Number(c.delta)>0);
+  function contributorsFromReasons(reasons){
+    return (reasons||[]).filter(r=>r?.direction==='self'&&['assignment','claim','habit'].includes(r.kind)).map(reason=>{
+      let delta=0;
+      if(reason.kind==='assignment')delta=(U.DELTA?.assignment||8)*(Number(reason.signal)||0);
+      else if(reason.kind==='claim')delta=(U.DELTA?.claim||5)*(Number(reason.signal)||0);
+      else if(reason.kind==='habit')delta=(U.DELTA?.habit||4)*clamp(Number(reason.signal)||0,0,1);
+      return {...clone(reason),delta};
+    }).filter(c=>c.delta>0);
+  }
+  function associationStrengthFromContributors(contributors){
+    return clamp((contributors||[]).reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,U.PREFERENCE_CAP||10);
   }
   function associationStrength(st,a,slotId){
-    return clamp(selfAssociationContributors(st,a,slotId).reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,U.PREFERENCE_CAP||10);
+    return associationStrengthFromContributors(contributorsFromReasons(U.associationReasons(st,a,'sleep',{kind:'slot',id:slotId})));
   }
   function preferredSleepConflicts(st,a){
     const out=[];
@@ -27,7 +35,7 @@
       if(!reasons.length)continue;
       const occupant=SP.slotOccupant(st,slot.id,a.id);if(!occupant)continue;
       const observation=E.observeAgentContext(st,a,occupant);
-      const contributors=selfAssociationContributors(st,a,slot.id),strength=associationStrength(st,a,slot.id);
+      const contributors=contributorsFromReasons(reasons),strength=associationStrengthFromContributors(contributors);
       out.push({slot,preferredSlot:{kind:'slot',id:slot.id},associationReasons:clone(reasons),associationContributors:clone(contributors),associationStrength:strength,occupant,observation});
     }
     return out.sort((x,y)=>y.associationStrength-x.associationStrength||String(x.slot.id).localeCompare(String(y.slot.id)));
