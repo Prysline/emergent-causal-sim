@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.43.0-attention-observation';
+const CURRENT_VERSION='11.44.0-sleep-slot-conflict';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -150,7 +150,8 @@ const engineDependentSubsystemRuntimes=[
   'src/systems/social/human-response.js',
   'src/systems/memory/deliberation.js',
   'src/systems/memory/social-outcome.js',
-  'src/systems/usage/runtime.js'
+  'src/systems/usage/runtime.js',
+  'src/systems/intent/sleep-conflict.js'
 ];
 
 for(const path of engineDependentSubsystemSchemas){
