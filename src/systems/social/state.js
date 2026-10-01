@@ -28,7 +28,10 @@
   }
 
   const HUMAN_RESPONSE_VERSION='11.44.0-sleep-slot-conflict';
-  W.registerInitialStateInitializer('humanSocialResponse.schema',(st)=>st,1100);
+  W.registerInitialStateInitializer('humanSocialResponse.schema',(st)=>{
+    for(const a of Object.values(st.agents||{}))a.sleepSlotYieldResponse=null;
+    return st;
+  },1100);
   W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION=HUMAN_RESPONSE_VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.talkOfferId='聊天邀請';
