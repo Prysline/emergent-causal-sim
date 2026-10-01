@@ -6,6 +6,7 @@
   const TALK_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,engageMin:.62});
   const TALK_AFFECT_RESPONSE_CAP=.12;
   const TALK_RELATIONSHIP_RESPONSE_CAP=.18;
+  const SLEEP_SLOT_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,acceptMin:.62});
   const HIGH_COMMITMENT_ACTIONS=new Set(['eat','drinkWater','drinkAlcohol','sleep','restockContainer','externalSupply']);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
@@ -83,6 +84,55 @@
       const response=talkResponseFor(responder,requester),responseId=addTalkResponse(st,responder,requester,bid.id,response);settleObservedBid(responder,bid.id);settleRequesterWait(requester,bid.id);if(response==='engage')applyFullTalk(st,requester,responder,bid.id,responseId);else if(response==='brief')applyBriefReply(requester,responder);responder.action=null;if(responder.activeIntent?.source?.bidId===bid.id)responder.activeIntent=null;
     }
   }
+  function newestObservedSleepSlotBid(st,a){
+    return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>['sleepSlotYieldRequest','sleepSlotDriveAway'].includes(x.bid?.data?.bidKind)&&x.bid?.data?.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;
+  }
+  function sleepSlotResponseEvaluation(human,requester,bidKind='sleepSlotYieldRequest'){
+    const base=bidKind==='sleepSlotDriveAway'?.34:.54,affect=talkAffectResponseDelta(human),relationship=talkRelationshipResponseDelta(human,requester),finalScore=round(clamp(base+affect+relationship,0,1));
+    const response=finalScore<SLEEP_SLOT_RESPONSE_THRESHOLDS.declineMax?'decline':finalScore>=SLEEP_SLOT_RESPONSE_THRESHOLDS.acceptMin?'accept':'delay';
+    return {baseScore:base,affectResponseDelta:affect,relationshipResponseDelta:relationship,finalScore,response};
+  }
+  function sleepSlotResponseCandidate(st,a){
+    if(!a||a.kind!=='human'||a.offMap||E.isSleeping?.(a))return null;
+    const pick=newestObservedSleepSlotBid(st,a);if(!pick)return null;
+    const requester=st.agents?.[pick.bid?.data?.bidFrom];if(!requester||requester.offMap)return null;
+    const evaluation=sleepSlotResponseEvaluation(a,requester,pick.bid.data.bidKind);
+    return {pick,requester,evaluation};
+  }
+  function emitSleepSlotResponse(st,responder,requester,bid,response){
+    const action=response==='accept'?'acceptSleepSlotYield':'refuseSleepSlotYield';
+    const text=response==='accept'?responder.name+'同意讓出睡眠位置。':responder.name+'拒絕讓出睡眠位置。';
+    return E.addEvent(text,'normal',[bid.id],{actor:responder.id,target:requester.id,action,responseToBid:bid.id,slot:bid.data?.slot||null,sleepSlotResponse:response,position:E.positionRef?.(responder.position)||null});
+  }
+  function bindSleepSlotYield(st,responder,requester,bid){
+    const action=E.buildAction?.(responder,{id:'wander'});if(!action)return false;
+    const intent={id:'intent:'+responder.id+':'+st.tick+':yieldSleepSlot:'+bid.id,kind:'explore',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictResponse',bidId:bid.id,requesterId:requester.id,slotId:bid.data?.slot||null}};
+    action.intentId=intent.id;action.sleepConflictYieldBidId=bid.id;action.sleepConflictYieldSlotId=bid.data?.slot||null;responder.action=action;responder.activeIntent=intent;
+    emitSleepSlotResponse(st,responder,requester,bid,'accept');settleObservedBid(responder,bid.id);return true;
+  }
+  function promoteSleepSlotResponses(st){
+    for(const responder of Object.values(st.agents||{})){
+      const c=sleepSlotResponseCandidate(st,responder);if(!c)continue;
+      const {pick,requester,evaluation}=c,bid=pick.bid;
+      if(evaluation.response==='delay')continue;
+      if(responder.action||responder.activeIntent){
+        const snap=E.reconsiderationSnapshot?.(st,responder);if(!snap?.ok||!Number.isFinite(snap.commitmentCost)||68<=snap.switchThreshold)continue;
+        clearAgentReservations(st,responder);dropHeld(st,responder);responder.action=null;responder.activeIntent=null;
+      }
+      if(evaluation.response==='decline'){emitSleepSlotResponse(st,responder,requester,bid,'decline');settleObservedBid(responder,bid.id);continue;}
+      bindSleepSlotYield(st,responder,requester,bid);
+    }
+  }
+  function settleSleepSlotYieldCompletion(st){
+    for(const responder of Object.values(st.agents||{})){
+      const action=responder.action,bidId=action?.sleepConflictYieldBidId,slotId=action?.sleepConflictYieldSlotId;if(!bidId||!slotId)continue;
+      if(responder.posture?.slotId===slotId)continue;
+      const bid=E.bidEvent?.(st,bidId),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
+      E.addEvent(responder.name+'實際離開了先前占用的睡眠位置。','normal',[bidId],{actor:responder.id,target:requester?.id||null,action:'sleepSlotYieldCompleted',responseToBid:bidId,slot:slotId,position:E.positionRef?.(responder.position)||null});
+      delete action.sleepConflictYieldBidId;delete action.sleepConflictYieldSlotId;
+    }
+  }
+
   function noResponseInterpretationWeight(waitEvent){const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;if(d.responderContextObserved!==true)return .22;const kind=d.observedResponderActionKind||null;if(kind==='sleep'||d.observedResponderPosture==='lying'&&kind==='sleep')return .05;if(kind&&HIGH_COMMITMENT_ACTIONS.has(kind))return .12;if(kind)return .28;return .45;}
   function prepareHumanTalkScenario(mode='talk-engage',seed=11331){
     const st=resetForScenario(seed),requester=st.agents?.zhou,responder=st.agents?.zhen,cat=st.agents?.orange;if(!requester||!responder)return st;
@@ -90,12 +140,12 @@
     Object.assign(requester.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:70});const social=mode==='talk-engage'?90:mode==='talk-brief'?35:mode==='talk-decline'?0:80;Object.assign(responder.needs,{hunger:18,thirst:mode==='talk-no-response'?95:18,fatigue:18,sleepNeed:18,social});
     requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};E.ensureIntentForAction?.(st,requester);return st;
   }
-  function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);}
-  function settleTick(st){resolveTalkResponses(st);E.reconcileIntents?.(st);}
+  function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);promoteSleepSlotResponses(st);}
+  function settleTick(st){resolveTalkResponses(st);settleSleepSlotYieldCompletion(st);E.reconcileIntents?.(st);}
 
   if(!E.registerRuntimeHook)throw new Error('systems/social/human-response.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
   E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 
-  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_AFFECT_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkAffectResponseDelta,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
+  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_AFFECT_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP,SLEEP_SLOT_RESPONSE_THRESHOLDS,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkAffectResponseDelta,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,newestObservedSleepSlotBid,sleepSlotResponseEvaluation,sleepSlotResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
 })();
