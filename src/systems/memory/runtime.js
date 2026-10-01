@@ -70,7 +70,10 @@
   function observableProjection(st,e){
     const d=e?.data||{},p=eventPosition(st,e);let positionRef=null;
     if(typeof d.position==='string')positionRef=d.position;else if(d.position&&typeof d.position==='object')positionRef=E.positionRef?.(d.position)||SP.key(d.position);else if(p)positionRef=E.positionRef?.(p)||SP.key(p);
-    return {action:String(d.action||''),actorId:d.actor||null,targetId:d.target||null,slotId:d.slot||null,furnitureId:d.furniture||null,positionRef:positionRef||null};
+    const observed={action:String(d.action||''),actorId:d.actor||null,targetId:d.target||null,positionRef:positionRef||null};
+    if(d.slot!=null)observed.slotId=d.slot;
+    if(d.furniture!=null)observed.furnitureId=d.furniture;
+    return observed;
   }
   function pruneAgentMemories(st,a){
     if(!Array.isArray(a?.episodicMemories))return [];
