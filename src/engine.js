@@ -40,6 +40,35 @@
   function sleepPropensity(a,minute=state.minute){return (a?.needs?.sleepNeed||0)+circadianSleepBias(a,minute)+Math.max(0,(a?.needs?.fatigue||0)-72)*.12;}
   function naturalWakeDrive(a,minute=state.minute){const p=sleepProfile(a);return p.naturalWakeSleepNeed-(a?.needs?.sleepNeed||0)-circadianSleepBias(a,minute)*.60;}
   function isSleeping(a){return !!(a?.action?.kind==='sleep'&&a.action.phase==='sleeping');}
+  function observeAgentContext(st,observer,target){
+    const unavailable=reason=>Object.freeze({observable:false,reason});
+    if(!st||!observer||!target)return unavailable('missing-agent');
+    if(observer.offMap||target.offMap)return unavailable('off-map');
+    if(isSleeping(observer))return unavailable('observer-sleeping');
+    if(!observer.position||!target.position)return unavailable('missing-position');
+    const observerRoom=SP.roomAt?.(st,observer.position),targetRoom=SP.roomAt?.(st,target.position);
+    if(observerRoom&&targetRoom&&observerRoom!==targetRoom)return unavailable('different-room');
+    if((SP.manhattan?.(observer.position,target.position)??Infinity)>4)return unavailable('out-of-range');
+    const observedAgentKind=target.kind==='human'?'human':isAnimalAgent(target)?'animal':'unknown';
+    return Object.freeze({observable:true,targetId:target.id,observedTick:st.tick,observedAgentKind,observedActionKind:target.action?.kind||null,observedPosture:target.posture?.kind||null});
+  }
+  function attentionStimulusData({kind,intensity}={}){
+    const normalizedKind=typeof kind==='string'?kind.trim():'';const normalizedIntensity=Number(intensity);
+    if(!normalizedKind||!Number.isFinite(normalizedIntensity)||normalizedIntensity<0)throw new Error('Attention stimulus requires a non-empty kind and non-negative finite intensity.');
+    return Object.freeze({interactionPurpose:'gainAttention',stimulusKind:normalizedKind,stimulusIntensity:normalizedIntensity});
+  }
+  function performAttentionInteraction(requester,responder,{stimulus,causeIds=[]}={}){
+    const observation=observeAgentContext(state,requester,responder);
+    if(!observation.observable)return {performed:false,reason:observation.reason,observation,eventId:null,wake:null};
+    const attention=attentionStimulusData(stimulus);
+    const eventId=addEvent(`${requester.name}試著引起${responder.name}的注意。`,'normal',causeIds,{actor:requester.id,target:responder.id,action:'attentionStimulus',...attention,position:positionRef(requester.position)});
+    let wake=null;
+    if(isSleeping(responder)){
+      wake=tryWakeFromInteraction(responder,{intensity:attention.stimulusIntensity,kind:attention.stimulusKind,reason:`${requester.name}的引起注意互動`,causeIds:[eventId]});
+      if(!wake.woke)addEvent(`${responder.name}沒有因這次刺激醒來。`,'normal',[eventId],{actor:requester.id,target:responder.id,action:'sleepDisturbance',stimulusIntensity:wake.intensity,stimulusKind:wake.kind,wakeChance:wake.chance,wakeRoll:wake.roll,position:positionRef(responder.position)});
+    }
+    return {performed:true,reason:null,observation,eventId,wake};
+  }
   function interactionWakeChance(a,intensity=0){if(!isSleeping(a))return 0;const p=sleepProfile(a),sleepTicks=a.action?.sleepTicks||0,drive=Math.max(0,naturalWakeDrive(a)),earlyPenalty=sleepTicks<p.minSleepTicks?14:0,highNeedPenalty=Math.max(0,(a.needs.sleepNeed||0)-55)*.35,lowNeedBonus=Math.max(0,35-(a.needs.sleepNeed||0))*.45;return clamp(intensity+drive*1.25+lowNeedBonus-highNeedPenalty-earlyPenalty,0,95);}
   function resourceName(id){return RESOURCE_TYPES[id]?.name||id;}
   function resourceIcon(id){return RESOURCE_TYPES[id]?.icon||'◻';}
@@ -375,5 +404,5 @@
   function supplyStatus(){const worker=activeSupplyActor();return {stock:foodStock(),trigger:state.supply.trigger,workerId:worker?.id||null,workerName:worker?.name||null,trips:state.supply.trips,totalProduced:state.supply.totalProduced};}
   function reset(seed=DEFAULT_SEED){eventSeq=0;const normalizedSeed=normalizeSeed(seed);state=resetStateSource.createState(normalizedSeed);addEvent(`${VERSION} 初始化：活動疲勞、睡眠需求、物種節律、睡眠中互動刺激、物流容器與 Interaction Geometry 使用單一 core state。`,'system',[],{seed:state.seed});return state;}
 
-  window.SimEngine={VERSION,RESOURCE_TYPES,ZH,DATA_ZH,PREVIEW_MODE:false,PREVIEW_FINGERPRINT:null,configureResetStateSource,currentResetStateSource,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,registerEventCreatedListener,listEventCreatedListeners,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,sleepProfile,circadianPatternName,circadianSleepBias,sleepPropensity,naturalWakeDrive,isSleeping,interactionWakeChance,tryWakeFromInteraction,foodStock,supplyStatus,actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,positionRef,reservationOwner,holderOf,buildAction,baseUtilityForAction,speciesProfile,isAnimalAgent,canPetAnimal,nearestPettableAnimal,canSatisfyHunger,canDrinkResource,decisionContributorsForAction,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};
+  window.SimEngine={VERSION,RESOURCE_TYPES,ZH,DATA_ZH,PREVIEW_MODE:false,PREVIEW_FINGERPRINT:null,configureResetStateSource,currentResetStateSource,clamp,rand,getState:()=>state,reset,tick,timeStr,addEvent,registerEventCreatedListener,listEventCreatedListeners,addNoise,resourceName,resourceIcon,contentSummary,endpointName,amountAt,capacityLeft,transferResource,resourceLoad,containerLoad,effectiveCarryLoad,movementExertion,actorCanTransfer,coordination,applyExertion,restRecoveryInfo,sleepRecoveryInfo,sleepProfile,circadianPatternName,circadianSleepBias,sleepPropensity,naturalWakeDrive,isSleeping,observeAgentContext,attentionStimulusData,performAttentionInteraction,interactionWakeChance,tryWakeFromInteraction,foodStock,supplyStatus,actionLabel,phaseLabel,getEntity,causeTree,tileEndpointId,positionRef,reservationOwner,holderOf,buildAction,baseUtilityForAction,speciesProfile,isAnimalAgent,canPetAnimal,nearestPettableAnimal,canSatisfyHunger,canDrinkResource,decisionContributorsForAction,registerDecisionOptionProvider,listDecisionOptionProviders,registerActionLabelResolver,listActionLabelResolvers,CORE_ADD_EVENT:addEvent,CORE_ACTION_LABEL:actionLabel};
 })();

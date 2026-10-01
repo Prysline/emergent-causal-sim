@@ -12,7 +12,7 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1132);
 let st=E.getState();
-assert.equal(st.version,'11.42.0-usage-preference-sleep');
+assert.equal(st.version,'11.43.0-attention-observation');
 assert.equal(E.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(st.affects,undefined,'Affect must not add a global affect registry');
 for(const a of Object.values(st.agents))assert.deepEqual(a.affect,{valence:0,activation:0,frustration:0,lastUpdatedTick:0,lastDecayTick:0,source:null});
