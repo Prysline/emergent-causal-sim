@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -134,6 +134,16 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
 
 通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+### Sleep preferred Slot conflict boundary
+
+Fixed-Slot sleep conflict 的 owner 是 Deliberation，不是 Spatial 或 Usage。Spatial 的 `slotAvailability(...)` / `sleepTargets()` 只回答 objective legality 與 canonical occupancy reason；Usage Preference 只回答 assignment / claim / habit Association Reason。occupied preferred Slot 必須留在 illegal side，不得建立第二份「可睡但被占」target list。
+
+occupant-specific candidate 必須消費 Engine-owned `observeAgentContext(...)` decision-time snapshot；World 知道 occupant 是誰不等於 requester 已知道。第一版只處理 Agent occupant，ordinary Object occupancy、free-surface multi-agent occupancy、完整 Perception / LOS / hearing 均不在此 contract。
+
+Deliberation 可以比較 alternate sleep target、有限期 occupancy wait、generic attention、Human yield request、Human non-physical shoo 與 defer。等待 Slot 與 Social `awaitResponse` 來源不同；只重用 private / finite / interruptible lifecycle pattern。Sleeping occupant 的 wake 是 interaction consequence，不等於 request understood / accepted / completed。Human response 必須由 responder-local observation / decision 建立自己的 Intent / Action；requester event 不得直接改寫 responder position、posture 或 private state。
+
+Conflict Resolution Evidence 隸屬既有 Decision Evidence framework，以 `parentDecisionId` 連回 adopted sleep decision，保存 preferred Slot、Association Reason、decision-time Observation snapshot、evaluated candidates / contributors、selection、evaluated tick 與 `priorConflictDecisionId`。後續 occupant 狀態不得回填舊 evidence；若最後改選其他 legal sleep Slot，既有 Target Selection Evidence 仍是 target selection 的唯一 private evidence owner。
 
 ### Agent-private Truth
 
