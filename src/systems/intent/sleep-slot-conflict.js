@@ -3,7 +3,7 @@
   if(!E||!W?.DELIBERATION_SCHEMA_VERSION||!SP||!U)return;
   if(typeof E.observeAgentContext!=='function'||typeof E.performAttentionInteraction!=='function')throw new Error('sleep-slot-conflict requires shared Agent-context observation + attention.');
   const VERSION=W.DELIBERATION_SCHEMA_VERSION;
-  const OCCUPANCY_WAIT_TICKS=Math.max(2,Number(E.REQUESTER_PATIENCE_TICKS)||3);
+  const OCCUPANCY_WAIT_TICKS=3;
   const ATTENTION_STIMULUS=Object.freeze({kind:'sound',intensity:18});
   const FORCEFUL_STIMULUS=Object.freeze({kind:'sound',intensity:34});
   const HIGH_COMMITMENT_ACTIONS=new Set(['eat','drinkWater','drinkAlcohol','sleep','restockContainer','externalSupply']);
@@ -59,7 +59,8 @@
     const observation=E.observeAgentContext(st,a,occupant);if(!observation.observable||observation.observedAgentKind!=='human'||observation.observedActionKind==='sleep')return null;
     const forceful=kind==='nonPhysicalShoo',attention=E.performAttentionInteraction(a,occupant,{stimulus:forceful?FORCEFUL_STIMULUS:ATTENTION_STIMULUS});
     if(!attention.performed)return null;
-    const id=E.addEvent(forceful?`${a.name}更強硬地要求${occupant.name}離開自己偏好的睡眠位置。`:`${a.name}請${occupant.name}讓出自己偏好的睡眠位置。`,forceful?'warn':'normal',[attention.eventId],{actor:a.id,target:occupant.id,action:'sleepSlotYieldRequest',requestKind:forceful?'nonPhysicalShoo':'requestYield',preferredSlot:conflict.slot.id,expectsResponse:true,perceivedByTarget:true,position:E.positionRef?.(a.position)||null});
+    const responderObservation=E.observeAgentContext(st,occupant,a),perceivedByTarget=responderObservation?.observable===true;
+    const id=E.addEvent(forceful?`${a.name}更強硬地要求${occupant.name}離開自己偏好的睡眠位置。`:`${a.name}請${occupant.name}讓出自己偏好的睡眠位置。`,forceful?'warn':'normal',[attention.eventId],{actor:a.id,target:occupant.id,action:'sleepSlotYieldRequest',requestKind:forceful?'nonPhysicalShoo':'requestYield',preferredSlot:conflict.slot.id,expectsResponse:true,perceivedByTarget,position:E.positionRef?.(a.position)||null});
     return id;
   }
   function bindYieldAction(st,responder,requester,requestId,slotId){
@@ -72,16 +73,25 @@
     return true;
   }
   function responseForRequest(st,event){
-    const d=event?.data||{},responder=d.target&&st.agents?.[d.target],requester=d.actor&&st.agents?.[d.actor];if(!responder||!requester||responder.kind!=='human'||responder.offMap||E.isSleeping?.(responder))return null;
+    const d=event?.data||{},responder=d.target&&st.agents?.[d.target],requester=d.actor&&st.agents?.[d.actor];if(!responder||!requester||d.perceivedByTarget!==true||responder.kind!=='human'||responder.offMap||E.isSleeping?.(responder))return null;
     if(st.events.some(e=>e.data?.responseToRequest===event.id))return null;
     const observed=E.observeAgentContext(st,responder,requester);if(!observed.observable)return null;
     const current=actionKind(responder);if(current&&HIGH_COMMITMENT_ACTIONS.has(current))return null;
     const own=U.associationReasons(st,responder,'sleep',{kind:'slot',id:d.preferredSlot}).filter(selfReason);
-    if(own.length){return E.addEvent(`${responder.name}拒絕讓出這個睡眠位置。`,'normal',[event.id],{actor:responder.id,target:requester.id,action:'sleepSlotYieldResponse',responseToRequest:event.id,response:'refused',preferredSlot:d.preferredSlot,position:E.positionRef?.(responder.position)||null});}
-    const responseId=E.addEvent(`${responder.name}答應讓出這個睡眠位置。`,'good',[event.id],{actor:responder.id,target:requester.id,action:'sleepSlotYieldResponse',responseToRequest:event.id,response:'accepted',preferredSlot:d.preferredSlot,position:E.positionRef?.(responder.position)||null});
+    if(own.length){return E.addEvent(`${responder.name}拒絕讓出這個睡眠位置。`,'normal',[event.id],{actor:responder.id,target:requester.id,action:'sleepSlotYieldResponse',responseToRequest:event.id,requestUnderstood:true,response:'refused',preferredSlot:d.preferredSlot,position:E.positionRef?.(responder.position)||null});}
+    const responseId=E.addEvent(`${responder.name}答應讓出這個睡眠位置。`,'good',[event.id],{actor:responder.id,target:requester.id,action:'sleepSlotYieldResponse',responseToRequest:event.id,requestUnderstood:true,response:'accepted',preferredSlot:d.preferredSlot,position:E.positionRef?.(responder.position)||null});
     bindYieldAction(st,responder,requester,event.id,d.preferredSlot);return responseId;
   }
   function latestResponse(st,requestId){return st.events.find(e=>e.data?.responseToRequest===requestId)||null;}
+  function settleYieldCompletions(st){
+    const completed=new Set((st.events||[]).filter(e=>e.data?.action==='sleepSlotYieldCompleted').map(e=>e.data?.responseEventId).filter(Boolean));
+    const accepted=(st.events||[]).filter(e=>e.data?.action==='sleepSlotYieldResponse'&&e.data?.response==='accepted'&&!completed.has(e.id));
+    for(const response of accepted){
+      const responder=response.data?.actor&&st.agents?.[response.data.actor],requester=response.data?.target&&st.agents?.[response.data.target],slotId=response.data?.preferredSlot;
+      if(!responder||!slotId||responder.posture?.slotId===slotId)continue;
+      E.addEvent(`${responder.name}實際離開了先前占用的睡眠位置。`,'normal',[response.data.responseToRequest,response.id].filter(Boolean),{actor:responder.id,target:requester?.id||response.data?.target||null,action:'sleepSlotYieldCompleted',responseToRequest:response.data.responseToRequest||null,responseEventId:response.id,preferredSlot:slotId,completed:true,position:E.positionRef?.(responder.position)||null});
+    }
+  }
   function interruptConflictWaitForHigherPriority(st,a){
     if(a.action?.kind!=='sleep'||a.action.phase!=='slotConflict')return false;
     const best=E.candidateIntents?.(st,a)?.find(c=>c.intentKind!=='sleep')||null,current=E.baseUtilityForAction?.(a,'sleep')||0;
@@ -130,6 +140,7 @@
   function settleTick(st){
     for(const a of Object.values(st.agents||{}))resolveConflict(st,a);
     const requests=st.events.filter(e=>e.tick===st.tick&&e.data?.action==='sleepSlotYieldRequest');for(const request of requests)responseForRequest(st,request);
+    settleYieldCompletions(st);
     E.reconcileIntents?.(st);
   }
   function conflictActionLabel(st,a){const p=a?.action;if(p?.kind!=='sleep'||p.phase!=='slotConflict')return null;const slot=p.preferredConflictSlot?SP.getSlot(st,p.preferredConflictSlot):null,name=slot&&st.furniture?.[slot.furnitureId]?.name||'偏好睡眠位置';if(p.waitingRequestId)return`睡眠・等待${name}讓位回應`;if(p.conflictMode==='waitForSlot')return`睡眠・等待${name}空出`;return`睡眠・處理${name}被占用`;}
@@ -144,7 +155,7 @@
   E.registerRuntimeHook('beforeTick','sleepSlotConflict.prepare',()=>prepareTick(E.getState()),650);
   E.registerRuntimeHook('afterTick','sleepSlotConflict.resolve',()=>settleTick(E.getState()),750);
 
-  const api={VERSION,OCCUPANCY_WAIT_TICKS,ATTENTION_STIMULUS,FORCEFUL_STIMULUS,sleepAssociations,preferredConflict,sleepOpportunityExists,resolutionCandidates,captureConflictResolutionEvidence,responseForRequest};
+  const api={VERSION,OCCUPANCY_WAIT_TICKS,ATTENTION_STIMULUS,FORCEFUL_STIMULUS,sleepAssociations,preferredConflict,sleepOpportunityExists,resolutionCandidates,captureConflictResolutionEvidence,responseForRequest,settleYieldCompletions};
   window.SimSleepSlotConflict=Object.freeze(api);
   Object.assign(E,{SLEEP_SLOT_CONFLICT_VERSION:VERSION,sleepPreferredSlotAssociations:sleepAssociations,preferredSleepSlotConflict:preferredConflict,sleepConflictResolutionCandidates:resolutionCandidates,captureConflictResolutionEvidence});
 })();
