@@ -107,7 +107,7 @@
   function bindSleepSlotYield(st,responder,requester,bid){
     const action=E.buildAction?.(responder,{id:'wander'});if(!action)return false;
     const intent={id:'intent:'+responder.id+':'+st.tick+':yieldSleepSlot:'+bid.id,kind:'explore',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictResponse',bidId:bid.id,requesterId:requester.id,slotId:bid.data?.slot||null}};
-    action.intentId=intent.id;action.sleepConflictYieldBidId=bid.id;action.sleepConflictYieldSlotId=bid.data?.slot||null;responder.action=action;responder.activeIntent=intent;
+    action.intentId=intent.id;responder.action=action;responder.activeIntent=intent;responder.sleepSlotYieldResponse={bidId:bid.id,slotId:bid.data?.slot||null,acceptedTick:st.tick};
     emitSleepSlotResponse(st,responder,requester,bid,'accept');settleObservedBid(responder,bid.id);return true;
   }
   function promoteSleepSlotResponses(st){
@@ -122,11 +122,13 @@
   }
   function settleSleepSlotYieldCompletion(st){
     for(const responder of Object.values(st.agents||{})){
-      const action=responder.action,bidId=action?.sleepConflictYieldBidId,slotId=action?.sleepConflictYieldSlotId;if(!bidId||!slotId)continue;
-      if(responder.posture?.slotId===slotId)continue;
-      const bid=E.bidEvent?.(st,bidId),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
-      E.addEvent(responder.name+'實際離開了先前占用的睡眠位置。','normal',[bidId],{actor:responder.id,target:requester?.id||null,action:'sleepSlotYieldCompleted',responseToBid:bidId,slot:slotId,position:E.positionRef?.(responder.position)||null});
-      delete action.sleepConflictYieldBidId;delete action.sleepConflictYieldSlotId;
+      const pending=responder.sleepSlotYieldResponse,bidId=pending?.bidId,slotId=pending?.slotId;if(!bidId||!slotId)continue;
+      if(responder.posture?.slotId!==slotId){
+        const bid=E.bidEvent?.(st,bidId),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
+        E.addEvent(responder.name+'實際離開了先前占用的睡眠位置。','normal',[bidId],{actor:responder.id,target:requester?.id||null,action:'sleepSlotYieldCompleted',responseToBid:bidId,slot:slotId,position:E.positionRef?.(responder.position)||null});
+        responder.sleepSlotYieldResponse=null;continue;
+      }
+      if(st.tick-(pending.acceptedTick||st.tick)>Math.max(6,Number(E.BID_MEMORY_TICKS)||6))responder.sleepSlotYieldResponse=null;
     }
   }
 
