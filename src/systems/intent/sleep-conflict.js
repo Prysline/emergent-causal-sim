@@ -120,7 +120,7 @@
       responder.observedSocialBids=(responder.observedSocialBids||[]).filter(ref=>ref.bidId!==pick.bid.id);
       if(response!=='accepted'||responder.posture?.slotId!==pick.bid.data.preferredSlotId)continue;
       const leave=E.buildAction(responder,{id:'wander'});if(!leave)continue;
-      const intent={id:'intent:'+responder.id+':'+st.tick+':respondSleepSlotConflict:'+pick.bid.id,kind:'respondSleepSlotConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictBid',bidId:pick.bid.id,responseEventId,tick:st.tick}};
+      const intent={id:'intent:'+responder.id+':'+st.tick+':respondSleepSlotConflict:'+pick.bid.id,kind:'respondSleepSlotConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictBid',bidId:pick.bid.id,responseEventId:responseId,tick:st.tick}};
       leave.intentId=intent.id;responder.activeIntent=intent;responder.action=leave;
     }
   }
