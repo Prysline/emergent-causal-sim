@@ -41,6 +41,7 @@ const crowdingIndex=indexOf('src/crowding-runtime-v1200.js');
 const pipelineIndex=indexOf('src/runtime-hook-pipeline.js');
 const hookManifestIndex=indexOf('src/runtime/hook-manifest.js');
 const usageIndex=indexOf('src/systems/usage/runtime.js');
+const sleepConflictIndex=indexOf('src/systems/intent/sleep-slot-conflict.js');
 const validatorIndex=indexOf('src/validation/registry.js');
 const manifestIndex=indexOf('src/validation/manifest.js');
 const uiIndex=indexOf('src/ui/core.js');
@@ -63,7 +64,7 @@ assert.ok(resourcesIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every simulation hook registrant');
-assert.ok(usageIndex>engineIndex&&usageIndex<hookManifestIndex,'Usage preference runtime must load after Engine/Evidence and before hook-manifest finalization');
+assert.ok(usageIndex>engineIndex&&usageIndex<sleepConflictIndex&&sleepConflictIndex<hookManifestIndex,'Sleep Slot conflict runtime must load after Usage/Evidence and before hook-manifest finalization');
 assert.ok(hookManifestIndex<validatorIndex,'simulation hook manifest must finalize before validation/UI composition');
 assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independently of the runtime-hook manifest');
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
@@ -150,7 +151,8 @@ const engineDependentSubsystemRuntimes=[
   'src/systems/social/human-response.js',
   'src/systems/memory/deliberation.js',
   'src/systems/memory/social-outcome.js',
-  'src/systems/usage/runtime.js'
+  'src/systems/usage/runtime.js',
+  'src/systems/intent/sleep-slot-conflict.js'
 ];
 
 for(const path of engineDependentSubsystemSchemas){
@@ -217,7 +219,7 @@ assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
-assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
