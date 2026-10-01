@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -128,6 +128,14 @@ World Authoring v11 以獨立 `usageAssignments[]` 保存正式使用指派，�
 `SP.sleepTargets()` 保持 objective legal candidate query，不讀 assignment / claim / habit。Usage preference runtime 只在 legal candidates 上組合 bounded assignment / claim / Memory-owned habit / species-activity contributors；因此「是否要睡」與「要睡哪裡」維持不同層。Association Reason 可獨立查詢已被 occupancy / reservation 排除的 target，不把 legal candidate list 當作歸屬真相。
 
 Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-private record；每次 reselection 建立新 record，保留 `parentDecisionId` 與 `priorTargetDecisionId`，不覆寫舊 evidence。Memory 只在 actor 自己實際形成 structured sleep-start experience 時更新 `usageHabits` persistent summary；habit strength 採 saturation gain + lazy decay。Inspector 只在 Agent Debug context 投影 Habit / Target Selection Evidence，並明確標示「私人」；World / Furniture presentation 不得把它翻成公共「這是某人的床」。
+
+### Sleep preferred Slot conflict boundary
+
+`SP.sleepTargets()` 仍只回傳 objective legal sleep targets；occupied preferred Slot 不會因 assignment / claim / habit 被塞回 legal candidate。`SimUsage.sleepAssociationTargets(...)` 只列舉既有 sleep associations，`SimSpatial.sleepTargetAvailability(...)` 只回答指定 Slot 的 objective availability / exclusion reason；`src/systems/intent/sleep-conflict.js` 才組合兩者形成 Agent-private preferred-slot conflict reasoning。
+
+occupant-specific resolution 必須消費 shared `observeAgentContext(...)` snapshot；看不到 occupant 時不得產生指定對象的 attention / request / drive-away。第一版 resolution candidates 為 alternate legal sleep target、occupancy wait、generic attention、Human request-yield、Human nonphysical drive-away，以及保留 conflict context 的暫時 defer。request / response / actual leaving / Slot becoming available 保持分離；requester 不直接改 responder posture / position / private state。Human responder 只能在自己觀察到 bid 後，以 responder-local decision 建立回應與後續離開 Action。
+
+Conflict Resolution Evidence 是既有 Decision Evidence 的 downstream Agent-private immutable record，保存 parent decision、preferred Slot、Association Reason、decision-time observation snapshot、evaluated candidates、selected resolution、contributors 與 prior conflict decision reference；重新評估不得覆寫舊 snapshot。occupancy wait 不建立 Slot reservation，每次有限等待後重新 Deliberation，且更迫切的 emergency need 可中斷等待。
 
 ### Agent-context Observation / Attention boundary
 
