@@ -199,6 +199,21 @@
     }
     out.sort((x,y)=>x.score-y.score);return out;
   }
+  function sleepTargetAvailability(st,a,targetRef){
+    if(targetRef?.kind!=='slot')return {available:false,reason:'unsupported-target',occupantId:null,reservedBy:null};
+    const slot=getSlot(st,targetRef.id);if(!slot)return {available:false,reason:'missing-slot',occupantId:null,reservedBy:null};
+    if(!slot.canSleep)return {available:false,reason:'not-sleep-slot',occupantId:null,reservedBy:null};
+    if(!slotAllows(slot,a))return {available:false,reason:'agent-not-allowed',occupantId:null,reservedBy:null};
+    if(!slotPoseFits(slot,a,'lying'))return {available:false,reason:'pose-does-not-fit',occupantId:null,reservedBy:null};
+    const occupant=slotOccupant(st,slot.id,a?.id);if(occupant)return {available:false,reason:'occupied',occupantId:occupant.id,reservedBy:null};
+    const reserved=slotReservedBy(st,slot.id,a?.id);if(reserved)return {available:false,reason:'reserved',occupantId:null,reservedBy:reserved.id};
+    const approach=window.SimSpatial?.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'})||null;
+    if(!approach)return {available:false,reason:'no-approach',occupantId:null,reservedBy:null};
+    const distance=window.SimSpatial?.pathDistance?.(st,a,approach,{mode:'walk',objective:'traversalCost'});
+    if(!Number.isFinite(distance))return {available:false,reason:'unreachable',occupantId:null,reservedBy:null};
+    return {available:true,reason:null,occupantId:null,reservedBy:null,approach:clonePos(approach),distance};
+  }
+
   function sleepTargets(st,a){
     const out=[],runtime=window.SimSpatial,pending=[];
     for(const slot of allSlots(st)){
@@ -220,5 +235,5 @@
   function describePlace(st,aOrPos){if(aOrPos?.offMap)return '門外';const p=aOrPos?.position||aOrPos;return nearestLabel(st,p);}
   function entitiesWithRole(st,role,collections=['containers','sources']){return collections.flatMap(k=>Object.values(st[k]||{})).filter(x=>hasRole(x,role));}
 
-  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotPoseFits,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargets,describePlace,entitiesWithRole,hasRole,boundaryIdBetween,boundaryById,boundaryBetween,doorsForBoundary,edgeStructurallyOpen,allStructures,getStructure,structureBetween,structureNeighborNodes,allExits,getExit,exitStructurallyAvailable};
+  window.SimSpatial={zOf,key,same,manhattan,clonePos,inBounds,tileAt,tileByPos,walkable,blockerAt,furniture,furnitureAt,allSlots,getSlot,slotsForFurniture,slotAllows,slotPoseFits,slotOccupant,slotReservedBy,slotAvailable,holderOf,objectPosition,occupantsAt,recomputeRooms,roomAt,normalizeNode,roomMetrics,tileLiquidAmount,floorSlipRiskAt,wettestTile,noiseAt,comfortAt,nearbyRestQuality,astar,pathDistance,adjacentWalkable,interactionGeometry,interactionPositions,bestInteractionPosition,isAtInteraction,restTargets,sleepTargetAvailability,sleepTargets,describePlace,entitiesWithRole,hasRole,boundaryIdBetween,boundaryById,boundaryBetween,doorsForBoundary,edgeStructurallyOpen,allStructures,getStructure,structureBetween,structureNeighborNodes,allExits,getExit,exitStructurallyAvailable};
 })();
