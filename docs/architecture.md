@@ -821,6 +821,16 @@ v11.20.0 將既有粗略的「目的 node occupancy 固定 penalty」收斂為 d
 - 舊 `Agent.carrying` 不存在。
 - transfer / serving / restock / external supply 都必須遵守 physical resource conservation 與合法 Interaction Geometry。
 
+### Preferred Sleep Slot Conflict
+
+- Spatial 只提供 canonical sleep legality / occupancy；occupied preferred Slot 不會重新成為 legal `sleepTargets()`。
+- Usage Preference 只提供 assignment / claim / habit Association Reason；Deliberation 組合 preference、objective occupancy 與 Agent-context Observation，持有 Agent-private conflict reasoning。
+- occupant-specific candidate 必須來自 `observeAgentContext()` 的 decision-time snapshot；看不到 occupant 時只能比較不依賴 occupant identity 的 alternate / occupancy wait 等選項。
+- Conflict Resolution Evidence 是 Decision Evidence 的 downstream immutable record；若選 alternate，之後仍由 Target Selection Evidence 解釋實際 legal sleep target。
+- generic attention、wake、request、response、actual release 與 Slot availability 是不同事實。requester 不得直接改 responder posture / position / Action / Intent / private state。
+- occupancy wait 是有限期、可 preempt 的 Agent-private sleep phase，不借用 Social `awaitResponse` semantic source，也不把 timeout 解讀成拒絕。
+- 第一版只處理 Agent occupant；Agent carry / relocate、ordinary Object occupancy、完整 Perception、Human personality 與 generic Animal intimidation / aggression 留在後續 slice。
+
 ### Sleep
 
 - `fatigue` 與 `sleepNeed` 分離。

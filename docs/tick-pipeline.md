@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
-> `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
+> `11.44.0-sleep-slot-conflict` 沒有新增、刪除或重新排序 runtime hook。preferred Slot conflict 在既有 core sleep state machine 與 Deliberation helpers 間同步處理；Conflict Resolution Evidence 繼續由既有 Decision Evidence owner 保存。occupancy wait 只是 sleep Action 的 private phase，soft reconsideration 明確允許較高優先需求中斷，不建立第二套 scheduler。\n>\n> `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
 > `11.41.0-carried-container-drop` 完成 Carried Containers P1 Slice D，但**沒有新增、刪除或重新排序 runtime hook**。同一 completed movement edge 的同步順序是：position commit → snapshot objective handling context → 既有 `onEnterTile` hazard → 必要的 Slice C contents-loss consequence → Slice D `containerDrop` occurrence。Drop 成功才清 `Agent.held` 並把 Container actual position 固定到 completed-edge destination node；正常 lifecycle `releaseHeld()` 不進這條 consequence path。Slice D v1 不做 drop-impact 二次 contents loss、Surface→floor 墜落或破損／彈跳／連續物理。planning / replan 仍不消耗 consequence RNG。
 
