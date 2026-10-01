@@ -1,5 +1,6 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
+  const E=window.SimEngine,W=window.SimWorld;if(!E||!W)return;
+  if(typeof E.observeAgentContext!=='function')throw new Error('systems/social/bid.js requires Engine observeAgentContext().');
   const VERSION=W.SOCIAL_BID_SCHEMA_VERSION||'11.12.2-social-bid-lifecycle';
   const BID_MEMORY_TICKS=6,REQUESTER_PATIENCE_TICKS=3;
   const INTERACTION_BY_BID_KIND=Object.freeze({talkOffer:'talk',animalAffection:'socialAffection',petOffer:'pet'});
@@ -60,7 +61,7 @@
   function privateWaitData(st,a,intent,bid){
     const data={actor:a.id,action:'socialWaitEnded',bidId:bid?.id||intent.source?.bidId||null,intentId:intent.id,visibility:'private',owner:a.id};if(!bid)return data;
     data.bidKind=bid.data?.bidKind||null;data.interactionKind=socialBidInteractionKind(bid);const responder=bid.data?.bidTo&&st.agents?.[bid.data?.bidTo];
-    const observation=E.observeAgentContext?.(st,a,responder);if(!observation?.observable){data.responderContextObserved=false;return data;}
+    const observation=E.observeAgentContext(st,a,responder);if(!observation?.observable){data.responderContextObserved=false;return data;}
     data.responderContextObserved=true;data.observedResponderActionKind=observation.observedActionKind;data.observedResponderPosture=observation.observedPosture;return data;
   }
   function expirePrivateWaiting(st){
