@@ -172,7 +172,7 @@ assert.match(entityUiSource,/UI_ENTITY_READABLE_VERSION=VERSION/,'Entity Readabl
 assert.match(entityUiSource,/fact\('基礎阻擋',SP\.walkable\(st,t\)\?'無':'有'\)/,'Tile Readable must expose only base blocker semantics');
 assert.doesNotMatch(entityUiSource,/fact\('通行',SP\.walkable/,'Tile Readable must not claim complete per-Agent traversal feasibility');
 const memoryUiSource=fs.readFileSync(new URL('../src/ui/inspectors/memory.js',import.meta.url),'utf8');
-assert.match(memoryUiSource,/Usage Habit（私人）|<b>私人<\\/b>/,'Agent Debug Memory Inspector must label Usage Habit as private');
+assert.ok(memoryUiSource.includes('Usage Habit（私人）')||memoryUiSource.includes('<b>私人</b>'),'Agent Debug Memory Inspector must label Usage Habit as private');
 assert.match(memoryUiSource,/effectiveUsageHabitStrength/,'Usage Habit Inspector must derive effective strength from the Memory owner');
 const intentUiSource=fs.readFileSync(new URL('../src/ui/inspectors/intent.js',import.meta.url),'utf8');
 assert.match(intentUiSource,/Target Selection Evidence（私人）/,'Agent Debug Intent Inspector must expose private Target Selection Evidence');
