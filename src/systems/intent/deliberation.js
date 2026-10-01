@@ -1,7 +1,8 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.42.0-usage-preference-sleep';
-  const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
+  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.44.0-sleep-slot-conflict';
+  const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2,OCCUPANCY_WAIT_TICKS=3;
+  const SLEEP_CONFLICT_ATTENTION=Object.freeze({attention:Object.freeze({kind:'sound',intensity:24}),request:Object.freeze({kind:'sound',intensity:24}),displace:Object.freeze({kind:'sound',intensity:34})});
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
   function routePreferenceForAction(st,a,action=a?.action){
     const careful=Math.max(0,Math.min(1,Number(a?.traits?.careful)||0));
@@ -10,6 +11,42 @@
   }
   const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
 
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  const round=v=>Math.round(v*1000)/1000;
+  function sleepPreferenceForSlot(st,a,slotId){
+    const U=window.SimUsage,target={kind:'slot',id:slotId},contributors=U?.preferenceContributors?.(st,a,'sleep',target)||[];
+    const self=contributors.filter(c=>c?.direction==='self'&&(Number(c.delta)||0)>0),cap=Number(U?.PREFERENCE_CAP)||10,preferenceDelta=clamp(self.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,cap);
+    return {target,associationReasons:self,preferenceDelta,cap};
+  }
+  function sleepSlotOccupant(st,a,slotId){return Object.values(st?.agents||{}).find(other=>other?.id!==a?.id&&!other?.offMap&&other?.posture?.slotId===slotId)||null;}
+  function preferredSleepSlotConflicts(st,a){
+    const legalIds=new Set((SP.sleepTargets(st,a)||[]).map(t=>t.id)),out=[];
+    for(const furniture of Object.values(st?.furniture||{}))for(const slot of furniture?.slots||[]){
+      if(!slot?.canSleep||legalIds.has(slot.id)||!SP.slotAllows?.(slot,a)||!SP.slotPoseFits?.(slot,a,'lying'))continue;
+      const preference=sleepPreferenceForSlot(st,a,slot.id);if(preference.preferenceDelta<=0)continue;
+      const occupant=sleepSlotOccupant(st,a,slot.id);if(!occupant)continue;
+      const observation=E.observeAgentContext?.(st,a,occupant)||Object.freeze({observable:false,reason:'observation-unavailable'});
+      out.push({preferredSlot:{kind:'slot',id:slot.id},associationReasons:preference.associationReasons,preferenceDelta:preference.preferenceDelta,objectiveReason:'occupiedByAgent',observation});
+    }
+    return out.sort((x,y)=>y.preferenceDelta-x.preferenceDelta||String(x.preferredSlot.id).localeCompare(String(y.preferredSlot.id)));
+  }
+  function sleepConflictResolutionCandidates(st,a,conflict){
+    if(!conflict)return [];
+    const U=window.SimUsage,cap=Number(U?.PREFERENCE_CAP)||10,insistence=clamp((Number(conflict.preferenceDelta)||0)/cap,0,1),profile=E.sleepProfile?.(a),minimum=Number(profile?.minimumSleepNeed)||0,urgency=clamp(((Number(a?.needs?.sleepNeed)||0)-minimum)/Math.max(1,100-minimum),0,1),ranked=U?.rankSleepTargets?.(st,a,SP.sleepTargets(st,a))||SP.sleepTargets(st,a)||[],out=[];
+    const common=[{kind:'usageAssociation',key:'preferredSlot',role:'conflictResolution',value:conflict.preferenceDelta,target:conflict.preferredSlot},{kind:'need',key:'sleepNeed',role:'conflictResolution',value:Number(a?.needs?.sleepNeed)||0}];
+    if(ranked.length)out.push({kind:'alternateSleep',score:round(10+(1-insistence)*4-urgency),target:{kind:'slot',id:ranked[0].id},contributors:[...common,{kind:'availability',key:'alternateLegalSleepTarget',role:'option',target:{kind:'slot',id:ranked[0].id}}]});
+    out.push({kind:'waitForSlot',score:round(7+insistence*5+urgency),contributors:[...common,{kind:'availability',key:'preferredSlotOccupied',role:'trigger'}]});
+    if(conflict.observation?.observable){
+      const sleeping=conflict.observation.observedActionKind==='sleep'||conflict.observation.observedPosture==='lying';
+      out.push({kind:'gainAttention',score:round(6+insistence*5+urgency*2+(sleeping?1:0)),contributors:[...common,{kind:'observation',key:'occupantContext',role:'eligibility',observedTick:conflict.observation.observedTick,observedAgentKind:conflict.observation.observedAgentKind,observedActionKind:conflict.observation.observedActionKind,observedPosture:conflict.observation.observedPosture}]});
+      if(conflict.observation.observedAgentKind==='human'){
+        out.push({kind:'requestYield',score:round(7+insistence*6+urgency*2),contributors:[...common,{kind:'observation',key:'humanOccupant',role:'eligibility',observedTick:conflict.observation.observedTick}]});
+        out.push({kind:'nonphysicalDisplace',score:round(4+insistence*5+urgency*3),contributors:[...common,{kind:'observation',key:'humanOccupant',role:'eligibility',observedTick:conflict.observation.observedTick},{kind:'interaction',key:'moreConfrontational',role:'modifier',value:1}]});
+      }
+    }
+    return out.sort((x,y)=>y.score-x.score||x.kind.localeCompare(y.kind));
+  }
+  function preferredSleepConflictDecision(st,a){const conflict=preferredSleepSlotConflicts(st,a)[0]||null;if(!conflict)return null;const candidates=sleepConflictResolutionCandidates(st,a,conflict);return {conflict,candidates,selected:candidates[0]||null};}
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function foodAmount(st){return Object.values(st.containers||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
   function wetTotal(st){return Object.values(st.map?.tiles||{}).reduce((sum,t)=>sum+(SP.tileLiquidAmount?.(t)||0),0);}
@@ -83,7 +120,7 @@
   }
   function reservationCount(st,a){return Object.values(st.reservations||{}).filter(owner=>owner===a.id).length;}
   function derivedCommitmentCost(st,a){
-    const kind=actionKind(a),p=a.action;if(!kind)return a.activeIntent?.kind==='awaitResponse'?2:0;
+    const kind=actionKind(a),p=a.action;if(!kind)return a.activeIntent?.kind==='awaitResponse'?2:0;if(kind==='sleep'&&p?.phase==='conflictWait')return 2;
     let cost=0;
     switch(kind){
       case'wander':cost=0;break;
@@ -113,8 +150,8 @@
     const intent=a.activeIntent;if(!intent)return {ok:false,reason:'no-intent'};
     if(intent.source?.type==='emergency')return {ok:false,reason:'emergency-intent'};
     if(E.emergencyChoice?.(st,a))return {ok:false,reason:'emergency-priority'};
-    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse';
-    if(!openWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
+    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse',occupancyWait=kind==='sleep'&&a.action?.phase==='conflictWait';
+    if(!openWait&&!occupancyWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
     const age=Math.max(0,st.tick-(intent.createdTick||0));
     if(age<MIN_INTENT_HOLD_TICKS)return {ok:false,reason:'minimum-hold',holdRemaining:MIN_INTENT_HOLD_TICKS-age};
     return {ok:true,reason:'eligible'};
@@ -153,5 +190,5 @@
   if(!E.registerRuntimeHook)throw new Error('systems/intent/deliberation.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
 
-  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
+  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,OCCUPANCY_WAIT_TICKS,SLEEP_CONFLICT_ATTENTION,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,preferredSleepSlotConflicts,sleepConflictResolutionCandidates,preferredSleepConflictDecision,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
 })();
