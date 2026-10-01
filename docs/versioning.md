@@ -26,7 +26,7 @@ Conflict Resolution Evidence 接在既有 Decision Evidence framework 下，保�
 
 Occupant-specific interaction 只在 observation 可得時建立。generic attention 仍由 `performAttentionInteraction()` 持有 stimulus / wake boundary；sleeping occupant 醒來不等於理解、接受或讓位。Human yield / nonphysical-displace request 只建立 observable interaction / Social Bid facts，不直接改 responder posture、position、Action、Intent 或 private state；Slot 真正重新可用仍由 canonical occupancy truth 決定。Animal 第一版只使用 alternate / wait / generic attention，不套 Human-only yield / displace semantics。
 
-Version impact：overall / Presentation、Deliberation / Decision Evidence → `11.44.0-sleep-slot-conflict`。Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`；Social Bid lifecycle 維持 `11.12.2-social-bid-lifecycle`；World Authoring 維持 `world-authoring-v11`；Resources / Physical / Spatial / Route / Locomotion / Contact / Crowding / Affect / Relationship 等未改 generation 均不假升。本 release 不加入 Agent carry / relocate、ordinary Object occupancy、free-surface multi-agent occupancy、完整 Perception、personality schema 或 generic Animal intimidation / aggression。
+Version impact：overall / Presentation、Deliberation / Decision Evidence、Human Social Response → `11.44.0-sleep-slot-conflict`。Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`；Social Bid lifecycle 維持 `11.12.2-social-bid-lifecycle`；World Authoring 維持 `world-authoring-v11`；Resources / Physical / Spatial / Route / Locomotion / Contact / Crowding / Affect / Relationship 等未改 generation 均不假升。本 release 不加入 Agent carry / relocate、ordinary Object occupancy、free-surface multi-agent occupancy、完整 Perception、personality schema 或 generic Animal intimidation / aggression。
 
 ### Current Attention + Agent-context observation release
 
