@@ -53,7 +53,6 @@ a.offMap=true;
 assert.equal(U.activeClaims(st,'sleep').length,1,'temporary offMap must not release a Runtime Claim');
 noIssues(st,'claim state');
 
-E.configureResetStateSource('usage-default-fixture',seed=>W.createInitialState(seed));
 E.reset(4042);st=E.getState();a=st.agents.zhen;
 const sleepUtilityBefore=E.baseUtilityForAction(a,'sleep');
 st.usageAssignments.push({id:'extra-right',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:right'}});
