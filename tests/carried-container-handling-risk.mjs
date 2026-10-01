@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.43.0-attention-observation';
+const APP_VERSION='11.44.0-sleep-slot-conflict';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
