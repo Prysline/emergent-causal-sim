@@ -108,6 +108,18 @@
   function newestConflictBid(st,a){
     return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>['yieldSleepSlotRequest','leaveSleepSlotDemand'].includes(x.bid?.data?.bidKind)&&x.bid.data.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;
   }
+  function settleCompletedYields(st){
+    for(const responder of Object.values(st.agents||{})){
+      const pending=responder.sleepSlotYieldResponse;if(!pending)continue;
+      const bid=E.bidEvent?.(st,pending.bidId);
+      if(responder.posture?.slotId!==pending.preferredSlotId){
+        const requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
+        E.addEvent(responder.name+'實際離開了先前占用的睡眠位置。','normal',[pending.responseEventId,pending.bidId].filter(Boolean),{actor:responder.id,target:requester?.id||bid?.data?.bidFrom||null,action:'sleepSlotYieldCompleted',responseToBid:pending.bidId,sleepConflictResponse:'completed',preferredSlotId:pending.preferredSlotId,position:E.positionRef(responder.position)});
+        responder.sleepSlotYieldResponse=null;continue;
+      }
+      if(st.tick>=pending.expiresTick)responder.sleepSlotYieldResponse=null;
+    }
+  }
   function promoteResponderAgency(st){
     for(const responder of Object.values(st.agents||{})){
       if(responder.kind!=='human'||responder.offMap||E.isSleeping(responder)||responder.action||responder.activeIntent)continue;
@@ -120,13 +132,14 @@
       responder.observedSocialBids=(responder.observedSocialBids||[]).filter(ref=>ref.bidId!==pick.bid.id);
       if(response!=='accepted'||responder.posture?.slotId!==pick.bid.data.preferredSlotId)continue;
       const leave=E.buildAction(responder,{id:'wander'});if(!leave)continue;
-      const intent={id:'intent:'+responder.id+':'+st.tick+':respondSleepSlotConflict:'+pick.bid.id,kind:'respondSleepSlotConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictBid',bidId:pick.bid.id,responseEventId:responseId,tick:st.tick}};
+      const intent={id:'intent:'+responder.id+':'+st.tick+':respondSleepSlotConflict:'+pick.bid.id,kind:'respondSleepSlotConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictBid',bidId:pick.bid.id,responseEventId:responseId,preferredSlotId:pick.bid.data.preferredSlotId||null,tick:st.tick}};
+      responder.sleepSlotYieldResponse={bidId:pick.bid.id,responseEventId:responseId,preferredSlotId:pick.bid.data.preferredSlotId||null,acceptedTick:st.tick,expiresTick:st.tick+Math.max(6,(Number(E.BID_MEMORY_TICKS)||6)*2)};
       leave.intentId=intent.id;responder.activeIntent=intent;responder.action=leave;
     }
   }
 
   if(!E.registerRuntimeHook)throw new Error('sleep-conflict requires runtime-hook-pipeline.js');
-  E.registerRuntimeHook('beforeTick','sleepConflict.responder-agency',()=>promoteResponderAgency(E.getState()),350);
+  E.registerRuntimeHook('beforeTick','sleepConflict.responder-agency',()=>{const st=E.getState();settleCompletedYields(st);promoteResponderAgency(st);},350);
 
   Object.assign(E,{SLEEP_CONFLICT_SCHEMA_VERSION:VERSION,preferredSleepConflict,resolutionCandidates,stepSleepPreferredSlotConflict,newestConflictBid});
 })();
