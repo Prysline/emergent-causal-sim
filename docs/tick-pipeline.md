@@ -4,7 +4,9 @@
 
 目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
-> `11.44.0-sleep-slot-conflict` 新增 beforeTick 650 `sleepSlotConflict.prepare` 與 afterTick 750 `sleepSlotConflict.resolve`。650 在一般 soft reconsideration 前攔截 `sleep.chooseSurface` 的 preferred-Slot Agent occupancy，把 action 留在 conflict phase，避免 core 先把「沒有 legal sleep target」當成一般 abort；750 在 Human Social resolve 後、Memory→Deliberation correction 前處理 conflict candidate、request response 與重新評估。occupancy wait 是獨立 semantic source，不冒充 Social `awaitResponse`。\n>\n> `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
+> `11.44.0-sleep-slot-conflict` 新增 beforeTick 650 `sleepSlotConflict.prepare` 與 afterTick 750 `sleepSlotConflict.resolve`。650 在一般 soft reconsideration 前攔截 `sleep.chooseSurface` 的 preferred-Slot Agent occupancy，把 action 留在 conflict phase，避免 core 先把「沒有 legal sleep target」當成一般 abort；750 在 Human Social resolve 後、Memory→Deliberation correction 前處理 conflict candidate、request response 與重新評估。occupancy wait 是獨立 semantic source，不冒充 Social `awaitResponse`。
+>
+> `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
 > `11.41.0-carried-container-drop` 完成 Carried Containers P1 Slice D，但**沒有新增、刪除或重新排序 runtime hook**。同一 completed movement edge 的同步順序是：position commit → snapshot objective handling context → 既有 `onEnterTile` hazard → 必要的 Slice C contents-loss consequence → Slice D `containerDrop` occurrence。Drop 成功才清 `Agent.held` 並把 Container actual position 固定到 completed-edge destination node；正常 lifecycle `releaseHeld()` 不進這條 consequence path。Slice D v1 不做 drop-impact 二次 contents loss、Surface→floor 墜落或破損／彈跳／連續物理。planning / replan 仍不消耗 consequence RNG。
 
@@ -55,7 +57,8 @@ flowchart TD
     B200 --> B250[250 Affect Decay]
     B250 --> B300[300 Human Social Prepare]
     B300 --> B400[400 Social Response Prepare]
-    B400 --> B650[650 Sleep Slot Conflict Prepare]\n    B650 --> B700[700 Soft Reconsideration]
+    B400 --> B650[650 Sleep Slot Conflict Prepare]
+    B650 --> B700[700 Soft Reconsideration]
     B700 --> B800[800 Replan - Preemption]
     B800 --> B900[900 Social Bid Prepare]
     B900 --> B1000[1000 Intent Reconcile]
@@ -99,7 +102,8 @@ flowchart TD
 | 200 | `memoryDeliberation.capture-idle` | Memory → Deliberation | 記住 core 前真正 idle 的 Agent | afterTick 800 只應 correction 本來由 core 新做初始 deliberation 的 Agent |
 | 250 | `affect.decay` | Affect | 將 current Affect decay 到即將進入的新 tick | Human / animal responder preparation 與後續 core decision 都必須讀到同一個 decay 後 Current Affect phase |
 | 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder | responder candidate 的 Affect score 必須已完成本 tick decay；非 core-loop event 經 core event-created notification 同步形成合法 observation |
-| 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |\n| 650 | `sleepSlotConflict.prepare` | Deliberation / Sleep Slot Conflict | 以 canonical Slot availability reason + shared Agent-context Observation 將 preferred-Slot Agent occupancy 收斂成 conflict phase | 必須早於 700 soft reconsideration 與 core `stepSleep()`，避免 occupancy context 被一般 no-target abort 吃掉；不把 occupied Slot 重新加入 `sleepTargets()` |
+| 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
+| 650 | `sleepSlotConflict.prepare` | Deliberation / Sleep Slot Conflict | 以 canonical Slot availability reason + shared Agent-context Observation 將 preferred-Slot Agent occupancy 收斂成 conflict phase | 必須早於 700 soft reconsideration 與 core `stepSleep()`，避免 occupancy context 被一般 no-target abort 吃掉；不把 occupied Slot 重新加入 `sleepTargets()` |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
 | 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
 | 900 | `socialBid.prepare` | Social Bid | waiting action injection、response provenance snapshot | 為 afterTick settlement 保留本 tick 之前的 responder/requester 狀態 |
@@ -126,7 +130,8 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 400 | `intent.recover-aborts` | Intent / Interruption | 從本 tick abort event 恢復仍有效的 open Intent | 必須在 Memory Observation Process 前完成本 tick interruption lifecycle |
 | 500 | `memory.process-events` | Episodic Memory | FIFO flush core-loop event-created notifications | 保留 core event 在 Agent loop 結束後才形成 Memory/Appraisal/Relationship/Affect 的既有語義 |
 | 600 | `socialResponse.resolve-pet-offers` | Social Response | settle captured response interaction，建立對應 world events | 非 core-loop event 經 event-created consumer 同步形成 Memory/Appraisal/Relationship/Affect；hook ID 只是目前 implementation owner |
-| 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見 |\n| 750 | `sleepSlotConflict.resolve` | Deliberation / Sleep Slot Conflict | 評估 preferred-slot resolution、處理 requester-private wait 與 responder-local yield response | 必須晚於既有 Human Social response owner、早於 800 correction；request / response / actual leave / Slot availability 保持分離 |
+| 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見 |
+| 750 | `sleepSlotConflict.resolve` | Deliberation / Sleep Slot Conflict | 評估 preferred-slot resolution、處理 requester-private wait 與 responder-local yield response | 必須晚於既有 Human Social response owner、早於 800 correction；request / response / actual leave / Slot availability 保持分離 |
 | 800 | `memoryDeliberation.correct-initial` | Memory → Deliberation | 修正本 tick core 初始 social target / utility choice | 因此 600/700 的 psychological update 若延後到 800 之後會改變現況 |
 | 850 | `deliberation.finalize-decision-evidence` | Deliberation | 將 correction 後仍存活的 initial Action 與 selected structured contributors freeze 成 adopted Decision Evidence | 必須晚於 800，否則會把 provisional target誤標成 final；Presentation只能在此之後讀取 final evidence |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
