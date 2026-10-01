@@ -108,15 +108,20 @@
     const exposure=L.handlingExposureForEdge({mode:step.mode,distanceMeters:step.distanceMeters,surfaceManeuver:executionManeuver,traversalManeuver:{from:{...from},to:{...to},directionVector:{x:(Number(to.x)||0)-(Number(from.x)||0),y:(Number(to.y)||0)-(Number(from.y)||0),z:toZ-fromZ}}});
     return {tilt:Math.max(0,Number(exposure?.tilt)||0),impact:Math.max(0,Number(exposure?.impact)||0),oscillation:Math.max(0,Number(exposure?.oscillation)||0)};
   }
-  function applyCompletedEdgeContentsLoss(a,step,executionManeuver=null){
-    const c=a?.held&&state.containers[a.held];if(!c)return false;
+  function completedEdgeHandlingContext(a,step,executionManeuver=null){
+    const c=a?.held&&state.containers[a.held];if(!c)return null;
     const exposure=completedEdgeHandlingExposure(step,executionManeuver),facts=exposure&&R.contentsLossExecutionFactsForContainer?.(state,c,exposure);
-    if(!facts||facts.occurrenceProbability<=0||facts.lossFraction<=0)return false;
+    return exposure&&facts?{container:c,exposure,facts}:null;
+  }
+  function completedEdgeRef(step){return {from:positionRef(step.from),to:positionRef(step.to),mode:step.mode,distanceMeters:Number(step.distanceMeters)||0};}
+  function applyCompletedEdgeContentsLoss(a,step,executionManeuver=null,context=null){
+    const resolved=context||completedEdgeHandlingContext(a,step,executionManeuver),c=resolved?.container,exposure=resolved?.exposure,facts=resolved?.facts;
+    if(!c||a?.held!==c.id||!facts||facts.occurrenceProbability<=0||facts.lossFraction<=0)return false;
     const effectNode=SP.resolveEffectNode?.(state,{actor:a}),destination=effectNode&&SP.environmentEndpointId?.(state,effectNode);
     if(!effectNode||!destination)return false;
     if(random()>=facts.occurrenceProbability)return false;
     let movedAny=false;
-    const completedEdge={from:positionRef(step.from),to:positionRef(step.to),mode:step.mode,distanceMeters:Number(step.distanceMeters)||0};
+    const completedEdge=completedEdgeRef(step);
     for(const [r,rawAmount] of Object.entries({...c.contents})){
       const amount=Math.max(0,Number(rawAmount)||0);if(amount<=0)continue;
       const moved=transferResource(r,c.id,destination,amount*facts.lossFraction);if(moved<=0)continue;
@@ -126,6 +131,15 @@
       setResourceCause(destination,r,eventId);
     }
     return movedAny;
+  }
+  function applyCompletedEdgeContainerDrop(a,step,executionManeuver=null,context=null){
+    const resolved=context||completedEdgeHandlingContext(a,step,executionManeuver),c=resolved?.container,exposure=resolved?.exposure,facts=resolved?.facts,probability=Math.max(0,Math.min(1,Number(facts?.containerDropProbability)||0));
+    if(!c||a?.held!==c.id||probability<=0)return false;
+    if(random()>=probability)return false;
+    const dropNode=SP.normalizeNode?SP.normalizeNode(state,step.to,step.to?.surfaceId||'floor'):{...step.to};
+    c.position={...dropNode};delete c.supportId;a.held=null;
+    addEvent(`${a.name}在移動中失手掉了${c.name}。`,'bad',[],{actor:a.id,container:c.id,action:'containerDrop',consequenceKind:'containerDrop',position:positionRef(dropNode),completedEdge:completedEdgeRef(step),handlingExposure:{...exposure},handlingRisk:{contentsLoss:facts.occurrenceProbability,containerDrop:probability}});
+    return true;
   }
 
   function targetLabel(t){if(!t)return'目標';if(t.kind==='agent')return state.agents[t.id]?.name||t.id;if(t.kind==='slot'){const s=SP.getSlot(state,t.id);return state.furniture[s?.furnitureId]?.name||'座位';}if(t.kind==='tile')return`(${t.position.x}, ${t.position.y}${(SP.zOf?.(t.position)??t.position.z??0)!==0?`, z=${SP.zOf?.(t.position)??t.position.z}`:''})`;return state.containers[t.id]?.name||state.sources[t.id]?.name||state.furniture[t.id]?.name||t.id;}
@@ -157,8 +171,10 @@
     a.position={...step.to};
     const load=effectiveCarryLoad(a),cost=movementExertion(load),moveLabel=L.modeLabel?.(step.mode)||step.mode||'移動';
     applyExertion(a,cost,load>.01?`負重${moveLabel}`:moveLabel,{thirstFactor:.18,hungerFactor:.05,load});
+    const handlingContext=completedEdgeHandlingContext(a,step,executionManeuver);
     const enterResult=onEnterTile(a);
-    if(!enterResult?.carriedContentsLoss)applyCompletedEdgeContentsLoss(a,step,executionManeuver);
+    if(!enterResult?.carriedContentsLoss)applyCompletedEdgeContentsLoss(a,step,executionManeuver,handlingContext);
+    applyCompletedEdgeContainerDrop(a,step,executionManeuver,handlingContext);
     const arrived=atSpatialPosition(a,goal);if(arrived)delete a.action.locomotionCredit;return arrived;
   }
   function moveToInteraction(a,target,reason,affordance='default'){const status=targetAvailability(target);if(!status.exists||!status.available){interruptUnavailableTarget(a,target,status);return false;}if(SP.isAtInteraction(state,a,target,affordance)){a.action.wait=0;return true;}const goal=SP.bestInteractionPosition(state,a,target,affordance);if(!goal){a.action.wait=(a.action.wait||0)+1;if(a.action.wait===1||a.action.wait===4)addEvent(`${a.name}暫時等待。`,'normal',[],{actor:a.id,action:'wait',target:target.id});if(a.action.wait>=MAX_INTERACTION_WAIT)abortAction(a,`持續找不到能接近${status.label}的位置`);return false;}a.action.spatialGoal={...goal};if(a.posture?.slotId){if(!standUp(a,goal))return false;a.action.wait=0;return false;}a.action.wait=0;moveToward(a,goal,reason);return false;}
