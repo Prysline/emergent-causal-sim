@@ -63,6 +63,9 @@ const ev1=E.addEvent('usage proof','normal',[],{actor:a.id,action:'sleep',phase:
 const h1=E.usageHabit(st,a,'sleep',{kind:'slot',id:'bed:left'});
 assert.ok(h1?.strength>0,'actor sleep-start memory must consolidate a private Usage Habit');
 assert.equal(h1.lastSourceMemoryId,`memory:zhen:${ev1}`);
+const usageMemory=a.episodicMemories.find(m=>m.sourceEventId===ev1);
+assert.equal(usageMemory?.observed?.slotId,'bed:left','sleep usage memory must retain the observed Slot identity');
+assert.equal(usageMemory?.observed?.furnitureId,'bed','sleep usage memory must retain the observed Furniture identity');
 E.addEvent('usage proof 2','normal',[],{actor:a.id,action:'sleep',phase:'start',slot:'bed:left',furniture:'bed',position:E.positionRef(a.position)});
 const h2=E.usageHabit(st,a,'sleep',{kind:'slot',id:'bed:left'});
 assert.ok(h2.strength>h1.strength&&h2.strength<1,'repeated use must strengthen habit with saturation headroom');
