@@ -33,7 +33,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openScenario(scenario){
   await page.goto(`http://127.0.0.1:4173/?scenario=${scenario}`,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>window.SimEngine?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION==='11.13.3a-human-social-response');
+  await page.waitForFunction(()=>window.SimEngine?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION==='11.44.0-sleep-slot-conflict');
   return page.evaluate(()=>({
     version:window.SimEngine.getState().version,
     humanSocialVersion:window.SimEngine.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,
@@ -74,7 +74,7 @@ async function snapshot(){
 }
 
 const opened=await openScenario('talk-engage');
-assert.equal(opened.humanSocialVersion,'11.13.3a-human-social-response');
+assert.equal(opened.humanSocialVersion,'11.44.0-sleep-slot-conflict');
 assert.equal(opened.scenarioValue,'talk-engage');
 assert.ok((await page.title()).includes('因果湧現模擬器'));
 await showFullTimeline();
