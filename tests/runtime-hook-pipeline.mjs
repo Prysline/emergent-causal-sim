@@ -17,6 +17,7 @@ const EXPECTED_HOOKS={
     {id:'affect.decay',order:250},
     {id:'humanSocial.prepare',order:300},
     {id:'socialResponse.capture-pet-offers',order:400},
+    {id:'sleepSlotConflict.prepare',order:650},
     {id:'intent.soft-reconsideration',order:700},
     {id:'intent.replan-preemption',order:800},
     {id:'socialBid.prepare',order:900},
@@ -31,6 +32,7 @@ const EXPECTED_HOOKS={
     {id:'memory.process-events',order:500},
     {id:'socialResponse.resolve-pet-offers',order:600},
     {id:'humanSocial.resolve',order:700},
+    {id:'sleepSlotConflict.resolve',order:750},
     {id:'memoryDeliberation.correct-initial',order:800},
     {id:'deliberation.finalize-decision-evidence',order:850},
     {id:'socialOutcome.process',order:900}
