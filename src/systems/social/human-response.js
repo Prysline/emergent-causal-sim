@@ -2,8 +2,10 @@
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;
   if(!E||!W?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
   if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/human-response.js requires systems/affect/runtime.js.');
-  const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.13.3a-human-social-response';
+  const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.44.0-sleep-slot-conflict';
   const TALK_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,engageMin:.62});
+  const SLEEP_SLOT_RESPONSE_THRESHOLDS=Object.freeze({refuseMax:.42,acceptMin:.58});
+  const SLEEP_SLOT_DISPLACE_PENALTY=.12;
   const TALK_AFFECT_RESPONSE_CAP=.12;
   const TALK_RELATIONSHIP_RESPONSE_CAP=.18;
   const HIGH_COMMITMENT_ACTIONS=new Set(['eat','drinkWater','drinkAlcohol','sleep','restockContainer','externalSupply']);
@@ -20,6 +22,48 @@
   function talkEngagementScore(human,requester=null){return talkResponseEvaluation(human,requester).finalScore;}
   function talkResponseFor(human,requester=null){return talkResponseEvaluation(human,requester).response;}
   function talkResponseUtility(human,requester=null){return round(48+talkEngagementScore(human,requester)*36);}
+  function sleepSlotResponseEvaluation(human,requester=null,bid=null){
+    const rawTrait=Number(human?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1),baseScore=round(.5+(sociability-.5)*.24),affectResponseDelta=talkAffectResponseDelta(human),relationshipResponseDelta=talkRelationshipResponseDelta(human,requester),confrontationPenalty=bid?.data?.bidKind==='sleepSlotDisplaceRequest'?SLEEP_SLOT_DISPLACE_PENALTY:0,finalScore=round(clamp(baseScore+affectResponseDelta+relationshipResponseDelta-confrontationPenalty,0,1));
+    const response=finalScore<SLEEP_SLOT_RESPONSE_THRESHOLDS.refuseMax?'refuse':finalScore>=SLEEP_SLOT_RESPONSE_THRESHOLDS.acceptMin?'accept':'delay';
+    return {baseScore,affectResponseDelta,relationshipResponseDelta,confrontationPenalty,finalScore,response};
+  }
+  function sleepSlotResponseUtility(human,requester=null,bid=null){const e=sleepSlotResponseEvaluation(human,requester,bid);return round(52+Math.abs(e.finalScore-.5)*28);}
+  function newestObservedSleepSlotRequest(st,a){return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>['sleepSlotYieldRequest','sleepSlotDisplaceRequest'].includes(x.bid?.data?.bidKind)&&x.bid.data.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;}
+  function sleepSlotResponseCandidate(st,a){
+    if(!a||a.kind!=='human'||a.offMap||E.isSleeping?.(a))return null;const pick=newestObservedSleepSlotRequest(st,a);if(!pick)return null;
+    const requester=st.agents?.[pick.bid.data.bidFrom];if(!requester||requester.offMap||requester.kind!=='human')return null;
+    const evaluation=sleepSlotResponseEvaluation(a,requester,pick.bid);return {intentKind:'respondSleepSlotBid',utility:sleepSlotResponseUtility(a,requester,pick.bid),requesterId:requester.id,bidId:pick.bid.id,slotId:pick.bid.data?.slot||null,observedTick:pick.ref.observedTick,response:evaluation.response,evaluation};
+  }
+  function addSleepSlotResponse(st,responder,requester,bid,response){
+    const understoodId=E.addEvent(responder.name+'理解了'+requester.name+'對睡眠位置的要求。','normal',[bid.id],{actor:responder.id,target:requester.id,action:'sleepSlotRequestUnderstood',responseToBid:bid.id,slot:bid.data?.slot||null,position:E.positionRef?.(responder.position)||null});
+    const action=response==='accept'?'sleepSlotRequestAccepted':response==='refuse'?'sleepSlotRequestRefused':'sleepSlotRequestDelayed';
+    const text=response==='accept'?responder.name+'接受了'+requester.name+'的讓位要求。':response==='refuse'?responder.name+'拒絕了'+requester.name+'的讓位要求。':responder.name+'表示會延後處理'+requester.name+'的讓位要求。';
+    return E.addEvent(text,response==='accept'?'good':'normal',[understoodId],{actor:responder.id,target:requester.id,action,responseToBid:bid.id,slot:bid.data?.slot||null,sleepSlotResponse:response,position:E.positionRef?.(responder.position)||null});
+  }
+  function clearForAcceptedSleepSlotResponse(st,a){clearAgentReservations(st,a);dropHeld(st,a);a.action=null;a.activeIntent=null;}
+  function resolveSleepSlotResponse(st,a,c){
+    const bid=E.bidEvent?.(st,c.bidId),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];if(!bid||!requester||bid.data?.bidTo!==a.id)return false;
+    addSleepSlotResponse(st,a,requester,bid,c.response);settleObservedBid(a,bid.id);
+    if(c.response==='accept'){
+      clearForAcceptedSleepSlotResponse(st,a);const action=E.buildAction?.(a,{id:'wander'});if(action){action.sleepSlotResponseBidId=bid.id;action.sleepSlotResponseSlotId=c.slotId||null;a.action=action;E.ensureIntentForAction?.(st,a);}
+    }
+    return true;
+  }
+  function promoteSleepSlotResponses(st){
+    for(const a of Object.values(st.agents||{})){
+      if(a.kind!=='human'||a.offMap||E.isSleeping?.(a))continue;const c=sleepSlotResponseCandidate(st,a);if(!c)continue;
+      if(!a.action&&!a.activeIntent){const best=E.candidateIntents?.(st,a)?.[0]||null;if(best&&best.utility>c.utility)continue;resolveSleepSlotResponse(st,a,c);continue;}
+      const snap=E.reconsiderationSnapshot?.(st,a);if(!snap?.ok||!Number.isFinite(snap.commitmentCost)||c.utility<=snap.switchThreshold)continue;resolveSleepSlotResponse(st,a,c);
+    }
+  }
+  function emitCompletedSleepSlotReleases(st){
+    const completions=new Set((st.events||[]).filter(e=>e.data?.action==='sleepSlotRequestCompleted'&&e.data?.responseToBid).map(e=>e.data.responseToBid));
+    for(const accepted of (st.events||[]).filter(e=>e.data?.action==='sleepSlotRequestAccepted'&&e.data?.responseToBid)){
+      const bid=E.bidEvent?.(st,accepted.data.responseToBid),responder=st.agents?.[accepted.data.actor],slotId=bid?.data?.slot||accepted.data?.slot||null;if(!bid||!responder||!slotId||completions.has(bid.id))continue;
+      if(responder.posture?.slotId===slotId)continue;
+      E.addEvent(responder.name+'已離開被要求讓出的睡眠位置。','normal',[accepted.id],{actor:responder.id,target:bid.data.bidFrom,action:'sleepSlotRequestCompleted',responseToBid:bid.id,slot:slotId,position:E.positionRef?.(responder.position)||null});completions.add(bid.id);
+    }
+  }
   function newestObservedTalkOffer(st,a){return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>x.bid?.data?.bidKind==='talkOffer'&&x.bid.data.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;}
   function talkResponseCandidate(st,a){
     if(!a||a.kind!=='human'||a.offMap||E.isSleeping?.(a))return null;const pick=newestObservedTalkOffer(st,a);if(!pick)return null;
@@ -90,12 +134,12 @@
     Object.assign(requester.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:70});const social=mode==='talk-engage'?90:mode==='talk-brief'?35:mode==='talk-decline'?0:80;Object.assign(responder.needs,{hunger:18,thirst:mode==='talk-no-response'?95:18,fatigue:18,sleepNeed:18,social});
     requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};E.ensureIntentForAction?.(st,requester);return st;
   }
-  function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);}
-  function settleTick(st){resolveTalkResponses(st);E.reconcileIntents?.(st);}
+  function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);promoteSleepSlotResponses(st);}
+  function settleTick(st){resolveTalkResponses(st);emitCompletedSleepSlotReleases(st);E.reconcileIntents?.(st);}
 
   if(!E.registerRuntimeHook)throw new Error('systems/social/human-response.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
   E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 
-  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_AFFECT_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkAffectResponseDelta,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
+  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_AFFECT_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP,SLEEP_SLOT_RESPONSE_THRESHOLDS,SLEEP_SLOT_DISPLACE_PENALTY,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkAffectResponseDelta,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,sleepSlotResponseEvaluation,sleepSlotResponseUtility,newestObservedSleepSlotRequest,sleepSlotResponseCandidate,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
 })();
