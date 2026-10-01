@@ -7,6 +7,7 @@
       {id:'memoryDeliberation.capture-idle',order:200},
       {id:'affect.decay',order:250},
       {id:'humanSocial.prepare',order:300},
+      {id:'sleepConflict.responder-agency',order:350},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
       {id:'intent.replan-preemption',order:800},
