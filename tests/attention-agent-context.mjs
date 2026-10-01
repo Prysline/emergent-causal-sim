@@ -26,7 +26,7 @@ target.position={x:5,y:6};observer.action={kind:'sleep',phase:'sleeping',sleepTi
 assert.equal(E.observeAgentContext(st,observer,target).reason,'observer-sleeping');
 observer.action=null;
 
-const busyAction=target.action;
+const busyAction=target.action,responderIntentBefore=target.activeIntent;
 const attention=E.performAttentionInteraction(observer,target,{stimulus:{kind:'sound',intensity:24}});
 assert.equal(attention.performed,true);
 const ev=st.causes[attention.eventId];
@@ -39,7 +39,7 @@ assert.equal(Object.hasOwn(ev.data,'requestUnderstood'),false);
 assert.equal(Object.hasOwn(ev.data,'requestAccepted'),false);
 assert.equal(target.action,busyAction,'attention stimulus must not overwrite responder agency or current work');
 assert.equal(observer.activeIntent,null,'standalone attention must not fabricate requester wait state');
-assert.equal(target.activeIntent,null,'standalone attention must not fabricate responder response state');
+assert.equal(target.activeIntent,responderIntentBefore,'standalone attention must preserve the responder existing intent instead of fabricating a response intent');
 noIssues('awake busy attention');
 
 E.reset(43002);st=E.getState();observer=st.agents.zhen;target=st.agents.zhou;
