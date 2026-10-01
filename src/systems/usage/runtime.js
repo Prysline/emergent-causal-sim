@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION='11.42.0-usage-preference-sleep';
+  const VERSION='11.44.0-sleep-slot-conflict';
   const PREFERENCE_CAP=10;
   const DELTA=Object.freeze({assignment:8,claim:5,habit:4,speciesActivity:2});
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
@@ -39,6 +39,14 @@
     const habit=E.usageHabit?.(st,a,activity,targetRef);
     if(habit?.effectiveStrength>0)out.push({kind:'habit',key:'habitualForSelf',role:'targetSelection',direction:'self',signal:habit.effectiveStrength,sourceRef:habit.lastSourceMemoryId||null,target:clone(targetRef),strength:habit.effectiveStrength,lastUsedTick:habit.lastUsedTick,useCount:habit.useCount});
     return out;
+  }
+
+  function sleepAssociationTargets(st,a){
+    const refs=new Map(),add=target=>{if(target?.kind==='slot'&&target.id)refs.set('slot:'+target.id,{kind:'slot',id:target.id});};
+    for(const assignment of st?.usageAssignments||[])if(assignment?.activity==='sleep'&&assignment.principal?.kind==='agent'&&assignment.principal.id===a?.id)add(assignment.target);
+    for(const claim of activeClaims(st,'sleep'))if(claim?.claimant?.kind==='agent'&&claim.claimant.id===a?.id)add(claim.target);
+    for(const habit of Object.values(a?.usageHabits||{}))if(habit?.activity==='sleep'&&(E.effectiveUsageHabitStrength?.(st,a,'sleep',habit.target)||0)>0)add(habit.target);
+    return [...refs.values()].sort((x,y)=>String(x.id).localeCompare(String(y.id)));
   }
 
   function speciesActivityContributor(st,a,activity,targetRef){
@@ -98,7 +106,7 @@
     return removed;
   }
 
-  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,preferenceContributors,evaluateSleepTarget,rankSleepTargets,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
+  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,sleepAssociationTargets,preferenceContributors,evaluateSleepTarget,rankSleepTargets,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
   window.SimUsage=Object.freeze(api);
   E.USAGE_PREFERENCE_VERSION=VERSION;
 })();
