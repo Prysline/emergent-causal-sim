@@ -18,7 +18,7 @@
 
 Slice D v1 **沒有**新增 drop-impact contents-loss model。若同一 movement edge 本身已依 Slice C 發生 `spill` / `contentsDrop`，它先完成；Container drop 本身不再額外造成第二段 resource transfer，也不建立假的 parent-child 因果。未來若增加 drop-impact spill，必須另有客觀 exposure / amount contract，並由 `containerDrop` Event 作 parent cause。這一版同樣不做 Surface→floor 墜落、Container breakage / damage、bounce、collision response、continuous rigid-body / fluid physics。
 
-一般持有 lifecycle 明確不是 accidental consequence：`releaseHeld()`、Action finish / abort、sleep settle 與 soft-reconsideration cleanup 仍只把 Container 留在角色當下 canonical position並清除 held relation；不建立 `containerDrop` Event、不讀 drop probability，也不消耗 consequence RNG。
+一般持有 lifecycle 明確不是 accidental consequence：`releaseHeld()`、Action finish / abort、sleep settle 與 soft-reconsideration cleanup 仍只把 Container 留在角色當下 canonical position並清除 held relation；不建立 `containerDrop` Event、不讀 drop probability，也不消耗 consequence RNG。反過來，若 accidental drop 讓 `eat` / `drink` 等 execution phase 失去其 required held Container，phase 以 `Agent.held` canonical truth 判定失效並進入既有 abort lifecycle；本版不自動撿回、不自動 retry，也沒有專用 recovery planner。
 
 Version impact：overall / Presentation → `11.41.0-carried-container-drop`。Resources 維持 `11.39.0-carried-contents-loss`；Spatial Passage 維持 `11.39.1-surface-boundary-transition`；Spatial Traversal / Route / Locomotion / Deliberation 維持 `11.38.0-carried-handling-risk`；Physical 維持 `11.37.0-carried-container-feasibility`；World Authoring `world-authoring-v10`、Furniture Catalog `furniture-definitions-v12`、Embodiment Capabilities `embodiment-capabilities-v4` 均不變。
 

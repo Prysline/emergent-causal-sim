@@ -87,7 +87,7 @@ Container drop 成功時，Engine 建立一次 canonical `containerDrop` World E
 
 **Slice D v1 明確不做：** drop 成功後不再額外 roll / deterministic 套用一段 drop-impact `spill` / `contentsDrop`；沒有 drop-impact calibration 就不自行發明第二套 contents-loss physics。也不做 Container breakage、bounce、collision response、damage、continuous fall / rigid-body / fluid simulation。未來若要讓「Container 掉落」再造成內容物流失，必須另設計 drop-impact exposure / amount contract，並以 `containerDrop` Event 作 parent cause link；不能把本版沒有的物理效果從文字或 UI 推論出來。
 
-一般 lifecycle release 與 accidental drop 必須分離：`releaseHeld()`、Action finish / abort、sleep settle 與 Deliberation soft-reconsideration 的 cleanup 只負責把 held Container 留在角色當下 canonical position並清除 held relation；它們不讀 `HandlingRisk.containerDrop`、不消耗 consequence RNG、也不建立 `containerDrop` Event。
+一般 lifecycle release 與 accidental drop 必須分離：`releaseHeld()`、Action finish / abort、sleep settle 與 Deliberation soft-reconsideration 的 cleanup 只負責把 held Container 留在角色當下 canonical position並清除 held relation；它們不讀 `HandlingRisk.containerDrop`、不消耗 consequence RNG、也不建立 `containerDrop` Event。若 accidental drop 使一個 execution phase 原本依賴的 plate / vessel 不再由 Agent 持有，該 phase 必須以 canonical `Agent.held` 失效為準進入既有 abort lifecycle，不能繼續用 action-local Container ID 遠端吃／喝。Slice D v1 不提供自動撿回、重試、重新規劃到掉落物或專用 drop-recovery intent。
 
 Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor 可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
 
