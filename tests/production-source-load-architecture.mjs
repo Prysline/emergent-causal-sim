@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.39.1-surface-boundary-transition';
+const CURRENT_VERSION='11.41.0-carried-container-drop';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
