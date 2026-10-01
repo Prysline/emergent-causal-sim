@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.42.0-usage-preference-sleep`。
+目前 runtime marker：`11.43.0-attention-agent-context`。
 
+> `11.43.0-attention-agent-context` 沒有新增、刪除或重新排序 runtime hook。`SimSpatial.observeAgentContext(...)` 是同步 pure query；generic attention stimulus 也在既有 core interaction execution 中同步建立 event / resolve perception-or-wake consequence。Social Bid prepare / settle ordering、same-tick response-before-timeout 與 requester-private `awaitResponse` lifecycle 均不變。
+>
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
 > `11.41.0-carried-container-drop` 完成 Carried Containers P1 Slice D，但**沒有新增、刪除或重新排序 runtime hook**。同一 completed movement edge 的同步順序是：position commit → snapshot objective handling context → 既有 `onEnterTile` hazard → 必要的 Slice C contents-loss consequence → Slice D `containerDrop` occurrence。Drop 成功才清 `Agent.held` 並把 Container actual position 固定到 completed-edge destination node；正常 lifecycle `releaseHeld()` 不進這條 consequence path。Slice D v1 不做 drop-impact 二次 contents loss、Surface→floor 墜落或破損／彈跳／連續物理。planning / replan 仍不消耗 consequence RNG。

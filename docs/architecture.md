@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.42.0-usage-preference-sleep`。
+目前 runtime marker：`11.43.0-attention-agent-context`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -149,6 +149,12 @@ Relationship 同樣遵守方向性 private truth：`A.relationships[B]` 與 `B.r
 
 「World 中存在某事」不代表所有 Agent 都知道。Episodic Memory 只保存該 Agent 實際可觀察到的 minimal projection；Social Bid responder 也只能從自己的 observed bid refs 建立 candidate。
 
+### Agent-context observation boundary
+
+`SimSpatial.observeAgentContext(state, observer, target)` 是 current Agent-context observation 的單一 reusable owner。它收斂原本 Social Bid requester timeout 使用的既有 production rule：observer / target 必須都在 map 且有 position，observer 不能正在 sleeping；雙方若都有 Room identity 則必須同 Room，且 Manhattan distance 必須 `<= 4`。不可觀察時回 `null`。
+
+可觀察時只回傳決策當下的 minimal snapshot：`targetAgentId / observedTick / observedAgentClass / observedActionKind / observedPosture`。下游不得把完整 World Agent object 當 Observation 傳遞，也不得另複製 Room / distance / sleeping predicate。這個 query 只收斂目前既有 responder-context observability，不代表視線遮擋、視野角度、光照、聽覺、感官差異或記憶位置等完整 Perception subsystem 已完成。
+
 ## 2. Canonical Action / Active Intent
 
 ### Action
@@ -231,6 +237,14 @@ Provider contract：
 - 可以附最小 provenance，供 candidate 被選中後的 subsystem settlement 使用。
 
 Social Bid responder 是目前正式使用者：Human 對 animal `socialAffection` 的 response candidate 直接由 responder-local `observedSocialBids` 產生，不再使用 `pendingInteraction / cat_request / accepted / catRequestExpired` compatibility bridge。
+
+### Generic attention interaction
+
+通用 attention interaction 表達 requester 希望 target 將注意力轉向 requester / current interaction。current canonical payload 是 `interactionPurpose:'getAttention'` 搭配 `stimulusKind / stimulusIntensity`；它可以獨立形成 `attentionStimulus` event，也可以作為其他有語意 interaction event 的附帶效果，因此不強迫 `引起注意 → 成功 → 再提出要求` 的固定兩段式 Action。
+
+Engine 的 delivered-stimulus contract 只記錄 stimulus 與 target 是否實際 perceived；若 target 正在 sleeping，會重用既有 sleep wake consequence，wake 仍只是可能結果。`perceivedByTarget`、`woke`、request understanding、request acceptance 與後續 behavior completion 是不同層級，current contract 不建立 `attentionCaptured / requestUnderstood / requestAccepted` shortcut，也不改寫 responder 的 Action / Intent / private state。第一次 no-response 也不自動提高 stimulus intensity；是否 retry、等待、放棄或改變強度必須由之後的 Deliberation 決定。
+
+這個 slice 沒有建立 hearing / line-of-sight / occlusion / sensory-capability 模型。caller 仍必須先滿足自身 interaction delivery / geometry 條件；attention contract 不把「有 World Event」泛化成遠距離必然被聽見。
 
 ## 4. Social Bid / response agency
 

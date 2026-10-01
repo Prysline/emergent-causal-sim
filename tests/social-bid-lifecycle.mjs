@@ -6,7 +6,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/action/state.js','systems/intent/state.js','systems/social/state.js','engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js','validation/rules/intent-active.js','validation/rules/social-bid.js']);
 
-const E=globalThis.SimEngine,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const latestBid=()=>E.getState().events.find(e=>e.data?.socialBid===true);
 const responseFor=bidId=>E.getState().events.find(e=>e.data?.responseToBid===bidId);
@@ -14,8 +14,10 @@ const waitEndFor=bidId=>E.getState().events.find(e=>e.data?.action==='socialWait
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.42.0-usage-preference-sleep');
+assert.equal(st.version,'11.43.0-attention-agent-context');
 assert.equal(E.SOCIAL_BID_SCHEMA_VERSION,'11.12.2-social-bid-lifecycle');
+assert.equal(typeof SP.observeAgentContext,'function','Social Bid must consume the shared Agent-context observation owner');
+assert.equal(E.canObserveSocialResponderContext,undefined,'Social Bid must not expose a second responder-context observability owner');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='socialBid.respond-animal-affection'),'Social Bid responder option provider must be registered');
 for(const a of Object.values(st.agents)){
   assert.deepEqual(a.observedSocialBids,[]);

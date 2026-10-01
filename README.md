@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.42.0・Usage preference sleep**（`11.42.0-usage-preference-sleep`）。
+目前 runtime marker：**v11.43.0・Attention + Agent-context observation**（`11.43.0-attention-agent-context`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -23,6 +23,8 @@
 - Action type 的唯一正式欄位是 `action.kind`；舊 `action.intent` compatibility 已移除。
 - `Agent.activeIntent` 是 Agent-private 短期目的，與 `action.kind` 分工不同；`action.intentId` 只作 Action → Active Intent linkage。
 - Social Bid 是可觀察的 World Event；requester waiting、responder Intent、episodic memory、Affect 都是各 Agent 自己的 private state，不建立共享心理 lifecycle registry。
+- Agent-context observation 由 `SimSpatial.observeAgentContext(state, observer, target)` 單一 query 持有；它只在 current observable boundary 內回傳 target identity、observed tick、Human / Animal classification、observed Action kind 與 posture snapshot，不把完整 Agent / private state 當 Observation 傳給下游。Social Bid requester timeout 也消費同一 query，不再持有第二套 Room / distance observability predicate。
+- 通用 attention interaction 以 `interactionPurpose:'getAttention' + stimulusKind / stimulusIntensity` 表達，可獨立發生或附著在既有互動事件。對 sleeping target，既有 wake consequence 仍只是刺激可能造成的結果；perceived / woke 都不等於 request 已理解、接受或已執行，retry intensity 也不會因 no-response 自動升級。
 - Episodic Memory 保存 Agent-local observable projection，不複製完整 World Event，也不把另一個 Agent 的 private state 當成可觀察資訊。
 - Relationship 也是 Agent-private directional state：`A → B` 與 `B → A` 分開保存，只承接 A 自己的 historical appraisal consolidation，不建立共享 pair score。
 
@@ -80,7 +82,8 @@
 
 ### Social agency
 
-- Social Bid / responder-local observation / requester-private waiting 分離。
+- Social Bid / responder-local observation / requester-private waiting 分離；requester wait-end 的 responder context 只引用共用 Agent-context observation snapshot。
+- 通用「引起注意」不是 wake 專用 Action，也不代表 responder 已回應；current Engine 提供 delivered attention-stimulus contract，現有 `seekHuman` 可把 attention purpose 與自身 social Bid 放在同一個 canonical interaction event。
 - Human talk response：engage / brief / decline / no response 是不同結果。
 - Pet response：accept / tolerate / avoid 由 responder 自己的 state 決定。
 - **Affect + Relationship → Responder Bias**：Human responder 與 animal responder 先由自己的 Current Affect 派生 `affectResponseSignal = clamp(valence - frustration, -1, +1)`，各以 `±0.12` cap 形成短期 delta，再與自己對 requester 的 directional Relationship `±0.18` delta 並列；不讀 requester Affect 或反方向 Relationship。

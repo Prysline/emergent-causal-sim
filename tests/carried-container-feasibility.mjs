@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.42.0-usage-preference-sleep';
+const APP_VERSION='11.43.0-attention-agent-context';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';

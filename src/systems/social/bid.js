@@ -58,16 +58,11 @@
       const requester=st.agents[e.data.target];if(requester?.activeIntent?.kind==='awaitResponse'&&requester.activeIntent.source?.bidId===bidId)requester.activeIntent=null;
     }
   }
-  function canObserveResponderContext(st,requester,responder){
-    if(!requester||!responder||requester.offMap||responder.offMap||E.isSleeping?.(requester)||!requester.position||!responder.position)return false;
-    const rr=SP.roomAt?.(st,requester.position),tr=SP.roomAt?.(st,responder.position);if(rr&&tr&&rr!==tr)return false;
-    return (SP.manhattan?.(requester.position,responder.position)??Infinity)<=4;
-  }
   function privateWaitData(st,a,intent,bid){
     const data={actor:a.id,action:'socialWaitEnded',bidId:bid?.id||intent.source?.bidId||null,intentId:intent.id,visibility:'private',owner:a.id};if(!bid)return data;
     data.bidKind=bid.data?.bidKind||null;data.interactionKind=socialBidInteractionKind(bid);const responder=bid.data?.bidTo&&st.agents?.[bid.data?.bidTo];
-    if(!canObserveResponderContext(st,a,responder)){data.responderContextObserved=false;return data;}
-    data.responderContextObserved=true;data.observedResponderActionKind=actionKind(responder);data.observedResponderPosture=responder?.posture?.kind||null;return data;
+    const observation=SP.observeAgentContext?.(st,a,responder);if(!observation){data.responderContextObserved=false;return data;}
+    data.responderContextObserved=true;data.observedResponderActionKind=observation.observedActionKind;data.observedResponderPosture=observation.observedPosture;return data;
   }
   function expirePrivateWaiting(st){
     for(const a of Object.values(st.agents||{})){
@@ -92,5 +87,5 @@
   E.registerRuntimeHook('afterTick','socialBid.settle',(ctx)=>settleTick(E.getState(),ctx.locals.socialBidV1122),300);
   E.registerRuntimeHook('afterReset','socialBid.normalize-reset',()=>normalizeSocialState(E.getState()),200);
 
-  Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,INTERACTION_BY_BID_KIND,bidEvent,socialBidInteractionKind,observedBidRefs,newestObservedAnimalBid,socialBidDecisionOptions,addObservedBid,canObserveSocialResponderContext:canObserveResponderContext});
+  Object.assign(E,{SOCIAL_BID_SCHEMA_VERSION:VERSION,BID_MEMORY_TICKS,REQUESTER_PATIENCE_TICKS,INTERACTION_BY_BID_KIND,bidEvent,socialBidInteractionKind,observedBidRefs,newestObservedAnimalBid,socialBidDecisionOptions,addObservedBid});
 })();

@@ -1,6 +1,6 @@
 (() => {
   const SP=window.SimSpatial;if(!SP?.normalizeNode)return;
-  const VERSION='11.11.1-spatial-observability';
+  const VERSION='11.43.0-agent-context-observation';
   const FLOOR='floor';
 
   function roomLabel(st,spaceId){return st.map?.rooms?.[spaceId]?.name||spaceId||'world';}
@@ -41,6 +41,29 @@
       walkable:agent?SP.nodeWalkable(st,node,agent):SP.nodeWalkable(st,node,null)
     };
   }
+  function observedAgentClass(a){
+    const socialClass=window.SimWorld?.SPECIES_PROFILES?.[a?.kind]?.socialClass;
+    if(a?.kind==='human'||socialClass==='person')return'human';
+    if(socialClass==='animal')return'animal';
+    return null;
+  }
+  function observeAgentContext(st,observerOrId,targetOrId){
+    const observer=typeof observerOrId==='string'?st.agents?.[observerOrId]:observerOrId;
+    const target=typeof targetOrId==='string'?st.agents?.[targetOrId]:targetOrId;
+    const isSleeping=window.SimEngine?.isSleeping;
+    if(typeof isSleeping!=='function')throw new Error('observeAgentContext requires SimEngine sleep semantics.');
+    if(!observer||!target||observer.offMap||target.offMap||isSleeping(observer)||!observer.position||!target.position)return null;
+    const observerRoom=SP.roomAt?.(st,observer.position),targetRoom=SP.roomAt?.(st,target.position);
+    if(observerRoom&&targetRoom&&observerRoom!==targetRoom)return null;
+    if((SP.manhattan?.(observer.position,target.position)??Infinity)>4)return null;
+    return {
+      targetAgentId:target.id,
+      observedTick:st.tick,
+      observedAgentClass:observedAgentClass(target),
+      observedActionKind:target.action?.kind||null,
+      observedPosture:target.posture?.kind||null
+    };
+  }
   function agentObservation(st,aOrId){
     const a=typeof aOrId==='string'?st.agents?.[aOrId]:aOrId;if(!a||a.offMap)return null;
     const current=nodeObservation(st,SP.nodeForAgent(st,a),a);
@@ -66,5 +89,5 @@
     return {furnitureId:id,surfaces,surfaceCount:surfaces.length,solids,solidCount:solids.length};
   }
   function formatNode(st,p){const o=nodeObservation(st,p);if(!o)return'無';const z=SP.zOf?.(o.position)??o.position.z??0;return `${o.spaceLabel}・${o.surfaceLabel} (${o.position.x}, ${o.position.y}${z!==0?`, z=${z}`:''})`;}
-  Object.assign(SP,{OBSERVABILITY_VERSION:VERSION,roomLabel,surfaceLabel,elevatedSolidEntries,clearanceSummaryFor,nodeObservation,agentObservation,objectObservation,furnitureObservation,formatNode});
+  Object.assign(SP,{OBSERVABILITY_VERSION:VERSION,roomLabel,surfaceLabel,elevatedSolidEntries,clearanceSummaryFor,nodeObservation,observeAgentContext,agentObservation,objectObservation,furnitureObservation,formatNode});
 })();

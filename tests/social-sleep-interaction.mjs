@@ -14,6 +14,7 @@ loadRuntimeProfile([
 const E=globalThis.SimEngine;
 const SP=globalThis.SimSpatial;
 const V=globalThis.SimValidator;
+assert.equal(E.ATTENTION_INTERACTION_VERSION,'11.43.0-attention-agent-context');
 
 function noIssues(label){
   const result=V.validateState(E.getState());
@@ -84,6 +85,10 @@ E.reset(20260911);
   assert.ok(contact,'動物打擾睡著的人仍應先形成真實接觸事件');
   assert.equal(contact.data.stimulusIntensity,34);
   assert.equal(contact.data.stimulusKind,'touch+sound');
+  assert.equal(contact.data.interactionPurpose,'getAttention','seekHuman stimulus should consume the generic attention contract');
+  assert.equal(Object.hasOwn(contact.data,'attentionCaptured'),false,'attention purpose must not fabricate attention success');
+  assert.equal(Object.hasOwn(contact.data,'requestUnderstood'),false,'perception / wake must not imply request understanding');
+  assert.equal(Object.hasOwn(contact.data,'requestAccepted'),false,'perception / wake must not imply request acceptance');
   assert.equal(contact.data.socialBid,true,'Current Social Bid lifecycle 應把 seekHuman contact 標記成 immutable world Bid');
   assert.equal(contact.data.bidId,contact.id);
   assert.equal(cat.activeIntent?.kind,'awaitResponse','requester 是否被回應仍由自己的 private wait Intent 表示');
@@ -114,6 +119,35 @@ E.reset(20260911);
   assert.ok(pet);
   assert.ok(!pet.text.includes('靠過去蹭'),'清醒動物被摸時也不應由 petAnimal action 固定宣告回蹭');
   noIssues('awake pet does not fabricate reciprocal rub');
+}
+
+
+E.reset(20260911);
+{
+  const st=E.getState(),requester=st.agents.zhen,responder=st.agents.zhou;
+  st.agents.orange.offMap=true;requester.position={x:5,y:5};responder.position={x:5,y:6};
+  const busyAction={kind:'wander',phase:'move',started:st.tick,wait:0};responder.action=busyAction;
+  const first=E.emitAttentionStimulus(requester,responder,{kind:'sound',intensity:12,text:'測試引起注意。'}),firstEvent=st.causes[first.eventId];
+  assert.equal(firstEvent.data.action,'attentionStimulus');assert.equal(firstEvent.data.interactionPurpose,'getAttention');
+  assert.equal(firstEvent.data.stimulusKind,'sound');assert.equal(firstEvent.data.stimulusIntensity,12);
+  assert.equal(first.perceivedByTarget,true,'delivered stimulus may be perceived by an awake responder');
+  assert.equal(responder.action,busyAction,'attention stimulus must not overwrite responder agency or current action');
+  assert.equal(st.events.some(e=>e.data?.responseToBid===first.eventId),false,'attention stimulus alone must not fabricate a response');
+  const retry=E.emitAttentionStimulus(requester,responder,{kind:'sound',intensity:12,text:'再次測試引起注意。'});
+  assert.equal(st.causes[retry.eventId].data.stimulusIntensity,12,'retry intensity must remain caller-selected; no-response must not auto-escalate');
+  assert.notEqual(retry.eventId,first.eventId);responder.action=null;noIssues('generic awake attention stimulus');
+}
+
+E.reset(20260911);
+{
+  const st=E.getState(),requester=st.agents.zhen,responder=st.agents.zhou;
+  st.agents.orange.offMap=true;responder.needs.sleepNeed=100;
+  const sleepSlot=putToSleep(st,responder,'bed:left',0),approach=SP.slotApproachNodes(st,sleepSlot,requester,'walk')[0];requester.position={...approach};
+  assert.equal(E.interactionWakeChance(responder,0),0);
+  const attempt=E.emitAttentionStimulus(requester,responder,{kind:'sound',intensity:0,text:'低強度呼喚測試。'}),event=st.causes[attempt.eventId];
+  assert.equal(attempt.woke,false);assert.equal(event.data.perceivedByTarget,false,'sleeping responder that did not wake must not be marked as having perceived the attention attempt');
+  assert.equal(E.isSleeping(responder),true);assert.equal(st.events.some(e=>e.data?.responseToBid===attempt.eventId),false,'wake failure must not fabricate understanding or refusal');
+  assert.equal(Object.hasOwn(event.data,'requestAccepted'),false);noIssues('generic sleeping attention stimulus');
 }
 
 console.log('Current social / sleep interaction regression: ok');

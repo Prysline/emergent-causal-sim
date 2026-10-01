@@ -8,8 +8,39 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.42.0-usage-preference-sleep');
-assert.equal(E.VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(st.version,'11.43.0-attention-agent-context');
+assert.equal(E.VERSION,'11.43.0-attention-agent-context');
+assert.equal(SP.OBSERVABILITY_VERSION,'11.43.0-agent-context-observation');
+
+
+let context=SP.observeAgentContext(st,zhen,orange);
+assert.equal(context.targetAgentId,'orange');
+assert.equal(context.observedTick,st.tick);
+assert.equal(context.observedAgentClass,'animal');
+assert.equal(context.observedActionKind,orange.action?.kind||null);
+assert.equal(context.observedPosture,orange.posture?.kind||null);
+assert.equal(Object.hasOwn(context,'needs'),false,'Agent-context observation must not expose the full target Agent object');
+assert.equal(SP.observeAgentContext(st,orange,zhen)?.observedAgentClass,'human');
+
+const observerAction=zhen.action;
+zhen.action={kind:'sleep',phase:'sleeping'};
+assert.equal(SP.observeAgentContext(st,zhen,orange),null,'sleeping observer must not gain responder-context observation');
+zhen.action=observerAction;
+const originalOrangeContextPosition={...orange.position};
+orange.position={...SP.normalizeNode(st,{x:10,y:6},'floor')};
+assert.equal(SP.observeAgentContext(st,zhen,orange),null,'Agent-context observation must respect the canonical Manhattan distance bound');
+orange.position=originalOrangeContextPosition;
+orange.offMap=true;
+assert.equal(SP.observeAgentContext(st,zhen,orange),null,'off-map target must not be observable');
+orange.offMap=false;
+const roomSamples=new Map();
+for(let y=0;y<st.map.height;y++)for(let x=0;x<st.map.width;x++){const room=SP.roomAt?.(st,{x,y,z:0});if(room&&!roomSamples.has(room))roomSamples.set(room,{x,y,z:0});}
+assert.ok(roomSamples.size>=2,'default world should expose at least two Rooms for observability boundary regression');
+const [roomA,roomB]=[...roomSamples.values()];
+const originalZhenRoomPosition={...zhen.position},originalOrangeRoomPosition={...orange.position};
+zhen.position={...SP.normalizeNode(st,roomA,'floor')};orange.position={...SP.normalizeNode(st,roomB,'floor')};
+assert.equal(SP.observeAgentContext(st,zhen,orange),null,'different known Rooms must remain outside responder-context observation');
+zhen.position=originalZhenRoomPosition;orange.position=originalOrangeRoomPosition;
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

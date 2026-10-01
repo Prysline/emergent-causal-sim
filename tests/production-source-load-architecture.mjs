@@ -9,7 +9,8 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.42.0-usage-preference-sleep';
+const CURRENT_VERSION='11.43.0-attention-agent-context';
+const USAGE_PREFERENCE_VERSION='11.42.0-usage-preference-sleep';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -207,6 +208,7 @@ assert.equal(W.RESOURCES_RUNTIME_VERSION,RESOURCES_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
+assert.equal(SP.OBSERVABILITY_VERSION,'11.43.0-agent-context-observation');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(P.VERSION,'11.37.0-carried-container-feasibility');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
@@ -216,10 +218,11 @@ assert.equal(L.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
-assert.equal(W.MEMORY_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(W.DELIBERATION_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(E.USAGE_PREFERENCE_VERSION,CURRENT_VERSION);
+assert.equal(W.MEMORY_SCHEMA_VERSION,USAGE_PREFERENCE_VERSION);
+assert.equal(W.DELIBERATION_SCHEMA_VERSION,USAGE_PREFERENCE_VERSION);
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,USAGE_PREFERENCE_VERSION);
+assert.equal(E.USAGE_PREFERENCE_VERSION,USAGE_PREFERENCE_VERSION);
+assert.equal(E.ATTENTION_INTERACTION_VERSION,CURRENT_VERSION);
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
 assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless production prefix must be complete without Presentation observers');
