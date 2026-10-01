@@ -129,12 +129,15 @@ assert.ok(requester.action?.kind==='drinkWater'||requester.activeIntent?.kind===
 noIssues('occupancy wait preemption');
 
 // A non-perceived request times out as no-response, never as refusal/intentional ignore.
+// Move the requester outside shared Agent-context observation range before emitting the request.
+// The direct resolution fixture intentionally bypasses candidate discovery so perception failure is deterministic.
 E.reset(44007);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;cat=st.agents.orange;quiet(requester);quiet(responder);cat.offMap=true;st.minute=180;
-placeNear(st,requester,'bed:left');occupy(st,responder,'bed:left',{sleeping:true});
-const sleepingRequestAction=bindSleepDecision(st,requester);conflict=S.preferredSleepConflict(st,requester);
+occupy(st,responder,'bed:left');requester.position={x:1,y:1};requester.posture={kind:'standing',slotId:null,furnitureId:null};
+const sleepingRequestAction=bindSleepDecision(st,requester);conflict={slot:SP.getSlot(st,'bed:left'),preferredSlot:{kind:'slot',id:'bed:left'}};
 S.beginResolution(st,requester,sleepingRequestAction,{kind:'requestYield',targetAgent:responder.id,conflict,evidenceId:null});
 const sleepingBid=eventBy(e=>e.data?.action==='sleepSlotYieldRequest');
 assert.ok(sleepingBid);
+assert.equal(sleepingBid.data.perceivedByTarget,false,'out-of-range request must remain unperceived');
 for(let i=0;i<(E.REQUESTER_PATIENCE_TICKS||3)+2&&requester.activeIntent?.kind==='awaitResponse';i++)E.tick();
 const waitEnded=eventBy(e=>e.data?.action==='socialWaitEnded'&&e.data?.bidId===sleepingBid.id);
 assert.ok(waitEnded,'no-response must use the existing requester-private wait timeout');
