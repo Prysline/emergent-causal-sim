@@ -118,8 +118,8 @@
   function settleObservedBid(a,bidId){if(a)a.observedSocialBids=(a.observedSocialBids||[]).filter(ref=>ref.bidId!==bidId);}
   function settleRequester(st,bid){const requester=st.agents?.[bid?.data?.bidFrom];if(requester?.activeIntent?.kind==='awaitResponse'&&requester.activeIntent.source?.bidId===bid.id)requester.activeIntent=null;}
   function responseCanCompete(st,a,utility){
-    if(!a.action&&!a.activeIntent){const best=E.candidateIntents?.(st,a)?.[0]||null;return !best||best.utility<=utility;}
-    const snap=E.reconsiderationSnapshot?.(st,a);return !!snap?.ok&&Number.isFinite(snap.commitmentCost)&&utility>snap.switchThreshold;
+    if(a.action||a.activeIntent)return false;
+    const best=E.candidateIntents?.(st,a)?.[0]||null;return !best||best.utility<=utility;
   }
   function markUnderstood(st,responder,requester,pick){
     if(pick.ref.understoodTick!=null)return;
