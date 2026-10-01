@@ -31,9 +31,9 @@
     W.DATA_ZH.replanCount='Replan 次數';
   }
 
-  const DELIBERATION_VERSION='11.42.0-usage-preference-sleep';
+  const DELIBERATION_VERSION='11.44.0-sleep-slot-conflict';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
-    for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];}
+    for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];a.conflictResolutionEvidence=[];}
     return st;
   },500);
   W.DELIBERATION_SCHEMA_VERSION=DELIBERATION_VERSION;
