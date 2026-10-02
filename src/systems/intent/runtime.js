@@ -2,7 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld;if(!E||!W)return;
   const VERSION=W.INTENT_SCHEMA_VERSION||'11.12.1-active-intent-foundation';
   const INTENT_BY_ACTION={
-    eat:'satisfyHunger',drinkWater:'drinkWater',drinkAlcohol:'drinkAlcohol',rest:'recoverFatigue',sleep:'sleep',
+    eat:'satisfyHunger',drinkWater:'drinkWater',drinkAlcohol:'drinkAlcohol',rest:'recoverFatigue',sleep:'sleep',sleepConflict:'sleep',sleepConflictResponse:'respondSleepConflict',
     talk:'socialize',petAnimal:'interactWithAnimal',seekHuman:'seekSocialContact',cleanFloor:'removeHazard',groom:'groom',
     wander:'explore',restockContainer:'restockResource',externalSupply:'replenishSupply'
   };
