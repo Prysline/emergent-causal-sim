@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -24,6 +24,13 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - Spatial topology、Surface / Contact / interaction geometry
 
 Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
+
+**Preferred sleep Slot conflict boundary**：Spatial 的 `sleepSlotAvailability(state, agent, slot)` 是指定 sleep Slot objective legality / exclusion-reason owner；`sleepTargets()` 也消費同一 query。Usage Preference 的 assignment / claim / habit 仍只提供 Association Reason。Deliberation 只在 fixed self-associated Slot 因 Agent occupancy 被排除時形成 Agent-private conflict，並且 occupant-specific candidate 必須消費 `observeAgentContext(...)` snapshot；看不到 occupant 時不得產生 Human/Animal 對象化互動。occupied preferred Slot 永遠不回填成 legal target。
+
+Conflict resolution candidate 與後續 target selection 是兩層不同決策：alternate / wait / generic attention / Human request-to-yield / Human nonphysical drive-away 由 Deliberation 比較；若選 alternate，才交回既有 Usage-ranked legal sleep target 與 Target Selection Evidence。occupancy wait 是 sleep-conflict private lifecycle，不冒充 Social `awaitResponse`，但同樣有限期且可被 higher-priority soft reconsideration 中斷。requester 的 interaction 只建立 observable request / stimulus；responder 是否理解、接受／拒絕，以及是否真的離開 Slot，全部由 responder-local Action 推進。wake、understood、accepted、completed 不互相代替。
+
+Conflict Resolution Evidence 掛在既有 Decision Evidence parent 下，保存 preferred Slot、Association Reason、decision-time Agent-context Observation snapshot、當次合法 resolution candidates、contributors、selection、evaluated tick 與 prior conflict decision reference；舊 snapshot 不得用未來 World state 回填。
+
 
 **Spatial description precision boundary**：current floor Spatial Node 仍是 coarse `spaceId + surfaceId + x/y/z` identity。Furniture-local metric solids 可以證明某 tile 內存在／不存在對目前 MovementEnvelope 可用的 free-space，但 Agent persistent floor position沒有 tile 內 local offset / region identity。因此 Presentation / event wording 不得把「同一 coarse floor tile 有 overhead Furniture」直接翻成「角色在家具正下方」。explicit Surface identity 可使用 Surface label（例如 `diningTable:surface → 餐桌桌面`）；coarse floor + overhead Furniture 只能使用「餐桌所在格的地面」等不超過現有 identity 精度的描述。若 Agent 目前綁定 `posture.slotId`，Slot occupancy 是比 coarse floor 更精確的 canonical identity，因此 place description 應優先使用 Furniture + Slot label（例如 `餐椅 B・座位`），而不是把 Slot coarse anchor 再投影成 floor wording。所有玩家可見 UI、map title 與 Inspector 必須消費同一 `SimSpatial.describePlace()` owner，不得從 `agentObservation.covered / overhead` 重新拼出第二套「家具下」描述。這不改 `nodeWalkable`、Furniture Surface traversal、Slot occupancy 或 MovementEnvelope feasibility。
 
