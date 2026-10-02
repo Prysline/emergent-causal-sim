@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -134,6 +134,14 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
 
 通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+### Sleep preferred Slot conflict boundary
+
+fixed-Slot sleep conflict 由 Deliberation 持有 resolution ownership。Spatial 仍只保存 canonical Slot legality / occupancy；`sleepTargets()` 不會把 occupied preferred Slot 重新列為合法候選。當 assignment / Runtime Claim / Usage Habit 指向的 preferred Slot 因 Agent occupancy 被排除時，Deliberation 透過 `sleepSlotAvailability(...)` 取得 exclusion reason，再以 `observeAgentContext(...)` 取得 decision-time occupant snapshot。只有實際可觀察到的 occupant context 才能產生 occupant-specific resolution；第一版只處理 Agent occupant，不把 ordinary Object occupancy 或完整 Perception 擴進此 slice。
+
+resolution candidates 與正常 legal sleep target 共同進入既有 decision comparison：可改用其他合法睡眠位置、等待 preferred Slot、引起 occupant 注意；觀察到 Human 時另可形成讓位 request 或非物理 drive-away。Association Reason 只作 bounded contributor，不變成硬規則。Animal occupant 不走 Human-only yield shortcut；generic attention 仍只代表 stimulus，不等於 request understood / accepted。
+
+Conflict Resolution Evidence 是 Decision Evidence 的 downstream Agent-private snapshot：保存 parent decision、preferred Slot、Association Reason、decision-time Observation、evaluated candidates、selected resolution、contributors、evaluated tick 與 prior conflict decision linkage；後續 wake、response 或 Slot 釋放不得回填舊 snapshot。Human responder 的 accept / refuse 由 responder-local Intent / Action 決定；request、response、實際離開 Slot、Slot 再次可用是分離的因果階段。requester 無權直接改寫 responder 的 position、posture、Action、Intent 或 private state。
 
 ### Agent-private Truth
 
