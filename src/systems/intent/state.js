@@ -15,7 +15,7 @@
     W.DATA_ZH.sourceIntentId='來源 Intent';
   }
 
-  const INTERRUPTION_VERSION='11.12.3-replan-preemption';
+  const INTERRUPTION_VERSION='11.44.0-sleep-slot-conflict';
   W.registerInitialStateInitializer('interruption.schema',(st)=>{
     
     return st;
