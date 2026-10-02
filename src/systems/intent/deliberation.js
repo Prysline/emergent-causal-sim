@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.42.0-usage-preference-sleep';
+  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.44.0-sleep-slot-conflict';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
   function routePreferenceForAction(st,a,action=a?.action){
@@ -9,6 +9,78 @@
     return {weights:{timeWeight:0,contentsRiskWeight,dropRiskWeight},contributors:[{kind:'trait',key:'careful',role:'routeWeight',value:careful,actionKind:action?.kind||null,contentsRiskWeight,dropRiskWeight}]};
   }
   const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
+  const SLEEP_CONFLICT_REASSESS_TICKS=2;
+  const SLEEP_CONFLICT_STIMULUS=Object.freeze({attention:{kind:'sound',intensity:22},requestYield:{kind:'sound',intensity:18},nonphysicalShoo:{kind:'sound',intensity:34}});
+  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+  function sleepConflictAssociation(st,a,slotId){
+    const U=window.SimUsage;if(!U?.associationReasons||!U?.preferenceContributors)return null;
+    const ref={kind:'slot',id:slotId},reasons=U.associationReasons(st,a,'sleep',ref).filter(r=>r?.direction==='self'&&Number(r.signal)>0);
+    if(!reasons.length)return null;
+    const contributors=U.preferenceContributors(st,a,'sleep',ref).filter(c=>c?.direction==='self'&&Number(c.delta)>0),strength=clamp(contributors.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,U.PREFERENCE_CAP||10);
+    return {ref,reasons,contributors,strength};
+  }
+  function preferredSleepConflictFor(st,a){
+    if(!st||!a||a.offMap)return null;
+    const conflicts=[];
+    for(const slot of SP.allSlots?.(st)||[]){
+      if(!slot?.canSleep||!SP.slotAllows?.(slot,a)||!SP.slotPoseFits?.(slot,a,'lying'))continue;
+      const association=sleepConflictAssociation(st,a,slot.id);if(!association)continue;
+      const occupant=SP.slotOccupant?.(st,slot.id,a.id);if(!occupant)continue;
+      const observation=E.observeAgentContext?.(st,a,occupant)||Object.freeze({observable:false,reason:'observation-unavailable'});
+      conflicts.push({slot,occupantId:occupant.id,association,observation});
+    }
+    return conflicts.sort((x,y)=>y.association.strength-x.association.strength||String(x.slot.id).localeCompare(String(y.slot.id)))[0]||null;
+  }
+  function sleepConflictResolutionCandidates(st,a,conflict,legalCandidates=[]){
+    if(!conflict)return [];
+    const strength=conflict.association.strength,noAlternate=!legalCandidates.length,out=[];
+    if(legalCandidates.length){const best=legalCandidates[0],burden=clamp(Number(best.effectiveScore??best.score)||0,-10,20);out.push({kind:'alternateSleepTarget',score:70-strength*2-burden*.35,target:{kind:'slot',id:best.id},contributors:[{kind:'associationStrength',value:strength},{kind:'objectiveTargetBurden',value:burden}]});}
+    out.push({kind:'waitForPreferredSlot',score:42+strength*2+(noAlternate?8:0),contributors:[{kind:'associationStrength',value:strength},{kind:'noAlternate',value:noAlternate}]});
+    const obs=conflict.observation;
+    if(obs?.observable){
+      const sleeping=obs.observedActionKind==='sleep'||obs.observedPosture==='lying';
+      out.push({kind:'gainOccupantAttention',score:38+strength*1.7+(noAlternate?8:0)+(sleeping?8:0),contributors:[{kind:'associationStrength',value:strength},{kind:'noAlternate',value:noAlternate},{kind:'observedSleeping',value:sleeping}]});
+      if(obs.observedAgentKind==='human'){
+        out.push({kind:'requestYield',score:48+strength*1.8+(noAlternate?8:0),contributors:[{kind:'associationStrength',value:strength},{kind:'noAlternate',value:noAlternate}]});
+        out.push({kind:'nonphysicalShoo',score:28+strength*1.5+(noAlternate?10:0),contributors:[{kind:'associationStrength',value:strength},{kind:'noAlternate',value:noAlternate}]});
+      }
+    }
+    return out.sort((x,y)=>y.score-x.score||x.kind.localeCompare(y.kind));
+  }
+  function emitSleepConflictBid(st,a,conflict,resolutionKind){
+    const target=st.agents?.[conflict.occupantId];if(!target)return null;
+    const stimulus=SLEEP_CONFLICT_STIMULUS[resolutionKind]||SLEEP_CONFLICT_STIMULUS.attention;
+    const attention=E.performAttentionInteraction?.(a,target,{stimulus});
+    if(resolutionKind==='attention')return {attention,eventId:attention?.eventId||null,bidId:null};
+    const perceived=!!attention?.performed&&!E.isSleeping?.(target);
+    const bidKind=resolutionKind==='requestYield'?'sleepSlotYieldRequest':'sleepSlotShoo';
+    const text=resolutionKind==='requestYield'?a.name+'要求'+target.name+'讓出目前的睡眠位置。':a.name+'以較強硬的非物理方式要求'+target.name+'離開目前的睡眠位置。';
+    const bidId=E.addEvent(text,'normal',attention?.eventId?[attention.eventId]:[],{actor:a.id,target:target.id,action:resolutionKind==='requestYield'?'requestSleepSlotYield':'nonphysicalSleepSlotShoo',slot:conflict.slot.id,interactionPurpose:resolutionKind==='requestYield'?'requestYield':'nonphysicalShoo',socialBid:true,bidKind,interactionKind:'sleepSlotConflict',expectsResponse:true,bidFrom:a.id,bidTo:target.id,perceivedByTarget:perceived,stimulusKind:stimulus.kind,stimulusIntensity:stimulus.intensity,position:E.positionRef?.(a.position)||null});
+    const bid=st.causes?.[bidId];if(bid?.data)bid.data.bidId=bidId;if(perceived&&bid)E.addObservedBid?.(st,target,bid,st.tick);
+    return {attention,eventId:attention?.eventId||null,bidId};
+  }
+  function enterSleepConflictWait(st,a,p,conflict,{sourceBidId=null,resolutionKind='waitForPreferredSlot'}={}){
+    p.phase='conflictWait';p.conflictPreferredSlot=conflict.slot.id;p.conflictOccupantId=conflict.occupantId;p.conflictReassessTick=st.tick+SLEEP_CONFLICT_REASSESS_TICKS;p.conflictSourceBidId=sourceBidId;p.conflictResolutionKind=resolutionKind;
+    E.addEvent(a.name+'暫時等待睡眠位置狀況改變。','normal',sourceBidId?[sourceBidId]:[],{actor:a.id,action:'sleepConflictWait',visibility:'private',owner:a.id,preferredSlot:conflict.slot.id,resolutionKind,position:E.positionRef?.(a.position)||null});
+  }
+  function resolvePreferredSleepConflictStep(st,a,p,legalCandidates=[]){
+    const conflict=preferredSleepConflictFor(st,a);if(!conflict)return {handled:false,conflict:null};
+    const candidates=sleepConflictResolutionCandidates(st,a,conflict,legalCandidates),selected=candidates[0]||null;if(!selected)return {handled:false,conflict};
+    const evidence=E.captureConflictResolutionEvidence?.(st,a,p,{preferredSlot:{kind:'slot',id:conflict.slot.id},associationReasons:conflict.association.reasons,conflictReason:'occupied',observation:conflict.observation?.observable?conflict.observation:{observable:false,reason:conflict.observation?.reason||'unavailable'},candidates,selectedResolution:selected,priorConflictDecisionId:p.conflictResolutionDecisionId||null});
+    if(evidence)p.conflictResolutionDecisionId=evidence.id;
+    if(selected.kind==='alternateSleepTarget')return {handled:false,conflict,selected,evidence};
+    if(selected.kind==='waitForPreferredSlot'){enterSleepConflictWait(st,a,p,conflict);return {handled:true,conflict,selected,evidence};}
+    const kind=selected.kind==='gainOccupantAttention'?'attention':selected.kind;
+    const interaction=emitSleepConflictBid(st,a,conflict,kind);enterSleepConflictWait(st,a,p,conflict,{sourceBidId:interaction?.bidId||null,resolutionKind:selected.kind});
+    return {handled:true,conflict,selected,evidence,interaction};
+  }
+  function stepPreferredSleepConflictWait(st,a,p){
+    const slotId=p?.conflictPreferredSlot;if(!slotId)return false;
+    if(SP.slotAvailable?.(st,slotId,a.id)||st.tick>=(Number(p.conflictReassessTick)||st.tick)){delete p.conflictPreferredSlot;delete p.conflictOccupantId;delete p.conflictReassessTick;delete p.conflictSourceBidId;delete p.conflictResolutionKind;p.phase='chooseSurface';return false;}
+    return true;
+  }
 
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function foodAmount(st){return Object.values(st.containers||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
@@ -92,6 +164,7 @@
       case'cleanFloor':cost=p.phase==='move'?5:13;break;
       case'groom':cost=12;break;
       case'rest':cost=p.phase==='chooseSurface'?3:p.phase==='move'?6:p.phase==='settle'?9:12;break;
+      case'sleep':if(p.phase==='conflictWait'){cost=2;break;}return Infinity;
       default:return Infinity;
     }
     if(a.held)cost+=10;
@@ -113,8 +186,8 @@
     const intent=a.activeIntent;if(!intent)return {ok:false,reason:'no-intent'};
     if(intent.source?.type==='emergency')return {ok:false,reason:'emergency-intent'};
     if(E.emergencyChoice?.(st,a))return {ok:false,reason:'emergency-priority'};
-    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse';
-    if(!openWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
+    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse',conflictWait=kind==='sleep'&&a.action?.phase==='conflictWait';
+    if(!openWait&&!conflictWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
     const age=Math.max(0,st.tick-(intent.createdTick||0));
     if(age<MIN_INTENT_HOLD_TICKS)return {ok:false,reason:'minimum-hold',holdRemaining:MIN_INTENT_HOLD_TICKS-age};
     return {ok:true,reason:'eligible'};
@@ -152,6 +225,7 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/deliberation.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
+  E.registerActionLabelResolver?.('sleep.preferred-slot-conflict',(st,a)=>a?.action?.kind==='sleep'&&a.action.phase==='conflictWait'?'睡眠・暫時等待偏好位置狀況改變':null,60);
 
-  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
+  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,SLEEP_CONFLICT_REASSESS_TICKS,SLEEP_CONFLICT_STIMULUS,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration,preferredSleepConflictFor,sleepConflictResolutionCandidates,resolvePreferredSleepConflictStep,stepPreferredSleepConflictWait});
 })();
