@@ -113,7 +113,7 @@
       if(responder.kind!=='human'||responder.offMap||responder.action||E.isSleeping?.(responder))continue;
       const pick=newestConflictBid(st,responder);if(!pick)continue;const bid=pick.bid,requester=st.agents?.[bid.data.bidFrom];if(!requester||requester.offMap)continue;
       const responseKind=localResponse(st,responder,bid),intent={id:`intent:${responder.id}:${st.tick}:respondSleepSlotConflict:${bid.id}`,kind:'respondSleepSlotConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictBid',bidId:bid.id,observedTick:pick.ref.observedTick}};
-      responder.activeIntent=intent;responder.action={kind:'respondSleepSlotConflict',phase:'respond',started:st.tick,wait:0,intentId:intent.id,responseToBid:bid.id,responseKind,requesterId:requester.id,slotId:bid.data.slot};
+      responder.activeIntent=intent;responder.action={kind:'respondSleepSlotConflict',phase:'respond',started:st.tick,wait:0,intentId:intent.id,responseToBid:bid.id,responseKind,requesterId:requester.id,slotId:bid.data.slot};E.addEvent(`${responder.name}理解了${requester.name}對睡眠位置的要求。`,'normal',[bid.id],{actor:responder.id,target:requester.id,action:'sleepSlotYieldUnderstood',responseToBid:bid.id,slot:bid.data.slot,position:E.positionRef?.(responder.position)||null});
     }
   }
   function clearObservedBid(a,bidId){a.observedSocialBids=(a.observedSocialBids||[]).filter(ref=>ref.bidId!==bidId);}
