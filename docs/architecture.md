@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -128,6 +128,16 @@ World Authoring v11 以獨立 `usageAssignments[]` 保存正式使用指派，�
 `SP.sleepTargets()` 保持 objective legal candidate query，不讀 assignment / claim / habit。Usage preference runtime 只在 legal candidates 上組合 bounded assignment / claim / Memory-owned habit / species-activity contributors；因此「是否要睡」與「要睡哪裡」維持不同層。Association Reason 可獨立查詢已被 occupancy / reservation 排除的 target，不把 legal candidate list 當作歸屬真相。
 
 Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-private record；每次 reselection 建立新 record，保留 `parentDecisionId` 與 `priorTargetDecisionId`，不覆寫舊 evidence。Memory 只在 actor 自己實際形成 structured sleep-start experience 時更新 `usageHabits` persistent summary；habit strength 採 saturation gain + lazy decay。Inspector 只在 Agent Debug context 投影 Habit / Target Selection Evidence，並明確標示「私人」；World / Furniture presentation 不得把它翻成公共「這是某人的床」。
+
+### Sleep preferred Slot conflict boundary
+
+Fixed-Slot sleep conflict 的 owner 是 Deliberation。Spatial 只回答 objective availability / exclusion reason；`SP.sleepTargets()` 仍只產生 legal sleep targets，被其他 Agent 佔用的偏好 Slot 不會因 assignment / claim / habit 而重新變成合法 target。Usage Preference 只列舉既有 self association 與 bounded contributor，不能把 association 變成 occupancy、reservation 或 general sleep Action utility。
+
+Conflict reasoning 只在已存在正向 sleep association 且 objective exclusion reason 為 Agent occupancy 時成立。occupant context 必須透過 canonical `observeAgentContext(st, observer, target)` 取得 decision-time snapshot；Conflict Resolution Evidence 保存 preferred Slot、Association Reasons、該 snapshot、實際評估的 resolution candidates、selected resolution 與 prior conflict decision linkage。舊 evidence 不得因 responder 後續 Action / posture 改變而回填。
+
+第一版可比較 alternate legal sleep target、有限 private occupancy wait、generic attention、Human yield request、Human nonphysical drive-away，以及暫時 defer。Animal occupant 不取得 Human-only request / drive shortcut。occupancy wait 不建立 reservation，也不是 Social `awaitResponse`；期限、relevant observation change 或更高優先 intent 都可讓 requester 回到 Deliberation。no-response 只代表沒有取得可觀察 response，不得推導 refusal / ignored / intentionalIgnore。
+
+Cross-Agent agency 維持既有邊界：requester 只建立可觀察 request / attention stimulus，不能直接修改 responder 的 position、posture、Action、Intent 或 private state。Human responder 自己消費 observed bid、以自己的 current context 形成 accept / refuse / delay；接受 response、實際離開 Slot、以及 Spatial 再次判定 Slot available 是不同 causal events。wake、request perceived、understood / accepted 與實際 release 也不合併。
 
 ### Agent-context Observation / Attention boundary
 
