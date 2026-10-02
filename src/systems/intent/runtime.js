@@ -4,12 +4,12 @@
   const INTENT_BY_ACTION={
     eat:'satisfyHunger',drinkWater:'drinkWater',drinkAlcohol:'drinkAlcohol',rest:'recoverFatigue',sleep:'sleep',
     talk:'socialize',petAnimal:'interactWithAnimal',seekHuman:'seekSocialContact',cleanFloor:'removeHazard',groom:'groom',
-    wander:'explore',restockContainer:'restockResource',externalSupply:'replenishSupply'
+    wander:'explore',restockContainer:'restockResource',externalSupply:'replenishSupply',yieldSleepSlot:'respondSleepSlotConflict'
   };
   const INTENT_ZH={
     satisfyHunger:'解決飢餓',drinkWater:'喝水',drinkAlcohol:'喝酒',recoverFatigue:'恢復活動疲勞',sleep:'睡眠',
     socialize:'進行社交',interactWithAnimal:'和動物互動',seekSocialContact:'尋求人類互動',removeHazard:'處理環境危險',groom:'理毛清潔',
-    explore:'探索／閒晃',restockResource:'補充室內資源',replenishSupply:'外出補給'
+    explore:'探索／閒晃',restockResource:'補充室內資源',replenishSupply:'外出補給',respondSleepSlotConflict:'回應睡眠位置衝突'
   };
 
   function intentKindForAction(kind){return INTENT_BY_ACTION[kind]||kind||'unknown';}
