@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.43.0-attention-observation`
+`11.44.0-sleep-slot-conflict`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.43.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation / Decision Evidence `11.42.0-usage-preference-sleep`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.44.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.37.0-carried-container-feasibility`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation / Decision Evidence `11.44.0-sleep-slot-conflict`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v4`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage Preference / Social Bid / Affect / Relationship / Surface Environment、Furniture Catalog 與 Embodiment Capabilities 不跟著 overall minor 假升。
 
 ### Version-marker synchronization rule
 
@@ -17,6 +17,18 @@
 測試或 fixture 中的硬編碼版本值必須先判斷其語意再更新：若它是在驗證「current contract / current release / current schema」，則應與本次換代同步；若它是在驗證未變更 subsystem 的 own generation，則必須保留原值，不得因 overall marker 改變而形式性假升版。換言之，stale-marker audit 是**語意核對**，不是 repo-wide blind replace。
 
 完成 marker / generation 變更後，PR 驗證記錄應能明確區分：哪些 marker 本次有換代、哪些 subsystem 明確未換代，以及 Node / Browser regression 中對應 current expectation 是否已同步。
+
+### Current Sleep preferred Slot conflict release
+
+`11.44.0-sleep-slot-conflict` 完成 fixed-Slot sleep conflict 第一版。Spatial 新增 `sleepSlotAvailability(state, agent, slot)` 作為指定 sleep Slot objective availability / exclusion-reason owner，既有 `sleepTargets()` 也改用同一 query；Agent occupancy 仍會把 Slot 排除在 legal targets 外，reservation / pose / allow-kind 等客觀條件也不建立第二套判斷。
+
+Deliberation 只把 fixed self association（slot assignment / self claim / Usage Habit）與 Agent occupancy 組合成 Agent-private preferred-slot conflict。occupant-specific candidate 必須消費共用 `observeAgentContext(...)` snapshot；第一版 candidate 包含 alternate legal sleep target、有限 occupancy wait、generic attention、Human request-to-yield、Human nonphysical drive-away。Association Reason 只作 bounded resolution contributor，不回灌 general sleep utility，也不保證任何單一處理方式。沒有 alternate 時，sleep Intent 仍可因 preferred conflict 保持 viable，不再直接退化成「找不到睡眠位置」而遺失衝突脈絡。
+
+occupancy wait 與 Social `awaitResponse` 是不同 semantic source，但同樣有限期、可被 higher-priority soft reconsideration 中斷。attention 沿用 `performAttentionInteraction()`；第一次無回應不會自動升級。Human directed request 會建立 structured request event，responder 只有在自己的 decision/action flow 選擇後才會產生 `sleepSlotRequestUnderstood`、accepted/refused response，以及可能的 `sleepSlotYield`。因此 not perceived / no response / understood / accepted / refused / completed 保持可追溯分離；accepted 不等於 Slot 已空出，wake 也不等於 understood 或 accepted。
+
+Conflict Resolution Evidence 由既有 Decision Evidence owner 持有，Deliberation / Decision Evidence generation 升到 `11.44.0-sleep-slot-conflict`。每筆 downstream evidence 保存 parent decision、preferred Slot、Association Reason、decision-time Agent-context Observation snapshot、resolution candidates / contributors / final selection、evaluated tick 與 prior conflict decision reference；重新評估新增 evidence，不覆寫舊 snapshot。
+
+Version impact：overall / Presentation、Deliberation / Decision Evidence → `11.44.0-sleep-slot-conflict`。Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`；Social Bid 維持 `11.12.2-social-bid-lifecycle`；World Authoring 維持 `world-authoring-v11`；Furniture Catalog 維持 `furniture-definitions-v12`；Resources / Physical / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Crowding / Affect / Relationship 等未改 subsystem generation 均不假升。本 release 沒有新增或重排 runtime hook。
 
 ### Current Attention + Agent-context observation release
 
