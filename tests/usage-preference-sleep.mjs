@@ -145,7 +145,7 @@ E.reset(44004);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;st.agents.orang
 let requestId=E.addEvent('sleep slot request','normal',[],{actor:a.id,target:b.id,action:'sleepSlotRequest',requestKind:'yield',interactionPurpose:'clearPreferredSleepSlot',slot:'bed:left',expectsResponse:true,perceivedByTarget:true,requestExpiresTick:st.tick+4});
 let responderOptions=E.sleepConflictResponderOptions(st,b);assert.ok(responderOptions.some(x=>x.response==='accept')&&responderOptions.some(x=>x.response==='refuse'));
 const accept=responderOptions.find(x=>x.response==='accept');b.action=E.buildAction(b,accept);assert.equal(b.action?.kind,'respondSleepSlotRequest');E.ensureIntentForAction(st,b);a.offMap=true;
-E.tick();let accepted=responseEvent(st,requestId);assert.equal(accepted?.data?.response,'accepted');assert.equal(b.posture.slotId,'bed:left','accepted response must not itself release the Slot');
+E.tick();let understood=st.events.find(e=>e.data?.action==='sleepSlotRequestUnderstood'&&e.data?.responseToRequest===requestId),accepted=responseEvent(st,requestId);assert.ok(understood,'understood must be a distinct structured outcome before acceptance/refusal');assert.equal(accepted?.data?.understoodEventId,understood.id);assert.equal(accepted?.data?.response,'accepted');assert.equal(b.posture.slotId,'bed:left','accepted response must not itself release the Slot');
 E.tick();assert.ok(st.events.some(e=>e.data?.action==='sleepSlotYield'&&e.data?.responseToRequest===requestId));assert.equal(b.posture.slotId,null,'responder must release the Slot through its own Action');
 noIssues('accepted yield');
 
