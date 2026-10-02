@@ -44,7 +44,7 @@ const beforePos=structuredClone(h.position),beforePosture=structuredClone(h.post
 assert.equal(a.action.phase,'conflictAwaitResponse');assert.deepEqual(h.position,beforePos);assert.deepEqual(h.posture,beforePosture,'requester request must not directly modify responder posture');
 const bid=st.causes[a.action.conflictBidId];assert.ok(bid?.data?.socialBid);assert.equal(bid.data.bidKind,'sleepSlotYield');
 E.rand=()=>0;E.tick();E.rand=oldRand;st=E.getState();a=st.agents.zhen;h=st.agents.zhou;
-const accepted=st.events.find(e=>e.data?.action==='sleepSlotYieldAccepted'&&e.data?.responseToBid===bid.id);assert.ok(accepted,'Human responder should be able to accept from its own responder-local decision');assert.equal(h.posture.slotId,'bed:left','acceptance is not the same fact as actually releasing the Slot');
+const understood=st.events.find(e=>e.data?.action==='sleepSlotYieldUnderstood'&&e.data?.responseToBid===bid.id);assert.ok(understood,'perceived request must become an explicit responder-local understood fact before response');const accepted=st.events.find(e=>e.data?.action==='sleepSlotYieldAccepted'&&e.data?.responseToBid===bid.id);assert.ok(accepted,'Human responder should be able to accept from its own responder-local decision');assert.notEqual(understood.id,accepted.id,'understood and accepted must remain distinct facts');assert.equal(h.posture.slotId,'bed:left','acceptance is not the same fact as actually releasing the Slot');
 E.tick();st=E.getState();h=st.agents.zhou;assert.equal(h.posture.slotId,null);assert.ok(st.events.find(e=>e.data?.action==='sleepSlotYieldCompleted'&&e.data?.responseToBid===bid.id));
 
 // E: no alternate keeps sleep motivation alive through conflict reasoning; no-response is not rejection.
