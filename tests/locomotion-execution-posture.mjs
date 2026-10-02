@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.43.0-attention-observation';
+const APP_VERSION='11.44.0-sleep-slot-conflict';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
