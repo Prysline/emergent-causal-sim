@@ -20,7 +20,7 @@
 
 ### Current Sleep preferred Slot conflict release
 
-`11.44.0-sleep-slot-conflict` 完成 fixed-Slot sleep conflict 第一版。Spatial 仍是 Slot occupancy / legality owner：被 Agent 佔用的 preferred Slot 不會重新進入 `SP.sleepTargets()`；Usage assignment / Runtime Claim / Agent-private Usage Habit 只提供 bounded Association Reason。當 sleep Need / circadian eligibility 成立且沒有 legal sleep target 時，只要存在被 Agent 佔用且對自己有正向 Association Reason 的 preferred Slot，sleep-level motive 仍可進入 Deliberation，不再提前退化成「沒有睡眠位置」。
+`11.44.0-sleep-slot-conflict` 完成 fixed-Slot sleep conflict 第一版。Spatial 仍是 Slot occupancy / legality owner：`SP.sleepSlotAvailability(state, agent, slot)` 單一回報指定 sleep Slot 的 objective availability / exclusion reason，`SP.sleepTargets()` 與 conflict detection 共用它；被 Agent 佔用的 preferred Slot 不會重新進入 `SP.sleepTargets()`；Usage assignment / Runtime Claim / Agent-private Usage Habit 只提供 bounded Association Reason。當 sleep Need / circadian eligibility 成立且沒有 legal sleep target 時，只要存在被 Agent 佔用且對自己有正向 Association Reason 的 preferred Slot，sleep-level motive 仍可進入 Deliberation，不再提前退化成「沒有睡眠位置」。
 
 Deliberation 透過 `SimSleepSlotConflict` 比較 alternate legal target、Agent-private occupancy wait、generic attention，以及 observed Human 的 yield request / nonphysical shoo。occupant-specific reasoning 只能消費 shared `observeAgentContext(...)` snapshot；Animal occupant 不取得 Human-only request/shoo shortcut。occupancy wait 使用獨立 `sleepSlotOccupancyWait` semantic source，有限期內可被既有 soft reconsideration / emergency preemption 中斷，並在到期或 Slot 重新可用後回到既有 sleep replan。
 
