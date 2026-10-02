@@ -94,8 +94,10 @@ conflict=C.preferredSleepSlotConflict(st,requester);kinds=new Set(C.resolutionCa
 for(const kind of ['waitForSlot','gainAttention','requestYield','deferSleep'])assert.ok(kinds.has(kind),'no-alternate conflict should still evaluate '+kind);
 
 // No-response is not refusal/ignore; timeout returns to Deliberation with private context.
+const timeoutBidId=E.addEvent('unanswered yield request','normal',[],{actor:requester.id,target:human.id,action:'sleepSlotYieldRequest',socialBid:true,bidKind:'sleepSlotYield',interactionKind:'sleepSlotConflict',expectsResponse:true,bidFrom:requester.id,bidTo:human.id,perceivedByTarget:true,preferredSlot:left.id});
+st.causes[timeoutBidId].data.bidId=timeoutBidId;
 requester.activeIntent={id:'intent:zhen:no-response:sleep',kind:'sleep',createdTick:Math.max(0,st.tick-5),lifecycle:'actionBound',source:{type:'test',tick:0}};
-requester.action={kind:'sleep',phase:'conflictAwaitResponse',started:Math.max(0,st.tick-5),intentId:requester.activeIntent.id,preferredSleepSlotId:left.id,conflictRequestBidId:bidId,conflictResponseUntilTick:st.tick};
+requester.action={kind:'sleep',phase:'conflictAwaitResponse',started:Math.max(0,st.tick-5),intentId:requester.activeIntent.id,preferredSleepSlotId:left.id,conflictRequestBidId:timeoutBidId,conflictResponseUntilTick:st.tick};
 C.stepConflict(st,requester,requester.action);
 const waitEnd=st.events.find(e=>e.data?.action==='sleepSlotRequestWaitEnded');
 assert.ok(waitEnd);
