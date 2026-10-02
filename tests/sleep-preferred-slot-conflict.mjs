@@ -70,6 +70,14 @@ assert.ok(conflict?.associationReasons.some(x=>x.kind==='habit'),'habit-only con
 assert.equal(conflict.associationReasons.some(x=>x.kind==='assignment'),false);
 noIssues('habit only');
 
+// Fixed-Slot v1 boundary: Furniture-level assignment must not be promoted into a specific occupied Slot conflict.
+E.reset(440021);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;cat=st.agents.orange;quiet(requester);quiet(responder);cat.offMap=true;
+st.usageAssignments=[{id:'zhen-sleep-furniture',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'furniture',id:'bed'}}];
+placeNear(st,requester,'bed:left');occupy(st,responder,'bed:left');
+assert.equal(U.associationReasons(st,requester,'sleep',{kind:'slot',id:'bed:left'}).some(x=>x.key==='assignedToSelf'),true,'Usage association may project a Furniture assignment to target ranking');
+assert.equal(S.preferredSleepConflict(st,requester),null,'first conflict slice must require fixed Slot identity rather than promote a Furniture assignment');
+noIssues('fixed Slot scope');
+
 // C: sleeping Animal allows generic attention but never Human-only yield shortcuts.
 E.reset(44003);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;cat=st.agents.orange;quiet(requester);quiet(responder);quiet(cat);responder.offMap=true;st.minute=180;
 placeNear(st,requester,'bed:left');occupy(st,cat,'bed:left',{sleeping:true});
