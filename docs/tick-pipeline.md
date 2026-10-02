@@ -103,7 +103,7 @@ flowchart TD
 | 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`；消費 responder-local observed sleep-conflict bid 並形成 understood / response / accepted-yield Action | responder candidate 的 Affect score 必須已完成本 tick decay；跨 Agent request 必須先成為可觀察 World Event，requester 不得直接修改 responder |
 | 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
-| 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
+| 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成；`sleep` 仍通常受保護，只有 preferred-Slot `conflictWait` phase 可被 emergency preempt |
 | 900 | `socialBid.prepare` | Social Bid | waiting action injection、response provenance snapshot | 為 afterTick settlement 保留本 tick 之前的 responder/requester 狀態 |
 | 1000 | `intent.reconcile-before` | Active Intent | Action ↔ Intent linkage 收斂 | core tick 前避免 live Action / Intent linkage 漂移 |
 | 1100 | `spatial.capture` | Spatial Effects | 保存 core 前位置與 event snapshot | afterTick 100 用來判斷本 tick movement / spill effects |
