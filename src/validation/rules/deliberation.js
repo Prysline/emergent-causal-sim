@@ -24,10 +24,27 @@
           if(!Array.isArray(item?.contributors))add('target_selection_evidence_contributors_invalid',`${a.name} 的 Target Selection Evidence contributors 必須是 array。`,{agentId:a.id,targetDecisionId:item?.id});
         }
       }
+
+      if(!Array.isArray(a.conflictResolutionEvidence))add('conflict_resolution_evidence_missing',`${a.name} 缺少 conflictResolutionEvidence array。`,{agentId:a.id});
+      else{
+        const ids=new Set();
+        for(const item of a.conflictResolutionEvidence){
+          if(!item||typeof item.id!=='string'||!item.id.startsWith(`conflict-decision:${a.id}:`))add('conflict_resolution_evidence_id_invalid',`${a.name} 的 Conflict Resolution Evidence ID 無效。`,{agentId:a.id,conflictDecisionId:item?.id});
+          else if(ids.has(item.id))add('conflict_resolution_evidence_id_duplicate',`${a.name} 有重複 Conflict Resolution Evidence ID。`,{agentId:a.id,conflictDecisionId:item.id});else ids.add(item.id);
+          if(!item?.parentDecisionId||item.activity!=='sleep'||item.preferredSlot?.kind!=='slot'||!item.preferredSlot?.id||!Number.isInteger(item.evaluatedTick))add('conflict_resolution_evidence_context_invalid',`${a.name} 的 Conflict Resolution Evidence 缺少 parent/activity/preferred Slot/tick context。`,{agentId:a.id,conflictDecisionId:item?.id});
+          if(!Array.isArray(item?.associationReasons)||!Array.isArray(item?.candidates)||!item?.selected?.kind)add('conflict_resolution_evidence_fields_invalid',`${a.name} 的 Conflict Resolution Evidence 缺少 association/candidates/selected。`,{agentId:a.id,conflictDecisionId:item?.id});
+          if(item?.observation?.observable===true){
+            const allowed=new Set(['observable','targetId','observedTick','observedAgentKind','observedActionKind','observedPosture']);
+            for(const key of Object.keys(item.observation))if(!allowed.has(key))add('conflict_resolution_observation_leak',`${a.name} 的 Conflict Resolution Evidence observation 含未授權欄位 ${key}。`,{agentId:a.id,conflictDecisionId:item?.id,key});
+          }
+        }
+      }
+
       if(action?.decisionId){
         if(!evidence||evidence.id!==action.decisionId)add('action_decision_link_missing',`${a.name} 的 Action decisionId 沒有對應目前 Decision Evidence。`,{agentId:a.id,decisionId:action.decisionId});
         else if(typeof E.decisionEvidenceMatchesAction==='function'&&!E.decisionEvidenceMatchesAction(a))add('action_decision_context_mismatch',`${a.name} 的 Action 與 Decision Evidence context 不一致。`,{agentId:a.id,decisionId:action.decisionId});
       }
+      if(action?.conflictResolutionDecisionId&&typeof E.currentConflictResolutionEvidence==='function'&&!E.currentConflictResolutionEvidence(a))add('action_conflict_resolution_link_invalid',`${a.name} 的 Action conflictResolutionDecisionId 沒有對應目前 Conflict Resolution Evidence。`,{agentId:a.id,conflictDecisionId:action.conflictResolutionDecisionId});
       if(action?.targetSelectionDecisionId&&typeof E.currentTargetSelectionEvidence==='function'&&!E.currentTargetSelectionEvidence(a))add('action_target_selection_link_invalid',`${a.name} 的 Action targetSelectionDecisionId 沒有對應目前 Target Selection Evidence。`,{agentId:a.id,targetDecisionId:action.targetSelectionDecisionId});
       if(intent&&(Object.prototype.hasOwnProperty.call(intent,'commitmentCost')||Object.prototype.hasOwnProperty.call(intent,'currentUtility')))add('derived_intent_deliberation_state_persisted',`${a.name} 的 Active Intent 不應保存 derived commitment / utility。`,{agentId:a.id,intentId:intent.id});
       if(intent?.source?.type==='softReconsideration'){
