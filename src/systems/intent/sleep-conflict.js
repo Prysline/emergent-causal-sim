@@ -140,8 +140,14 @@
   function expireResponseWaits(st){
     for(const a of Object.values(st.agents||{})){
       const intent=a.activeIntent;if(intent?.kind!=='awaitSleepConflictResponse'||intent.lifecycle!=='open'||st.tick<intent.patienceUntilTick)continue;
-      const bidId=intent.source?.bidId,bid=bidId&&E.bidEvent?.(st,bidId),responder=bid?.data?.bidTo&&st.agents?.[bid.data.bidTo],observation=E.observeAgentContext(st,a,responder);
+      const bidId=intent.source?.bidId,bid=bidId&&E.bidEvent?.(st,bidId),responder=bid?.data?.bidTo&&st.agents?.[bid.data?.bidTo],observation=E.observeAgentContext(st,a,responder);
       E.addEvent(`${a.name}等了一會兒，沒有得到明確的讓位回應。`,'normal',bidId?[bidId]:[],{actor:a.id,action:'sleepConflictResponseWaitEnded',bidId:bidId||null,intentId:intent.id,visibility:'private',owner:a.id,responderContextObserved:!!observation?.observable,observedResponderActionKind:observation?.observable?observation.observedActionKind:null,observedResponderPosture:observation?.observable?observation.observedPosture:null});a.activeIntent=null;
+    }
+  }
+  function injectRequesterWaitingActions(st){
+    for(const a of Object.values(st.agents||{})){
+      const intent=a.activeIntent;if(a.action||intent?.kind!=='awaitSleepConflictResponse'||intent.lifecycle!=='open')continue;
+      a.action={kind:'sleepConflictResponseWait',phase:'waiting',started:intent.createdTick,intentId:intent.id,wait:0,__sleepConflictTransient:true};
     }
   }
   function actionLabel(st,a){const p=a?.action;if(p?.kind==='sleepConflict')return p.resolution==='wait'?'睡眠衝突・等待偏好位置':p.resolution==='attention'?'睡眠衝突・引起占用者注意':p.resolution==='requestYield'?'睡眠衝突・要求讓位':'睡眠衝突・非物理驅離';if(p?.kind==='sleepConflictResponse')return p.phase==='leaveSlot'?'回應讓位要求・準備離開':'回應睡眠位置要求';return null;}
@@ -150,6 +156,7 @@
   E.registerActionLabelResolver?.('sleepConflict.label',actionLabel,80);
   if(!E.registerRuntimeHook)throw new Error('systems/intent/sleep-conflict.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','sleepConflict.responses',()=>{const st=E.getState();expireResponseWaits(st);promoteResponses(st);},350);
+  E.registerRuntimeHook('beforeTick','sleepConflict.requester-wait',()=>injectRequesterWaitingActions(E.getState()),850);
 
   window.SimSleepConflict=Object.freeze({VERSION,ATTENTION_STIMULUS,preferredSleepConflicts,conflictCandidates,sleepConflictDecisionOptions,buildAction,stepAction,stepResponse,responseCandidate});
   E.SLEEP_CONFLICT_VERSION=VERSION;
