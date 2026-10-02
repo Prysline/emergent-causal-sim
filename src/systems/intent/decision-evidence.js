@@ -58,6 +58,21 @@
     if(priorTargetDecisionId)evidence.priorTargetDecisionId=priorTargetDecisionId;
     a.targetSelectionEvidence.push(evidence);action.targetSelectionDecisionId=id;return evidence;
   }
+  function captureConflictResolutionEvidence(st,a,action,{preferredSlot,associationReasons=[],conflictReason='occupied',observation=null,candidates=[],selectedResolution=null,priorConflictDecisionId=null}={}){
+    const parentDecisionId=action?.decisionId;
+    if(!st||!a||!action||!parentDecisionId||!preferredSlot?.kind||!preferredSlot?.id||!selectedResolution?.kind)return null;
+    if(!Array.isArray(a.conflictResolutionEvidence))a.conflictResolutionEvidence=[];
+    const sequence=a.conflictResolutionEvidence.reduce((max,e)=>Math.max(max,Number(e?.sequence)||0),0)+1;
+    const id=`conflict-decision:${a.id}:${st.tick}:${sequence}`;
+    const evidence={id,sequence,parentDecisionId,preferredSlot:clone(preferredSlot),associationReasons:clone(associationReasons),conflictReason,evaluatedTick:st.tick,observation:clone(observation),candidates:clone(candidates),selectedResolution:clone(selectedResolution)};
+    if(priorConflictDecisionId)evidence.priorConflictDecisionId=priorConflictDecisionId;
+    a.conflictResolutionEvidence.push(evidence);action.conflictResolutionDecisionId=id;return evidence;
+  }
+  function currentConflictResolutionEvidence(a){
+    const action=a?.action,id=action?.conflictResolutionDecisionId;if(!action||!id||!Array.isArray(a.conflictResolutionEvidence))return null;
+    const evidence=a.conflictResolutionEvidence.find(e=>e?.id===id)||null;
+    return evidence?.parentDecisionId===action.decisionId?evidence:null;
+  }
   function currentTargetSelectionEvidence(a){
     const id=a?.action?.targetSelectionDecisionId;if(!id||!Array.isArray(a?.targetSelectionEvidence))return null;
     const evidence=a.targetSelectionEvidence.find(item=>item?.id===id)||null;
@@ -82,5 +97,5 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/decision-evidence.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','deliberation.finalize-decision-evidence',()=>finalizeInitialDecisionEvidence(E.getState()),850);
-  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
+  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureConflictResolutionEvidence,currentConflictResolutionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
 })();
