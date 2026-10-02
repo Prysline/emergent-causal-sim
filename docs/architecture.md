@@ -141,7 +141,7 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 
 第一版 conflict candidates 為 legal alternate、finite re-evaluation wait、generic attention、Human `requestYield` 與 Human `nonphysicalShoo`。Animal occupant 不取得 Human-only request / shoo candidate。Sleep conflict wait 是 `sleep` Action 的獨立 phase，不冒充 Social `awaitResponse`；它有明確 re-evaluation tick，且只在這個 phase 開放既有 soft reconsideration，因此更高優先需求可以中斷等待，而正常 sleep phases 仍受保護。
 
-Conflict Resolution Evidence 是 Decision Evidence 的 downstream Agent-private record；保存 parent decision、preferred Slot、Association Reason、decision-time Observation、evaluated candidates、selected resolution、evaluated tick 與 prior conflict decision。request / response / actual Slot release 保持分離；request / shoo 只建立 observable interaction + Social Bid，Human responder 可以在自己的 response policy 中 accept / decline / delay / no-response，但 response 本身不直接騰空 Slot。
+Conflict Resolution Evidence 是 Decision Evidence 的 downstream Agent-private record；保存 parent decision、preferred Slot、Association Reason、decision-time Observation、evaluated candidates、selected resolution、evaluated tick 與 prior conflict decision。request / perceived / understood / response / actual Slot release 保持分離；request / shoo 只建立 observable interaction + Social Bid。Human responder 先在自己的 human-social owner 形成 `understandSleepSlotRequest`；之後可 accept / decline / delay / no-response。accept 只建立 responder-local `respondSleepSlotConflict` Intent + `yieldSleepSlot` Action，不直接騰空 Slot；實際離位由下一個 responder Action phase 自己執行並建立 `completeSleepSlotYield`。
 
 ### Agent-private Truth
 
@@ -185,6 +185,7 @@ Relationship 同樣遵守方向性 private truth：`A.relationships[B]` 與 `B.r
 - soft reconsideration / hysteresis
 - requester-private `awaitResponse`
 - responder-private `respondSocialBid`
+- responder-private `respondSleepSlotConflict`
 
 動物互動使用 canonical `interactWithAnimal` Intent 與 `petAnimal` Action。是否能撫摸某 target 由 species profile / affordance 與可達性等實際條件判斷，不依 Cat / Dog / Rabbit 等物種名稱建立平行 Action kind。
 
