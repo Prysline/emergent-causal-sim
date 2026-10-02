@@ -23,7 +23,7 @@
     return clamp((contributors||[]).filter(c=>['assignment','claim','habit'].includes(c?.kind)&&c?.direction==='self').reduce((sum,c)=>sum+Math.max(0,Number(c.delta)||0),0),0,window.SimUsage?.PREFERENCE_CAP||10);
   }
   function preferredSleepConflicts(st,a){
-    const U=window.SimUsage;if(!U?.associationReasons||!SP.sleepSlotAvailability||!E.observeAgentContext)return[];
+    const U=window.SimUsage;if(!U?.associationReasons)throw new Error('Sleep preferred Slot conflict requires SimUsage associationReasons().');if(typeof SP.sleepSlotAvailability!=='function')throw new Error('Sleep preferred Slot conflict requires Spatial sleepSlotAvailability().');if(typeof E.observeAgentContext!=='function')throw new Error('Sleep preferred Slot conflict requires Engine observeAgentContext().');
     const out=[];
     for(const slot of SP.allSlots(st)){
       if(!slot?.canSleep||!SP.slotAllows(slot,a)||!SP.slotPoseFits?.(slot,a,'lying'))continue;
@@ -76,7 +76,7 @@
     action.sleepConflictHistory??=[];action.sleepConflictHistory.push({tick:st.tick,selection});if(action.sleepConflictHistory.length>12)action.sleepConflictHistory.shift();
   }
   function captureConflictEvidence(st,a,action,conflict,candidates,selection){
-    return E.captureConflictResolutionEvidence?.(st,a,action,{preferredTarget:conflict.preferredTarget,associationReasons:conflict.associationReasons,observation:conflict.observation,candidates:candidates.map(c=>({kind:c.kind,score:c.score,contributors:c.contributors,selectedTarget:c.selectedTarget?{kind:'slot',id:c.selectedTarget.id}:null})),selection:{kind:selection.kind,score:selection.score,selectedTarget:selection.selectedTarget?{kind:'slot',id:selection.selectedTarget.id}:null},priorConflictDecisionId:action.conflictResolutionDecisionId||null})||null;
+    if(typeof E.captureConflictResolutionEvidence!=='function')throw new Error('Sleep preferred Slot conflict requires Conflict Resolution Evidence owner.');return E.captureConflictResolutionEvidence(st,a,action,{preferredTarget:conflict.preferredTarget,associationReasons:conflict.associationReasons,observation:conflict.observation,candidates:candidates.map(c=>({kind:c.kind,score:c.score,contributors:c.contributors,selectedTarget:c.selectedTarget?{kind:'slot',id:c.selectedTarget.id}:null})),selection:{kind:selection.kind,score:selection.score,selectedTarget:selection.selectedTarget?{kind:'slot',id:selection.selectedTarget.id}:null},priorConflictDecisionId:action.conflictResolutionDecisionId||null});
   }
   function beginConflictWait(st,a,action,conflict,selection,{phase='sleepConflictWait',requestEventId=null,source='occupancy'}={}){
     recordConflictHistory(st,action,selection.kind);action.phase=phase;action.sleepConflictPreferredSlotId=conflict.preferredTarget.id;action.sleepConflictWaitUntil=st.tick+SLEEP_CONFLICT_WAIT_TICKS;action.sleepConflictRequestEventId=requestEventId;action.sleepConflictWaitSource=source;
@@ -84,7 +84,7 @@
   }
   function performConflictInteraction(st,a,action,conflict,selection){
     const occupant=conflict.observation?.observable&&st.agents?.[conflict.observation.targetId];if(!occupant)return false;
-    const stimulus=SLEEP_CONFLICT_STIMULUS[selection.kind]||SLEEP_CONFLICT_STIMULUS.attention,attention=E.performAttentionInteraction?.(a,occupant,{stimulus});
+    if(typeof E.performAttentionInteraction!=='function')throw new Error('Sleep preferred Slot conflict requires generic attention interaction.');const stimulus=SLEEP_CONFLICT_STIMULUS[selection.kind]||SLEEP_CONFLICT_STIMULUS.attention,attention=E.performAttentionInteraction(a,occupant,{stimulus});
     if(!attention?.performed)return false;
     if(selection.kind==='attention'){beginConflictWait(st,a,action,conflict,selection,{source:'afterAttention'});return true;}
     const requestKind=selection.kind==='requestYield'?'yield':'driveAwayNonphysical',perceivedByTarget=!E.isSleeping?.(occupant),requestExpiresTick=st.tick+SLEEP_CONFLICT_WAIT_TICKS;
