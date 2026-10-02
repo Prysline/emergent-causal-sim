@@ -152,8 +152,9 @@
   function stepSleepConflictResponse(st,a,action){
     const request=(st.events||[]).find(e=>e.id===action?.requestEventId&&e.data?.action==='sleepSlotRequest'&&e.data?.target===a?.id);if(!request)return {finish:true};
     if(action.phase==='respond'){
-      const responseEventId=E.addEvent?.(action.response==='accept'?`${a.name}表示會讓出這個睡眠位置。`:`${a.name}拒絕讓出這個睡眠位置。`,'normal',[request.id],{actor:a.id,target:request.data.actor,action:'sleepSlotResponse',response:action.response==='accept'?'accepted':'refused',responseToRequest:request.id,slot:action.slotId});
-      action.responseEventId=responseEventId||null;if(action.response==='refuse')return {finish:true};action.phase='yield';return {finish:false};
+      const understoodEventId=E.addEvent?.(`${a.name}理解了這次睡眠位置要求。`,'normal',[request.id],{actor:a.id,target:request.data.actor,action:'sleepSlotRequestUnderstood',responseToRequest:request.id,slot:action.slotId});
+      const responseEventId=E.addEvent?.(action.response==='accept'?`${a.name}表示會讓出這個睡眠位置。`:`${a.name}拒絕讓出這個睡眠位置。`,'normal',[understoodEventId||request.id],{actor:a.id,target:request.data.actor,action:'sleepSlotResponse',response:action.response==='accept'?'accepted':'refused',responseToRequest:request.id,slot:action.slotId,understoodEventId:understoodEventId||null});
+      action.understoodEventId=understoodEventId||null;action.responseEventId=responseEventId||null;if(action.response==='refuse')return {finish:true};action.phase='yield';return {finish:false};
     }
     if(action.phase==='yield'){
       if(a.posture?.slotId===action.slotId){
