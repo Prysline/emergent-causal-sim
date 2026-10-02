@@ -65,6 +65,15 @@
   function rankSleepTargets(st,a,targets=SP.sleepTargets(st,a)){
     return (targets||[]).map(t=>evaluateSleepTarget(st,a,t)).sort((x,y)=>x.effectiveScore-y.effectiveScore||x.objectiveScore-y.objectiveScore||String(x.id).localeCompare(String(y.id)));
   }
+  function sleepTargetAssociations(st,a){
+    return SP.allSlots(st).filter(slot=>slot?.canSleep).map(slot=>{
+      const target={kind:'slot',id:slot.id},reasons=associationReasons(st,a,'sleep',target).filter(reason=>reason?.direction==='self');
+      if(!reasons.length)return null;
+      const contributors=preferenceContributors(st,a,'sleep',target).filter(c=>c?.direction==='self'||c?.kind==='habit');
+      const preferenceDelta=clamp(contributors.reduce((sum,c)=>sum+Math.max(0,Number(c?.delta)||0),0),0,PREFERENCE_CAP);
+      return {target,reasons,contributors,preferenceDelta};
+    }).filter(Boolean).sort((x,y)=>y.preferenceDelta-x.preferenceDelta||String(x.target.id).localeCompare(String(y.target.id)));
+  }
 
   function worldClaimEligibility(st,activity,targetRef){
     return (st?.claimEligibility||[]).find(x=>x?.activity===activity&&refKey(x.target)===refKey(targetRef))||null;
@@ -98,7 +107,7 @@
     return removed;
   }
 
-  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,preferenceContributors,evaluateSleepTarget,rankSleepTargets,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
+  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,preferenceContributors,evaluateSleepTarget,rankSleepTargets,sleepTargetAssociations,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
   window.SimUsage=Object.freeze(api);
   E.USAGE_PREFERENCE_VERSION=VERSION;
 })();
