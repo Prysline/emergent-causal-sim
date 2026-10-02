@@ -140,13 +140,16 @@
     settleObservedBid(responder,pick.bid.id);settleRequester(st,pick.bid);
   }
   function acceptYield(st,responder,requester,pick,evaluation){
-    const responseId=E.addEvent(responder.name+'答應讓出目前的睡眠位置。','good',[pick.bid.id],{actor:responder.id,target:requester.id,action:'acceptSleepSlotYield',responseToBid:pick.bid.id,slot:pick.bid.data?.slot||null,responseScore:evaluation.finalScore,position:E.positionRef?.(responder.position)||null});
+    const slotId=pick.bid.data?.slot||null,egress=slotId?SP.slotEgressNodes?.(st,slotId,responder,'walk')?.[0]||null:null;
+    const action=egress?E.buildAction?.(responder,{id:'wander',targetTile:egress}):null;
+    if(!action?.targetTile)return false;
+    const responseId=E.addEvent(responder.name+'答應讓出目前的睡眠位置。','good',[pick.bid.id],{actor:responder.id,target:requester.id,action:'acceptSleepSlotYield',responseToBid:pick.bid.id,slot:slotId,responseScore:evaluation.finalScore,position:E.positionRef?.(responder.position)||null});
     settleObservedBid(responder,pick.bid.id);settleRequester(st,pick.bid);
-    const action=E.buildAction?.(responder,{id:'wander'});if(!action)return;
     if(responder.activeIntent&&responder.action){responder.action=null;responder.activeIntent=null;}
-    const intent={id:'intent:'+responder.id+':'+st.tick+':respondSleepSlotRequest:'+pick.bid.id,kind:'respondSleepSlotRequest',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:pick.bid.id,responseEventId:responseId,slotId:pick.bid.data?.slot||null}};
+    const intent={id:'intent:'+responder.id+':'+st.tick+':respondSleepSlotRequest:'+pick.bid.id,kind:'respondSleepSlotRequest',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:pick.bid.id,responseEventId:responseId,slotId:slotId}};
     action.intentId=intent.id;responder.action=action;responder.activeIntent=intent;
-    responder.pendingSleepSlotYield={bidId:pick.bid.id,responseEventId:responseId,slotId:pick.bid.data?.slot||null,requesterId:requester.id};
+    responder.pendingSleepSlotYield={bidId:pick.bid.id,responseEventId:responseId,slotId:slotId,requesterId:requester.id};
+    return true;
   }
   function promoteYieldResponses(st){
     for(const responder of Object.values(st.agents||{})){
