@@ -6,6 +6,7 @@
       {id:'socialOutcome.capture-events',order:100},
       {id:'memoryDeliberation.capture-idle',order:200},
       {id:'affect.decay',order:250},
+      {id:'sleepConflict.respond',order:275},
       {id:'humanSocial.prepare',order:300},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
