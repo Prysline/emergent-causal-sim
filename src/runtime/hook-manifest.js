@@ -6,6 +6,7 @@
       {id:'socialOutcome.capture-events',order:100},
       {id:'memoryDeliberation.capture-idle',order:200},
       {id:'affect.decay',order:250},
+      {id:'sleepConflict.respond',order:275},
       {id:'humanSocial.prepare',order:300},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
@@ -16,6 +17,7 @@
     ],
     afterTick:[
       {id:'spatial.effects',order:100},
+      {id:'sleepConflict.complete-yield',order:150},
       {id:'intent.reconcile-after',order:200},
       {id:'socialBid.settle',order:300},
       {id:'intent.recover-aborts',order:400},
