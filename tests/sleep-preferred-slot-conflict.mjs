@@ -57,7 +57,7 @@ assert.equal(evidence.preferredSlot.id,'bed:left');
 assert.ok(evidence.associationReasons.some(x=>x.key==='assignedToSelf'));
 assert.equal(evidence.observation.targetId,responder.id);
 assert.ok(evidence.candidates.length>=5);
-const frozenObservedAction=evidence.observation.observedActionKind;responder.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{x:2,y:2},oneShot:true};
+const frozenObservedAction=evidence.observation.observedActionKind;responder.action=E.buildAction(responder,{id:'wander'});E.ensureIntentForAction(st,responder);
 assert.equal(evidence.observation.observedActionKind,frozenObservedAction,'later responder state must not backfill prior conflict evidence');
 noIssues('assigned + alternate');
 
