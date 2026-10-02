@@ -19,7 +19,7 @@ function bind(a,kind,intentKind,extra={}){
 E.reset(20260911);
 let st=E.getState();
 assert.equal(st.version,'11.44.0-sleep-slot-conflict');
-assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.12.3-replan-preemption');
+assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 noIssues('reset');
 
 // Hard Action failure does not automatically destroy a still-valid Intent.
@@ -83,17 +83,33 @@ assert.equal(eventsByAction('socialWaitEnded').some(e=>e.data?.bidId===bidId),fa
 assert.ok(eventsByAction('intentPreempt').some(e=>e.data?.priorIntentId?.includes('awaitResponse')));
 noIssues('emergency preempts private waiter');
 
+// Sleep is normally protected, but its private preferred-Slot conflict wait is explicitly interruptible.
+E.reset(20260911);st=E.getState();human=st.agents.zhen;
+human.needs.thirst=20;human.needs.hunger=99;human.needs.sleepNeed=80;
+bind(human,'sleep','sleep',{phase:'conflictWait',conflictPreferredSlot:'bed:left',conflictReassessTick:st.tick+4});
+assert.equal(E.emergencyPreemptibleAction(human),true,'only the sleep conflict-wait phase should opt into emergency preemption');
+E.tick();st=E.getState();human=st.agents.zhen;
+const conflictPreempt=eventsByAction('intentPreempt')[0];
+assert.ok(conflictPreempt,'emergency hunger must interrupt preferred-Slot occupancy wait');
+assert.equal(conflictPreempt.data.priorActionKind,'sleep');
+assert.equal(conflictPreempt.data.emergencyNeed,'hunger');
+assert.equal(human.activeIntent?.source?.type,'emergency');
+assert.equal(human.action?.kind,'eat');
+bind(human,'sleep','sleep',{phase:'chooseSurface'});
+assert.equal(E.emergencyPreemptibleAction(human),false,'ordinary sleep phases must remain protected from generic emergency switching');
+noIssues('emergency preempts only sleep conflict wait');
+
 // Conservative first-stage policy protects high/atomic workflows from generic emergency switching.
 E.reset(20260911);st=E.getState();human=st.agents.zhen;
 human.needs.thirst=99;human.needs.hunger=80;human.needs.sleepNeed=20;
 const eatIntentId=bind(human,'eat','satisfyHunger',{phase:'prepare'});
 E.tick();st=E.getState();human=st.agents.zhen;
-assert.equal(eventsByAction('intentPreempt').length,0,'eat workflow should not be emergency-preempted by the conservative v11.12.3 policy');
+assert.equal(eventsByAction('intentPreempt').length,0,'eat workflow should not be emergency-preempted by the conservative protected-workflow policy');
 assert.equal(human.activeIntent?.id,eatIntentId);
 assert.equal(human.activeIntent?.kind,'satisfyHunger');
 noIssues('protected workflow remains stable');
 
-// Requester timeout remains private: v11.12.3 must not reinterpret it as a responder hard invalidation.
+// Requester timeout remains private: current interruption policy must not reinterpret it as a responder hard invalidation.
 E.reset(41);st=E.getState();
 const requester=st.agents.orange,responder=st.agents.zhou;
 const socialBidId=E.addEvent('橘子發出一次測試用社交邀請。','good',[],{actor:'orange',target:'zhou',action:'seekHuman',socialBid:true,bidKind:'animalAffection',bidFrom:'orange',bidTo:'zhou',perceivedByTarget:true});
