@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -129,6 +129,16 @@ World Authoring v11 以獨立 `usageAssignments[]` 保存正式使用指派，�
 
 Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-private record；每次 reselection 建立新 record，保留 `parentDecisionId` 與 `priorTargetDecisionId`，不覆寫舊 evidence。Memory 只在 actor 自己實際形成 structured sleep-start experience 時更新 `usageHabits` persistent summary；habit strength 採 saturation gain + lazy decay。Inspector 只在 Agent Debug context 投影 Habit / Target Selection Evidence，並明確標示「私人」；World / Furniture presentation 不得把它翻成公共「這是某人的床」。
 
+### Sleep preferred Slot conflict
+
+fixed-Slot sleep conflict 的 owner 是 Deliberation，而不是 Spatial 或 Usage。被 Agent 佔用的 preferred Slot 繼續由 canonical occupancy 排除於 `SP.sleepTargets()`；Deliberation 另外查詢該 Slot 的 assignment / Runtime Claim / Usage Habit Association Reasons，並只透過 shared `observeAgentContext(...)` 取得 decision-time occupant snapshot。第一版不處理 ordinary Object occupancy、free-surface packing 或 forced Agent relocation。
+
+resolution candidates 可以包含合法替代、有限 occupancy wait、generic attention、Human 讓位 request、Human 非物理 drive-away 與暫時放棄。這些不是硬編碼優先序；Association Reasons 只作 bounded contributor。Animal occupant 不取得 Human-only request / drive-away shortcut。occupancy wait 使用 sleep conflict 自己的 Action phase / semantic source，不冒充 Social Bid `awaitResponse`；只有 conflict wait phases 可被既有 soft reconsideration / emergency preemption 中斷，真正 sleeping phase仍維持 protected。
+
+跨 Agent request 以 canonical World Event / Social Bid boundary 傳遞，responder 只從自己的 `observedSocialBids` 建立 responder-local Intent / Action。requester 不得直接修改 responder posture / position / Action / Intent。perceived、understood、accepted / refused / delayed 與 actual Slot release 是不同事實；wake consequence 也不等於其中任何一個。
+
+Conflict Resolution Evidence 延伸既有 Decision Evidence owner，保存 `parentDecisionId`、preferred Slot、Association Reasons、conflict reason、frozen decision-time Observation、evaluated candidates、selected resolution 與 `priorConflictDecisionId`。它是 Agent-private downstream evidence，不取代 occupancy / Usage truth，也不得事後回填 occupant 的新狀態。
+
 ### Agent-context Observation / Attention boundary
 
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
@@ -177,6 +187,7 @@ Relationship 同樣遵守方向性 private truth：`A.relationships[B]` 與 `B.r
 - soft reconsideration / hysteresis
 - requester-private `awaitResponse`
 - responder-private `respondSocialBid`
+- responder-private `respondSleepSlotConflict`
 
 動物互動使用 canonical `interactWithAnimal` Intent 與 `petAnimal` Action。是否能撫摸某 target 由 species profile / affordance 與可達性等實際條件判斷，不依 Cat / Dog / Rabbit 等物種名稱建立平行 Action kind。
 
