@@ -43,8 +43,8 @@ function assertIneligibleApplySkipsCandidateWork(label,expectedReason,setup){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.43.0-attention-observation');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(st.version,'11.44.0-sleep-slot-conflict');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);
 noIssues('reset');
