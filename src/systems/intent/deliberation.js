@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.42.0-usage-preference-sleep';
+  const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.44.0-sleep-slot-conflict';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
   function routePreferenceForAction(st,a,action=a?.action){
@@ -63,6 +63,55 @@
       default:return 0;
     }
   }
+
+  const clamp01=v=>Math.max(0,Math.min(1,v));
+  function sleepConflictAssociationScore(reason){
+    if(reason?.direction!=='self')return 0;
+    if(reason.kind==='assignment')return 8;
+    if(reason.kind==='claim')return 5;
+    if(reason.kind==='habit')return 4*clamp01(Number(reason.signal)||0);
+    return 0;
+  }
+  function preferredSleepConflicts(st,a){
+    const U=window.SimUsage;if(!U?.associationReasons||!SP.slotOccupant)return [];
+    const out=[];
+    for(const furniture of Object.values(st.furniture||{}))for(const slot of furniture.slots||[]){
+      if(!slot?.canSleep||!SP.slotAllows?.(slot,a)||!SP.slotPoseFits?.(slot,a,'lying'))continue;
+      const target={kind:'slot',id:slot.id};
+      const reasons=U.associationReasons(st,a,'sleep',target).filter(r=>r?.direction==='self');
+      if(!reasons.length)continue;
+      const occupant=SP.slotOccupant(st,slot.id,a.id);if(!occupant)continue;
+      const observation=E.observeAgentContext?.(st,a,occupant)||Object.freeze({observable:false,reason:'observation-unavailable'});
+      const associationScore=Math.min(10,reasons.reduce((sum,r)=>sum+sleepConflictAssociationScore(r),0));
+      out.push({preferredSlot:target,occupantId:occupant.id,associationReasons:reasons,associationScore,observation});
+    }
+    return out.sort((x,y)=>y.associationScore-x.associationScore||String(x.preferredSlot.id).localeCompare(String(y.preferredSlot.id)));
+  }
+  function sleepConflictResolutionCandidates(st,a,conflict,{excludeResolution=null}={}){
+    const U=window.SimUsage;if(!conflict||!U)return [];
+    const legal=U.rankSleepTargets?.(st,a,SP.sleepTargets(st,a))||SP.sleepTargets(st,a);
+    const alt=legal[0]||null,noAlternate=!alt,urgency=clamp01(((Number(a?.needs?.sleepNeed)||0)-28)/72),insist=Number(conflict.associationScore)||0;
+    const out=[];
+    if(alt)out.push({kind:'useAlternate',score:52-insist*1.1-Math.min(10,Math.max(0,Number(alt.effectiveScore??alt.score)||0)*.18),target:{kind:'slot',id:alt.id},targetEvaluation:alt,contributors:[{kind:'association',key:'preferredSlot',role:'conflictResolution',value:insist},{kind:'objective',key:'alternateSleepTarget',role:'conflictResolution',value:Number(alt.effectiveScore??alt.score)||0}]});
+    out.push({kind:'wait',score:38+insist*1.05+(1-urgency)*4+(noAlternate?8:0),contributors:[{kind:'association',key:'preferredSlot',role:'conflictResolution',value:insist},{kind:'need',key:'sleepNeed',role:'conflictResolution',value:Number(a?.needs?.sleepNeed)||0}]});
+    out.push({kind:'abandon',score:18+(1-urgency)*8-insist*.45,contributors:[{kind:'need',key:'sleepNeed',role:'conflictResolution',value:Number(a?.needs?.sleepNeed)||0}]});
+    const obs=conflict.observation;
+    if(obs?.observable){
+      const sleeping=obs.observedActionKind==='sleep'&&obs.observedPosture==='lying';
+      out.push({kind:'gainAttention',score:36+insist+urgency*6+(noAlternate?5:0)+(sleeping?4:0),targetAgent:obs.targetId,contributors:[{kind:'association',key:'preferredSlot',role:'conflictResolution',value:insist},{kind:'observation',key:'occupantContext',role:'conflictResolution',observedTick:obs.observedTick,observedActionKind:obs.observedActionKind,observedPosture:obs.observedPosture}]});
+      if(obs.observedAgentKind==='human'){
+        out.push({kind:'requestYield',score:39+insist*1.15+urgency*5+(noAlternate?6:0),targetAgent:obs.targetId,contributors:[{kind:'association',key:'preferredSlot',role:'conflictResolution',value:insist},{kind:'observation',key:'humanOccupant',role:'conflictResolution',observedTick:obs.observedTick}]});
+        out.push({kind:'assertYield',score:30+insist*1.2+urgency*8+(noAlternate?7:0),targetAgent:obs.targetId,contributors:[{kind:'association',key:'preferredSlot',role:'conflictResolution',value:insist},{kind:'observation',key:'humanOccupant',role:'conflictResolution',observedTick:obs.observedTick}]});
+      }
+    }
+    return out.filter(x=>x.kind!==excludeResolution).sort((x,y)=>y.score-x.score||x.kind.localeCompare(y.kind));
+  }
+  function sleepPreferredSlotConflictDecision(st,a,options={}){
+    const conflict=preferredSleepConflicts(st,a)[0]||null;if(!conflict)return null;
+    const candidates=sleepConflictResolutionCandidates(st,a,conflict,options),selected=candidates[0]||null;
+    return selected?{conflict,candidates,selected,evaluatedTick:st.tick}:null;
+  }
+
   function candidateIntents(st,a){
     const out=[];
     const push=(intentKind,actionKindValue,extra={})=>{const utility=utilityForIntent(st,a,intentKind);if(utility>0)out.push({intentKind,actionKind:actionKindValue,utility,decisionContributors:E.decisionContributorsForAction?.(a,actionKindValue)||[],...extra});};
@@ -153,5 +202,5 @@
   if(!E.registerRuntimeHook)throw new Error('systems/intent/deliberation.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
 
-  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
+  Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,routePreferenceForAction,utilityForIntent,candidateIntents,preferredSleepConflicts,sleepConflictResolutionCandidates,sleepPreferredSlotConflictDecision,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration});
 })();
