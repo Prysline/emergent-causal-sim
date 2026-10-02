@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -134,6 +134,14 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
 
 通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+### Sleep preferred Slot conflict boundary
+
+`11.44.0-sleep-slot-conflict` 讓 fixed sleep Slot 的偏好衝突進入既有 Deliberation，而不改寫 Spatial legality。`SimSpatial.sleepTargets()` 仍只回 legal target；occupied Slot 仍由 `agent.posture.slotId` 的 canonical occupancy 排除。Deliberation 另以 `SimUsage.associationReasons()` / preference contributors 辨識 requester 對 occupied Slot 的 assignment / claim / habit 關聯，並只透過 `observeAgentContext(...)` 取得 occupant-specific decision-time snapshot。
+
+第一版 conflict candidates 為 legal alternate、finite re-evaluation wait、generic attention、Human `requestYield` 與 Human `nonphysicalShoo`。Animal occupant 不取得 Human-only request / shoo candidate。Sleep conflict wait 是 `sleep` Action 的獨立 phase，不冒充 Social `awaitResponse`；它有明確 re-evaluation tick，且只在這個 phase 開放既有 soft reconsideration，因此更高優先需求可以中斷等待，而正常 sleep phases 仍受保護。
+
+Conflict Resolution Evidence 是 Decision Evidence 的 downstream Agent-private record；保存 parent decision、preferred Slot、Association Reason、decision-time Observation、evaluated candidates、selected resolution、evaluated tick 與 prior conflict decision。request / response / actual Slot release 保持分離；request / shoo 只建立 observable interaction + Social Bid，Human responder 可以在自己的 response policy 中 accept / decline / delay / no-response，但 response 本身不直接騰空 Slot。
 
 ### Agent-private Truth
 
