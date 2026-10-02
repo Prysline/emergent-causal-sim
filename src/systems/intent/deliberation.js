@@ -15,13 +15,22 @@
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
   function preferredSleepAssociations(st,a){
-    const U=window.SimUsage;
-    if(!U?.sleepTargetAssociations){
-      const hasUsageFacts=(st?.usageAssignments?.length||0)>0||(st?.usageClaims?.length||0)>0||Object.keys(a?.usageHabits||{}).length>0;
-      if(hasUsageFacts)throw new Error('Preferred sleep conflict requires SimUsage sleepTargetAssociations() when usage facts exist.');
+    const U=window.SimUsage,hasUsageFacts=(st?.usageAssignments?.length||0)>0||(st?.usageClaims?.length||0)>0||Object.keys(a?.usageHabits||{}).length>0;
+    if(typeof U?.associationReasons!=='function'||typeof U?.preferenceContributors!=='function'){
+      if(hasUsageFacts)throw new Error('Preferred sleep conflict requires canonical Usage association owners when usage facts exist.');
       return [];
     }
-    return U.sleepTargetAssociations(st,a);
+    const cap=Number(U.PREFERENCE_CAP)||10,out=[];
+    for(const slot of SP.allSlots?.(st)||[]){
+      if(!slot?.canSleep)continue;
+      const target={kind:'slot',id:slot.id};
+      const reasons=U.associationReasons(st,a,'sleep',target).filter(reason=>reason?.direction==='self'&&Number(reason.signal)>0);
+      if(!reasons.length)continue;
+      const contributors=U.preferenceContributors(st,a,'sleep',target).filter(c=>c?.direction==='self'&&Number(c.delta)>0);
+      const strength=clamp(contributors.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,cap);
+      out.push({target,reasons,contributors,strength});
+    }
+    return out.sort((x,y)=>y.strength-x.strength||String(x.target.id).localeCompare(String(y.target.id)));
   }
   function preferredSleepConflictFor(st,a){
     if(!st||!a||a.offMap)return null;
