@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION='11.42.0-usage-preference-sleep';
+  const VERSION='11.44.0-sleep-slot-conflict';
   const PREFERENCE_CAP=10;
   const DELTA=Object.freeze({assignment:8,claim:5,habit:4,speciesActivity:2});
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
@@ -40,6 +40,13 @@
     if(habit?.effectiveStrength>0)out.push({kind:'habit',key:'habitualForSelf',role:'targetSelection',direction:'self',signal:habit.effectiveStrength,sourceRef:habit.lastSourceMemoryId||null,target:clone(targetRef),strength:habit.effectiveStrength,lastUsedTick:habit.lastUsedTick,useCount:habit.useCount});
     return out;
   }
+
+  function sleepAssociationTargets(st,a){
+    return SP.allSlots(st).filter(slot=>slot.canSleep&&SP.slotAllows(slot,a)&&SP.slotPoseFits(slot,a,'lying')).map(slot=>{
+      const target={kind:'slot',id:slot.id},reasons=selfAssociationReasons(associationReasons(st,a,'sleep',target));return reasons.length?{target,reasons}:null;
+    }).filter(Boolean).sort((x,y)=>String(x.target.id).localeCompare(String(y.target.id)));
+  }
+  function selfAssociationReasons(reasons){return (reasons||[]).filter(r=>r?.direction==='self'&&Number(r.signal)>0);}
 
   function speciesActivityContributor(st,a,activity,targetRef){
     if(activity!=='sleep'||targetRef?.kind!=='slot')return null;
@@ -98,7 +105,7 @@
     return removed;
   }
 
-  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,preferenceContributors,evaluateSleepTarget,rankSleepTargets,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
+  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,selfAssociationReasons,sleepAssociationTargets,preferenceContributors,evaluateSleepTarget,rankSleepTargets,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
   window.SimUsage=Object.freeze(api);
   E.USAGE_PREFERENCE_VERSION=VERSION;
 })();
