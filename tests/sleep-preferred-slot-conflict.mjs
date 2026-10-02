@@ -33,7 +33,7 @@ assert.equal(conflict.target.id,'bed:left');assert.equal(conflict.observation.ob
 let legal=U.rankSleepTargets(st,a),action=E.buildAction(a,{id:'sleep'});a.action=action;E.ensureIntentForAction(st,a);E.adoptDecisionEvidence(st,a,action,{source:{type:'test',intentKind:'sleep'},contributors:[]});
 let resolution=E.chooseSleepConflictResolution(st,a,action,legal);
 for(const kind of ['alternate','wait','attention','requestYield','driveAway'])assert.ok(resolution.candidates.some(c=>c.kind===kind),`Human+alternate must expose ${kind}`);
-const frozen=structuredClone(resolution.evidence.observation);human.action={kind:'wander',phase:'move',started:st.tick};human.posture={kind:'standing',slotId:null,furnitureId:null};
+const frozen=structuredClone(resolution.evidence.observation);human.action={kind:'wander',phase:'move',started:st.tick};human.posture={kind:'standing',slotId:null,furnitureId:null};human.activeIntent=null;E.reconcileIntents(st);
 assert.deepEqual(resolution.evidence.observation,frozen,'Conflict Resolution Evidence must keep the decision-time observation snapshot');
 assert.equal(resolution.evidence.parentDecisionId,action.decisionId);
 assert.equal(E.currentConflictResolutionEvidence(a).id,resolution.evidence.id);
