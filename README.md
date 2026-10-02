@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.43.0・Attention + Agent-context observation**（`11.43.0-attention-observation`）。
+目前 runtime marker：**v11.44.0・Sleep preferred Slot conflict**（`11.44.0-sleep-slot-conflict`）。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -24,6 +24,7 @@
 - `Agent.activeIntent` 是 Agent-private 短期目的，與 `action.kind` 分工不同；`action.intentId` 只作 Action → Active Intent linkage。
 - Social Bid 是可觀察的 World Event；requester waiting、responder Intent、episodic memory、Affect 都是各 Agent 自己的 private state，不建立共享心理 lifecycle registry。
 - Agent-context observation 由 Engine 的 `observeAgentContext(...)` 單一 query 持有目前 coarse observability 規則；Social timeout 與後續 conflict consumer 只能消費其 snapshot。通用 attention interaction 只保存 `interactionPurpose + stimulus kind/intensity` 並可觸發既有 wake consequence，不自動代表注意已捕捉、request 已理解／接受或 responder 已採取行動。
+- **Sleep preferred Slot conflict**：occupied preferred Slot 仍不會被塞回 `sleepTargets()`；Deliberation 以 assignment / claim / habit Association Reason、shared Agent-context Observation 與 legal alternate targets 組合 Agent-private conflict candidates。第一版可比較 alternate、有限期等待、attention、Human request yield 與 nonphysical shoo；request / response / Slot release 分離，requester 不直接改寫 responder posture / position / private state。Conflict Resolution Evidence 保存 decision-time snapshot，re-evaluation 以 prior decision 串接。
 - Episodic Memory 保存 Agent-local observable projection，不複製完整 World Event，也不把另一個 Agent 的 private state 當成可觀察資訊。
 - Relationship 也是 Agent-private directional state：`A → B` 與 `B → A` 分開保存，只承接 A 自己的 historical appraisal consolidation，不建立共享 pair score。
 
