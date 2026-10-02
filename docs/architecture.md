@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -72,6 +72,16 @@ World v4 / Door-Opening-Exit slice 將 Grid / Wall decision gate 落成正式 co
 Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
 
 Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**。`SimEditorPreviewBridge` 只在明確 `?preview=editor` 時讀取同 origin `sessionStorage` handoff；沒有 query flag 的一般 simulator load 永遠使用 `DEFAULT_WORLD_AUTHORING`。`world.js` 的 `createInitialStateFromAuthoring(authoring, seed)` 與既有 `createInitialState(seed)` 共用同一 canonical named initializer pipeline；Engine 在頁面啟動時只捕捉一次有效 preview snapshot，因此 Reset deterministic 重建同一 snapshot，不形成可持久污染 default world 的 hidden override。
+
+### Sleep preferred Slot conflict boundary
+
+Sleep target legality 與 preference / conflict reasoning 保持分層。Spatial 的 `SP.sleepTargets()` 只回 objective legal sleep targets；Agent 佔用的 Slot 即使是 assignment / claim / habit preferred target 也維持不可用。Usage Preference 只提供 Association Reason，不建立第二份 occupancy truth，也不回饋 general sleep Action utility。Deliberation 以 `preferredSleepConflicts(...)` 組合這些 Association Reason、canonical `SP.slotOccupant(...)` 是否存在 occupancy conflict，以及 Engine-owned `observeAgentContext(...)` snapshot；只有實際可觀察到 occupant 時才產生 occupant-specific attention / Human request candidates。
+
+Conflict Resolution Evidence 是既有 Decision Evidence 的 Agent-private downstream record，透過 `parentDecisionId` 連回採納中的 sleep Action；每次 reevaluation 另以 `priorConflictDecisionId` 串接，不改寫舊 snapshot。Evidence 可保存 preferred Slot、Association Reason、decision-time observed target identity / tick / Human-or-Animal classification / Action kind / posture、候選與 final resolution，但不得保存完整 responder object、未觀察 private state或 future-state backfill。
+
+execution 仍由 canonical sleep Action state machine持有。alternate 只能取自當下合法 `sleepTargets()`；occupancy wait 是 sleep-conflict 自己的有限 private lifecycle，不借名成 Social `awaitResponse`，且 emergency preemption 可中斷 wait。gain attention 重用 `performAttentionInteraction(...)`，wake consequence 不等於 understood / accept。Human yield request / assert 透過既有 Social Bid observable reference 讓 responder 自己看見；Human Social owner再產生 understood、accept/refuse/delay，accept 後 responder 自己建立離位 Action。requester 不直接改 responder position / posture / Action / Intent / private state；只有 canonical Slot occupancy 真正解除才建立 completion event。Animal 第一版沒有 Human-only yield shortcut。
+
+v1 的 candidate score、attention `sound / 24` 與 idle Human responder `sleepNeed >= 70` reference split 都只是 current calibration seam；它們可以日後由 Personality / Relationship / Context contributor擴充，但不改上述 truth / agency boundary，也不成為 World authored ownership。
 
 ### Carried Container handling-risk boundary
 
