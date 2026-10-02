@@ -92,6 +92,7 @@
       case'cleanFloor':cost=p.phase==='move'?5:13;break;
       case'groom':cost=12;break;
       case'rest':cost=p.phase==='chooseSurface'?3:p.phase==='move'?6:p.phase==='settle'?9:12;break;
+      case'sleep':cost=String(p.phase||'').startsWith('conflict')?2:Infinity;break;
       default:return Infinity;
     }
     if(a.held)cost+=10;
