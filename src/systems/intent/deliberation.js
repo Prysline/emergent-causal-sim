@@ -15,7 +15,7 @@
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
   function sleepConflictAssociation(st,a,slotId){
-    const U=window.SimUsage;if(!U?.associationReasons||!U?.preferenceContributors)return null;
+    const U=window.SimUsage;if(!U?.associationReasons||!U?.preferenceContributors)throw new Error('Preferred sleep conflict requires SimUsage association owner.');
     const ref={kind:'slot',id:slotId},reasons=U.associationReasons(st,a,'sleep',ref).filter(r=>r?.direction==='self'&&Number(r.signal)>0);
     if(!reasons.length)return null;
     const contributors=U.preferenceContributors(st,a,'sleep',ref).filter(c=>c?.direction==='self'&&Number(c.delta)>0),strength=clamp(contributors.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,U.PREFERENCE_CAP||10);
