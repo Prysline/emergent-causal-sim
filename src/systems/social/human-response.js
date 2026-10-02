@@ -97,10 +97,16 @@
       if(responder.kind!=='human'||responder.offMap||E.isSleeping?.(responder)||responder.action||responder.activeIntent)continue;
       const pick=newestObservedSleepConflictBid(st,responder);if(!pick)continue;
       const bid=pick.bid,requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];if(!requester||requester.offMap||!SP.isAtInteraction(st,responder,{kind:'agent',id:requester.id},'social'))continue;
+      const alreadyUnderstood=Object.values(st.causes||{}).some(e=>e?.data?.action==='understandSleepSlotRequest'&&e.data.responseToBid===bid.id&&e.data.actor===responder.id);
+      if(!alreadyUnderstood)E.addEvent(responder.name+'理解了'+requester.name+'對睡眠位置的要求。','normal',[bid.id],{actor:responder.id,target:requester.id,action:'understandSleepSlotRequest',responseToBid:bid.id,slot:bid.data?.slot||null,position:E.positionRef?.(responder.position)||null});
       const evaluation=sleepConflictResponseEvaluation(responder,requester,bid);if(evaluation.response==='delay')continue;
       const accepted=evaluation.response==='accept',action=accepted?'acceptSleepSlotYield':'declineSleepSlotYield',text=accepted?responder.name+'回應了'+requester.name+'的讓位要求，表示願意處理目前的位置衝突。':responder.name+'回應了'+requester.name+'的讓位要求，這次沒有答應讓位。';
-      E.addEvent(text,accepted?'good':'normal',[bid.id],{actor:responder.id,target:requester.id,action,responseToBid:bid.id,sleepSlotResponse:evaluation.response,slot:bid.data?.slot||null,position:E.positionRef?.(responder.position)||null});
+      const responseId=E.addEvent(text,accepted?'good':'normal',[bid.id],{actor:responder.id,target:requester.id,action,responseToBid:bid.id,sleepSlotResponse:evaluation.response,slot:bid.data?.slot||null,position:E.positionRef?.(responder.position)||null});
       settleObservedBid(responder,bid.id);
+      if(accepted){
+        responder.action={kind:'yieldSleepSlot',phase:'acknowledged',started:st.tick,wait:0,responseToBid:bid.id,requesterId:requester.id,slotId:bid.data?.slot||null,acceptResponseEventId:responseId};
+        E.ensureIntentForAction?.(st,responder);
+      }
     }
   }
   function noResponseInterpretationWeight(waitEvent){const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;if(d.responderContextObserved!==true)return .22;const kind=d.observedResponderActionKind||null;if(kind==='sleep'||d.observedResponderPosture==='lying'&&kind==='sleep')return .05;if(kind&&HIGH_COMMITMENT_ACTIONS.has(kind))return .12;if(kind)return .28;return .45;}
