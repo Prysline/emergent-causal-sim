@@ -46,7 +46,7 @@
   function conflictCandidates(st,a,conflict){
     const legal=U.rankSleepTargets(st,a,SP.sleepTargets(st,a)),bestAlternate=legal[0]||null,observation=observationForConflict(st,a,conflict);
     const insist=conflict.strength,noAlternate=!bestAlternate,prior=lastConflictEvidence(a,conflict.slot.id),out=[];
-    const push=(kind,score,contributors=[],extra={})=>{if(prior?.selectedResolution===kind)score-=6;out.push({kind,score:Math.round(score*1000)/1000,contributors:clone(contributors),...extra});};
+    const push=(kind,score,contributors=[],extra={})=>out.push({kind,score:Math.round(score*1000)/1000,contributors:clone(contributors),...extra});
     const common=[{kind:'association',key:'preferredSlotInsistence',role:'modifier',value:insist}];
     if(bestAlternate)push('alternate',52-insist*1.8-clamp(Number(bestAlternate.effectiveScore)||0,-10,25)*.35,common,{target:{kind:'slot',id:bestAlternate.id}});
     push('wait',35+insist*1.4+(noAlternate?8:0),common);
@@ -77,9 +77,9 @@
   function beginOccupancyWait(st,a,action,conflict){
     action.phase='conflictWait';action.preferredConflictSlotId=conflict.slot.id;action.conflictWaitStartedTick=st.tick;action.conflictWaitUntilTick=st.tick+waitDurationTicks(conflict);return {handled:true,resolution:'wait'};
   }
-  function awaitResponseIntent(st,a,bidId,slotId){
+  function awaitResponseIntent(st,a,bidId,slotId,conflictDecisionId=null){
     const patience=Math.max(1,Number(E.REQUESTER_PATIENCE_TICKS)||3);
-    return {id:'intent:'+a.id+':'+st.tick+':awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict',preferredSlotId:slotId},patienceUntilTick:st.tick+patience};
+    return {id:'intent:'+a.id+':'+st.tick+':awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict',preferredSlotId:slotId,conflictDecisionId},patienceUntilTick:st.tick+patience};
   }
   function emitYieldBid(st,a,action,conflict,evaluation,mode){
     const observation=evaluation.observation,target=observation?.targetId&&st.agents?.[observation.targetId];if(!observation?.observable||!target)return beginOccupancyWait(st,a,action,conflict);
@@ -87,10 +87,10 @@
     const wasSleeping=observation.observedActionKind==='sleep',perceivedByTarget=!wasSleeping;
     const bidKind=mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYield',interactionKind=mode==='driveAway'?'nonPhysicalDriveAway':'requestYield';
     const text=mode==='driveAway'?a.name+'以較強硬的非物理方式要求'+target.name+'離開偏好的睡眠位置。':a.name+'要求'+target.name+'讓出偏好的睡眠位置。';
-    const bidId=E.addEvent(text,'normal',attention.eventId?[attention.eventId]:[],{actor:a.id,target:target.id,action:mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYieldRequest',slot:conflict.slot.id,socialBid:true,bidKind,interactionKind,expectsResponse:true,bidFrom:a.id,bidTo:target.id,perceivedByTarget,interactionPurpose:mode==='driveAway'?'driveAwayFromSleepSlot':'requestSleepSlotYield',position:E.positionRef?.(a.position)||null});
+    const bidId=E.addEvent(text,'normal',attention.eventId?[attention.eventId]:[],{actor:a.id,target:target.id,action:mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYieldRequest',slot:conflict.slot.id,socialBid:true,bidKind,interactionKind,expectsResponse:true,bidFrom:a.id,bidTo:target.id,perceivedByTarget,interactionPurpose:mode==='driveAway'?'driveAwayFromSleepSlot':'requestSleepSlotYield',conflictDecisionId:action.conflictResolutionDecisionId||null,position:E.positionRef?.(a.position)||null});
     const bid=st.causes?.[bidId];if(bid?.data)bid.data.bidId=bidId;
     if(perceivedByTarget&&bid)E.addObservedBid?.(st,target,bid,st.tick);
-    a.action=null;a.activeIntent=awaitResponseIntent(st,a,bidId,conflict.slot.id);
+    const conflictDecisionId=action.conflictResolutionDecisionId||null;a.action=null;a.activeIntent=awaitResponseIntent(st,a,bidId,conflict.slot.id,conflictDecisionId);
     return {handled:true,resolution:mode,bidId,perceivedByTarget};
   }
   function resolveSleepChoice(st,a,action){
