@@ -111,6 +111,13 @@ let snap=E.reconsiderationSnapshot(st,requester);
 assert.equal(snap.ok,true);assert.equal(snap.commitmentCost,2);assert.equal(snap.bestChallenger?.intentKind,'satisfyHunger');
 requester.action.phase='sleeping';snap=E.reconsiderationSnapshot(st,requester);assert.equal(snap.ok,false);assert.equal(snap.reason,'protected-action');
 
+// Emergency needs must also preempt conflict waiting instead of being blocked by the protected sleep action.
+requester.action={kind:'sleep',phase:'conflictWait',started:Math.max(0,st.tick-5),intentId:requester.activeIntent.id,preferredSleepSlotId:left.id,conflictWaitUntilTick:st.tick+3};
+requester.needs.hunger=96;requester.needs.sleepNeed=60;
+E.tick();
+assert.equal(requester.activeIntent?.kind,'satisfyHunger','emergency hunger must preempt sleep conflict waiting');
+assert.equal(requester.action?.kind,'eat','emergency hunger must replace the conflict-wait sleep action');
+
 assert.equal(globalThis.SimPerception,undefined,'first version must not introduce a full Perception subsystem');
 requester.action=null;requester.activeIntent=null;noIssues('sleep preferred Slot conflict');
 console.log('Sleep preferred Slot conflict regression: ok');
