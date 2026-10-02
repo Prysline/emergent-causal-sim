@@ -107,16 +107,20 @@
     return acceptUtility>=refuseUtility?{response:'accept',utility:acceptUtility,ownAssociationValue:own}:{response:'refuse',utility:refuseUtility,ownAssociationValue:own};
   }
   function responseCandidate(st,a){if(!a||a.kind!=='human'||a.offMap||E.isSleeping(a))return null;const pick=newestYieldBid(st,a);if(!pick)return null;const requester=st.agents?.[pick.bid.data.bidFrom];if(!requester||requester.offMap)return null;const ev=responseEvaluation(st,a,pick);return {...ev,bidId:pick.bid.id,requesterId:requester.id,preferredSlot:pick.bid.data.preferredSlot,observedTick:pick.ref.observedTick};}
-  function bindResponse(st,a,c){
+  function bindResponse(st,a,c,{softSnapshot=null,priorIntent=null,priorActionKind=null}={}){
     const action={kind:'sleepConflictResponse',phase:'respond',started:st.tick,wait:0,response:c.response,responseToBid:c.bidId,targetAgent:c.requesterId,preferredSlot:{kind:'slot',id:c.preferredSlot},ownAssociationValue:c.ownAssociationValue};
-    const intent={id:`intent:${a.id}:${st.tick}:respondSleepConflict:${c.bidId}`,kind:'respondSleepConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflict',bidId:c.bidId,observedTick:c.observedTick}};action.intentId=intent.id;a.action=action;a.activeIntent=intent;return true;
+    const intent={id:`intent:${a.id}:${st.tick}:respondSleepConflict:${c.bidId}`,kind:'respondSleepConflict',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflict',bidId:c.bidId,observedTick:c.observedTick}};action.intentId=intent.id;a.action=action;a.activeIntent=intent;
+    E.adoptDecisionEvidence?.(st,a,action,{source:{type:'sleepSlotConflictResponse',tick:st.tick,intentKind:intent.kind,bidId:c.bidId,observedTick:c.observedTick},contributors:[{kind:'socialBid',key:'sleepSlotConflict',role:'motivation',bidId:c.bidId,observedTick:c.observedTick,fromAgent:c.requesterId},{kind:'association',key:'responderPreferredSlotStrength',role:'modifier',value:c.ownAssociationValue}],utility:c.utility});
+    if(softSnapshot)E.addEvent(`${a.name}重新權衡後，改先回應睡眠位置讓位要求。`,'normal',[],{actor:a.id,action:'intentReconsider',priorIntentId:priorIntent?.id||null,priorIntentKind:priorIntent?.kind||null,priorActionKind:priorActionKind||null,intentId:intent.id,intentKind:intent.kind,nextActionKind:'sleepConflictResponse',challengerIntentKind:'respondSleepConflict',currentUtility:softSnapshot.currentUtility,challengerUtility:c.utility,switchMargin:softSnapshot.switchMargin,commitmentCost:softSnapshot.commitmentCost,switchThreshold:softSnapshot.switchThreshold,position:E.positionRef?.(a.position)||null});
+    return true;
   }
   function promoteResponses(st){
     for(const a of Object.values(st.agents||{})){
       if(a.kind!=='human'||a.offMap||E.isSleeping(a)||a.activeIntent?.kind==='respondSleepConflict')continue;const c=responseCandidate(st,a);if(!c)continue;
       if(!a.action&&!a.activeIntent){const best=E.candidateIntents?.(st,a)?.[0]||null;if(best&&best.utility>c.utility)continue;bindResponse(st,a,c);continue;}
       const snap=E.reconsiderationSnapshot?.(st,a);if(!snap?.ok||!Number.isFinite(snap.commitmentCost)||c.utility<=snap.switchThreshold)continue;
-      for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];if(a.held){const held=st.containers?.[a.held];if(held)held.position={...a.position};a.held=null;}a.action=null;a.activeIntent=null;bindResponse(st,a,c);
+      const priorIntent=clone(a.activeIntent),priorActionKind=a.action?.kind||null;
+      for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];if(a.held){const held=st.containers?.[a.held];if(held)held.position={...a.position};a.held=null;}a.action=null;a.activeIntent=null;bindResponse(st,a,c,{softSnapshot:snap,priorIntent,priorActionKind});
     }
   }
   function clearBidRef(a,bidId){if(a)a.observedSocialBids=(a.observedSocialBids||[]).filter(x=>x.bidId!==bidId);}
