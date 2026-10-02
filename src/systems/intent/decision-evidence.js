@@ -7,8 +7,9 @@
   function actionContext(action){
     if(!action)return null;
     const out={kind:action.kind,started:action.started};
-    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId'])if(action[key]!=null)out[key]=clone(action[key]);
+    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId','resolution','responseToBid'])if(action[key]!=null)out[key]=clone(action[key]);
     if(action.targetTile!=null)out.targetTile=clone(action.targetTile);
+    if(action.preferredSlot!=null)out.preferredSlot=clone(action.preferredSlot);
     return out;
   }
   function sameValue(a,b){return JSON.stringify(a)===JSON.stringify(b);}
@@ -16,7 +17,7 @@
     const action=a?.action,evidence=a?.decisionEvidence,ctx=evidence?.action;
     if(!action||!evidence||!ctx||action.decisionId!==evidence.id||ctx.kind!==action.kind||ctx.started!==action.started)return false;
     if(evidence.intentId&&action.intentId!==evidence.intentId)return false;
-    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId','targetTile'])if(Object.prototype.hasOwnProperty.call(ctx,key)&&!sameValue(ctx[key],action[key]))return false;
+    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId','resolution','responseToBid','preferredSlot','targetTile'])if(Object.prototype.hasOwnProperty.call(ctx,key)&&!sameValue(ctx[key],action[key]))return false;
     return true;
   }
   function selectedSocialTargetContributor(st,a,action,source){
@@ -63,6 +64,21 @@
     const evidence=a.targetSelectionEvidence.find(item=>item?.id===id)||null;
     return evidence&&evidence.parentDecisionId===a.action?.decisionId?evidence:null;
   }
+  function captureConflictResolutionEvidence(st,a,action,{preferredSlot,associationReasons=[],observation=null,evaluatedCandidates=[],selectedResolution,contributors=[],priorConflictDecisionId=null}={}){
+    const parentDecisionId=action?.decisionId;
+    if(!st||!a||!action||!parentDecisionId||preferredSlot?.kind!=='slot'||!preferredSlot.id||!selectedResolution)return null;
+    if(!Array.isArray(a.conflictResolutionEvidence))a.conflictResolutionEvidence=[];
+    const sequence=a.conflictResolutionEvidence.reduce((max,e)=>Math.max(max,Number(e?.sequence)||0),0)+1;
+    const id=`conflict-decision:${a.id}:${st.tick}:${sequence}`;
+    const evidence={id,sequence,parentDecisionId,preferredSlot:clone(preferredSlot),associationReasons:clone(associationReasons),observation:clone(observation),evaluatedCandidates:clone(evaluatedCandidates),selectedResolution,evaluatedTick:st.tick,contributors:clone(contributors)};
+    if(priorConflictDecisionId)evidence.priorConflictDecisionId=priorConflictDecisionId;
+    a.conflictResolutionEvidence.push(evidence);action.conflictResolutionDecisionId=id;return evidence;
+  }
+  function currentConflictResolutionEvidence(a){
+    const id=a?.action?.conflictResolutionDecisionId;if(!id||!Array.isArray(a?.conflictResolutionEvidence))return null;
+    const evidence=a.conflictResolutionEvidence.find(item=>item?.id===id)||null;
+    return evidence&&evidence.parentDecisionId===a.action?.decisionId?evidence:null;
+  }
   function routePathsSame(st,left,right){const a=left?.path||[],b=right?.path||[];return a.length===b.length&&a.every((node,index)=>SP?.nodeSame?SP.nodeSame(st,node,b[index]):sameValue(node,b[index]));}
   function handlingRouteMetrics(route,score){return {pathDistance:Number(route?.pathDistance),traversalCost:Number(route?.traversalCost),travelTime:Number(route?.travelTime),handlingRisk:{contentsLoss:Number(route?.handlingRisk?.contentsLoss)||0,containerDrop:Number(route?.handlingRisk?.containerDrop)||0},decisionScore:Number(score)};}
   function handlingRouteContributor(st,a,selected,baseline,preference){
@@ -82,5 +98,5 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/decision-evidence.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','deliberation.finalize-decision-evidence',()=>finalizeInitialDecisionEvidence(E.getState()),850);
-  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
+  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureConflictResolutionEvidence,currentConflictResolutionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
 })();
