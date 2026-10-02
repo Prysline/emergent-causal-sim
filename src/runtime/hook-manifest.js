@@ -6,6 +6,7 @@
       {id:'socialOutcome.capture-events',order:100},
       {id:'memoryDeliberation.capture-idle',order:200},
       {id:'affect.decay',order:250},
+      {id:'sleepSlotConflict.resolve-responses',order:275},
       {id:'humanSocial.prepare',order:300},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
@@ -22,6 +23,7 @@
       {id:'memory.process-events',order:500},
       {id:'socialResponse.resolve-pet-offers',order:600},
       {id:'humanSocial.resolve',order:700},
+      {id:'sleepSlotConflict.promote-responses',order:750},
       {id:'memoryDeliberation.correct-initial',order:800},
       {id:'deliberation.finalize-decision-evidence',order:850},
       {id:'socialOutcome.process',order:900}
