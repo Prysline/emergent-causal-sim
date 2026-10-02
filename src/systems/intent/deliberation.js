@@ -241,7 +241,6 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/deliberation.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','intent.soft-reconsideration',()=>applySoftReconsiderations(E.getState()),700);
-  E.registerActionLabelResolver?.('sleep.preferred-slot-conflict',(st,a)=>a?.action?.kind==='sleep'&&a.action.phase==='conflictWait'?'睡眠・暫時等待偏好位置狀況改變':null,60);
 
   Object.assign(E,{DELIBERATION_SCHEMA_VERSION:VERSION,SOFT_SWITCH_MARGIN,MIN_INTENT_HOLD_TICKS,SOFT_RECONSIDERABLE_ACTIONS,ROUTE_CONTENTS_RISK_WEIGHT_MAX,ROUTE_DROP_RISK_WEIGHT_MAX,SLEEP_CONFLICT_REASSESS_TICKS,SLEEP_CONFLICT_STIMULUS,routePreferenceForAction,utilityForIntent,candidateIntents,derivedCommitmentCost,reconsiderationSnapshot,applySoftReconsideration,preferredSleepConflictFor,sleepConflictResolutionCandidates,resolvePreferredSleepConflictStep,stepPreferredSleepConflictWait});
 })();
