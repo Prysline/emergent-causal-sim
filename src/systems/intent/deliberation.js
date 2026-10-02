@@ -66,8 +66,12 @@
     const bid=st.causes?.[bidId];if(bid?.data)bid.data.bidId=bidId;if(perceived&&bid)E.addObservedBid?.(st,target,bid,st.tick);
     return {attention,eventId:attention?.eventId||null,bidId};
   }
+  function sleepConflictObservationSignature(observation){
+    const o=observation||{},observable=o.observable===true;
+    return JSON.stringify({observable,reason:observable?null:o.reason||null,targetId:observable?o.targetId||null:null,observedAgentKind:observable?o.observedAgentKind||null:null,observedActionKind:observable?o.observedActionKind||null:null,observedPosture:observable?o.observedPosture||null:null});
+  }
   function enterSleepConflictWait(st,a,p,conflict,{sourceBidId=null,resolutionKind='waitForPreferredSlot'}={}){
-    p.phase='conflictWait';p.conflictPreferredSlot=conflict.slot.id;p.conflictOccupantId=conflict.occupantId;p.conflictReassessTick=st.tick+SLEEP_CONFLICT_REASSESS_TICKS;p.conflictSourceBidId=sourceBidId;p.conflictResolutionKind=resolutionKind;
+    p.phase='conflictWait';p.conflictPreferredSlot=conflict.slot.id;p.conflictOccupantId=conflict.occupantId;p.conflictObservationSignature=sleepConflictObservationSignature(conflict.observation);p.conflictReassessTick=st.tick+SLEEP_CONFLICT_REASSESS_TICKS;p.conflictSourceBidId=sourceBidId;p.conflictResolutionKind=resolutionKind;
     E.addEvent(a.name+'暫時等待睡眠位置狀況改變。','normal',sourceBidId?[sourceBidId]:[],{actor:a.id,action:'sleepConflictWait',visibility:'private',owner:a.id,preferredSlot:conflict.slot.id,resolutionKind,position:E.positionRef?.(a.position)||null});
   }
   function resolvePreferredSleepConflictStep(st,a,p,legalCandidates=[]){
@@ -83,7 +87,14 @@
   }
   function stepPreferredSleepConflictWait(st,a,p){
     const slotId=p?.conflictPreferredSlot;if(!slotId)return false;
-    if(SP.slotAvailable?.(st,slotId,a.id)||st.tick>=(Number(p.conflictReassessTick)||st.tick)){delete p.conflictPreferredSlot;delete p.conflictOccupantId;delete p.conflictReassessTick;delete p.conflictSourceBidId;delete p.conflictResolutionKind;p.phase='chooseSurface';return false;}
+    const occupant=SP.slotOccupant?.(st,slotId,a.id)||null;
+    let observationChanged=false;
+    if(occupant){
+      const observation=E.observeAgentContext?.(st,a,occupant)||Object.freeze({observable:false,reason:'observation-unavailable'});
+      const signature=sleepConflictObservationSignature(observation);
+      observationChanged=occupant.id===p.conflictOccupantId?signature!==p.conflictObservationSignature:observation.observable===true;
+    }
+    if(!occupant||SP.slotAvailable?.(st,slotId,a.id)||observationChanged||st.tick>=(Number(p.conflictReassessTick)||st.tick)){delete p.conflictPreferredSlot;delete p.conflictOccupantId;delete p.conflictObservationSignature;delete p.conflictReassessTick;delete p.conflictSourceBidId;delete p.conflictResolutionKind;p.phase='chooseSurface';return false;}
     return true;
   }
 
