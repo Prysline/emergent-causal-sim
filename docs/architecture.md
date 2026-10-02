@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -134,6 +134,14 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
 
 通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+### Preferred sleep Slot conflict boundary
+
+固定 sleep Slot 的 occupancy conflict 由 Deliberation 持有，不建立第二份 Spatial / Usage truth。Spatial 的 `sleepTargetAvailability(st, agent, slotId)` 是指定 sleep Slot objective legality / exclusion reason 的 owner；`sleepTargets()` 仍只回傳 legal candidates，occupied preferred Slot 不得被塞回候選。Usage Preference 的 `sleepAssociationTargets(...)` 只列舉 assignment / claim / Habit 等 self association，不把它們升格成 occupancy truth 或 general Action utility。
+
+Deliberation 只在 preferred association 遇到 Agent occupancy 時形成 Agent-private conflict reasoning，occupant-specific candidate 必須消費既有 `observeAgentContext(...)` snapshot。第一版 resolution candidates 是合法 alternate、有限期 occupancy wait、generic attention、Human request-yield 與 Human 非物理 drive-away；Animal 不套 Human-only request / drive-away。request / stimulus 只建立 canonical interaction facts與既有 wake consequence；wake、understood、accepted、實際離開與 Slot 再次 legal 仍是分離事實。
+
+Conflict Resolution Evidence 沿用 Decision Evidence owner，保存 parent decision、preferred Slot、Association Reasons、decision-time Observation snapshot、evaluated candidates、selected resolution、evaluated tick 與 prior conflict decision reference。重新評估建立新 record，不回填舊 snapshot。occupancy wait 不建立 reservation，並且只有 `sleep/conflictWait` phase 參與 soft reconsideration；真正 sleeping phase 仍保持 protected。
 
 ### Agent-private Truth
 
