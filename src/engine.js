@@ -355,7 +355,6 @@
       case'rest':action={...base,phase:'chooseSurface',restTicks:0};break;
       case'sleep':action={...base,phase:'chooseSurface',sleepTicks:0};break;
       case'sleepConflict':action=window.SimSleepConflict?.buildAction?.(state,a,choice)||null;break;
-      case'sleepConflictResponse':action=window.SimSleepConflict?.buildResponseAction?.(state,a,choice)||null;break;
       case'talk':{const other=choice.targetAgent?state.agents[choice.targetAgent]:nearestAgent(a,'human',{allowSleeping:false});action=other&&!other.offMap?{...base,phase:'move',targetAgent:other.id}:null;break;}
       case'petAnimal':{const animal=choice.targetAgent?state.agents[choice.targetAgent]:nearestPettableAnimal(a);action=canPetAnimal(a,animal)?{...base,phase:'move',targetAgent:animal.id}:null;break;}
       case'seekHuman':{const h=choice.targetAgent?state.agents[choice.targetAgent]:nearestAgent(a,'human');action=h&&!h.offMap&&isAnimalAgent(a)?{...base,phase:'move',targetAgent:h.id}:null;break;}
