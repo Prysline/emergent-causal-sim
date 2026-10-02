@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
+> `11.44.0-sleep-slot-conflict` 新增 beforeTick 350 `sleepConflict.responses`：它只處理 requester-private conflict response wait expiry 與 responder-local yield/refusal adoption。preferred Slot exclusion / candidate construction 本身仍是同步 query；occupied Slot 不進 `sleepTargets()`，Conflict Resolution Evidence 仍由既有 Decision Evidence owner保存。
+>
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
 > `11.41.0-carried-container-drop` 完成 Carried Containers P1 Slice D，但**沒有新增、刪除或重新排序 runtime hook**。同一 completed movement edge 的同步順序是：position commit → snapshot objective handling context → 既有 `onEnterTile` hazard → 必要的 Slice C contents-loss consequence → Slice D `containerDrop` occurrence。Drop 成功才清 `Agent.held` 並把 Container actual position 固定到 completed-edge destination node；正常 lifecycle `releaseHeld()` 不進這條 consequence path。Slice D v1 不做 drop-impact 二次 contents loss、Surface→floor 墜落或破損／彈跳／連續物理。planning / replan 仍不消耗 consequence RNG。
@@ -99,6 +101,7 @@ flowchart TD
 | 200 | `memoryDeliberation.capture-idle` | Memory → Deliberation | 記住 core 前真正 idle 的 Agent | afterTick 800 只應 correction 本來由 core 新做初始 deliberation 的 Agent |
 | 250 | `affect.decay` | Affect | 將 current Affect decay 到即將進入的新 tick | Human / animal responder preparation 與後續 core decision 都必須讀到同一個 decay 後 Current Affect phase |
 | 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder | responder candidate 的 Affect score 必須已完成本 tick decay；非 core-loop event 經 core event-created notification 同步形成合法 observation |
+| 350 | `sleepConflict.responses` | Sleep Conflict / Deliberation | expiry requester-private response wait，並讓 Human responder 以自己的 current state 評估 yield / refusal | 必須晚於 Human Social prepare、早於 animal response 與 core action execution；只讀 observed Bid / Agent-private state，不直接替 requester 改 responder |
 | 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
 | 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
