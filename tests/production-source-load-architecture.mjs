@@ -221,7 +221,7 @@ assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias'
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
-assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(E.USAGE_PREFERENCE_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
 assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless production prefix must be complete without Presentation observers');
