@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION='11.44.0-sleep-slot-conflict';
+  const VERSION='11.42.0-usage-preference-sleep';
   const PREFERENCE_CAP=10;
   const DELTA=Object.freeze({assignment:8,claim:5,habit:4,speciesActivity:2});
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
@@ -65,16 +65,6 @@
   function rankSleepTargets(st,a,targets=SP.sleepTargets(st,a)){
     return (targets||[]).map(t=>evaluateSleepTarget(st,a,t)).sort((x,y)=>x.effectiveScore-y.effectiveScore||x.objectiveScore-y.objectiveScore||String(x.id).localeCompare(String(y.id)));
   }
-  function sleepTargetAssociations(st,a){
-    return SP.allSlots(st).filter(slot=>slot?.canSleep).map(slot=>{
-      const target={kind:'slot',id:slot.id},reasons=associationReasons(st,a,'sleep',target).filter(reason=>reason?.direction==='self'&&Number(reason.signal)>0);
-      if(!reasons.length)return null;
-      const contributors=preferenceContributors(st,a,'sleep',target).filter(c=>c?.direction==='self'&&Number(c.delta)>0);
-      const strength=clamp(contributors.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,PREFERENCE_CAP);
-      return {target,reasons,contributors,strength};
-    }).filter(Boolean).sort((x,y)=>y.strength-x.strength||String(x.target.id).localeCompare(String(y.target.id)));
-  }
-
   function worldClaimEligibility(st,activity,targetRef){
     return (st?.claimEligibility||[]).find(x=>x?.activity===activity&&refKey(x.target)===refKey(targetRef))||null;
   }
@@ -107,7 +97,7 @@
     return removed;
   }
 
-  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,preferenceContributors,evaluateSleepTarget,rankSleepTargets,sleepTargetAssociations,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
+  const api={VERSION,PREFERENCE_CAP,DELTA,associationReasons,preferenceContributors,evaluateSleepTarget,rankSleepTargets,worldClaimEligibility,agentClaimDecision,acquireUsageClaimForSuccessfulUse,releaseUsageClaim,reconcileUsageClaims,activeClaims};
   window.SimUsage=Object.freeze(api);
   E.USAGE_PREFERENCE_VERSION=VERSION;
 })();
