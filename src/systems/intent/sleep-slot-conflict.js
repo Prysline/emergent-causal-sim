@@ -121,7 +121,8 @@
     if(availability?.available)return true;
     const occupant=SP.slotOccupant(st,slotId,a.id);if(!occupant)return true;
     const next=E.observeAgentContext(st,a,occupant),prev=action.conflictObservation;
-    return JSON.stringify(next)!==JSON.stringify(prev);
+    const relevance=o=>o?.observable?{observable:true,targetId:o.targetId,observedAgentKind:o.observedAgentKind,observedActionKind:o.observedActionKind,observedPosture:o.observedPosture}:{observable:false,reason:o?.reason||null};
+    return JSON.stringify(relevance(next))!==JSON.stringify(relevance(prev));
   }
   function stepConflict(st,a,action){
     if(action.phase==='conflictReevaluate'){action.phase='chooseSurface';return {handled:true};}
