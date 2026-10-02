@@ -7,7 +7,7 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,V=globalThis.SimValidator;
 
 assert.equal(A.VERSION,'world-authoring-v11');
-assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(E.USAGE_PREFERENCE_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 
@@ -101,9 +101,11 @@ function putObserverNear(st,agent,slot){const node=SP.slotApproachNodes(st,slot,
 E.reset(44001);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;let orange=st.agents.orange;let leftConflict=SP.getSlot(st,'bed:left'),rightConflict=SP.getSlot(st,'bed:right');
 st.usageAssignments=[{id:'conflict-left',principal:{kind:'agent',id:a.id},activity:'sleep',target:{kind:'slot',id:leftConflict.id}}];putObserverNear(st,a,leftConflict);placeInSlot(st,b,leftConflict);orange.offMap=true;
 let legal=U.rankSleepTargets(st,a);assert.equal(legal.some(x=>x.id===leftConflict.id),false);assert.ok(legal.some(x=>x.id===rightConflict.id),'alternate bed must remain a legal canonical target');
+assert.equal(SP.sleepTargetAvailability(st,a,{kind:'slot',id:leftConflict.id}).reason,'occupied','Spatial must own the objective preferred-Slot exclusion reason');
+assert.ok(U.sleepTargetAssociations(st,a).some(x=>x.target.id===leftConflict.id&&x.reasons.some(r=>r.key==='assignedToSelf')),'Usage must enumerate the existing preferred sleep association independently of legality');
 let conflict=E.preferredSleepConflictFor(st,a),resolution=E.sleepConflictResolutionCandidates(st,a,conflict,legal);
 assert.equal(conflict.slot.id,leftConflict.id);assert.ok(conflict.association.reasons.some(x=>x.key==='assignedToSelf'));
-for(const kind of ['alternateSleepTarget','waitForPreferredSlot','gainOccupantAttention','requestYield','nonphysicalShoo'])assert.ok(resolution.some(x=>x.kind===kind),'Human conflict should expose '+kind);
+for(const kind of ['alternateSleepTarget','waitForPreferredSlot','gainOccupantAttention','requestYield','nonphysicalShoo','deferSleepConflict'])assert.ok(resolution.some(x=>x.kind===kind),'Human conflict should expose '+kind);
 assert.equal(st.perception,undefined,'sleep conflict must not invent a full Perception registry');noIssues('assigned + alternate');
 
 // B: habit alone can establish preference pressure without becoming assignment or occupancy truth.
@@ -137,13 +139,19 @@ for(const e of st.events)assert.equal(['ignored','rejected','intentionalIgnore']
 E.reset(44006);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;orange=st.agents.orange;leftConflict=SP.getSlot(st,'bed:left');rightConflict=SP.getSlot(st,'bed:right');
 st.usageAssignments=[{id:'no-alt-left',principal:{kind:'agent',id:a.id},activity:'sleep',target:{kind:'slot',id:leftConflict.id}}];putObserverNear(st,a,leftConflict);placeInSlot(st,b,leftConflict);placeInSlot(st,orange,rightConflict);a.needs.sleepNeed=90;
 assert.equal(SP.sleepTargets(st,a).length,0);assert.ok(E.baseUtilityForAction(a,'sleep')>0,'preferred occupied conflict must keep sleep eligible even with no legal target');
+conflict=E.preferredSleepConflictFor(st,a);resolution=E.sleepConflictResolutionCandidates(st,a,conflict,[]);assert.ok(resolution.some(x=>x.kind==='deferSleepConflict'),'no-alternate conflict must still compare temporary defer as a resolution candidate');
 action=armSleepDecision(st,a);step=E.resolvePreferredSleepConflictStep(st,a,action,[]);assert.equal(action.phase,'conflictWait');assert.ok(['waitForPreferredSlot','gainOccupantAttention','requestYield','nonphysicalShoo'].includes(step.selected.kind));
 a.activeIntent.createdTick=st.tick-3;a.needs.hunger=100;E.tick();assert.equal(a.activeIntent?.source?.type,'emergency','emergency owner must interrupt occupancy wait rather than soft reconsideration');assert.equal(a.action?.kind,'eat');assert.ok(st.events.some(e=>e.data?.action==='intentPreempt'&&e.data?.priorActionKind==='sleep'&&e.data?.emergencyNeed==='hunger'));noIssues('conflict wait preemption');
 
 // Shared Agent-context owner is actually consumed by preferred conflict reasoning.
 E.reset(44007);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;leftConflict=SP.getSlot(st,'bed:left');st.usageAssignments=[{id:'owner-left',principal:{kind:'agent',id:a.id},activity:'sleep',target:{kind:'slot',id:leftConflict.id}}];putObserverNear(st,a,leftConflict);placeInSlot(st,b,leftConflict);
-const canonicalObserve=E.observeAgentContext;let observeCalls=0;E.observeAgentContext=(...args)=>{observeCalls++;return canonicalObserve(...args);};try{conflict=E.preferredSleepConflictFor(st,a);}finally{E.observeAgentContext=canonicalObserve;}assert.ok(conflict);assert.equal(observeCalls,1,'conflict reasoning must consume the shared Agent-context observation owner exactly once for the selected occupant');
-noIssues('shared observation owner');
+const canonicalObserve=E.observeAgentContext,canonicalAvailability=SP.sleepTargetAvailability,canonicalUsage=globalThis.SimUsage;let observeCalls=0,availabilityCalls=0,associationCalls=0;
+E.observeAgentContext=(...args)=>{observeCalls++;return canonicalObserve(...args);};
+SP.sleepTargetAvailability=(...args)=>{availabilityCalls++;return canonicalAvailability(...args);};
+globalThis.SimUsage=Object.freeze({...canonicalUsage,sleepTargetAssociations:(...args)=>{associationCalls++;return canonicalUsage.sleepTargetAssociations(...args);}});
+try{conflict=E.preferredSleepConflictFor(st,a);}finally{E.observeAgentContext=canonicalObserve;SP.sleepTargetAvailability=canonicalAvailability;globalThis.SimUsage=canonicalUsage;}
+assert.ok(conflict);assert.equal(associationCalls,1,'Deliberation must consume the Usage-owned sleep association enumeration');assert.ok(availabilityCalls>=1,'Deliberation must consume Spatial-owned objective availability reasons');assert.equal(observeCalls,1,'conflict reasoning must consume the shared Agent-context observation owner exactly once for the selected occupant');
+noIssues('shared conflict owners');
 
 // A new observable occupant-state change must invalidate occupancy wait before its fixed deadline.
 E.reset(44008);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;orange=st.agents.orange;leftConflict=SP.getSlot(st,'bed:left');rightConflict=SP.getSlot(st,'bed:right');
