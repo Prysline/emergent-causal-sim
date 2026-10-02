@@ -138,7 +138,7 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 
 ### Sleep preferred Slot conflict boundary
 
-fixed-Slot sleep conflict 不建立第二份 occupancy / ownership truth。`SP.sleepTargets()` 仍只回傳當下 objective legal sleep targets，被 Agent 佔用的 preferred Slot 不會因 assignment / claim / Habit 而重新變成 legal candidate。Usage Preference 只提供可獨立查詢的 bounded Association Reason；Deliberation 才將 preferred Slot、canonical occupancy、shared Agent-context Observation 與可行 resolution candidates 組合成決策。
+fixed-Slot sleep conflict 不建立第二份 occupancy / ownership truth。`SP.sleepSlotAvailability(state, agent, slot)` 是指定 sleep Slot objective availability / exclusion-reason 的 Spatial owner，`SP.sleepTargets()` 也消費同一 query；被 Agent 佔用的 preferred Slot 不會因 assignment / claim / Habit 而重新變成 legal candidate。Usage Preference 只提供可獨立查詢的 bounded Association Reason；Deliberation 才將 preferred Slot、canonical occupancy、shared Agent-context Observation 與可行 resolution candidates 組合成決策。
 
 occupant-specific reasoning 必須消費 Engine `observeAgentContext(st, observer, target)` 的 snapshot；不可直接把 World 裡完整 occupant Agent object 當作 requester 已知資訊。第一版 resolution candidates 包含 alternate legal sleep target、Agent-private occupancy wait、generic attention，以及 observed Human 的 yield request / nonphysical shoo。Animal occupant 不取得 Human-only shortcut。Occupancy wait 使用 `source.type = sleepSlotOccupancyWait`，不是 Social `awaitResponse`；有限期內可被較高 utility soft reconsideration或 emergency preemption 中斷，到期或 Slot 重新可用後回到既有 sleep replan。
 
