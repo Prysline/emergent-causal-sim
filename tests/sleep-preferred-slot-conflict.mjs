@@ -58,7 +58,7 @@ assert.ok(habitReasons.some(x=>x.kind==='habit'));assert.equal(habitReasons.some
 
 // C: sleeping Animal can produce wait/attention but never Human request/drive-away; wake never releases the Slot by itself.
 E.reset(44003);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
-nearSlot(st,requester,'bed:left');placeAtSlot(st,cat,'bed:left',{sleeping:true});SP.getSlot(st,'bed:right').canSleep=false;
+nearSlot(st,requester,'bed:left');placeAtSlot(st,cat,'bed:left',{sleeping:true});st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;
 conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');evaluation=SC.conflictCandidates(st,requester,conflict);
 assert.ok(evaluation.candidates.some(x=>x.kind==='wait'));assert.ok(evaluation.candidates.some(x=>x.kind==='attention'));
 assert.equal(evaluation.candidates.some(x=>x.kind==='requestYield'),false);assert.equal(evaluation.candidates.some(x=>x.kind==='driveAway'),false);
@@ -87,7 +87,7 @@ assert.equal(human.action,null);assert.equal(human.posture.slotId,'bed:left');
 
 // E: no alternate keeps sleep utility alive and enters conflict handling instead of losing context to "no sleep position".
 E.reset(44006);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
-nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');SP.getSlot(st,'bed:right').canSleep=false;requester.needs.sleepNeed=90;
+nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;requester.needs.sleepNeed=90;
 assert.equal(SP.sleepTargets(st,requester).length,0);assert.ok(E.baseUtilityForAction(requester,'sleep')>0,'preferred conflict must keep sleep candidate alive');
 armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);
 assert.equal(st.events.some(e=>e.data?.action==='abort'&&e.data?.actionKind==='sleep'),false,'no-alternate conflict must not immediately abort as no sleep position');
@@ -101,7 +101,7 @@ assert.equal(st.events.some(e=>/ignored|rejected|intentionalIgnore/i.test(String
 
 // Higher-priority emergency may interrupt occupancy wait.
 E.reset(44008);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
-nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');SP.getSlot(st,'bed:right').canSleep=false;armSleep(st,requester);
+nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;armSleep(st,requester);
 requester.action.phase='conflictWait';requester.action.preferredConflictSlotId='bed:left';requester.action.conflictWaitStartedTick=0;requester.action.conflictWaitUntilTick=99;requester.needs.hunger=99;
 E.tick();
 assert.notEqual(requester.activeIntent?.kind,'sleep','emergency hunger must be able to preempt occupancy wait');
