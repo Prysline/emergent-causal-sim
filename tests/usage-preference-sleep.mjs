@@ -117,7 +117,7 @@ st.usageAssignments=[{id:'animal-left',principal:{kind:'agent',id:a.id},activity
 legal=U.rankSleepTargets(st,a);assert.equal(legal.length,0);conflict=E.preferredSleepConflictFor(st,a);assert.equal(conflict.observation.observedAgentKind,'animal');assert.equal(conflict.observation.observedActionKind,'sleep');
 resolution=E.sleepConflictResolutionCandidates(st,a,conflict,legal);assert.ok(resolution.some(x=>x.kind==='gainOccupantAttention'));assert.equal(resolution.some(x=>x.kind==='requestYield'||x.kind==='nonphysicalShoo'),false);
 let action=armSleepDecision(st,a),step=E.resolvePreferredSleepConflictStep(st,a,action,legal);assert.equal(step.handled,true);assert.equal(step.selected.kind,'gainOccupantAttention');
-let frozen=E.currentConflictResolutionEvidence(a);assert.equal(frozen.observation.observedActionKind,'sleep');orange.action=null;orange.posture={kind:'standing',slotId:null,furnitureId:null};assert.equal(frozen.observation.observedActionKind,'sleep','later World change must not backfill conflict evidence');
+let frozen=E.currentConflictResolutionEvidence(a);assert.equal(frozen.observation.observedActionKind,'sleep');orange.action=null;orange.activeIntent=null;orange.posture={kind:'standing',slotId:null,furnitureId:null};assert.equal(frozen.observation.observedActionKind,'sleep','later World change must not backfill conflict evidence');
 assert.equal(st.events.some(e=>['requestSleepSlotYield','nonphysicalSleepSlotShoo'].includes(e.data?.action)),false,'Animal conflict must not use Human-only request/shoo');noIssues('sleeping animal conflict');
 
 // D: Human request is an observable bid. Requester does not move the responder; responder-local acceptance is distinct from actual Slot release.
