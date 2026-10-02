@@ -83,6 +83,26 @@
       const response=talkResponseFor(responder,requester),responseId=addTalkResponse(st,responder,requester,bid.id,response);settleObservedBid(responder,bid.id);settleRequesterWait(requester,bid.id);if(response==='engage')applyFullTalk(st,requester,responder,bid.id,responseId);else if(response==='brief')applyBriefReply(requester,responder);responder.action=null;if(responder.activeIntent?.source?.bidId===bid.id)responder.activeIntent=null;
     }
   }
+  function newestObservedSleepConflictBid(st,a){
+    return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>['sleepSlotYieldRequest','sleepSlotShoo'].includes(x.bid?.data?.bidKind)&&x.bid.data.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;
+  }
+  function sleepConflictResponseEvaluation(human,requester,bid){
+    const relationship=clamp(Number(E.relationshipSignal?.(human,requester?.id))||0,-1,1),affect=clamp(Number(E.affectResponseSignal?.(human))||0,-1,1),confrontational=bid?.data?.bidKind==='sleepSlotShoo';
+    const finalScore=round(clamp(.5+relationship*.22+affect*.16-(confrontational?.18:0),0,1));
+    const response=finalScore<.28?'decline':finalScore>=.46?'accept':'delay';
+    return {relationship,affect,confrontational,finalScore,response};
+  }
+  function resolveSleepConflictResponses(st){
+    for(const responder of Object.values(st.agents||{})){
+      if(responder.kind!=='human'||responder.offMap||E.isSleeping?.(responder)||responder.action||responder.activeIntent)continue;
+      const pick=newestObservedSleepConflictBid(st,responder);if(!pick)continue;
+      const bid=pick.bid,requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];if(!requester||requester.offMap||!SP.isAtInteraction(st,responder,{kind:'agent',id:requester.id},'social'))continue;
+      const evaluation=sleepConflictResponseEvaluation(responder,requester,bid);if(evaluation.response==='delay')continue;
+      const accepted=evaluation.response==='accept',action=accepted?'acceptSleepSlotYield':'declineSleepSlotYield',text=accepted?responder.name+'回應了'+requester.name+'的讓位要求，表示願意處理目前的位置衝突。':responder.name+'回應了'+requester.name+'的讓位要求，這次沒有答應讓位。';
+      E.addEvent(text,accepted?'good':'normal',[bid.id],{actor:responder.id,target:requester.id,action,responseToBid:bid.id,sleepSlotResponse:evaluation.response,slot:bid.data?.slot||null,position:E.positionRef?.(responder.position)||null});
+      settleObservedBid(responder,bid.id);
+    }
+  }
   function noResponseInterpretationWeight(waitEvent){const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;if(d.responderContextObserved!==true)return .22;const kind=d.observedResponderActionKind||null;if(kind==='sleep'||d.observedResponderPosture==='lying'&&kind==='sleep')return .05;if(kind&&HIGH_COMMITMENT_ACTIONS.has(kind))return .12;if(kind)return .28;return .45;}
   function prepareHumanTalkScenario(mode='talk-engage',seed=11331){
     const st=resetForScenario(seed),requester=st.agents?.zhou,responder=st.agents?.zhen,cat=st.agents?.orange;if(!requester||!responder)return st;
@@ -90,12 +110,12 @@
     Object.assign(requester.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:70});const social=mode==='talk-engage'?90:mode==='talk-brief'?35:mode==='talk-decline'?0:80;Object.assign(responder.needs,{hunger:18,thirst:mode==='talk-no-response'?95:18,fatigue:18,sleepNeed:18,social});
     requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};E.ensureIntentForAction?.(st,requester);return st;
   }
-  function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);promoteTalkResponses(st);}
+  function prepareTick(st){const pendingOffers=capturePendingTalkOffers(st);emitTalkOffers(st,pendingOffers);resolveSleepConflictResponses(st);promoteTalkResponses(st);}
   function settleTick(st){resolveTalkResponses(st);E.reconcileIntents?.(st);}
 
   if(!E.registerRuntimeHook)throw new Error('systems/social/human-response.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','humanSocial.prepare',()=>prepareTick(E.getState()),300);
   E.registerRuntimeHook('afterTick','humanSocial.resolve',()=>settleTick(E.getState()),700);
 
-  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_AFFECT_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkAffectResponseDelta,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,noResponseInterpretationWeight,prepareHumanTalkScenario});
+  Object.assign(E,{HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION:VERSION,TALK_RESPONSE_THRESHOLDS,TALK_AFFECT_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP,HIGH_COMMITMENT_ACTIONS,talkBaseEngagementScore,talkAffectResponseDelta,talkRelationshipResponseDelta,talkResponseEvaluation,talkEngagementScore,talkResponseFor,talkResponseUtility,newestObservedTalkOffer,talkResponseCandidate,newestObservedSleepConflictBid,sleepConflictResponseEvaluation,noResponseInterpretationWeight,prepareHumanTalkScenario});
 })();
