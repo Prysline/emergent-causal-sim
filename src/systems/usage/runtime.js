@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  const VERSION='11.42.0-usage-preference-sleep';
+  const VERSION='11.44.0-sleep-slot-conflict';
   const PREFERENCE_CAP=10;
   const DELTA=Object.freeze({assignment:8,claim:5,habit:4,speciesActivity:2});
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
