@@ -113,8 +113,8 @@
     const intent=a.activeIntent;if(!intent)return {ok:false,reason:'no-intent'};
     if(intent.source?.type==='emergency')return {ok:false,reason:'emergency-intent'};
     if(E.emergencyChoice?.(st,a))return {ok:false,reason:'emergency-priority'};
-    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse';
-    if(!openWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
+    const kind=actionKind(a),openWait=!a.action&&intent.lifecycle==='open'&&intent.kind==='awaitResponse',sleepConflictWait=kind==='sleep'&&String(a.action?.phase||'').startsWith('conflict');
+    if(!openWait&&!sleepConflictWait&&!SOFT_RECONSIDERABLE_ACTIONS.has(kind))return {ok:false,reason:'protected-action'};
     const age=Math.max(0,st.tick-(intent.createdTick||0));
     if(age<MIN_INTENT_HOLD_TICKS)return {ok:false,reason:'minimum-hold',holdRemaining:MIN_INTENT_HOLD_TICKS-age};
     return {ok:true,reason:'eligible'};
