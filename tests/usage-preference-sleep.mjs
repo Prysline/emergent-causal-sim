@@ -7,7 +7,7 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,V=globalThis.SimValidator;
 
 assert.equal(A.VERSION,'world-authoring-v11');
-assert.equal(E.USAGE_PREFERENCE_VERSION,'11.44.0-sleep-slot-conflict');
+assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 
@@ -102,7 +102,7 @@ E.reset(44001);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;let orange=st.a
 st.usageAssignments=[{id:'conflict-left',principal:{kind:'agent',id:a.id},activity:'sleep',target:{kind:'slot',id:leftConflict.id}}];putObserverNear(st,a,leftConflict);placeInSlot(st,b,leftConflict);orange.offMap=true;
 let legal=U.rankSleepTargets(st,a);assert.equal(legal.some(x=>x.id===leftConflict.id),false);assert.ok(legal.some(x=>x.id===rightConflict.id),'alternate bed must remain a legal canonical target');
 assert.equal(SP.sleepTargetAvailability(st,a,{kind:'slot',id:leftConflict.id}).reason,'occupied','Spatial must own the objective preferred-Slot exclusion reason');
-assert.ok(U.sleepTargetAssociations(st,a).some(x=>x.target.id===leftConflict.id&&x.reasons.some(r=>r.key==='assignedToSelf')),'Usage must enumerate the existing preferred sleep association independently of legality');
+assert.ok(U.associationReasons(st,a,'sleep',{kind:'slot',id:leftConflict.id}).some(r=>r.key==='assignedToSelf'),'Usage association reasons must remain queryable independently of legality');
 let conflict=E.preferredSleepConflictFor(st,a),resolution=E.sleepConflictResolutionCandidates(st,a,conflict,legal);
 assert.equal(conflict.slot.id,leftConflict.id);assert.ok(conflict.association.reasons.some(x=>x.key==='assignedToSelf'));
 for(const kind of ['alternateSleepTarget','waitForPreferredSlot','gainOccupantAttention','requestYield','nonphysicalShoo','deferSleepConflict'])assert.ok(resolution.some(x=>x.kind===kind),'Human conflict should expose '+kind);
@@ -148,9 +148,9 @@ E.reset(44007);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;leftConflict=SP
 const canonicalObserve=E.observeAgentContext,canonicalAvailability=SP.sleepTargetAvailability,canonicalUsage=globalThis.SimUsage;let observeCalls=0,availabilityCalls=0,associationCalls=0;
 E.observeAgentContext=(...args)=>{observeCalls++;return canonicalObserve(...args);};
 SP.sleepTargetAvailability=(...args)=>{availabilityCalls++;return canonicalAvailability(...args);};
-globalThis.SimUsage=Object.freeze({...canonicalUsage,sleepTargetAssociations:(...args)=>{associationCalls++;return canonicalUsage.sleepTargetAssociations(...args);}});
+globalThis.SimUsage=Object.freeze({...canonicalUsage,associationReasons:(...args)=>{associationCalls++;return canonicalUsage.associationReasons(...args);}});
 try{conflict=E.preferredSleepConflictFor(st,a);}finally{E.observeAgentContext=canonicalObserve;SP.sleepTargetAvailability=canonicalAvailability;globalThis.SimUsage=canonicalUsage;}
-assert.ok(conflict);assert.equal(associationCalls,1,'Deliberation must consume the Usage-owned sleep association enumeration');assert.ok(availabilityCalls>=1,'Deliberation must consume Spatial-owned objective availability reasons');assert.equal(observeCalls,1,'conflict reasoning must consume the shared Agent-context observation owner exactly once for the selected occupant');
+assert.ok(conflict);assert.ok(associationCalls>=1,'Deliberation must consume the canonical Usage association owner');assert.ok(availabilityCalls>=1,'Deliberation must consume Spatial-owned objective availability reasons');assert.equal(observeCalls,1,'conflict reasoning must consume the shared Agent-context observation owner exactly once for the selected occupant');
 noIssues('shared conflict owners');
 
 // A new observable occupant-state change must invalidate occupancy wait before its fixed deadline.
