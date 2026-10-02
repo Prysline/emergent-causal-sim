@@ -148,6 +148,7 @@
     const egress=SP.slotEgressNodes?.(st,pending.slotId,responder,'walk')?.[0]||null;
     if(!egress)return false;
     const action=E.buildAction?.(responder,{id:'wander',targetTile:egress});if(!action?.targetTile)return false;
+    action.sleepSlotYield={slotId:pending.slotId,bidId:pending.bidId};
     const intent=responder.activeIntent||pendingYieldIntent(st,responder,pending);
     intent.lifecycle='actionBound';action.intentId=intent.id;responder.activeIntent=intent;responder.action=action;return true;
   }
