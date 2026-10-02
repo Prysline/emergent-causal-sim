@@ -210,6 +210,6 @@
 
   window.SimSleepSlotConflict=Object.freeze({
     VERSION,OCCUPANCY_WAIT_TICKS,RESPONSE_WAIT_TICKS,ATTENTION_STIMULUS,REQUEST_STIMULUS,DRIVE_STIMULUS,
-    preferredSleepSlotConflicts,preferredSleepSlotConflict,resolutionCandidates,sleepDecisionOption,chooseSurface,stepConflict,responseEvaluation,newestObservedConflictBid
+    preferredSleepSlotConflicts,preferredSleepSlotConflict,resolutionCandidates,sleepDecisionOption,chooseSurface,stepConflict,responseEvaluation,newestObservedConflictBid,promoteResponses,resolveResponses
   });
 })();
