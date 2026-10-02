@@ -37,8 +37,9 @@
   }
   function preferredSleepConflicts(st,a){
     const out=[];
+    if(typeof SP.sleepSlotAvailability!=='function')throw new Error('sleep-slot-conflict requires Spatial sleepSlotAvailability().');
     for(const slot of SP.allSlots(st)){
-      if(!slot.canSleep||!SP.slotAllows(slot,a)||!SP.slotPoseFits(slot,a,'lying'))continue;
+      const availability=SP.sleepSlotAvailability(st,a,slot);if(availability.reason!=='occupied')continue;
       const reasons=fixedSlotReasons(st,a,slot.id,U.associationReasons(st,a,'sleep',{kind:'slot',id:slot.id}));
       if(!reasons.length)continue;
       const occupant=SP.slotOccupant(st,slot.id,a.id);if(!occupant)continue;
