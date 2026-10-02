@@ -65,6 +65,7 @@
   function rankSleepTargets(st,a,targets=SP.sleepTargets(st,a)){
     return (targets||[]).map(t=>evaluateSleepTarget(st,a,t)).sort((x,y)=>x.effectiveScore-y.effectiveScore||x.objectiveScore-y.objectiveScore||String(x.id).localeCompare(String(y.id)));
   }
+
   function worldClaimEligibility(st,activity,targetRef){
     return (st?.claimEligibility||[]).find(x=>x?.activity===activity&&refKey(x.target)===refKey(targetRef))||null;
   }
