@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
-> `11.44.0-sleep-slot-conflict` 新增 beforeTick 350 `sleepConflict.responses`：它只處理 requester-private conflict response wait expiry 與 responder-local yield/refusal adoption。preferred Slot exclusion / candidate construction 本身仍是同步 query；occupied Slot 不進 `sleepTargets()`，Conflict Resolution Evidence 仍由既有 Decision Evidence owner保存。
+> `11.44.0-sleep-slot-conflict` 新增 beforeTick 350 `sleepConflict.responses` 與 850 `sleepConflict.requester-wait`：前者處理 requester-private conflict response wait expiry 與 responder-local yield/refusal adoption；後者只在 800 emergency preemption 之後，為仍有效的 open response-wait Intent 注入 transient waiting Action。preferred Slot exclusion / candidate construction 本身仍是同步 query；occupied Slot 不進 `sleepTargets()`，Conflict Resolution Evidence 仍由既有 Decision Evidence owner保存。
 >
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
@@ -105,6 +105,7 @@ flowchart TD
 | 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
 | 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
+| 850 | `sleepConflict.requester-wait` | Sleep Conflict / Deliberation | 對仍在等待明確讓位回應的 open Intent 注入 transient waiting Action | 必須晚於 emergency preemption，避免等待遮蔽更高優先需求；只阻止 core 在同一 tick 另起一般 action |
 | 900 | `socialBid.prepare` | Social Bid | waiting action injection、response provenance snapshot | 為 afterTick settlement 保留本 tick 之前的 responder/requester 狀態 |
 | 1000 | `intent.reconcile-before` | Active Intent | Action ↔ Intent linkage 收斂 | core tick 前避免 live Action / Intent linkage 漂移 |
 | 1100 | `spatial.capture` | Spatial Effects | 保存 core 前位置與 event snapshot | afterTick 100 用來判斷本 tick movement / spill effects |
