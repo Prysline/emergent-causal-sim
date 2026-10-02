@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
-> `11.44.0-sleep-slot-conflict` 沒有新增、刪除或重新排序 runtime hook。preferred-Slot conflict 由既有 core sleep state machine 同步呼叫 Deliberation query；Human sleep-conflict response 由既有 `humanSocial.prepare` hook 處理，hook ID / order 未改。occupancy wait 只改 `sleep` Action phase eligibility，不建立新的 scheduler 或 hidden lifecycle registry。
+> `11.44.0-sleep-slot-conflict` 沒有新增、刪除或重新排序 runtime hook。preferred-Slot conflict 由既有 core sleep state machine 同步呼叫 Deliberation query；Human sleep-conflict understood / response 由既有 `humanSocial.prepare` hook 處理，hook ID / order 未改。accept 只建立 responder-local `yieldSleepSlot` Action，actual Slot release 在後續 core Action step 自己完成。occupancy wait 只改 `sleep` Action phase eligibility，不建立新的 scheduler 或 hidden lifecycle registry。
 >
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
@@ -100,7 +100,7 @@ flowchart TD
 | 100 | `socialOutcome.capture-events` | Social Outcome Memory | 保存本 tick requester-private outcome 掃描 marker | 必須早於可能產生 wait-end / response 的後續 lifecycle |
 | 200 | `memoryDeliberation.capture-idle` | Memory → Deliberation | 記住 core 前真正 idle 的 Agent | afterTick 800 只應 correction 本來由 core 新做初始 deliberation 的 Agent |
 | 250 | `affect.decay` | Affect | 將 current Affect decay 到即將進入的新 tick | Human / animal responder preparation 與後續 core decision 都必須讀到同一個 decay 後 Current Affect phase |
-| 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder | responder candidate 的 Affect score 必須已完成本 tick decay；非 core-loop event 經 core event-created notification 同步形成合法 observation |
+| 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`；消費 responder-local observed sleep-conflict bid 並形成 understood / response / accepted-yield Action | responder candidate 的 Affect score 必須已完成本 tick decay；跨 Agent request 必須先成為可觀察 World Event，requester 不得直接修改 responder |
 | 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
 | 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
