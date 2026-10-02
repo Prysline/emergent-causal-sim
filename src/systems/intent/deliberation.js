@@ -14,25 +14,24 @@
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-  function sleepConflictAssociation(st,a,slotId){
+  function preferredSleepAssociations(st,a){
     const U=window.SimUsage;
-    if(!U?.associationReasons||!U?.preferenceContributors){
+    if(!U?.sleepTargetAssociations){
       const hasUsageFacts=(st?.usageAssignments?.length||0)>0||(st?.usageClaims?.length||0)>0||Object.keys(a?.usageHabits||{}).length>0;
-      if(hasUsageFacts)throw new Error('Preferred sleep conflict requires SimUsage association owner when usage facts exist.');
-      return null;
+      if(hasUsageFacts)throw new Error('Preferred sleep conflict requires SimUsage sleepTargetAssociations() when usage facts exist.');
+      return [];
     }
-    const ref={kind:'slot',id:slotId},reasons=U.associationReasons(st,a,'sleep',ref).filter(r=>r?.direction==='self'&&Number(r.signal)>0);
-    if(!reasons.length)return null;
-    const contributors=U.preferenceContributors(st,a,'sleep',ref).filter(c=>c?.direction==='self'&&Number(c.delta)>0),strength=clamp(contributors.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,U.PREFERENCE_CAP||10);
-    return {ref,reasons,contributors,strength};
+    return U.sleepTargetAssociations(st,a);
   }
   function preferredSleepConflictFor(st,a){
     if(!st||!a||a.offMap)return null;
+    if(typeof SP.sleepTargetAvailability!=='function')throw new Error('Preferred sleep conflict requires Spatial sleepTargetAvailability().');
     const conflicts=[];
-    for(const slot of SP.allSlots?.(st)||[]){
-      if(!slot?.canSleep||!SP.slotAllows?.(slot,a)||!SP.slotPoseFits?.(slot,a,'lying'))continue;
-      const association=sleepConflictAssociation(st,a,slot.id);if(!association)continue;
-      const occupant=SP.slotOccupant?.(st,slot.id,a.id);if(!occupant)continue;
+    for(const association of preferredSleepAssociations(st,a)){
+      const availability=SP.sleepTargetAvailability(st,a,association.target);
+      if(availability?.reason!=='occupied'||!availability.occupantId)continue;
+      const slot=SP.getSlot?.(st,association.target.id),occupant=st.agents?.[availability.occupantId];
+      if(!slot||!occupant)continue;
       const observation=E.observeAgentContext?.(st,a,occupant)||Object.freeze({observable:false,reason:'observation-unavailable'});
       conflicts.push({slot,occupantId:occupant.id,association,observation});
     }
@@ -43,6 +42,7 @@
     const strength=conflict.association.strength,noAlternate=!legalCandidates.length,out=[];
     if(legalCandidates.length){const best=legalCandidates[0],burden=clamp(Number(best.effectiveScore??best.score)||0,-10,20);out.push({kind:'alternateSleepTarget',score:70-strength*2-burden*.35,target:{kind:'slot',id:best.id},contributors:[{kind:'associationStrength',value:strength},{kind:'objectiveTargetBurden',value:burden}]});}
     out.push({kind:'waitForPreferredSlot',score:42+strength*2+(noAlternate?8:0),contributors:[{kind:'associationStrength',value:strength},{kind:'noAlternate',value:noAlternate}]});
+    out.push({kind:'deferSleepConflict',score:34-strength*.5+(noAlternate?2:6),contributors:[{kind:'associationStrength',value:strength},{kind:'noAlternate',value:noAlternate}]});
     const obs=conflict.observation;
     if(obs?.observable){
       const sleeping=obs.observedActionKind==='sleep'||obs.observedPosture==='lying';
@@ -80,6 +80,10 @@
     const evidence=E.captureConflictResolutionEvidence?.(st,a,p,{preferredSlot:{kind:'slot',id:conflict.slot.id},associationReasons:conflict.association.reasons,conflictReason:'occupied',observation:conflict.observation?.observable?conflict.observation:{observable:false,reason:conflict.observation?.reason||'unavailable'},candidates,selectedResolution:selected,priorConflictDecisionId:p.conflictResolutionDecisionId||null});
     if(evidence)p.conflictResolutionDecisionId=evidence.id;
     if(selected.kind==='alternateSleepTarget')return {handled:false,conflict,selected,evidence};
+    if(selected.kind==='deferSleepConflict'){
+      E.addEvent(a.name+'暫時放棄處理目前的偏好睡眠位置衝突。','normal',[],{actor:a.id,action:'deferSleepConflict',visibility:'private',owner:a.id,preferredSlot:conflict.slot.id,position:E.positionRef?.(a.position)||null});
+      return {handled:true,defer:true,conflict,selected,evidence};
+    }
     if(selected.kind==='waitForPreferredSlot'){enterSleepConflictWait(st,a,p,conflict);return {handled:true,conflict,selected,evidence};}
     const kind=selected.kind==='gainOccupantAttention'?'attention':selected.kind;
     const interaction=emitSleepConflictBid(st,a,conflict,kind);enterSleepConflictWait(st,a,p,conflict,{sourceBidId:interaction?.bidId||null,resolutionKind:selected.kind});
