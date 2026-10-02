@@ -42,6 +42,7 @@ E.reset(44001);
 let st=E.getState(),requester=st.agents.zhen,responder=st.agents.zhou,cat=st.agents.orange;
 quiet(requester);quiet(responder);cat.offMap=true;st.minute=180;
 placeNear(st,requester,'bed:left');occupy(st,responder,'bed:left');
+assert.equal(SP.sleepSlotAvailability(st,requester,'bed:left').reason,'occupied','Spatial must own the objective exclusion reason consumed by both legal target query and conflict reasoning');
 assert.equal(SP.sleepTargets(st,requester).some(t=>t.id==='bed:left'),false,'occupied preferred Slot must remain outside legal sleepTargets');
 assert.equal(SP.sleepTargets(st,requester).some(t=>t.id==='bed:right'),true,'alternate bed should remain legal');
 let conflict=S.preferredSleepConflict(st,requester);
