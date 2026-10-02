@@ -12,6 +12,13 @@
   const round=v=>Math.round(v*1000)/1000;
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
 
+  function fixedSlotReason(st,a,slotId,reason){
+    if(reason?.direction!=='self'||!['assignment','claim','habit'].includes(reason.kind))return false;
+    if(reason.kind!=='assignment')return true;
+    const refs=new Set(reason.sourceRefs||[]);
+    return (st?.usageAssignments||[]).some(x=>refs.has(x.id)&&x.principal?.kind==='agent'&&x.principal.id===a?.id&&x.activity==='sleep'&&x.target?.kind==='slot'&&x.target.id===slotId);
+  }
+  function fixedSlotReasons(st,a,slotId,reasons){return (reasons||[]).filter(reason=>fixedSlotReason(st,a,slotId,reason));}
   function contributorsFromReasons(reasons){
     return (reasons||[]).filter(r=>r?.direction==='self'&&['assignment','claim','habit'].includes(r.kind)).map(reason=>{
       let delta=0;
@@ -25,13 +32,14 @@
     return clamp((contributors||[]).reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,U.PREFERENCE_CAP||10);
   }
   function associationStrength(st,a,slotId){
-    return associationStrengthFromContributors(contributorsFromReasons(U.associationReasons(st,a,'sleep',{kind:'slot',id:slotId})));
+    const reasons=fixedSlotReasons(st,a,slotId,U.associationReasons(st,a,'sleep',{kind:'slot',id:slotId}));
+    return associationStrengthFromContributors(contributorsFromReasons(reasons));
   }
   function preferredSleepConflicts(st,a){
     const out=[];
     for(const slot of SP.allSlots(st)){
       if(!slot.canSleep||!SP.slotAllows(slot,a)||!SP.slotPoseFits(slot,a,'lying'))continue;
-      const reasons=U.associationReasons(st,a,'sleep',{kind:'slot',id:slot.id}).filter(r=>r?.direction==='self');
+      const reasons=fixedSlotReasons(st,a,slot.id,U.associationReasons(st,a,'sleep',{kind:'slot',id:slot.id}));
       if(!reasons.length)continue;
       const occupant=SP.slotOccupant(st,slot.id,a.id);if(!occupant)continue;
       const observation=E.observeAgentContext(st,a,occupant);
