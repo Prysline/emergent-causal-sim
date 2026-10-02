@@ -63,6 +63,20 @@
     const evidence=a.targetSelectionEvidence.find(item=>item?.id===id)||null;
     return evidence&&evidence.parentDecisionId===a.action?.decisionId?evidence:null;
   }
+  function captureConflictResolutionEvidence(st,a,action,{preferredTarget,associationReasons=[],conflictReason,observation=null,candidates=[],selected,priorConflictDecisionId=null}={}){
+    const parentDecisionId=action?.decisionId;
+    if(!st||!a||!action||!parentDecisionId||!preferredTarget?.kind||!preferredTarget?.id||!conflictReason||!selected?.kind)return null;
+    if(!Array.isArray(a.conflictResolutionEvidence))a.conflictResolutionEvidence=[];
+    const sequence=a.conflictResolutionEvidence.reduce((max,e)=>Math.max(max,Number(e?.sequence)||0),0)+1,id=`conflict-decision:${a.id}:${st.tick}:${sequence}`;
+    const evidence={id,sequence,parentDecisionId,preferredTarget:clone(preferredTarget),associationReasons:clone(associationReasons),conflictReason,evaluatedTick:st.tick,observation:observation?clone(observation):null,candidates:clone(candidates),selected:clone(selected)};
+    if(priorConflictDecisionId)evidence.priorConflictDecisionId=priorConflictDecisionId;
+    a.conflictResolutionEvidence.push(evidence);action.conflictResolutionDecisionId=id;return evidence;
+  }
+  function currentConflictResolutionEvidence(a){
+    const id=a?.action?.conflictResolutionDecisionId;if(!id||!Array.isArray(a?.conflictResolutionEvidence))return null;
+    const evidence=a.conflictResolutionEvidence.find(item=>item?.id===id)||null;
+    return evidence&&evidence.parentDecisionId===a.action?.decisionId?evidence:null;
+  }
   function routePathsSame(st,left,right){const a=left?.path||[],b=right?.path||[];return a.length===b.length&&a.every((node,index)=>SP?.nodeSame?SP.nodeSame(st,node,b[index]):sameValue(node,b[index]));}
   function handlingRouteMetrics(route,score){return {pathDistance:Number(route?.pathDistance),traversalCost:Number(route?.traversalCost),travelTime:Number(route?.travelTime),handlingRisk:{contentsLoss:Number(route?.handlingRisk?.contentsLoss)||0,containerDrop:Number(route?.handlingRisk?.containerDrop)||0},decisionScore:Number(score)};}
   function handlingRouteContributor(st,a,selected,baseline,preference){
@@ -82,5 +96,5 @@
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/decision-evidence.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('afterTick','deliberation.finalize-decision-evidence',()=>finalizeInitialDecisionEvidence(E.getState()),850);
-  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
+  Object.assign(E,{DECISION_EVIDENCE_SCHEMA_VERSION:VERSION,adoptDecisionEvidence,decisionEvidenceMatchesAction,currentDecisionEvidence,captureTargetSelectionEvidence,currentTargetSelectionEvidence,captureConflictResolutionEvidence,currentConflictResolutionEvidence,captureHandlingRouteDecisionEvidence,finalizeInitialDecisionEvidence});
 })();
