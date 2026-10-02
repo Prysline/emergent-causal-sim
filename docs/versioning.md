@@ -24,7 +24,7 @@
 
 Conflict Resolution Evidence 由既有 Decision Evidence owner 保存 decision-time snapshot，含 preferred Slot、Association Reason、observed occupant context、evaluated candidates、selected resolution 與 prior-conflict linkage。Human yield request 只建立 observable Bid；responder 以自己的 current needs / association / existing reconsideration contract形成 accept 或 refuse，accept 後仍需 responder 自己執行 leave-Slot Action，requester 不會直接修改對方 position / posture / Intent / private state。response wait 是 Agent-private 且 timeout 不等於 refusal；occupancy wait 本身回到下一輪 Deliberation，不借用 Social `awaitResponse` 作為第二份語意真相。
 
-Version impact：overall / Presentation、Deliberation / Decision Evidence → `11.44.0-sleep-slot-conflict`。Memory、Usage Preference 維持 `11.42.0-usage-preference-sleep`；Social Bid lifecycle 維持 `11.12.2-social-bid-lifecycle`；World Authoring 維持 `world-authoring-v11`。Resources / Physical / Spatial Traversal / Passage / Route / Locomotion / Contact / Crowding / Affect / Relationship 等未改 generation 不假升。本 release 新增 beforeTick 350 `sleepConflict.responses`，其 ordering contract 見 `tick-pipeline.md`。
+Version impact：overall / Presentation、Deliberation / Decision Evidence → `11.44.0-sleep-slot-conflict`。Memory、Usage Preference 維持 `11.42.0-usage-preference-sleep`；Social Bid lifecycle 維持 `11.12.2-social-bid-lifecycle`；World Authoring 維持 `world-authoring-v11`。Resources / Physical / Spatial Traversal / Passage / Route / Locomotion / Contact / Crowding / Affect / Relationship 等未改 generation 不假升。本 release 新增 beforeTick 350 `sleepConflict.responses` 與 850 `sleepConflict.requester-wait`；後者刻意位於 800 emergency preemption 之後，避免 response wait 遮蔽更高優先需求。ordering contract 見 `tick-pipeline.md`。
 
 ### Current Attention + Agent-context observation release
 
