@@ -151,7 +151,8 @@ const engineDependentSubsystemRuntimes=[
   'src/systems/social/human-response.js',
   'src/systems/memory/deliberation.js',
   'src/systems/memory/social-outcome.js',
-  'src/systems/usage/runtime.js'
+  'src/systems/usage/runtime.js',
+  'src/systems/intent/sleep-conflict.js'
 ];
 
 for(const path of engineDependentSubsystemSchemas){
