@@ -145,4 +145,12 @@ E.reset(44007);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;leftConflict=SP
 const canonicalObserve=E.observeAgentContext;let observeCalls=0;E.observeAgentContext=(...args)=>{observeCalls++;return canonicalObserve(...args);};try{conflict=E.preferredSleepConflictFor(st,a);}finally{E.observeAgentContext=canonicalObserve;}assert.ok(conflict);assert.equal(observeCalls,1,'conflict reasoning must consume the shared Agent-context observation owner exactly once for the selected occupant');
 noIssues('shared observation owner');
 
+// A new observable occupant-state change must invalidate occupancy wait before its fixed deadline.
+E.reset(44008);st=E.getState();a=st.agents.zhen;b=st.agents.zhou;orange=st.agents.orange;leftConflict=SP.getSlot(st,'bed:left');rightConflict=SP.getSlot(st,'bed:right');
+st.usageAssignments=[{id:'observation-change-left',principal:{kind:'agent',id:a.id},activity:'sleep',target:{kind:'slot',id:leftConflict.id}}];putObserverNear(st,a,leftConflict);placeInSlot(st,b,leftConflict);placeInSlot(st,orange,rightConflict);
+action=armSleepDecision(st,a);step=E.resolvePreferredSleepConflictStep(st,a,action,[]);assert.equal(action.phase,'conflictWait');assert.ok(action.conflictReassessTick>st.tick);
+b.action={kind:'sleep',phase:'sleeping',sleepTarget:{kind:'slot',id:leftConflict.id,position:{...leftConflict.position}},sleepTicks:1,started:st.tick,wait:0};b.activeIntent=null;E.reconcileIntents(st);
+assert.equal(E.stepPreferredSleepConflictWait(st,a,action),false,'new shared Observation must return occupancy wait to Deliberation before the fixed deadline');assert.equal(action.phase,'chooseSurface');
+noIssues('conflict observation invalidation');
+
 console.log('Usage preference sleep regression: ok');
