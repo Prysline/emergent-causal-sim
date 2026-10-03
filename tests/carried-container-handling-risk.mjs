@@ -5,11 +5,11 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.43.0-attention-observation';
+const APP_VERSION='11.44.0-sleep-slot-conflict';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
-const DELIBERATION_VERSION='11.42.0-usage-preference-sleep';
+const DELIBERATION_VERSION='11.44.0-sleep-slot-conflict';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=route=>(route?.path||[]).map(node=>[node.x,node.y,node.z??0,node.surfaceId||'floor']);
 const objectiveFacts=route=>({traversalCost:route.traversalCost,travelTime:route.travelTime,handlingExposure:route.handlingExposure,handlingRisk:route.handlingRisk});

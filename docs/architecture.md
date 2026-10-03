@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.43.0-attention-observation`。
+目前 runtime marker：`11.44.0-sleep-slot-conflict`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -134,6 +134,14 @@ Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-p
 `SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
 
 通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+### Preferred sleep Slot conflict boundary
+
+fixed-Slot sleep conflict 由 Deliberation-side `SimSleepConflict` 持有 resolution reasoning，而不是由 Spatial 或 Usage Preference 建立第二份 occupancy / ownership truth。Spatial 仍以 `slotOccupant / slotReservedBy / slotAvailable` 持有 canonical Slot availability；`sleepTargetExclusion(...)` 只回傳 exclusion reason，occupied preferred Slot 仍不得進入 `SP.sleepTargets()`。Usage Preference 的 assignment / claim / habit 仍只提供 bounded Association Reason，因此「我偏好這個位置」與「這個位置現在可睡」維持不同事實層。
+
+Conflict consumer 只能透過既有 `observeAgentContext(...)` 取得 decision-time occupant snapshot，再比較 alternate legal sleep position、有限期 occupancy wait、generic attention，以及對可觀察 Human 的 yield request / nonphysical drive-away。Animal 沒有 Human-only request shortcut；不可觀察 occupant 也不洩漏 identity 到 evidence。occupancy wait 是 sleep-conflict 自己的 Action phase，有限期、無 reservation，且可被 soft reconsideration 或 emergency preemption 打斷；它不冒充 Social `awaitResponse`。
+
+`Conflict Resolution Evidence` 是既有 Decision Evidence 的 downstream Agent-private record，保存 preferred Slot、Association Reasons、decision-time Observation snapshot、evaluated candidates、selected resolution、contributors 與 prior conflict link。request / drive-away 另外建立可觀察 Social Bid；requester 的 response wait 沿用 Social Bid lifecycle，但 source 帶 `sleepSlotConflict` context。Human responder 只根據自己可見的 bid 與自己的 need / association / relationship 在 responder-local runtime 做 accept / refuse / delay；accept response 本身不改 posture / position，真正離開 Slot 由 responder 自己建立 `yieldSleepSlot` Intent + Action。wake、request understood、accept/refuse、departure 與 Slot 實際重新 available 仍是不同事件／狀態層。
 
 ### Agent-private Truth
 
@@ -907,3 +915,5 @@ Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration deb
 正式 app 在所有 `validation/rules/` semantic validator rules 載入後由 `validation/manifest.js` finalize expected layer set。duplicate ID、duplicate order、missing expected layer、unexpected layer、finalize 後 late registration 都必須 loud failure；不得靠 `index.html` script load order 靜默決定 validation semantics。
 
 每個 layer 接收 `(state, previousResult)` 並回傳下一個 validation result；既有 invariant logic 保持在原本 owner 檔案。Registry 只負責 ownership / ordering / completeness，不把 subsystem invariant 集中回單一巨型 validator。
+
+**Sleep conflict response outcome boundary**：preferred-Slot conflict 的 Human request 將 `perceived`、`understood`、`accepted / refused` 與 `completed` 分開保存；busy responder 可以只有 perceived 而沒有立即 understood/response。接受只建立 responder-local departure Intent/Action，不直接改 requester 或 responder 的位置；只有 canonical Slot occupancy 實際清除後才形成 completed event。occupancy wait 使用獨立 `sleepSlotOccupancy` source/phase，patience 是獨立 calibration，不由 assignment / claim / habit 強度硬算。
