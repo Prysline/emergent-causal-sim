@@ -130,7 +130,10 @@ function ensureRuntimeDependencies(paths){
     .filter(index=>index>=0);
   if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
   const traversalIndex=paths.indexOf('spatial-traversal.js');
-  if(traversalIndex>=0&&!paths.includes('spatial-agent-carry.js'))paths.splice(traversalIndex+1,0,'spatial-agent-carry.js');
+  if(traversalIndex>=0&&!paths.includes('spatial-agent-carry.js')){
+    const carryIndex=paths.indexOf('systems/agent-carry.js');
+    paths.splice(Math.max(traversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
+  }
   return paths;
 }
 
