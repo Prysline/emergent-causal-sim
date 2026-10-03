@@ -119,17 +119,18 @@ bidId=addConflictBid(st,requester,human);SC.processSleepConflictResponses(st);
 assert.equal(st.events.some(e=>e.data?.responseToBid===bidId&&['acceptSleepSlotYield','refuseSleepSlotYield'].includes(e.data?.action)),false);
 assert.equal(st.events.some(e=>/ignored|rejected|intentionalIgnore/i.test(String(e.data?.action||''))),false);
 
-// G: higher-priority emergency may interrupt occupancy wait.
+// G: occupancy wait is one private wait decision, then re-enters Deliberation; higher-priority emergency may interrupt it.
 E.reset(44009);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;armSleep(st,requester);
-requester.action.phase='conflictWait';requester.action.preferredConflictSlotId='bed:left';requester.action.conflictWaitSource='sleepSlotOccupancy';requester.action.conflictWaitStartedTick=0;requester.action.conflictWaitUntilTick=99;requester.needs.hunger=99;
+requester.action.phase='conflictWait';requester.action.preferredConflictSlotId='bed:left';requester.action.conflictWaitSource='sleepSlotOccupancy';requester.action.conflictWaitStartedTick=0;requester.action.conflictWaitUntilTick=1;requester.needs.hunger=99;
 E.tick();
 assert.notEqual(requester.activeIntent?.kind,'sleep','emergency hunger must be able to preempt occupancy wait');
 assert.equal(requester.action?.kind,'eat');
 
 noIssues('sleep preferred Slot conflict');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.44.0-sleep-slot-conflict');
-assert.equal(SC.OCCUPANCY_WAIT_TICKS,3,'occupancy wait patience must be a separate calibration, not derived from assignment / claim / habit strength');
+assert.equal(SC.OCCUPANCY_REASSESS_TICKS,1,'occupancy wait must re-enter Deliberation instead of encoding a fixed multi-tick patience contract');
+assert.equal(SC.OCCUPANCY_WAIT_TICKS,undefined,'sleep conflict must not expose a fixed occupancy patience contract');
 assert.equal(SC.ATTENTION_REASSESS_TICKS,1,'attention-only resolution must have an explicit finite reassessment boundary');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
