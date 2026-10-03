@@ -12,7 +12,7 @@ loadRuntimeProfile([
 ]);
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.44.0-sleep-slot-conflict';
+const APP_VERSION='11.45.0-agent-carry-relocate';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
@@ -22,7 +22,6 @@ verticalAuthoring.structures={
   stairA:{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8,clearanceHeight:2}
 };
 E.configureResetStateSource('locomotion-vertical-fixture',seed=>W.createInitialStateFromAuthoring(verticalAuthoring,seed));
-
 
 function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
   E.reset(11900);
@@ -86,7 +85,6 @@ assert.deepEqual(L.SURFACE_MANEUVER_BURDEN_BY_KIND,{human:9,cat:1.6},'Surface tr
 assert.equal(L.surfaceManeuverBurden(human,{family:'climb',kind:'climbUp',direction:'up'}),9);
 assert.equal(L.surfaceManeuverTiming(human,'walk',{family:'climb',kind:'climbUp',direction:'up'},1,0).movementTicks,1,'first maneuver policy must preserve existing walk timing instead of inventing extra magic ticks');
 
-// A: normal corridor stays walk-first; no posture-transition tax when already standing.
 let f=resetFixture({height:2,width:.8});
 let plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(plan.pathDistance,2);
@@ -100,7 +98,6 @@ E.tick();assert.ok(SP.nodeSame(E.getState(),f.human.position,f.mid),'walk should
 E.tick();assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'walk should reach a two-edge goal in two movement ticks');
 E.tick();assert.equal(f.human.action,null,'existing action lifecycle may settle on the tick after arrival');assert.deepEqual(f.human.locomotion,{mode:null,phase:'idle'});
 
-// B: low unique passage selects kneel crawl and spends one explicit transition tick.
 f=resetFixture({height:.95,width:.8});
 plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.deepEqual(plan.steps.map(x=>x.mode),['kneelCrawl','kneelCrawl']);
@@ -121,7 +118,6 @@ assert.equal(f.human.posture.kind,'kneeling','arrival must not silently stand up
 E.tick();assert.equal(f.human.action,null);assert.equal(f.human.posture.kind,'kneeling','action completion keeps authoritative posture until a later transition');
 assert.deepEqual(f.water.position,f.goal,'water remains on the far side of the unique passage');
 
-// C: lower passage only permits prone crawl.
 f=resetFixture({height:.70,width:.8});
 plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.deepEqual(plan.steps.map(x=>x.mode),['proneCrawl','proneCrawl']);
@@ -131,14 +127,12 @@ assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal));
 assert.equal(f.human.posture.kind,'prone');
 assert.equal(f.human.locomotion.mode,'proneCrawl');
 
-// D: width-blocked passage remains impossible in every Human mode.
 f=resetFixture({height:2,width:null,edgeWidth:.44});
 plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.deepEqual(plan.path,[]);
 assert.equal(plan.travelTime,Infinity);
 assert.equal(f.human.posture.kind,'standing');
 
-// E: speedFactor remains execution timing; it must not redefine objective mode burden.
 f=resetFixture({height:.95,width:.8,kneelSpeed:.25});
 plan=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(L.edgeMoveTicks(f.human,'kneelCrawl'),4,'individual profile override must change kneel edge timing');
@@ -150,7 +144,6 @@ assert.ok(!SP.nodeSame(E.getState(),f.human.position,f.goal),'agent must not arr
 E.tick();
 assert.ok(SP.nodeSame(E.getState(),f.human.position,f.goal),'actual movement must honor the speedFactor-sensitive selected mode timing');
 
-// F: a legal stair route executes a real cross-Z movement step without a stair-specific action.
 E.reset(11901);
 st=E.getState();human=st.agents.zhen;
 st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
@@ -167,7 +160,6 @@ assert.ok(SP.nodeSame(E.getState(),human.position,stairUpper),'one walk movement
 assert.equal(human.posture.kind,'standing');
 assert.equal(human.locomotion.mode,'walk');
 
-// G: a Surface transition executes the same maneuver identity selected by Route / Locomotion.
 E.reset(11902);
 st=E.getState();human=st.agents.zhen;
 st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
@@ -197,8 +189,6 @@ plan=SP.planRoute(st,cat,catTableTop,{mode:'auto',objective:'traversalCost'});
 assert.equal(plan.steps[0]?.surfaceManeuver?.kind,'jumpUp','Default Cat tabletop transition must retain its distinct jumpUp capability result');
 
 E.reset(11904);
-
-// Validator owns locomotion/posture consistency and pending edge timing.
 let validation=V.validateState(E.getState());
 assert.equal(validation.issueCount,0,validation.issues.map(x=>x.message).join('\n'));
 f.human.locomotion={mode:'kneelCrawl',phase:'moving'};f.human.posture={kind:'standing',slotId:null,furnitureId:null};
