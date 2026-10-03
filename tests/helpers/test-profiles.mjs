@@ -134,6 +134,8 @@ function ensureRuntimeDependencies(paths){
     const carryIndex=paths.indexOf('systems/agent-carry.js');
     paths.splice(Math.max(traversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
   }
+  const validationManifestIndex=paths.indexOf('validation/manifest.js');
+  if(validationManifestIndex>=0&&!paths.includes('validation/rules/agent-carry.js'))paths.splice(validationManifestIndex,0,'validation/rules/agent-carry.js');
   return paths;
 }
 
