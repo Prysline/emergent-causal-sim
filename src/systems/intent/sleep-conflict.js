@@ -3,7 +3,7 @@
   if(!E||!SP||!U)return;
   if(typeof E.observeAgentContext!=='function'||typeof E.performAttentionInteraction!=='function')throw new Error('sleep-conflict.js requires shared Agent-context observation + attention.');
   const VERSION='11.44.0-sleep-slot-conflict';
-  const OCCUPANCY_WAIT_TICKS=3;
+  const OCCUPANCY_REASSESS_TICKS=1;
   const ATTENTION_REASSESS_TICKS=1;
   const REQUEST_STIMULUS=Object.freeze({kind:'sound',intensity:24});
   const DRIVE_STIMULUS=Object.freeze({kind:'sound',intensity:32});
@@ -75,11 +75,10 @@
       priorConflictDecisionId:evaluation.prior?.id||null
     })||null;
   }
-  function waitDurationTicks(){return OCCUPANCY_WAIT_TICKS;}
-  function beginConflictWait(st,action,conflict,{source='sleepSlotOccupancy',ticks=OCCUPANCY_WAIT_TICKS}={}){
+  function beginConflictWait(st,action,conflict,{source='sleepSlotOccupancy',ticks=OCCUPANCY_REASSESS_TICKS}={}){
     action.phase='conflictWait';action.preferredConflictSlotId=conflict.slot.id;action.conflictWaitSource=source;action.conflictWaitStartedTick=st.tick;action.conflictWaitUntilTick=st.tick+Math.max(1,Number(ticks)||1);return {handled:true,resolution:source==='attentionReassessment'?'attention':'wait'};
   }
-  function beginOccupancyWait(st,a,action,conflict){return beginConflictWait(st,action,conflict,{source:'sleepSlotOccupancy',ticks:waitDurationTicks()});}
+  function beginOccupancyWait(st,a,action,conflict){return beginConflictWait(st,action,conflict,{source:'sleepSlotOccupancy',ticks:OCCUPANCY_REASSESS_TICKS});}
   function awaitResponseIntent(st,a,bidId,slotId,conflictDecisionId=null){
     const patience=Math.max(1,Number(E.REQUESTER_PATIENCE_TICKS)||3);
     return {id:'intent:'+a.id+':'+st.tick+':awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict',preferredSlotId:slotId,conflictDecisionId},patienceUntilTick:st.tick+patience};
@@ -211,7 +210,7 @@
   E.registerRuntimeHook('beforeTick','sleepConflict.respond',()=>processSleepConflictResponses(E.getState()),275);
   E.registerRuntimeHook('afterTick','sleepConflict.complete-yield',()=>settleYieldCompletions(E.getState()),150);
 
-  const api={VERSION,OCCUPANCY_WAIT_TICKS,ATTENTION_REASSESS_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions,observeSleepConflictBid};
+  const api={VERSION,OCCUPANCY_REASSESS_TICKS,ATTENTION_REASSESS_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions,observeSleepConflictBid};
   window.SimSleepConflict=Object.freeze(api);
   E.SLEEP_SLOT_CONFLICT_VERSION=VERSION;
 })();
