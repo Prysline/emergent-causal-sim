@@ -1,6 +1,7 @@
 (() => {
   const W=window.SimWorld,C=window.SimEmbodimentCapabilities,R=window.SimResources;
-  if(!W?.registerInitialStateInitializer||!C||!R)throw new Error('Agent carry requires World, Embodiment Capabilities, and Resources.');
+  if(!W?.registerInitialStateInitializer)throw new Error('systems/agent-carry.js requires world.js initial-state pipeline.');
+  if(!C||!R)throw new Error('systems/agent-carry.js requires Embodiment Capabilities and Resources.');
 
   const VERSION='11.45.0-agent-carry-relocate';
   const METHOD='twoArmCarry';
