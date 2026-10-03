@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.44.0-sleep-slot-conflict';
+const APP_VERSION='11.45.0-agent-carry-relocate';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,V=globalThis.SimValidator,W=globalThis.SimWorld;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
@@ -41,7 +41,6 @@ assert.deepEqual(E.listRuntimeHooks('episodicMemoryCreated'),[
 ]);
 noIssues('reset');
 
-// Full Human↔Human conversation consolidates once per participant, from the appraisal that represents each participant's own outcome.
 st=E.prepareHumanTalkScenario('talk-engage',11501);
 assert.ok(runUntil(()=>E.getState().events.some(e=>e.data?.action==='talk'),10),'engage scenario should complete a talk encounter');
 st=E.getState();let requester=st.agents.zhou,responder=st.agents.zhen;
@@ -56,7 +55,6 @@ E.observeEventForMemories(st,acceptEvent,st.tick);
 assert.deepEqual(relation(requester,'zhen'),requesterRel,'re-observing the same source event must not consolidate Relationship twice');
 noIssues('full talk directional consolidation');
 
-// Brief response: requester gets a mild negative affinity trace; responder only becomes more familiar because its actor-side appraisal is neutral.
 st=E.prepareHumanTalkScenario('talk-brief',11502);
 assert.ok(runUntil(()=>E.getState().events.some(e=>e.data?.action==='briefTalkReply'),10),'brief scenario should resolve');
 st=E.getState();requester=st.agents.zhou;responder=st.agents.zhen;
@@ -66,7 +64,6 @@ assert.ok(relation(responder,'zhou')?.familiarity>0,'responder still gains direc
 assert.equal(relation(responder,'zhou')?.affinity,0,'choosing a brief reply must not invent a negative feeling in the responder');
 noIssues('brief reply asymmetric consolidation');
 
-// avoidPet proves the same observable event may push the two directions differently.
 st=E.preparePetResponseScenario('pet-avoid',11503);
 assert.ok(runUntil(()=>E.getState().events.some(e=>e.data?.action==='avoidPet'),6),'pet avoid scenario should resolve');
 st=E.getState();const human=st.agents.zhou,cat=st.agents.orange;
@@ -75,7 +72,6 @@ assert.ok(relation(human,'orange')?.affinity<0,'human target should consolidate 
 assert.ok(relation(cat,'zhou')?.affinity>0,'animal actor may consolidate successful boundary maintenance positively');
 noIssues('avoidPet directional appraisal');
 
-// Requester-private no-response updates only requester→counterpart, and repeated processing of the same wait event is exactly-once.
 st=E.prepareHumanTalkScenario('talk-no-response',11504);
 assert.ok(runUntil(()=>E.getState().agents.zhou.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'),10),'no-response should form private outcome memory');
 st=E.getState();requester=st.agents.zhou;responder=st.agents.zhen;
@@ -89,7 +85,6 @@ E.rememberRequesterSocialOutcome(st,waitEvent);
 assert.deepEqual(relation(requester,'zhen'),privateRel,'same private source must not consolidate twice');
 noIssues('private no-response relationship boundary');
 
-// Proposal-only and unrelated episodes are not audited relationship evidence even when they have an appraisal.
 E.reset(11505);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;requester.position={x:5,y:5};responder.position={x:5,y:6};calm(requester);calm(responder);st.agents.orange.offMap=true;
 const offerId=E.addEvent('測試聊天邀請','normal',[],{actor:'zhen',target:'zhou',action:'talkOffer',socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:'zhen',bidTo:'zhou',perceivedByTarget:true,position:E.positionRef(requester.position)});
 st.causes[offerId].data.bidId=offerId;
@@ -101,7 +96,6 @@ assert.equal(relation(requester,'zhou'),null,'non-relational agency must not bec
 assert.equal(relation(responder,'zhen'),null);
 noIssues('audited evidence gate');
 
-// Relationship is consolidated persistent slow state, not a recomputation from the current hot-memory set.
 st=E.prepareHumanTalkScenario('talk-engage',11506);assert.ok(runUntil(()=>E.getState().events.some(e=>e.data?.action==='talk'),10));st=E.getState();requester=st.agents.zhou;
 const consolidated=clone(relation(requester,'zhen'));assert.ok(consolidated);
 requester.affect={valence:0,activation:0,frustration:0,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:null};
@@ -109,8 +103,6 @@ requester.episodicMemories=[];
 assert.deepEqual(relation(requester,'zhen'),consolidated,'pruning/clearing episodic memory must not erase already consolidated relationship state');
 noIssues('relationship survives memory pruning');
 
-// Relationship remains separate from Memory association itself. Base/no-counterpart responder helpers remain relationship-neutral;
-// v11.15.2 explicit-counterpart responder influence is covered by its focused regression.
 E.reset(11507);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;const animal=st.agents.orange;calm(requester,{social:90});calm(responder,{social:55});calm(animal,{social:55});
 const talkScoreBefore=E.talkEngagementScore(responder),petScoreBefore=E.petResponseScore(animal),assocBefore=clone(E.targetAssociation(st,requester,'zhou'));
 requester.relationships.zhou={familiarity:.92,affinity:-.88,lastUpdatedTick:st.tick};
@@ -122,7 +114,6 @@ assert.deepEqual(E.targetAssociation(st,requester,'zhou'),assocBefore,'Relations
 assert.ok(E.relationshipTargetDelta(requester,'zhou')<0,'Relationship target preference remains a separate derived delta');
 noIssues('base responder helper and memory-association boundary');
 
-// Bounded state and forbidden mirror fields remain clean during integration.
 E.reset(11508);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
@@ -140,4 +131,4 @@ for(let i=0;i<500;i++){
   if(i%25===0)noIssues(`tick ${i+1}`);
 }
 noIssues('500 tick integration');
-console.log('v11.15 Relationship foundation regression: ok under v11.20.0 app marker');
+console.log('v11.15 Relationship foundation regression: ok under current app marker');
