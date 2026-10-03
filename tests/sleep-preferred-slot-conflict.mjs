@@ -34,7 +34,7 @@ const addConflictBid=(st,requester,responder,{kind='sleepSlotYield',slot='bed:le
 // A: assigned preferred Slot stays illegal while conflict deliberation can compare alternate / wait / attention / Human request / nonphysical drive-away.
 E.reset(44001);
 let st=E.getState(),requester=st.agents.zhen,human=st.agents.zhou,cat=st.agents.orange;
-cat.offMap=true;const left=nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');
+cat.offMap=true;nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');
 assert.equal(SP.sleepTargets(st,requester).some(x=>x.id==='bed:left'),false);
 assert.equal(SP.sleepTargetExclusion(st,requester,'bed:left').reason,'occupied');
 assert.ok(U.associationReasons(st,requester,'sleep',{kind:'slot',id:'bed:left'}).some(x=>x.key==='assignedToSelf'));
@@ -67,17 +67,20 @@ assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Anim
 assert.equal(SP.slotAvailable(st,'bed:left',requester.id),false,'wake consequence must not imply Slot release');
 assert.equal(st.events.some(e=>['acceptSleepSlotYield','refuseSleepSlotYield'].includes(e.data?.action)),false,'Animal attention must not create Human yield response');
 
-// D: Human responder decides locally. Acceptance/refusal is separate from actual Slot release.
+// D: Human responder decides locally. Response is a World Event; requester settles its own private wait only after perceiving it.
 E.reset(44004);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');human.needs.sleepNeed=10;
 let bidId=addConflictBid(st,requester,human);
 requester.activeIntent={id:'intent:zhen:test:awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict'},patienceUntilTick:st.tick+3};
 SC.processSleepConflictResponses(st);
 const accepted=st.events.find(e=>e.data?.action==='acceptSleepSlotYield'&&e.data?.responseToBid===bidId);assert.ok(accepted);
+assert.equal(accepted.data.perceivedByTarget,true,'response perception must be recorded through the shared Agent-context boundary');
 assert.equal(human.posture.slotId,'bed:left','accept response itself must not directly rewrite responder posture');
 assert.equal(human.activeIntent?.kind,'yieldSleepSlot','accepted responder should own its departure Intent');
 assert.equal(human.action?.kind,'wander','accepted responder should own its departure Action');
-assert.equal(requester.activeIntent,null,'observable response should settle requester response wait');
+assert.equal(requester.activeIntent?.kind,'awaitResponse','responder response must not directly clear requester-private Intent');
+SC.processSleepConflictResponses(st);
+assert.equal(requester.activeIntent,null,'requester may settle its own wait after consuming a perceived response event');
 assert.ok(st.events.some(e=>e.data?.action==='understandSleepSlotRequest'&&e.data?.responseToBid===bidId),'perceived request must be able to become an explicit understood outcome before acceptance');
 for(let i=0;i<4&&!st.events.some(e=>e.data?.action==='completeSleepSlotYield'&&e.data?.responseToBid===bidId);i++)E.tick();
 assert.ok(st.events.some(e=>e.data?.action==='completeSleepSlotYield'&&e.data?.responseToBid===bidId),'accepted response must stay distinct from actual Slot release completion');
