@@ -32,14 +32,38 @@
   });
   const POSE_PROFILES=deepFreeze({
     human:{
-      standing:{height:{source:'height',factor:1},width:{source:'width',factor:1},length:{source:'length',factor:1}},
-      sitting:{height:{source:'height',factor:.55},width:{source:'width',factor:1},length:{source:'height',factor:.36}},
-      lying:{height:{source:'length',factor:1},width:{source:'width',factor:1},length:{source:'height',factor:1}}
+      standing:{
+        height:{source:'height',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'length',factor:1}
+      },
+      sitting:{
+        height:{source:'height',factor:.55},
+        width:{source:'width',factor:1},
+        length:{source:'height',factor:.36}
+      },
+      lying:{
+        height:{source:'length',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'height',factor:1}
+      }
     },
     cat:{
-      standing:{height:{source:'height',factor:1},width:{source:'width',factor:1},length:{source:'length',factor:1}},
-      sitting:{height:{source:'length',factor:1},width:{source:'width',factor:1},length:{source:'height',factor:.90}},
-      lying:{height:{source:'height',factor:.50},width:{source:'width',factor:1.25},length:{source:'length',factor:1}}
+      standing:{
+        height:{source:'height',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'length',factor:1}
+      },
+      sitting:{
+        height:{source:'length',factor:1},
+        width:{source:'width',factor:1},
+        length:{source:'height',factor:.90}
+      },
+      lying:{
+        height:{source:'height',factor:.50},
+        width:{source:'width',factor:1.25},
+        length:{source:'length',factor:1}
+      }
     }
   });
   const SUPPORT_PROFILES=deepFreeze({
@@ -84,7 +108,9 @@
     }
     return out;
   }
-  function getPoseEnvelopeForKind(kind,bodyGeometry,posture){return derivePoseEnvelope(bodyGeometry,poseProfileForKind(kind,posture));}
+  function getPoseEnvelopeForKind(kind,bodyGeometry,posture){
+    return derivePoseEnvelope(bodyGeometry,poseProfileForKind(kind,posture));
+  }
   function supportProfileForKind(kind,posture){return SUPPORT_PROFILES[kind]?.[posture]||null;}
   function deriveSupportFootprint(bodyGeometry,supportProfile){
     if(!bodyGeometry||!supportProfile)return null;
@@ -96,7 +122,9 @@
     }
     return out;
   }
-  function getSupportFootprintForKind(kind,bodyGeometry,posture='standing'){return deriveSupportFootprint(bodyGeometry,supportProfileForKind(kind,posture));}
+  function getSupportFootprintForKind(kind,bodyGeometry,posture='standing'){
+    return deriveSupportFootprint(bodyGeometry,supportProfileForKind(kind,posture));
+  }
   function surfaceManeuverProfileForKind(kind,family){return SURFACE_MANEUVER_PROFILES[kind]?.[family]||null;}
   function agentCarryMethod(method){return AGENT_CARRY_METHODS[method]||null;}
   function agentCarryCapabilityForKind(kind,method){
@@ -112,28 +140,61 @@
     return true;
   }
 
-  function defaultPhysicalProfile(kind){const template=DEFAULT_PHYSICAL_PROFILES[kind];return template?clone(template):null;}
+  function defaultPhysicalProfile(kind){
+    const template=DEFAULT_PHYSICAL_PROFILES[kind];
+    return template?clone(template):null;
+  }
   function supportedLocomotionModesForKind(kind){
-    const profile=DEFAULT_PHYSICAL_PROFILES[kind];if(!profile)return [];
+    const profile=DEFAULT_PHYSICAL_PROFILES[kind];
+    if(!profile)return [];
     return Object.keys(profile.locomotionCapabilities||{}).filter(mode=>profile.locomotionCapabilities?.[mode]===true&&!!profile.locomotionProfiles?.[mode]);
   }
   function postureForMode(mode){return POSTURE_BY_MODE[mode]||null;}
   function modeFromPosture(posture){return MODE_BY_POSTURE[posture]||null;}
   function freePosturesForKind(kind){
     if(!DEFAULT_PHYSICAL_PROFILES[kind])return [];
-    const supported=new Set(supportedLocomotionModesForKind(kind).map(postureForMode).filter(Boolean));supported.add('lying');
+    const supported=new Set(supportedLocomotionModesForKind(kind).map(postureForMode).filter(Boolean));
+    supported.add('lying');
     return ALL_POSTURES.filter(posture=>posture!=='sitting'&&posture!=='carried'&&supported.has(posture));
   }
   function slotPosturesForKind(kind,slot={}){
     if(!DEFAULT_PHYSICAL_PROFILES[kind])return [];
-    const supported=new Set(freePosturesForKind(kind));supported.add('sitting');if(!slot?.canRest&&!slot?.canSleep)supported.delete('lying');
+    const supported=new Set(freePosturesForKind(kind));
+    supported.add('sitting');
+    if(!slot?.canRest&&!slot?.canSleep)supported.delete('lying');
     return ALL_POSTURES.filter(posture=>posture!=='carried'&&supported.has(posture));
   }
   function postureLabel(posture){return POSTURE_LABELS[posture]||posture||'未知';}
   function modeLabel(mode){return MODE_LABELS[mode]||mode||'移動';}
 
   window.SimEmbodimentCapabilities=Object.freeze({
-    VERSION,DEFAULT_PHYSICAL_PROFILES,POSE_PROFILES,SUPPORT_PROFILES,SURFACE_MANEUVER_PROFILES,AGENT_CARRY_METHODS,AGENT_CARRY_CAPABILITIES,ALL_POSTURES,POSTURE_BY_MODE,MODE_BY_POSTURE,
-    defaultPhysicalProfile,poseProfileForKind,derivePoseEnvelope,getPoseEnvelopeForKind,supportProfileForKind,deriveSupportFootprint,getSupportFootprintForKind,surfaceManeuverProfileForKind,agentCarryMethod,agentCarryCapabilityForKind,poseEnvelopeFitsUsableSpace,supportedLocomotionModesForKind,postureForMode,modeFromPosture,freePosturesForKind,slotPosturesForKind,postureLabel,modeLabel
+    VERSION,
+    DEFAULT_PHYSICAL_PROFILES,
+    POSE_PROFILES,
+    SUPPORT_PROFILES,
+    SURFACE_MANEUVER_PROFILES,
+    AGENT_CARRY_METHODS,
+    AGENT_CARRY_CAPABILITIES,
+    ALL_POSTURES,
+    POSTURE_BY_MODE,
+    MODE_BY_POSTURE,
+    defaultPhysicalProfile,
+    poseProfileForKind,
+    derivePoseEnvelope,
+    getPoseEnvelopeForKind,
+    supportProfileForKind,
+    deriveSupportFootprint,
+    getSupportFootprintForKind,
+    surfaceManeuverProfileForKind,
+    agentCarryMethod,
+    agentCarryCapabilityForKind,
+    poseEnvelopeFitsUsableSpace,
+    supportedLocomotionModesForKind,
+    postureForMode,
+    modeFromPosture,
+    freePosturesForKind,
+    slotPosturesForKind,
+    postureLabel,
+    modeLabel
   });
 })();
