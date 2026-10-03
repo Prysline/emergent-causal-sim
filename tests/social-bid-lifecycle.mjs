@@ -14,7 +14,7 @@ const waitEndFor=bidId=>E.getState().events.find(e=>e.data?.action==='socialWait
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.44.0-sleep-slot-conflict');
+assert.equal(st.version,'11.45.0-agent-carry-relocate');
 assert.equal(E.SOCIAL_BID_SCHEMA_VERSION,'11.12.2-social-bid-lifecycle');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='socialBid.respond-animal-affection'),'Social Bid responder option provider must be registered');
 for(const a of Object.values(st.agents)){
@@ -23,8 +23,6 @@ for(const a of Object.values(st.agents)){
 }
 noIssues('reset');
 
-// Real seekHuman interaction becomes an immutable world Bid. Requester waiting is private;
-// responder observation is a local reference; no pendingInteraction compatibility state is created.
 E.reset(20260911);
 st=E.getState();
 const cat=st.agents.orange,human=st.agents.zhou;
@@ -50,8 +48,6 @@ assert.equal(Object.prototype.hasOwnProperty.call(human,'pendingInteraction'),fa
 assert.equal(st.events.some(e=>e.data?.action==='catRequestExpired'),false,'legacy fake expiry event must not leak through');
 noIssues('world Bid + private requester waiting');
 
-// The responder may become free later and form its own response Intent. Moving the responder away here
-// is an explicit world-state change; it does not modify the requester private waiting state.
 human.action=null;human.activeIntent=null;human.position={x:10,y:6};
 const requesterPos={...cat.position};
 const responseChoices=E.socialBidDecisionOptions(st,human);
@@ -70,8 +66,6 @@ assert.equal(Object.prototype.hasOwnProperty.call(human,'pendingInteraction'),fa
 assert.equal(cat.activeIntent?.kind,'awaitResponse');
 noIssues('delayed responder Intent');
 
-// Requester patience ends independently while the responder is still travelling. Timeout must not move the requester
-// and must not remotely cancel the responder private Intent.
 const patienceUntil=cat.activeIntent.patienceUntilTick;
 while(E.getState().tick<patienceUntil)E.tick();
 st=E.getState();
@@ -86,7 +80,6 @@ assert.equal(human.activeIntent?.kind,'respondSocialBid','requester timeout must
 assert.equal(human.activeIntent?.source?.bidId,bid.id);
 noIssues('independent requester timeout');
 
-// The requester can remain nearby doing something else; the already-formed responder Intent may still complete later.
 cat.needs.fatigue=70;
 cat.action={kind:'rest',phase:'resting',started:st.tick,wait:0,restTicks:0,targetFatigue:0,restTarget:{kind:'standing',position:{...cat.position},quality:.18,posture:'standing'}};
 E.reconcileIntents(st);
@@ -100,7 +93,6 @@ assert.equal(cat.activeIntent?.kind==='awaitResponse',false,'late response must 
 assert.equal(human.observedSocialBids.some(x=>x.bidId===bid.id),false,'completed response should release the responder local Bid reference');
 noIssues('late physical response');
 
-// Same-tick race: an actual response on the requester deadline wins before private timeout settlement.
 E.reset(41);
 st=E.getState();
 const raceCat=st.agents.orange,raceHuman=st.agents.zhou;
@@ -111,7 +103,6 @@ raceCat.activeIntent={id:`intent:orange:0:awaitResponse:${raceBidId}`,kind:'awai
 raceHuman.observedSocialBids=[{bidId:raceBidId,observedTick:0,expiresTick:6}];
 raceHuman.activeIntent={id:`intent:zhou:0:respondSocialBid:${raceBidId}`,kind:'respondSocialBid',createdTick:0,lifecycle:'actionBound',source:{type:'socialBid',bidId:raceBidId,observedTick:0}};
 raceHuman.action={kind:'petAnimal',phase:'interact',started:0,wait:0,targetAgent:'orange',intentId:raceHuman.activeIntent.id};
-
 noIssues('race setup');
 E.tick();
 st=E.getState();
@@ -120,7 +111,6 @@ assert.equal(waitEndFor(raceBidId),undefined,'same-tick physical response must s
 assert.equal(raceCat.activeIntent,null);
 noIssues('same-tick response before timeout');
 
-// Responder option remains a normal candidate: urgent core needs may still win instead of forcing a response.
 E.reset(31415);
 st=E.getState();
 const competingHuman=st.agents.zhou,competingCat=st.agents.orange;
@@ -136,7 +126,6 @@ assert.notEqual(st.agents.zhou.activeIntent?.kind,'respondSocialBid','Social Bid
 assert.ok(st.agents.zhou.observedSocialBids.some(x=>x.bidId===competingBidId),'unselected observed Bid should remain available within its bounded lifetime');
 noIssues('responder candidate competes with urgent core need');
 
-// Long-run integration keeps active Social Bid state bounded and never restores shared pending request truth.
 E.reset(77);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
