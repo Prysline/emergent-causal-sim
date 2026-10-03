@@ -142,11 +142,11 @@
     }
   }
   function bindYieldDeparture(st,responder,bid,evaluation){
-    if(responder.posture?.slotId!==bid.data?.slot)return false;
-    const egress=SP.slotEgressNodes?.(st,bid.data.slot,responder,'walk')?.[0]||null;
+    const slot=SP.getSlot?.(st,bid.data?.slot);if(!slot||responder.posture?.slotId!==slot.id)return false;
+    const egress=SP.slotEgressNodes?.(st,slot,responder,'walk')?.[0]||null;
     if(!egress)return false;
     const departure=E.buildAction?.(responder,{id:'wander',targetTile:egress});if(!departure)return false;
-    const intent={id:'intent:'+responder.id+':'+st.tick+':yieldSleepSlot:'+bid.id,kind:'yieldSleepSlot',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictResponse',bidId:bid.id,slotId:bid.data?.slot,tick:st.tick}};
+    const intent={id:'intent:'+responder.id+':'+st.tick+':yieldSleepSlot:'+bid.id,kind:'yieldSleepSlot',createdTick:st.tick,lifecycle:'actionBound',source:{type:'sleepSlotConflictResponse',bidId:bid.id,slotId:slot.id,tick:st.tick}};
     departure.intentId=intent.id;responder.action=departure;responder.activeIntent=intent;
     E.adoptDecisionEvidence?.(st,responder,departure,{source:{type:'sleepSlotConflictResponse',tick:st.tick,bidId:bid.id,intentKind:'yieldSleepSlot'},contributors:[{kind:'need',key:'sleepNeed',role:'modifier',value:evaluation.sleepNeed},{kind:'association',key:'ownSlotInsistence',role:'modifier',value:evaluation.ownAssociationStrength},{kind:'relationship',key:'requesterSignal',role:'modifier',value:evaluation.relationshipSignal}],utility:evaluation.score*100});
     return true;
