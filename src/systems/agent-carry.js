@@ -16,7 +16,7 @@
 
   function capabilityFor(agent,method=METHOD){return C.agentCarryCapabilityForKind?.(agent?.kind,method)||null;}
   function carryLocalEnvelope(carried,method=METHOD){
-    const capability=capabilityFor(carried?.kind?{kind:carried.kind}:carried,method),body=carried?.physical?.bodyGeometry,cal=capability?.carriedGeometryCalibration;
+    const methodProfile=C.agentCarryMethod?.(method),body=carried?.physical?.bodyGeometry,cal=methodProfile?.carriedGeometryCalibration;
     if(!body||!cal)return null;
     const height=Number(body.width),bodyHeight=Number(body.height),bodyWidth=Number(body.width),bodyLength=Number(body.length);
     if(![height,bodyHeight,bodyWidth,bodyLength].every(v=>Number.isFinite(v)&&v>0))return null;
@@ -87,7 +87,7 @@
     if(!(SP.nodeLocomotionAccessible?.(st,node,carried)??SP.nodeWalkable?.(st,node,carried)??SP.walkable?.(st,node)))return {ok:false,reason:'floor-node-inaccessible'};
     if((SP.nodeOccupantsAt?.(st,node,carried.id)||SP.occupantsAt?.(st,node,carried.id)||[]).length)return {ok:false,reason:'floor-node-occupied'};
     const carrierNode=SP.nodeForAgent?.(st,carrier)||SP.normalizeNode?.(st,carrier.position);
-    if(!carrierNode||!SP.nodeSame?.(st,carrierNode,node)&&((SP.manhattan?.(carrierNode,node)??Infinity)!==1))return {ok:false,reason:'carrier-not-at-placement-reach'};
+    if(!carrierNode||(!SP.nodeSame?.(st,carrierNode,node)&&(SP.manhattan?.(carrierNode,node)??Infinity)!==1))return {ok:false,reason:'carrier-not-at-placement-reach'};
     const posture=relation.responderMode==='sleeping'?'lying':'standing';
     return {ok:true,kind:'floor',position:node,posture};
   }
