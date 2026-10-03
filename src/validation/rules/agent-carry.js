@@ -39,5 +39,5 @@
     return {...base,issueCount:issues.length,issues,ok:issues.length===0};
   }
 
-  V.registerValidationLayer('agent-carry',validateLayer,95);
+  V.registerValidationLayer('agent-carry',validateLayer,92);
 })();
