@@ -25,10 +25,10 @@ const armSleep=(st,a)=>{
   E.adoptDecisionEvidence(st,a,a.action,{source:{type:'test',tick:st.tick,intentKind:'sleep'},contributors:E.decisionContributorsForAction(a,'sleep'),utility:E.baseUtilityForAction(a,'sleep')});
   return a.action;
 };
-const addConflictBid=(st,requester,responder,{kind='sleepSlotYield',slot='bed:left'}={})=>{
+const addConflictBid=(st,requester,responder,{kind='sleepSlotYield',slot='bed:left',perceived=true}={})=>{
   const action=kind==='sleepSlotDriveAway'?'sleepSlotDriveAway':'sleepSlotYieldRequest';
-  const id=E.addEvent('sleep conflict test bid','normal',[],{actor:requester.id,target:responder.id,action,slot,socialBid:true,bidKind:kind,interactionKind:kind==='sleepSlotDriveAway'?'nonPhysicalDriveAway':'requestYield',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true});
-  st.causes[id].data.bidId=id;E.addObservedBid(st,responder,st.causes[id],st.tick);return id;
+  const id=E.addEvent('sleep conflict test bid','normal',[],{actor:requester.id,target:responder.id,action,slot,socialBid:true,bidKind:kind,interactionKind:kind==='sleepSlotDriveAway'?'nonPhysicalDriveAway':'requestYield',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:perceived});
+  st.causes[id].data.bidId=id;return id;
 };
 
 // A: assigned preferred Slot stays illegal while conflict deliberation can compare alternate / wait / attention / Human request / nonphysical drive-away.
@@ -40,6 +40,7 @@ assert.equal(SP.sleepTargetExclusion(st,requester,'bed:left').reason,'occupied')
 assert.ok(U.associationReasons(st,requester,'sleep',{kind:'slot',id:'bed:left'}).some(x=>x.key==='assignedToSelf'));
 let conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');assert.ok(conflict);
 let evaluation=SC.conflictCandidates(st,requester,conflict);
+assert.deepEqual(evaluation.observation,E.observeAgentContext(st,requester,human),'sleep conflict must consume the shared Agent-context observation owner');
 for(const kind of ['alternate','wait','attention','requestYield','driveAway'])assert.ok(evaluation.candidates.some(x=>x.kind===kind),'missing '+kind);
 armSleep(st,requester);const observedSnapshot=structuredClone(evaluation.observation);SC.resolveSleepChoice(st,requester,requester.action);
 assert.ok(requester.conflictResolutionEvidence.length>=1);
@@ -64,13 +65,18 @@ assert.ok(evaluation.candidates.some(x=>x.kind==='wait'));assert.ok(evaluation.c
 assert.equal(evaluation.candidates.some(x=>x.kind==='requestYield'),false);assert.equal(evaluation.candidates.some(x=>x.kind==='driveAway'),false);
 armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);
 assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Animal no-alternate case should be able to select generic attention');
+assert.equal(requester.action?.phase,'conflictWait','attention-only resolution must enter explicit reassessment instead of falling through to core sleep target failure');
+assert.equal(requester.action?.conflictWaitSource,'attentionReassessment');
 assert.equal(SP.slotAvailable(st,'bed:left',requester.id),false,'wake consequence must not imply Slot release');
 assert.equal(st.events.some(e=>['acceptSleepSlotYield','refuseSleepSlotYield'].includes(e.data?.action)),false,'Animal attention must not create Human yield response');
+E.tick();
+assert.equal(st.events.some(e=>e.data?.action==='abort'&&e.data?.actionKind==='sleep'),false,'attention reassessment must not collapse into the old no-sleep-position abort on the next core step');
 
-// D: Human responder decides locally. Response is a World Event; requester settles its own private wait only after perceiving it.
+// D: Human responder observes a World bid locally, decides locally, and owns its departure Intent/Action.
 E.reset(44004);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');human.needs.sleepNeed=10;
 let bidId=addConflictBid(st,requester,human);
+assert.ok(E.observedBidRefs(st,human).some(ref=>ref.bidId===bidId),'perceived conflict bid must enter responder-private observation through the World-event listener');
 requester.activeIntent={id:'intent:zhen:test:awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict'},patienceUntilTick:st.tick+3};
 SC.processSleepConflictResponses(st);
 const accepted=st.events.find(e=>e.data?.action==='acceptSleepSlotYield'&&e.data?.responseToBid===bidId);assert.ok(accepted);
@@ -99,17 +105,24 @@ assert.equal(SP.sleepTargets(st,requester).length,0);assert.ok(E.baseUtilityForA
 armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);
 assert.equal(st.events.some(e=>e.data?.action==='abort'&&e.data?.actionKind==='sleep'),false,'no-alternate conflict must not immediately abort as no sleep position');
 
-// No-response is not refusal / ignored; busy responder simply does not create a response event.
+// F: perception outcomes stay distinct. Not perceived never creates responder-private observation; perceived-but-busy is no response, not refusal/ignore.
 E.reset(44007);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
+nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');
+bidId=addConflictBid(st,requester,human,{perceived:false});
+assert.equal(E.observedBidRefs(st,human).some(ref=>ref.bidId===bidId),false,'not-perceived conflict bid must not mutate responder-private observed bids');
+SC.processSleepConflictResponses(st);
+assert.equal(st.events.some(e=>e.data?.responseToBid===bidId),false,'not-perceived request must not produce understood/accepted/refused response');
+
+E.reset(44008);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');human.action={kind:'rest',phase:'resting',started:st.tick,wait:0,restTicks:0,targetFatigue:0,restTarget:{kind:'standing',position:{...human.position},quality:.18,posture:'standing'}};E.ensureIntentForAction(st,human);
 bidId=addConflictBid(st,requester,human);SC.processSleepConflictResponses(st);
 assert.equal(st.events.some(e=>e.data?.responseToBid===bidId&&['acceptSleepSlotYield','refuseSleepSlotYield'].includes(e.data?.action)),false);
 assert.equal(st.events.some(e=>/ignored|rejected|intentionalIgnore/i.test(String(e.data?.action||''))),false);
 
-// Higher-priority emergency may interrupt occupancy wait.
-E.reset(44008);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
+// G: higher-priority emergency may interrupt occupancy wait.
+E.reset(44009);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;armSleep(st,requester);
-requester.action.phase='conflictWait';requester.action.preferredConflictSlotId='bed:left';requester.action.conflictWaitStartedTick=0;requester.action.conflictWaitUntilTick=99;requester.needs.hunger=99;
+requester.action.phase='conflictWait';requester.action.preferredConflictSlotId='bed:left';requester.action.conflictWaitSource='sleepSlotOccupancy';requester.action.conflictWaitStartedTick=0;requester.action.conflictWaitUntilTick=99;requester.needs.hunger=99;
 E.tick();
 assert.notEqual(requester.activeIntent?.kind,'sleep','emergency hunger must be able to preempt occupancy wait');
 assert.equal(requester.action?.kind,'eat');
@@ -117,6 +130,7 @@ assert.equal(requester.action?.kind,'eat');
 noIssues('sleep preferred Slot conflict');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(SC.OCCUPANCY_WAIT_TICKS,3,'occupancy wait patience must be a separate calibration, not derived from assignment / claim / habit strength');
+assert.equal(SC.ATTENTION_REASSESS_TICKS,1,'attention-only resolution must have an explicit finite reassessment boundary');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
