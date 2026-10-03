@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.44.0-sleep-slot-conflict';
+const APP_VERSION='11.45.0-agent-carry-relocate';
 const RELATIONSHIP_VERSION='11.15.2-relationship-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const near=(actual,expected,eps=.001,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
@@ -48,7 +48,6 @@ assert.equal(E.TALK_RELATIONSHIP_RESPONSE_CAP,.18);
 assert.equal(E.PET_RELATIONSHIP_RESPONSE_CAP,.18);
 noIssues('reset');
 
-// Relationship exposes one directional, unitless signal; responders own how strongly they consume it.
 let responder=st.agents.zhen,requester=st.agents.zhou;
 calm(responder);calm(requester);
 assert.equal(E.relationshipSignal(responder,requester.id),0);
@@ -59,7 +58,6 @@ setRelationship(responder,requester,{familiarity:1,affinity:0});assert.equal(E.r
 setRelationship(responder,requester,{familiarity:99,affinity:99});assert.equal(E.relationshipSignal(responder,requester.id),1);
 assert.equal(E.relationshipTargetDelta(responder,requester.id),8,'v11.15.1 target-preference scaling must remain unchanged');
 
-// Human talk: same responder state, only responder→requester Relationship changes the response band.
 ({responder,requester}=armTalk({affinity:0,seed:11521}));
 let neutralTalk=E.talkResponseEvaluation(responder,requester);
 near(neutralTalk.baseScore,.451);near(neutralTalk.relationshipResponseDelta,0);near(neutralTalk.finalScore,.451);assert.equal(neutralTalk.response,'brief');
@@ -75,7 +73,6 @@ near(negativeTalk.relationshipResponseDelta,-.18);near(negativeTalk.finalScore,.
 requester.relationships[responder.id]={familiarity:1,affinity:1,lastUpdatedTick:st.tick};
 assert.equal(E.talkResponseFor(responder,requester),'decline','requester→responder Relationship must not leak into responder policy');
 
-// Actual Human flow preserves the same directional counterfactual and does not leak private score decomposition into World Events.
 armTalk({affinity:1,seed:11522});E.tick();st=E.getState();
 let offer=eventBy(e=>e.data?.action==='talkOffer'),response=eventBy(e=>e.data?.responseToBid===offer?.id&&['acceptTalk','briefTalkReply','declineTalk'].includes(e.data?.action));
 assert.equal(response?.data?.action,'acceptTalk');
@@ -85,7 +82,6 @@ armTalk({affinity:-1,seed:11523});E.tick();st=E.getState();
 offer=eventBy(e=>e.data?.action==='talkOffer');response=eventBy(e=>e.data?.responseToBid===offer?.id&&['acceptTalk','briefTalkReply','declineTalk'].includes(e.data?.action));
 assert.equal(response?.data?.action,'declineTalk');noIssues('negative human response');
 
-// Animal pet response: same animal state, only animal→human Relationship changes accept/tolerate/avoid.
 let human,animal;({human,animal}=armPet({affinity:0,seed:11531}));
 let neutralPet=E.petResponseEvaluation(animal,human);
 near(neutralPet.baseScore,.442);near(neutralPet.relationshipResponseDelta,0);near(neutralPet.finalScore,.442);assert.equal(neutralPet.response,'tolerate');
@@ -98,7 +94,6 @@ near(negativePet.relationshipResponseDelta,-.18);near(negativePet.finalScore,.26
 human.relationships[animal.id]={familiarity:1,affinity:1,lastUpdatedTick:E.getState().tick};
 assert.equal(E.petResponseFor(animal,human),'avoid','human→animal Relationship must not leak into animal responder policy');
 
-// Actual animal flow uses the same bounded response modifier without persisting a responder cache.
 armPet({affinity:1,seed:11532});E.tick();st=E.getState();
 offer=eventBy(e=>e.data?.action==='petOffer');response=eventBy(e=>e.data?.responseToBid===offer?.id&&['acceptPet','toleratePet','avoidPet'].includes(e.data?.action));
 assert.equal(response?.data?.action,'acceptPet');
