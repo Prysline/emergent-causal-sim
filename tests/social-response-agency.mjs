@@ -29,10 +29,8 @@ function armDirectPet(social,seed=11321){
   assert.equal(SP.isAtInteraction(st,human,{kind:'agent',id:cat.id},'social'),true,'fixture must begin in social range');
   return st;
 }
-
 function latestAction(action){return E.getState().events.find(e=>e.data?.action===action);}
 
-// Response score is deterministic and produces three legible bands from the same animal with only social need changed.
 E.reset(11320);let st=E.getState(),cat=st.agents.orange;
 cat.needs.social=5;assert.equal(E.petResponseFor(cat),'avoid');
 cat.needs.social=45;assert.equal(E.petResponseFor(cat),'tolerate');
@@ -43,9 +41,8 @@ assert.ok(E.petResponseScore(cat)<baselineScore,'negative responder Affect shoul
 cat.affect=neutralAffect;
 noIssues('deterministic response bands');
 
-// High social need: human intent becomes an observable petOffer, animal accepts, then and only then petAnimal succeeds.
 st=armDirectPet(90,21321);E.tick();st=E.getState();
-assert.equal(st.version,'11.44.0-sleep-slot-conflict');
+assert.equal(st.version,'11.45.0-agent-carry-relocate');
 const acceptOffer=latestAction('petOffer'),acceptResponse=latestAction('acceptPet');
 assert.ok(acceptOffer?.data?.socialBid,'high-social case must create observable petOffer');
 assert.equal(acceptOffer.data.bidKind,'petOffer');
@@ -59,7 +56,6 @@ assert.equal(eventsForOffer(acceptOffer.id).filter(e=>e.data?.action==='petAnima
 assert.equal(st.agents.zhou.action,null,'initiator action should complete after response');
 noIssues('accept flow');
 
-// Mid social need: tolerate is distinct from active acceptance but still permits a weaker successful pet.
 st=armDirectPet(45,31321);const preCatSocial=st.agents.orange.needs.social;E.tick();st=E.getState();
 const tolerateOffer=latestAction('petOffer'),tolerateResponse=latestAction('toleratePet');
 assert.ok(tolerateOffer&&tolerateResponse,'mid-social case should tolerate in the focused fixture');
@@ -68,7 +64,6 @@ assert.ok(toleratePet);assert.equal(toleratePet.data.petResponse,'tolerate');
 assert.ok(preCatSocial-st.agents.orange.needs.social<10,'tolerate should give less animal social relief than active acceptance');
 noIssues('tolerate flow');
 
-// Low social need: animal visibly avoids the hand, no successful pet occurs, and appraisal/Affect stay Agent-private.
 st=armDirectPet(5,41321);const humanBefore={...st.agents.zhou.affect},catBefore={...st.agents.orange.affect};E.tick();st=E.getState();
 const avoidOffer=latestAction('petOffer'),avoidResponse=latestAction('avoidPet');
 assert.ok(avoidOffer&&avoidResponse,'low-social case should create a stable avoid outcome');
@@ -84,34 +79,23 @@ assert.ok(st.agents.orange.affect.valence>catBefore.valence,'animal may get shor
 for(const key of ['responseScore','socialNeed','socialTrait','affect','relationship'])assert.equal(Object.prototype.hasOwnProperty.call(avoidResponse.data,key),false,`world event must not leak ${key}`);
 noIssues('avoid flow with appraisal/affect');
 
-// Responder Current Affect now contributes a bounded response modifier, while the source remains Agent-private.
 const responseScoreBeforeAffectMutation=E.petResponseScore(st.agents.orange),validSource=JSON.parse(JSON.stringify(st.agents.orange.affect.source));
 st.agents.orange.affect={valence:-1,activation:1,frustration:1,lastUpdatedTick:st.tick,lastDecayTick:st.tick,source:validSource};
 assert.equal(E.affectResponseSignal(st.agents.orange),-1);assert.ok(E.petResponseScore(st.agents.orange)<responseScoreBeforeAffectMutation,'negative responder Affect should lower the current pet response score');
 noIssues('affect responder influence');
 
-// An existing animal→human Social Bid can be answered by a nested human petOffer without collapsing private waiting truth.
 E.reset(46321);st=E.getState();
 {
   const human=st.agents.zhou,requestingCat=st.agents.orange,bystander=st.agents.zhen;
   human.position={x:5,y:5};requestingCat.position={x:5,y:6};bystander.position={x:7,y:5};
   Object.assign(human.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:65});
   Object.assign(requestingCat.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,groomingNeed:20,social:90});
-  const originalBidId=E.addEvent(`${requestingCat.name}主動找${human.name}撒嬌。`,'good',[],{
-    actor:requestingCat.id,target:human.id,action:'seekHuman',position:E.positionRef?.(requestingCat.position)||'5,6',
-    socialBid:true,bidKind:'animalAffection',bidFrom:requestingCat.id,bidTo:human.id,perceivedByTarget:true
-  });
+  const originalBidId=E.addEvent(`${requestingCat.name}主動找${human.name}撒嬌。`,'good',[],{actor:requestingCat.id,target:human.id,action:'seekHuman',position:E.positionRef?.(requestingCat.position)||'5,6',socialBid:true,bidKind:'animalAffection',bidFrom:requestingCat.id,bidTo:human.id,perceivedByTarget:true});
   st.causes[originalBidId].data.bidId=originalBidId;
   E.addObservedBid(st,human,st.causes[originalBidId],st.tick);
-  requestingCat.activeIntent={
-    id:`intent:${requestingCat.id}:${st.tick}:awaitResponse:${originalBidId}`,
-    kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:originalBidId},patienceUntilTick:st.tick+3
-  };
+  requestingCat.activeIntent={id:`intent:${requestingCat.id}:${st.tick}:awaitResponse:${originalBidId}`,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId:originalBidId},patienceUntilTick:st.tick+3};
   human.action={kind:'petAnimal',phase:'interact',targetAgent:requestingCat.id,started:st.tick,wait:0};
-  human.activeIntent={
-    id:`intent:${human.id}:${st.tick}:respondSocialBid:${originalBidId}`,
-    kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:originalBidId,observedTick:st.tick}
-  };
+  human.activeIntent={id:`intent:${human.id}:${st.tick}:respondSocialBid:${originalBidId}`,kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:originalBidId,observedTick:st.tick}};
   human.action.intentId=human.activeIntent.id;
   E.tick();st=E.getState();
   const nestedOffer=st.events.find(e=>e.data?.action==='petOffer'&&e.data?.responseToBid===originalBidId);
@@ -125,7 +109,6 @@ E.reset(46321);st=E.getState();
   noIssues('nested bid response flow');
 }
 
-// Sleeping animals stay on the existing touch-stimulus path rather than receiving a conscious accept/tolerate/avoid response.
 E.reset(51321);st=E.getState();
 {
   const human=st.agents.zhou,sleepingCat=st.agents.orange,slot=SP.getSlot(st,'sofa:left');
@@ -146,7 +129,6 @@ E.reset(51321);st=E.getState();
   noIssues('sleeping animal compatibility');
 }
 
-// Long-run bounded integration remains validator-clean and never persists private response caches.
 E.reset(61321);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
