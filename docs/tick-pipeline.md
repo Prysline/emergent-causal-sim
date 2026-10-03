@@ -220,3 +220,45 @@ core addEvent
 - **Core-loop producers**：event-created notification 仍在建立時發出，但 Memory 只 queue，不立即改 Agent-private state；FIFO 在 afterTick 500 flush，保留同 tick Agent sequential decision boundary。
 - **Exactly once**：同一 source event 仍只產生一個 Agent-local episode；重複 delivery / re-observation 不得重複 Appraisal / Relationship consolidation / Affect。
 - **Relationship gate**：Relationship hook 只對 audited direct relational evidence 生效；一般 episode雖經同一 hook，也只 no-op，不把 `agency === other` 自動解讀成人際關係。
+- **No persistent mirror**：deferred queue 是 Memory runtime-local ephemeral integration state，不寫入 canonical simulation state。
+- **No marker sweep**：`memory.capture-events` 與 newest-event marker 已移除；Memory 不再掃 `state.events` 推斷「哪些事件剛發生」。
+- **Private outcome remains separate**：`privateSocialOutcome` 仍是 requester-private experience path，不折進 generic World Event observation；它只可更新 requester 自己的 directional Relationship。
+
+PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contract：tick 外 direct API、pre-core Human social offer、core-loop world event、Social Response Resolve 600、Human Social Resolve 700 都必須維持原有心理可見時點與 `event.tick → observedTick` provenance。Relationship consolidation 在這些既有心理 checkpoint 中維持 order 350；v11.15.1 target preference 與 v11.15.2 responder bias 都只讀已存在的 Relationship derived signal，不改 event delivery mode。
+
+## 8. 哪些 order / boundary 變更必須視為 semantic change
+
+至少以下調整不得當成純 refactor：
+
+1. 任一 observable event producer 從 core-loop 移到非 core-loop（或反向），因為會改變 Memory delivery mode。
+2. `Memory Observation Process` 500 相對 core tick / downstream decision hooks 的位置改變。
+3. `Social Bid Settle` 相對 requester timeout / response annotation 的位置改變。
+4. `Social Response Resolve` 600 / `Human Social Resolve` 700 與 `Memory-to-Deliberation Correction` 800 的相對位置改變。
+5. Affect Decay 移到 core tick 後，或 Appraisal / Relationship / Affect 支線順序改變。
+6. Relationship consolidation 被移到 historical Appraisal 完成前，或開始讀 Current Affect / raw event 推定關係。
+7. Soft Reconsideration / Replan-Preemption / Intent Reconcile 的相對順序改變。
+8. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
+9. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
+10. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
+11. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
+
+這些變更都應同步更新：
+
+- 本文件；
+- `tests/runtime-hook-pipeline.mjs`；
+- 受影響 subsystem 的 focused timing / Relationship regression；
+- Notion Architecture / 相關 Current Design 權威頁。
+
+## 9. Source of truth / regression
+
+- runtime source of truth：各 subsystem 的 `registerRuntimeHook(phase, id, handler, order)` 與 core event-created listener registration。
+- hook registry：`E.listRuntimeHooks(phase)`。
+- event-created consumer registry：`E.listEventCreatedListeners()`。
+- architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 exact simulation hook ID / order，並拒絕 extension-owned lifecycle wrapper。
+- Relationship Foundation causal guard：`tests/relationship-foundation.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
+- Relationship Target Preference causal guard：`tests/relationship-target-preference.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility isolation、負向不 hard-ban，以及 generic animal affordance eligibility。
+- Relationship Responder Bias causal guard：`tests/relationship-responder-bias.mjs` 鎖 responder → requester directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy 與 no persistent score cache。
+- Physical / Passage causal guard：`tests/physical-profile-foundation.mjs` 與 `tests/passage-profile-multimode.mjs` 鎖 multi-mode envelope、passage height/width、walk-only A* 與 no-auto-crawl boundary；不引入新的 hook-order assertion，因本 slice 沒有新增 lifecycle stage。
+- presentation hook / decorator 的 exact ordering 另由 presentation / browser regression 鎖定；它們不能被誤讀成 simulation pipeline stage。
+
+若 source registry、focused regression 與本文不一致，以 current executable source + regression 為準，並在同一修正中同步本文；不得讓舊文件 ordering 反過來覆蓋現行已驗證 runtime。
