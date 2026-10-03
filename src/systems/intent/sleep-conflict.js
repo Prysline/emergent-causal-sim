@@ -4,6 +4,7 @@
   if(typeof E.observeAgentContext!=='function'||typeof E.performAttentionInteraction!=='function')throw new Error('sleep-conflict.js requires shared Agent-context observation + attention.');
   const VERSION='11.44.0-sleep-slot-conflict';
   const OCCUPANCY_WAIT_TICKS=3;
+  const ATTENTION_REASSESS_TICKS=1;
   const REQUEST_STIMULUS=Object.freeze({kind:'sound',intensity:24});
   const DRIVE_STIMULUS=Object.freeze({kind:'sound',intensity:32});
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -75,12 +76,19 @@
     })||null;
   }
   function waitDurationTicks(){return OCCUPANCY_WAIT_TICKS;}
-  function beginOccupancyWait(st,a,action,conflict){
-    action.phase='conflictWait';action.preferredConflictSlotId=conflict.slot.id;action.conflictWaitSource='sleepSlotOccupancy';action.conflictWaitStartedTick=st.tick;action.conflictWaitUntilTick=st.tick+waitDurationTicks();return {handled:true,resolution:'wait'};
+  function beginConflictWait(st,action,conflict,{source='sleepSlotOccupancy',ticks=OCCUPANCY_WAIT_TICKS}={}){
+    action.phase='conflictWait';action.preferredConflictSlotId=conflict.slot.id;action.conflictWaitSource=source;action.conflictWaitStartedTick=st.tick;action.conflictWaitUntilTick=st.tick+Math.max(1,Number(ticks)||1);return {handled:true,resolution:source==='attentionReassessment'?'attention':'wait'};
   }
+  function beginOccupancyWait(st,a,action,conflict){return beginConflictWait(st,action,conflict,{source:'sleepSlotOccupancy',ticks:waitDurationTicks()});}
   function awaitResponseIntent(st,a,bidId,slotId,conflictDecisionId=null){
     const patience=Math.max(1,Number(E.REQUESTER_PATIENCE_TICKS)||3);
     return {id:'intent:'+a.id+':'+st.tick+':awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict',preferredSlotId:slotId,conflictDecisionId},patienceUntilTick:st.tick+patience};
+  }
+  function observeSleepConflictBid(ctx){
+    const st=ctx?.state,event=ctx?.event,d=event?.data;
+    if(!st||!event||d?.socialBid!==true||d?.perceivedByTarget!==true||!['sleepSlotYield','sleepSlotDriveAway'].includes(d?.bidKind))return null;
+    const responder=d.bidTo&&st.agents?.[d.bidTo];if(!responder)return null;
+    return E.addObservedBid?.(st,responder,event,event.tick??st.tick)||null;
   }
   function emitYieldBid(st,a,action,conflict,evaluation,mode){
     const observation=evaluation.observation,target=observation?.targetId&&st.agents?.[observation.targetId];if(!observation?.observable||!target)return beginOccupancyWait(st,a,action,conflict);
@@ -90,7 +98,6 @@
     const text=mode==='driveAway'?a.name+'以較強硬的非物理方式要求'+target.name+'離開偏好的睡眠位置。':a.name+'要求'+target.name+'讓出偏好的睡眠位置。';
     const bidId=E.addEvent(text,'normal',attention.eventId?[attention.eventId]:[],{actor:a.id,target:target.id,action:mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYieldRequest',slot:conflict.slot.id,socialBid:true,bidKind,interactionKind,expectsResponse:true,bidFrom:a.id,bidTo:target.id,perceivedByTarget,interactionPurpose:mode==='driveAway'?'driveAwayFromSleepSlot':'requestSleepSlotYield',conflictDecisionId:action.conflictResolutionDecisionId||null,position:E.positionRef?.(a.position)||null});
     const bid=st.causes?.[bidId];if(bid?.data)bid.data.bidId=bidId;
-    if(perceivedByTarget&&bid)E.addObservedBid?.(st,target,bid,st.tick);
     const conflictDecisionId=action.conflictResolutionDecisionId||null;a.action=null;a.activeIntent=awaitResponseIntent(st,a,bidId,conflict.slot.id,conflictDecisionId);
     return {handled:true,resolution:mode,bidId,perceivedByTarget};
   }
@@ -105,7 +112,8 @@
       case'attention':{
         const target=evaluation.observation?.targetId&&st.agents?.[evaluation.observation.targetId];
         if(!target)return beginOccupancyWait(st,a,action,conflict);
-        E.performAttentionInteraction(a,target,{stimulus:REQUEST_STIMULUS});action.phase='chooseSurface';return {handled:true,resolution:'attention'};
+        E.performAttentionInteraction(a,target,{stimulus:REQUEST_STIMULUS});
+        return beginConflictWait(st,action,conflict,{source:'attentionReassessment',ticks:ATTENTION_REASSESS_TICKS});
       }
       case'requestYield':return emitYieldBid(st,a,action,conflict,evaluation,'requestYield');
       case'driveAway':return emitYieldBid(st,a,action,conflict,evaluation,'driveAway');
@@ -197,12 +205,13 @@
     }
   }
 
-  E.registerActionLabelResolver?.('sleepConflict.label',(st,a)=>a?.action?.kind==='sleep'&&a.action.phase==='conflictWait'?'睡眠・等待偏好的睡眠位置空出':null,120);
+  E.registerEventCreatedListener?.('sleepConflict.observe-bid',observeSleepConflictBid,150);
+  E.registerActionLabelResolver?.('sleepConflict.label',(st,a)=>a?.action?.kind==='sleep'&&a.action.phase==='conflictWait'?(a.action.conflictWaitSource==='attentionReassessment'?'睡眠・引起注意後重新觀察偏好位置':'睡眠・等待偏好的睡眠位置空出'):null,120);
   if(!E.registerRuntimeHook)throw new Error('sleep-conflict.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','sleepConflict.respond',()=>processSleepConflictResponses(E.getState()),275);
   E.registerRuntimeHook('afterTick','sleepConflict.complete-yield',()=>settleYieldCompletions(E.getState()),150);
 
-  const api={VERSION,OCCUPANCY_WAIT_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions};
+  const api={VERSION,OCCUPANCY_WAIT_TICKS,ATTENTION_REASSESS_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions,observeSleepConflictBid};
   window.SimSleepConflict=Object.freeze(api);
   E.SLEEP_SLOT_CONFLICT_VERSION=VERSION;
 })();
