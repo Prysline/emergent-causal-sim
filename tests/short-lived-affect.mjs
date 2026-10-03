@@ -12,13 +12,12 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1132);
 let st=E.getState();
-assert.equal(st.version,'11.44.0-sleep-slot-conflict');
+assert.equal(st.version,'11.45.0-agent-carry-relocate');
 assert.equal(E.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(st.affects,undefined,'Affect must not add a global affect registry');
 for(const a of Object.values(st.agents))assert.deepEqual(a.affect,{valence:0,activation:0,frustration:0,lastUpdatedTick:0,lastDecayTick:0,source:null});
 noIssues('reset');
 
-// Positive appraisal creates bounded Agent-private short-lived affect without leaking to a neutral bystander.
 E.reset(1312);st=E.getState();
 st.agents.zhou.position={x:5,y:5};st.agents.orange.position={x:5,y:6};st.agents.zhen.position={x:6,y:6};st.agents.orange.needs.social=90;
 const petId=E.addEvent('老周摸了橘子。','normal',[],{actor:'zhou',target:'orange',action:'petAnimal',position:'5,6'});
@@ -32,7 +31,6 @@ assert.deepEqual(zhenAffect,{valence:0,activation:0,frustration:0,lastUpdatedTic
 assert.equal(Object.prototype.hasOwnProperty.call(orangeMemory.appraisal,'affect'),false,'historical appraisal must remain separate from current affect');
 noIssues('positive private affect');
 
-// Negative audited appraisal raises frustration; repeated related events can push it again but remain bounded.
 E.reset(2312);st=E.getState();
 st.agents.zhou.position={x:5,y:5};st.agents.orange.position={x:5,y:6};st.agents.zhen.position={x:7,y:5};
 const spill1=E.addEvent('老周把水灑在地上。','warn',[],{actor:'zhou',action:'spill',position:'5,5',amount:4});
@@ -48,13 +46,11 @@ assert.ok(second.frustration<=1&&second.activation<=1&&second.valence>=-1,'affec
 assert.equal(second.source.sourceEventId,spill2,'current affect provenance should point to the latest contributing appraisal');
 noIssues('repeated negative affect');
 
-// Re-observing the same memory does not reapply Affect because no new appraisal is formed.
 const beforeReobserve=JSON.stringify(st.agents.orange.affect);
 E.observeEventForMemories(st,st.causes[spill2],st.tick);
 assert.equal(JSON.stringify(st.agents.orange.affect),beforeReobserve,'same-event re-observation must not reapply current affect');
 noIssues('no duplicate affect on re-observation');
 
-// With no new appraisal, explicit decay reduces all active magnitudes and eventually clears stale provenance.
 const preDecay={...st.agents.orange.affect};
 st.tick=1;E.decayAffectState(st,1);
 const decayed=st.agents.orange.affect;
@@ -67,7 +63,6 @@ assert.deepEqual(st.agents.orange.affect.source,null,'fully decayed affect shoul
 assert.equal(st.agents.orange.affect.valence,0);assert.equal(st.agents.orange.affect.activation,0);assert.equal(st.agents.orange.affect.frustration,0);
 noIssues('decay to neutral');
 
-// Affect remains directly inert to general deliberation candidate utility; responder-specific influence is covered separately.
 E.reset(3312);st=E.getState();
 st.agents.zhou.position={x:5,y:5};st.agents.zhen.position={x:5,y:6};
 const beforeUtility=E.candidateIntents(st,st.agents.zhen).map(x=>[x.intentKind,x.utility]);
@@ -77,7 +72,6 @@ const afterUtility=E.candidateIntents(st,st.agents.zhen).map(x=>[x.intentKind,x.
 assert.deepEqual(afterUtility,beforeUtility,'Current Affect must not influence general candidate utility');
 noIssues('decision inert');
 
-// Integration: tick-driven decay and new appraisal updates stay bounded and validator-clean.
 E.reset(4312);
 for(let i=0;i<500;i++){
   E.tick();st=E.getState();
