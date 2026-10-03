@@ -130,7 +130,17 @@
     return {score,response,sleepNeed,ownAssociationStrength:own,relationshipSignal:relationship,requestAge:age};
   }
   function settleObservedBid(a,bidId){if(a)a.observedSocialBids=(a.observedSocialBids||[]).filter(ref=>ref.bidId!==bidId);}
-  function settleRequesterWait(st,bidId){const bid=E.bidEvent?.(st,bidId),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];if(requester?.activeIntent?.kind==='awaitResponse'&&requester.activeIntent.source?.bidId===bidId){requester.action=null;requester.activeIntent=null;}}
+  function requesterResponseEvent(st,a,bidId){
+    return (st.events||[]).find(e=>e?.data?.responseToBid===bidId&&e.data?.target===a.id&&e.data?.perceivedByTarget===true&&['accepted','refused'].includes(e.data?.responseKind))||null;
+  }
+  function consumeRequesterResponses(st){
+    for(const requester of Object.values(st.agents||{})){
+      const intent=requester.activeIntent,bidId=intent?.source?.context==='sleepSlotConflict'&&intent.kind==='awaitResponse'?intent.source.bidId:null;
+      if(!bidId)continue;
+      const response=requesterResponseEvent(st,requester,bidId);if(!response)continue;
+      requester.action=null;requester.activeIntent=null;
+    }
+  }
   function bindYieldDeparture(st,responder,bid,evaluation){
     if(responder.posture?.slotId!==bid.data?.slot)return false;
     const departure=E.buildAction?.(responder,{id:'wander'});if(!departure)return false;
@@ -140,6 +150,7 @@
     return true;
   }
   function processSleepConflictResponses(st){
+    consumeRequesterResponses(st);
     for(const responder of Object.values(st.agents||{})){
       if(responder.kind!=='human'||responder.offMap||E.isSleeping?.(responder)||responder.action||responder.activeIntent)continue;
       const pick=newestObservedConflictBid(st,responder);if(!pick)continue;
@@ -152,8 +163,9 @@
       const evaluation=responseEvaluation(st,responder,pick.bid,pick.ref.observedTick);
       if(evaluation.response==='delay')continue;
       const requester=st.agents?.[pick.bid.data?.bidFrom],accepted=evaluation.response==='accept',action=accepted?'acceptSleepSlotYield':'refuseSleepSlotYield',responseKind=accepted?'accepted':'refused';
-      E.addEvent(accepted?responder.name+'接受了'+(requester?.name||'對方')+'的讓位要求。':responder.name+'拒絕了'+(requester?.name||'對方')+'的讓位要求。','normal',[pick.bid.id,understoodId].filter(Boolean),{actor:responder.id,target:requester?.id||null,action,responseToBid:pick.bid.id,slot:pick.bid.data?.slot,responseKind,requestKind:pick.bid.data?.bidKind,position:E.positionRef?.(responder.position)||null});
-      settleObservedBid(responder,pick.bid.id);settleRequesterWait(st,pick.bid.id);
+      const requesterObservation=requester?E.observeAgentContext(st,requester,responder):{observable:false};
+      E.addEvent(accepted?responder.name+'接受了'+(requester?.name||'對方')+'的讓位要求。':responder.name+'拒絕了'+(requester?.name||'對方')+'的讓位要求。','normal',[pick.bid.id,understoodId].filter(Boolean),{actor:responder.id,target:requester?.id||null,action,responseToBid:pick.bid.id,slot:pick.bid.data?.slot,responseKind,requestKind:pick.bid.data?.bidKind,perceivedByTarget:requesterObservation.observable===true,position:E.positionRef?.(responder.position)||null});
+      settleObservedBid(responder,pick.bid.id);
       if(accepted)bindYieldDeparture(st,responder,pick.bid,evaluation);
     }
   }
@@ -173,7 +185,7 @@
   E.registerRuntimeHook('beforeTick','sleepConflict.respond',()=>processSleepConflictResponses(E.getState()),275);
   E.registerRuntimeHook('afterTick','sleepConflict.complete-yield',()=>settleYieldCompletions(E.getState()),150);
 
-  const api={VERSION,OCCUPANCY_WAIT_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,processSleepConflictResponses,settleYieldCompletions};
+  const api={VERSION,OCCUPANCY_WAIT_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions};
   window.SimSleepConflict=Object.freeze(api);
   E.SLEEP_SLOT_CONFLICT_VERSION=VERSION;
 })();
