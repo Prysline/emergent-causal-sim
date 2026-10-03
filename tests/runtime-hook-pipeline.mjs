@@ -57,7 +57,10 @@ assert.equal(E.RUNTIME_HOOK_PIPELINE_VERSION,'runtime-hook-pipeline-2');
 assert.equal(E.tick,E.RUNTIME_PIPELINE_TICK,'simulation runtimes must not replace the pipeline tick dispatcher');
 assert.equal(E.reset,E.RUNTIME_PIPELINE_RESET,'simulation runtimes must not replace the pipeline reset dispatcher');
 assert.equal(E.addEvent,E.CORE_ADD_EVENT,'simulation runtimes must not replace the core event creator');
-assert.deepEqual(E.listEventCreatedListeners(),[{id:'memory.episodic-observation',order:100}],'Memory must consume the core event-created lifecycle through a named listener');
+assert.deepEqual(E.listEventCreatedListeners(),[
+  {id:'memory.episodic-observation',order:100},
+  {id:'sleepConflict.observe-bid',order:150}
+],'event-created listener ids/orders are architecture semantics and must remain explicit');
 
 for(const [phase,expected] of Object.entries(EXPECTED_HOOKS)){
   assert.deepEqual(E.listRuntimeHooks(phase),expected,`${phase} hook ids/orders are architecture semantics and must remain explicit`);
