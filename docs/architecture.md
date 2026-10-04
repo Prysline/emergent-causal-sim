@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.44.0-sleep-slot-conflict`。
+目前 runtime marker：`11.45.0-agent-carry-relocate`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -17,6 +17,7 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - canonical World Event：`state.events / state.causes`
 - Agent / Object 的物理位置
 - Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
+- canonical Agent carry relation：`state.agentCarries`；它與 Container-only `Agent.held` 分離，carried Agent 在 relation 存續期間不保留競爭的 ordinary floor / Slot occupancy，raw `position=null`，可觀察位置只由 carrier 即時投影
 - authored structure / passage geometry：`map.cellSizeMeters`、layer `boundaries`、root `structures`、Door / Exit reference、Furniture Definition 的 metric local `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot `approachEdges`，以及 low-level `map.passageConstraints`
 - Container / Source / Surface Environment 的實際 resource contents
 - posture、held container、reservations
@@ -81,7 +82,7 @@ Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface
 
 Slice C 的 execution boundary 仍由 core `moveToward()` 持有：只有 movement edge 真正完成、position 已 commit 後才 evaluate 一次 contents-loss consequence；posture transition tick、multi-tick edge 中途、完成前 interruption、replan / planning query 都不得 consume consequence RNG。execution 以 Locomotion 同一 `handlingExposureForEdge(...)` 由實際 completed edge facts 派生 exposure，再以 Resources 同一 objective `HandlingRisk.contentsLoss` 做一次 seeded occurrence roll；`careful` 等 subjective weight 不重算 probability。若 occurrence 成功，Resources 的 C2 deterministic amount curve 使用 `amountSeverity = 0.28 × sqrt(raw retention severity)`、`fillModifier = 0.5 + 0.5 × fillRatio`、`lossFraction = clamp01(amountSeverity × fillModifier)`；同一 Container 所有 nonzero contents 共用該 fraction，不再逐 resource 抽 RNG。Engine 將每個實際 amount 從 Container 精確轉移到 `resolveEffectNode(...)` 對應的 Spatial Environment endpoint；liquid 建立 `spill`、solid 建立 `contentsDrop` canonical World Event，Event 只保存 transfer / completed-edge / exposure / risk provenance，不另存 competing resource truth。若同 completed edge 的既有 on-enter hazard 已實際造成 carried-content consequence，normal handling 明確跳過，避免 double consequence。
 
-Slice D 的 execution boundary 仍留在同一個 core `moveToward()` completed-edge transaction，沒有新增 runtime hook。position commit 後先 snapshot 一份 **同一 edge、同一 held Container** 的 objective HandlingExposure / HandlingRisk context，再執行既有 `onEnterTile`、必要的 Slice C contents loss，最後才用該 snapshot 的 `HandlingRisk.containerDrop` 做一次獨立 seeded occurrence roll。這讓 contents loss 與 Container drop 都以 mutation 前的同一組 objective movement facts 為基準；兩者是同一 movement exposure 的 sibling consequence，不互相改寫 probability。若兩者都發生，Slice C resource transfer 先完成，再執行 Container drop。
+Slice D 的 execution boundary 仍留在同一個 core `moveToward()` completed-edge transaction，沒有新增 runtime hook。position commit 後先 snapshot 一份 **同一 edge、同一 held Container** 的 objective HandlingExposure / HandlingRisk context，再執行既有 `onEnterTile`、必要的 Slice C contents loss，最後才用該 snapshot 的 `HandlingRisk.containerDrop` 做一次獨立 seeded occurrence roll。這讓 contents loss 與 Container drop 都以 mutation 前的同一組 objective movement facts為基準；兩者是同一 movement exposure 的 sibling consequence，不互相改寫 probability。若兩者都發生，Slice C resource transfer 先完成，再執行 Container drop。
 
 Container drop 成功時，Engine 建立一次 canonical `containerDrop` World Event、將 `Agent.held` 清為 `null`，並把 Container 的 actual `position` 設為 completed edge 的 canonical destination node；若 Agent 位於 Furniture Surface，Container 仍落在該 Surface node，不偷偷投影到 same-XY floor。這個第一版只表達「失手離手 + 落在目前 canonical node」；沒有 Surface→floor 垂直墜落求解。
 
@@ -89,7 +90,7 @@ Container drop 成功時，Engine 建立一次 canonical `containerDrop` World E
 
 一般 lifecycle release 與 accidental drop 必須分離：`releaseHeld()`、Action finish / abort、sleep settle 與 Deliberation soft-reconsideration 的 cleanup 只負責把 held Container 留在角色當下 canonical position並清除 held relation；它們不讀 `HandlingRisk.containerDrop`、不消耗 consequence RNG、也不建立 `containerDrop` Event。若 accidental drop 使一個 execution phase 原本依賴的 plate / vessel 不再由 Agent 持有，該 phase 必須以 canonical `Agent.held` 失效為準進入既有 abort lifecycle，不能繼續用 action-local Container ID 遠端吃／喝。Slice D v1 不提供自動撿回、重試、重新規劃到掉落物或專用 drop-recovery intent。
 
-Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor 可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
+Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
 
 Engine 每次開始下一 movement edge 前仍重新 query current Route，沒有 persistent path truth。若 handling risk 確實改變 route winner，Decision Evidence 只 freeze Container identity、subjective weights、selected/baseline objective metrics與 score；不保存 path nodes。initial core choice 在既有 afterTick 850 finalization 前，route contributor可先附著於同 tick provisional pick，再由原本的 Decision Evidence finalizer收斂；不新增 hook或改 hook ordering。
 
@@ -484,7 +485,7 @@ Core `engine.js` 持有唯一 canonical event creator。正式 invariant：
 E.addEvent === E.CORE_ADD_EVENT
 ```
 
-`addEvent` 先建立單一 World Event 並寫入：
+`addEvent` 先建立單一 World Event並寫入：
 
 ```text
 state.events
@@ -826,6 +827,7 @@ v11.20.0 將既有粗略的「目的 node occupancy 固定 penalty」收斂為 d
 ### Resources / logistics
 
 - `Agent.held + Container.contents` 是搬運與資源位置的正式 truth。
+- `state.agentCarries` 是搬運另一 Agent 的獨立 canonical relation；它不覆寫 `Agent.held`，也不把 carried Agent 的 projected position保存成第二份 ordinary position。
 - 舊 `Agent.carrying` 不存在。
 - transfer / serving / restock / external supply 都必須遵守 physical resource conservation 與合法 Interaction Geometry。
 
@@ -877,6 +879,7 @@ Physical / Locomotion Current invariant：
 
 - `agent.physical` 保存 individual authoritative profile；template 只是初始化來源，不是 runtime species hard-code；
 - `MovementEnvelope` 只由 `SimPhysical.getMovementEnvelope(agent, mode)` derived，不建立 persistent mirror；`PassageProfile` 同樣由 Spatial edge geometry derived，不建立 cache；
+- `SimPhysical.getEffectiveTraversalEnvelope(state, agent, mode)` 可在 body-only MovementEnvelope 上組合 Resources-owned held Container 與 AgentCarry-owned carried Agent burden；它只回 derived effective geometry，不建立第二份 body / carry cache；
 - locomotion baseline 是 `walk`，不得再把 Agent posture `standing` 當成同一個 locomotion mode；
 - Human 目前可查詢 `walk / kneelCrawl / proneCrawl` feasibility，Cat 目前只定義 `walk`；capability 只表示物理支援，不代表行為意願；
 - Spatial production route 已支援 `mode:'auto'` 的 walk / kneelCrawl / proneCrawl execution；explicit walk-only query仍可供 focused compatibility。physical feasibility、mode execution 與 behavioral willingness仍分層；
