@@ -65,6 +65,20 @@ const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml
 const stateTests=[...workflow.matchAll(/node (tests\/[A-Za-z0-9._/-]+\.mjs)/g)].map(match=>match[1]);
 assert.ok(stateTests.length>0,'Node regression workflow must enumerate current Node regression tests');
 
+const releaseSource=fs.readFileSync(new URL('../src/release.js',import.meta.url),'utf8');
+const currentOverallMatch=releaseSource.match(/const VERSION='([^']+)'/);
+assert.ok(currentOverallMatch,'release.js must expose the canonical overall VERSION marker');
+const currentOverallVersion=currentOverallMatch[1];
+const staleOverallAssertions=[];
+for(const relativePath of stateTests){
+  if(relativePath==='tests/test-profile-composition.mjs')continue;
+  const source=fs.readFileSync(new URL('../'+relativePath,import.meta.url),'utf8');
+  for(const match of source.matchAll(/assert\.equal\((st\.version|E\.VERSION),['"]([^'"]+)['"]/g)){
+    if(match[2]!==currentOverallVersion)staleOverallAssertions.push(relativePath+': '+match[1]+' expects '+match[2]+' but release.js is '+currentOverallVersion);
+  }
+}
+assert.deepEqual(staleOverallAssertions,[],'Current overall release assertions must be audited together with every release marker bump:\n'+staleOverallAssertions.join('\n'));
+
 const retiredNames=Object.keys(TEST_PROFILE_CONTRACT.retiredSources);
 for(const relativePath of stateTests){
   if(relativePath==='tests/test-profile-composition.mjs')continue;
