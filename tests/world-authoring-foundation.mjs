@@ -52,9 +52,9 @@ assert.equal(authored.furniture.frontDoor,undefined,'Door must no longer exist a
 assert.deepEqual(authored.doors.frontDoor,{id:'frontDoor',name:'大門',boundary:{z:0,id:'v:1,6'},state:'open'});
 assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:'offMap',boundary:{z:0,id:'v:1,6'},access:{x:1,y:6,z:0}});
 
-const st=I.createInitialState(authored,{seed:20260911,version:'11.44.0-sleep-slot-conflict'});
+const st=I.createInitialState(authored,{seed:20260911,version:'11.45.0-agent-carry-relocate'});
 assert.equal(JSON.stringify(authored),authoredBefore,'compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.44.0-sleep-slot-conflict');
+assert.equal(st.version,'11.45.0-agent-carry-relocate');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);
@@ -97,9 +97,9 @@ assert.ok(!serialized.includes('"footprint"'),'resolved Definition geometry must
 assert.ok(serialized.includes('"structures"')&&serialized.includes('"boundaries"')&&serialized.includes('"doors"')&&serialized.includes('"exits"'),'v6 structural truth must serialize explicitly');
 assert.ok(!serialized.includes('"canExit"'),'v6 must not serialize legacy furniture exit compatibility');
 
-const again=I.createInitialState(authored,{seed:20260911,version:'11.44.0-sleep-slot-conflict'});
+const again=I.createInitialState(authored,{seed:20260911,version:'11.45.0-agent-carry-relocate'});
 assert.deepEqual(again,st,'same package + same seed must produce the same raw compiled state');
-const otherSeed=I.createInitialState(authored,{seed:7,version:'11.44.0-sleep-slot-conflict'});
+const otherSeed=I.createInitialState(authored,{seed:7,version:'11.45.0-agent-carry-relocate'});
 const normalizeSeed=x=>{const y=JSON.parse(JSON.stringify(x));y.seed=0;y.rngState=0;return y;};
 assert.deepEqual(normalizeSeed(otherSeed),normalizeSeed(st),'changing seed must not change authored world content');
 
