@@ -3,7 +3,7 @@
   if(!W?.registerInitialStateInitializer)throw new Error('systems/agent-carry.js requires world.js initial-state pipeline.');
   if(!C||!R)throw new Error('systems/agent-carry.js requires Embodiment Capabilities and Resources.');
 
-  const VERSION='11.45.0-agent-carry-relocate';
+  const VERSION='11.46.0-sleep-agent-carry-integration';
   const METHOD='twoArmCarry';
   const clone=p=>p?{...p}:null;
   const relations=st=>st?.agentCarries||{};
