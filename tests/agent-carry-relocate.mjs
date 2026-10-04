@@ -57,7 +57,6 @@ assert.equal(feasibility.ok,false);
 assert.equal(feasibility.reason,'mass-capacity-exceeded');
 cat.physical.mass=originalMass;
 
-const beforePosition={...cat.position};
 let established=A.establishCarry(st,human,cat,{cooperative:true});
 assert.equal(established.ok,true);
 assert.equal(Object.keys(st.agentCarries).length,1);
@@ -115,6 +114,27 @@ if(destinationSlot){
     assert.equal(cat.posture.slotId,destinationSlot.id);
   }
 }
+
+E.reset(14503);
+st=E.getState();human=st.agents.zhen;cat=st.agents.orange;
+const wakeSleepSlot=SP.allSlots(st).find(slot=>slot.canSleep&&SP.slotAllows(slot,cat)&&SP.slotPoseFits(slot,cat,'lying'));
+cat.position={...wakeSleepSlot.position};
+cat.posture={kind:'lying',slotId:wakeSleepSlot.id,furnitureId:wakeSleepSlot.furnitureId};
+cat.action={kind:'sleep',phase:'sleeping',started:st.tick,sleepTicks:1,wait:0};
+const wakePickupApproach=SP.bestSlotApproachNode(st,wakeSleepSlot,human,{mode:'walk',objective:'traversalCost'});
+human.position={...wakePickupApproach};human.posture={kind:'standing',slotId:null,furnitureId:null};
+established=A.establishCarry(st,human,cat);
+assert.equal(established.ok,true);
+assert.equal(established.relation.responderMode,'sleeping','relation keeps establishment mode as provenance');
+cat.action=null;
+validation=V.validateState(st);
+assert.equal(validation.issueCount,0,'waking after legal establishment must not invalidate the physical carry relation');
+const wakeCarrierNode=SP.nodeForAgent(st,human);
+const awakeFloorTarget=(SP.adjacentWalkable(st,wakeCarrierNode)||[]).find(node=>(SP.nodeOccupantsAt(st,node,cat.id)||[]).length===0);
+assert.ok(awakeFloorTarget);
+placed=A.placeCarriedAgent(st,human,{kind:'floor',position:awakeFloorTarget});
+assert.equal(placed.ok,true);
+assert.equal(placed.posture,'standing','release posture must derive from current responder state, not establishment provenance');
 
 E.reset(14502);
 st=E.getState();human=st.agents.zhen;cat=st.agents.orange;st.agents.zhou.offMap=true;
