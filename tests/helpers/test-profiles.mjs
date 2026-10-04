@@ -130,9 +130,11 @@ function ensureRuntimeDependencies(paths){
     .filter(index=>index>=0);
   if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
   const traversalIndex=paths.indexOf('spatial-traversal.js');
-  if(traversalIndex>=0&&paths.includes('systems/agent-carry.js')&&!paths.includes('spatial-agent-carry.js')){
+  if(traversalIndex>=0&&!paths.includes('spatial-candidate-selection.js'))paths.splice(traversalIndex+1,0,'spatial-candidate-selection.js');
+  const resolvedTraversalIndex=paths.indexOf('spatial-traversal.js');
+  if(resolvedTraversalIndex>=0&&paths.includes('systems/agent-carry.js')&&!paths.includes('spatial-agent-carry.js')){
     const carryIndex=paths.indexOf('systems/agent-carry.js');
-    paths.splice(Math.max(traversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
+    paths.splice(Math.max(resolvedTraversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
   }
   const validationManifestIndex=paths.indexOf('validation/manifest.js');
   if(validationManifestIndex>=0&&!paths.includes('validation/rules/agent-carry.js'))paths.splice(validationManifestIndex,0,'validation/rules/agent-carry.js');
