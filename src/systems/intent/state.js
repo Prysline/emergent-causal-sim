@@ -24,14 +24,14 @@
   if(W.DATA_ZH){
     W.DATA_ZH.intentId='Intent ID';
     W.DATA_ZH.intentKind='Intent 類型';
-    W.DATA_ZH.priorActionKind='原 Action';
+    W.DATA_ZH.priorActionKind='原 Intent';
     W.DATA_ZH.nextActionKind='新 Action';
     W.DATA_ZH.emergencyNeed='緊急需求';
     W.DATA_ZH.emergencyValue='緊急值';
     W.DATA_ZH.replanCount='Replan 次數';
   }
 
-  const DELIBERATION_VERSION='11.44.0-sleep-slot-conflict';
+  const DELIBERATION_VERSION='11.46.0-sleep-carry-integration';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
     for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];a.conflictResolutionEvidence=[];}
     return st;
