@@ -82,24 +82,24 @@
     return true;
   }
 
-  function floorPlacement(st,carrier,carried,target,relation){
+  function floorPlacement(st,carrier,carried,target){
     const SP=window.SimSpatial,node=SP?.normalizeNode?.(st,target?.position||target,'floor');
     if(!node||node.surfaceId!=='floor')return {ok:false,reason:'invalid-floor-node'};
     if(!(SP.nodeLocomotionAccessible?.(st,node,carried)??SP.nodeWalkable?.(st,node,carried)??SP.walkable?.(st,node)))return {ok:false,reason:'floor-node-inaccessible'};
     if((SP.nodeOccupantsAt?.(st,node,carried.id)||SP.occupantsAt?.(st,node,carried.id)||[]).length)return {ok:false,reason:'floor-node-occupied'};
     const carrierNode=SP.nodeForAgent?.(st,carrier)||SP.normalizeNode?.(st,carrier.position);
     if(!carrierNode||(!SP.nodeSame?.(st,carrierNode,node)&&(SP.manhattan?.(carrierNode,node)??Infinity)!==1))return {ok:false,reason:'carrier-not-at-placement-reach'};
-    const posture=relation.responderMode==='sleeping'?'lying':'standing';
+    const posture=isSleeping(carried)?'lying':'standing';
     return {ok:true,kind:'floor',position:node,posture};
   }
 
-  function slotPlacement(st,carrier,carried,target,relation){
+  function slotPlacement(st,carrier,carried,target){
     const SP=window.SimSpatial,slot=SP?.getSlot?.(st,target?.id);if(!slot)return {ok:false,reason:'missing-slot'};
     if(!SP.slotAllows?.(slot,carried))return {ok:false,reason:'slot-kind-mismatch'};
     if(!SP.slotAvailable?.(st,slot.id,carried.id))return {ok:false,reason:'slot-unavailable'};
     const requested=target?.posture;
     let posture=null;
-    if(relation.responderMode==='sleeping')posture=slot.canSleep&&SP.slotPoseFits?.(slot,carried,'lying')?'lying':null;
+    if(isSleeping(carried))posture=slot.canSleep&&SP.slotPoseFits?.(slot,carried,'lying')?'lying':null;
     else if(requested==='sitting'&&SP.slotPoseFits?.(slot,carried,'sitting'))posture='sitting';
     else if(requested==='lying'&&SP.slotPoseFits?.(slot,carried,'lying'))posture='lying';
     else if((slot.canRest||slot.mealSeat)&&SP.slotPoseFits?.(slot,carried,'sitting'))posture='sitting';
@@ -113,8 +113,8 @@
   function placementLegality(st,carrierOrId,target){
     const carrier=agentFor(st,carrierOrId),relation=relationForCarrier(st,carrier);if(!carrier||!relation)return {ok:false,reason:'no-carry-relation'};
     const carried=st.agents?.[relation.carriedAgentId];if(!carried)return {ok:false,reason:'missing-carried-agent'};
-    if(target?.kind==='slot')return slotPlacement(st,carrier,carried,target,relation);
-    if(target?.kind==='floor')return floorPlacement(st,carrier,carried,target,relation);
+    if(target?.kind==='slot')return slotPlacement(st,carrier,carried,target);
+    if(target?.kind==='floor')return floorPlacement(st,carrier,carried,target);
     return {ok:false,reason:'placement-kind-unsupported'};
   }
 
