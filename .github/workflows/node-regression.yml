@@ -111,3 +111,11 @@ jobs:
       - run: node tests/runtime-hook-pipeline.mjs
       - run: node tests/presentation-observability.mjs
       - run: node tests/presentation-event-truth.mjs
+      - name: Export PR workspace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-workspace
+          path: .
+          include-hidden-files: true
+          retention-days: 1
