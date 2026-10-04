@@ -4,7 +4,8 @@ import {loadProductionBefore} from './helpers/production-loader.mjs';
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,SC=globalThis.SimSleepConflict,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,AC=globalThis.SimAgentCarry,SC=globalThis.SimSleepConflict,V=globalThis.SimValidator;
+const APP_VERSION='11.46.0-sleep-carry-integration';
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 authored.usageAssignments=[{id:'zhen-sleep-left',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
@@ -34,6 +35,7 @@ const addConflictBid=(st,requester,responder,{kind='sleepSlotYield',slot='bed:le
 // A: assigned preferred Slot stays illegal while conflict deliberation can compare alternate / wait / attention / Human request / nonphysical drive-away.
 E.reset(44001);
 let st=E.getState(),requester=st.agents.zhen,human=st.agents.zhou,cat=st.agents.orange;
+assert.equal(st.version,APP_VERSION);
 cat.offMap=true;nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');
 assert.equal(SP.sleepTargets(st,requester).some(x=>x.id==='bed:left'),false);
 assert.equal(SP.sleepTargetExclusion(st,requester,'bed:left').reason,'occupied');
@@ -42,6 +44,7 @@ let conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:lef
 let evaluation=SC.conflictCandidates(st,requester,conflict);
 assert.deepEqual(evaluation.observation,E.observeAgentContext(st,requester,human),'sleep conflict must consume the shared Agent-context observation owner');
 for(const kind of ['alternate','wait','attention','requestYield','driveAway'])assert.ok(evaluation.candidates.some(x=>x.kind===kind),'missing '+kind);
+assert.equal(evaluation.candidates.some(x=>x.kind==='carryOccupant'),false,'awake occupant must not enter sleeping carry path without cooperation evidence');
 armSleep(st,requester);const observedSnapshot=structuredClone(evaluation.observation);SC.resolveSleepChoice(st,requester,requester.action);
 assert.ok(requester.conflictResolutionEvidence.length>=1);
 const evidence=requester.conflictResolutionEvidence.at(-1);
@@ -50,21 +53,51 @@ human.action={kind:'rest',phase:'resting',started:st.tick,wait:0,restTicks:0,tar
 assert.deepEqual(evidence.observation,observedSnapshot,'Conflict Resolution Evidence must freeze decision-time observation');
 assert.equal(Object.hasOwn(evidence.observation,'needs'),false,'evidence must not retain full Agent state');
 
-// B: habit-only preferred Slot participates without inventing assignment truth.
+// B: habit-only preferred Slot participates without inventing assignment truth; Sleep consumes Usage-owned deltas rather than duplicating 8 / 5 / 4.
 E.reset(44002);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;st.usageAssignments=[];
 E.consolidateUsageHabit(st,requester,'sleep',{kind:'slot',id:'bed:left'},{usedTick:st.tick,sourceMemoryId:'memory:test:1'});
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');
 const habitReasons=U.associationReasons(st,requester,'sleep',{kind:'slot',id:'bed:left'});
 assert.ok(habitReasons.some(x=>x.kind==='habit'));assert.equal(habitReasons.some(x=>x.kind==='assignment'),false);assert.equal(SC.hasPreferredSleepConflict(st,requester),true);
+const originalPreferenceContributors=U.preferenceContributors;
+U.preferenceContributors=(state,agent,activity,target)=>agent.id===requester.id&&activity==='sleep'&&target?.id==='bed:left'?[{kind:'habit',direction:'self',delta:3.25,signal:.99,key:'testCanonicalDelta'}]:originalPreferenceContributors(state,agent,activity,target);
+try{
+  assert.equal(SC.associationStrength(st,requester,{kind:'slot',id:'bed:left'}),3.25,'Sleep insistence must consume Usage canonical contributor delta instead of reconstructing habit weight');
+}finally{U.preferenceContributors=originalPreferenceContributors;}
 
-// C: sleeping Animal can produce wait/attention but never Human request/drive-away; wake never releases the Slot by itself.
+// C: sleeping Animal can form a carry candidate but never Human request/drive-away; private occupant Usage ranking is not consulted.
 E.reset(44003);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
-nearSlot(st,requester,'bed:left');placeAtSlot(st,cat,'bed:left',{sleeping:true});st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;
-conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');evaluation=SC.conflictCandidates(st,requester,conflict);
+nearSlot(st,requester,'bed:left');placeAtSlot(st,cat,'bed:left',{sleeping:true});
+conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');assert.ok(conflict);
+const originalRankSleepTargets=U.rankSleepTargets;
+U.rankSleepTargets=(state,agent,...args)=>{if(agent.id===cat.id)throw new Error('occupant private Usage ranking must not be read by relocation planning');return originalRankSleepTargets(state,agent,...args);};
+try{evaluation=SC.conflictCandidates(st,requester,conflict);}finally{U.rankSleepTargets=originalRankSleepTargets;}
 assert.ok(evaluation.candidates.some(x=>x.kind==='wait'));assert.ok(evaluation.candidates.some(x=>x.kind==='attention'));
 assert.equal(evaluation.candidates.some(x=>x.kind==='requestYield'),false);assert.equal(evaluation.candidates.some(x=>x.kind==='driveAway'),false);
+const carryCandidate=evaluation.candidates.find(x=>x.kind==='carryOccupant');
+assert.ok(carryCandidate,'observed sleeping Animal with requester-time attemptability + placement proposal should produce carry candidate');
+assert.equal(carryCandidate.targetAgent,cat.id);
+assert.notEqual(carryCandidate.targetPlacement?.id,'bed:left','original conflict Slot must be excluded from relocation proposal');
+assert.ok(['slot','floor'].includes(carryCandidate.targetPlacement?.kind));
+if(carryCandidate.targetPlacement.kind==='slot')assert.equal(SP.getSlot(st,carryCandidate.targetPlacement.id)?.canSleep,true,'Slot-first proposal must use a sleep-capable Slot');
+const privateMass=cat.physical.mass;cat.physical.mass=999;
+evaluation=SC.conflictCandidates(st,requester,conflict);
+const hiddenMassCandidate=evaluation.candidates.find(x=>x.kind==='carryOccupant');
+assert.ok(hiddenMassCandidate,'hidden target mass must not erase requester-time sleeping carry candidate');
+assert.equal(E.buildAction(requester,{id:'carryAgent',targetAgent:cat.id,targetPlacement:hiddenMassCandidate.targetPlacement,cooperative:false}),null,'execution-time canonical carry feasibility must still reject hidden impossible mass');
+cat.physical.mass=privateMass;
+cat.held='cupA';
+evaluation=SC.conflictCandidates(st,requester,conflict);
+assert.ok(evaluation.candidates.some(x=>x.kind==='carryOccupant'),'hidden held state must not erase requester-time sleeping carry candidate');
+assert.equal(E.buildAction(requester,{id:'carryAgent',targetAgent:cat.id,targetPlacement:evaluation.candidates.find(x=>x.kind==='carryOccupant').targetPlacement,cooperative:false}),null,'execution-time canonical feasibility must reject hidden nested held state');
+cat.held=null;
+
+// C2: when no alternate sleep Slot remains, relocation may fall back to bounded floor while generic attention can still win utility.
+st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;
+conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');evaluation=SC.conflictCandidates(st,requester,conflict);
+const floorCarry=evaluation.candidates.find(x=>x.kind==='carryOccupant');assert.ok(floorCarry);assert.equal(floorCarry.targetPlacement.kind,'floor','no compatible nearby sleep Slot should fall back to bounded floor');
 armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);
-assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Animal no-alternate case should be able to select generic attention');
+assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Animal no-alternate case should still be able to select generic attention by utility');
 assert.equal(requester.action?.phase,'conflictWait','attention-only resolution must enter explicit reassessment instead of falling through to core sleep target failure');
 assert.equal(requester.action?.conflictWaitSource,'attentionReassessment');
 assert.equal(SP.slotAvailable(st,'bed:left',requester.id),false,'wake consequence must not imply Slot release');
@@ -72,9 +105,15 @@ assert.equal(st.events.some(e=>['acceptSleepSlotYield','refuseSleepSlotYield'].i
 E.tick();
 assert.equal(st.events.some(e=>e.data?.action==='abort'&&e.data?.actionKind==='sleep'),false,'attention reassessment must not collapse into the old no-sleep-position abort on the next core step');
 
-// D: Human responder observes a World bid locally, decides locally, and owns its departure Intent/Action.
+// D: Human responder observes a World bid locally, decides locally, and owns its departure Intent/Action. Response insistence also consumes Usage-owned delta.
 E.reset(44004);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');human.needs.sleepNeed=10;
+const originalResponderPreferenceContributors=U.preferenceContributors;
+U.preferenceContributors=(state,agent,activity,target)=>agent.id===human.id&&activity==='sleep'&&target?.id==='bed:left'?[{kind:'claim',direction:'self',delta:2.5,signal:1,key:'testResponderCanonicalDelta'}]:originalResponderPreferenceContributors(state,agent,activity,target);
+try{
+  const responseProbe=SC.responseEvaluation(st,human,{data:{slot:'bed:left',bidFrom:requester.id,bidKind:'sleepSlotYield'}},st.tick);
+  assert.equal(responseProbe.ownAssociationStrength,2.5,'responder-side insistence must consume Usage canonical contributor delta');
+}finally{U.preferenceContributors=originalResponderPreferenceContributors;}
 let bidId=addConflictBid(st,requester,human);
 assert.ok(E.observedBidRefs(st,human).some(ref=>ref.bidId===bidId),'perceived conflict bid must enter responder-private observation through the World-event listener');
 requester.activeIntent={id:'intent:zhen:test:awaitResponse:'+bidId,kind:'awaitResponse',createdTick:st.tick,lifecycle:'open',source:{type:'socialBid',bidId,context:'sleepSlotConflict'},patienceUntilTick:st.tick+3};
@@ -128,12 +167,13 @@ assert.notEqual(requester.activeIntent?.kind,'sleep','emergency hunger must be a
 assert.equal(requester.action?.kind,'eat');
 
 noIssues('sleep preferred Slot conflict');
-assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.44.0-sleep-slot-conflict');
+assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,APP_VERSION);
+assert.equal(AC.VERSION,APP_VERSION);
 assert.equal(SC.OCCUPANCY_REASSESS_TICKS,1,'occupancy wait must re-enter Deliberation instead of encoding a fixed multi-tick patience contract');
 assert.equal(SC.OCCUPANCY_WAIT_TICKS,undefined,'sleep conflict must not expose a fixed occupancy patience contract');
 assert.equal(SC.ATTENTION_REASSESS_TICKS,1,'attention-only resolution must have an explicit finite reassessment boundary');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,APP_VERSION);
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 
-console.log('Sleep preferred Slot conflict regression: ok');
+console.log('Sleep preferred Slot conflict × sleeping Agent carry regression: ok');
