@@ -14,7 +14,7 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(43001);
 let st=E.getState(),observer=st.agents.zhen,target=st.agents.zhou;
-assert.equal(st.version,'11.44.0-sleep-slot-conflict');
+assert.equal(st.version,'11.45.0-agent-carry-relocate');
 observer.position={x:5,y:5};target.position={x:5,y:6};
 target.action={kind:'rest',phase:'resting',started:st.tick,wait:0,restTicks:0,targetFatigue:0,restTarget:{kind:'standing',position:{...target.position},quality:.18,posture:'standing'}};
 E.reconcileIntents(st);

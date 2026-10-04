@@ -32,14 +32,17 @@ const engineCore=runtimeProfilePaths([
 ]);
 assert.equal(engineCore.includes('src/spatial-traversal.js'),false,'engine-core profile must not implicitly load traversal');
 assert.ok(engineCore.includes('src/systems/resources.js'),'Engine runtime profiles must include the canonical Resources owner');
-assert.ok(engineCore.includes('src/systems/physical.js'),'Engine runtime profiles must include the canonical Physical owner for held-container hand feasibility');
-assert.ok(engineCore.indexOf('src/systems/resources.js')<engineCore.indexOf('src/systems/physical.js'),'Resources must load before Physical in Engine runtime profiles');
+assert.ok(engineCore.includes('src/systems/agent-carry.js'),'Engine runtime profiles must include the canonical Agent Carry owner');
+assert.ok(engineCore.includes('src/systems/physical.js'),'Engine runtime profiles must include the canonical Physical owner for carried hand feasibility');
+assert.ok(engineCore.indexOf('src/systems/resources.js')<engineCore.indexOf('src/systems/agent-carry.js'),'Resources must load before Agent Carry in Engine runtime profiles');
+assert.ok(engineCore.indexOf('src/systems/agent-carry.js')<engineCore.indexOf('src/systems/physical.js'),'Agent Carry must load before Physical consumes its handling profile');
 assert.ok(engineCore.indexOf('src/systems/physical.js')<engineCore.indexOf('src/spatial/finalize.js'),'Physical initial-state registration must happen before the Spatial finalizer');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/engine.js'),'runtime profile must finalize initial state before Engine captures factories');
 
 const initialState=initialStateProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js'
 ]);
+assert.ok(initialState.includes('src/spatial-agent-carry.js'),'traversal profiles must install Agent carry position projection');
 assert.equal(initialState.at(-1),'src/spatial/finalize.js','initial-state profile must finish with the Spatial finalizer when Engine is absent');
 assert.throws(
   ()=>runtimeProfilePaths(['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','engine.js']),
@@ -48,7 +51,7 @@ assert.throws(
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
-  'systems/resources.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
+  'systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
 const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');

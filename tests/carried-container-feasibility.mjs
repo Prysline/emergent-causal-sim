@@ -8,9 +8,9 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.44.0-sleep-slot-conflict';
+const APP_VERSION='11.45.0-agent-carry-relocate';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
-const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
+const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const A=globalThis.SimWorldAuthoring;
@@ -25,7 +25,7 @@ const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=path=>path.map(node=>[node.x,node.y]);
 
 assert.equal(A.VERSION,'world-authoring-v11');
-assert.equal(C.VERSION,'embodiment-capabilities-v4');
+assert.equal(C.VERSION,'embodiment-capabilities-v5');
 assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
 assert.equal(SP.PASSAGE_PROFILE_VERSION,PASSAGE_VERSION);
@@ -54,7 +54,7 @@ E.reset(11710);
 let st=E.getState(),human=st.agents.zhen;
 assert.equal(st.version,APP_VERSION);
 assert.equal(human.physical.manipulation.handCapacity,2);
-assert.equal(Object.hasOwn(human,'carrying'),false,'Agent.held remains the only held relation');
+assert.equal(Object.hasOwn(human,'carrying'),false,'Agent.held remains the only Container-held relation');
 
 const bodyWalk=P.getMovementEnvelope(human,'walk');
 const noHeldWalk=P.getEffectiveTraversalEnvelope(st,human,'walk');

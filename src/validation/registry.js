@@ -24,16 +24,20 @@
     }
 
     for(const a of Object.values(st.agents||{})){
+      const carryRelation=window.SimAgentCarry?.relationForCarried?.(st,a)||null;
       for(const legacy of ['location','plan','seatSlot','seatedOn','__slotTarget','__eatAfterSeat','__restAfterSlot','carrying'])if(Object.prototype.hasOwnProperty.call(a,legacy))add('legacy_agent_state',`${a.name}仍含舊欄位 ${legacy}。`,{agentId:a.id,field:legacy});
       if(!Number.isFinite(a.needs?.sleepNeed)||a.needs.sleepNeed<0||a.needs.sleepNeed>100)add('sleep_need_invalid',`${a.name}的 sleepNeed 必須是 0–100 的有限數值。`,{agentId:a.id,value:a.needs?.sleepNeed});
       if(a.traits?.circadianPattern&&!['diurnal','nocturnal','crepuscular'].includes(a.traits.circadianPattern))add('circadian_pattern_invalid',`${a.name}的 circadianPattern 無效。`,{agentId:a.id,value:a.traits.circadianPattern});
       if(a.traits?.circadianPhaseOffsetMinutes!==undefined&&!Number.isFinite(a.traits.circadianPhaseOffsetMinutes))add('circadian_phase_invalid',`${a.name}的 circadianPhaseOffsetMinutes 必須是有限數值。`,{agentId:a.id,value:a.traits.circadianPhaseOffsetMinutes});
       if(!a.offMap){
-        if(!a.position)add('agent_position_missing',`${a.name}沒有 Tile 座標。`,{agentId:a.id});
+        if(carryRelation){if(a.position)add('carried_agent_persisted_position',`${a.name}被抱持時不應保留 ordinary position truth。`,{agentId:a.id,carrierId:carryRelation.carrierId});}
+        else if(!a.position)add('agent_position_missing',`${a.name}沒有 Tile 座標。`,{agentId:a.id});
         else if(!SP.walkable(st,a.position))add('agent_on_blocked_tile',`${a.name}位於不可通行 Tile ${SP.key(a.position)}。`,{agentId:a.id,position:SP.key(a.position),blocker:SP.blockerAt(st,a.position)});
         else{const list=byTile.get(SP.key(a.position))||[];list.push(a.id);byTile.set(SP.key(a.position),list);}
       }
-      if(!a.posture||!['standing','sitting','lying','kneeling','prone'].includes(a.posture.kind))add('invalid_posture',`${a.name}的 posture 無效。`,{agentId:a.id});
+      if(!a.posture||!['standing','sitting','lying','kneeling','prone','carried'].includes(a.posture.kind))add('invalid_posture',`${a.name}的 posture 無效。`,{agentId:a.id});
+      if(a.posture?.kind==='carried'&&!carryRelation)add('carried_posture_without_relation',`${a.name}標記 carried posture，卻沒有 canonical Agent carry relation。`,{agentId:a.id});
+      if(carryRelation&&a.posture?.kind!=='carried')add('carry_relation_posture_mismatch',`${a.name}有 Agent carry relation，posture 卻不是 carried。`,{agentId:a.id,carrierId:carryRelation.carrierId});
       const usesSlot=!!a.posture?.slotId;
       if(usesSlot){
         const slot=SP.getSlot(st,a.posture.slotId);
@@ -46,7 +50,7 @@
           const list=bySlot.get(slot.id)||[];list.push(a.id);bySlot.set(slot.id,list);
         }
       }else if(a.posture?.kind==='sitting')add('sitting_without_slot',`${a.name}標記 sitting 卻沒有 slot。`,{agentId:a.id});
-      if(a.action?.kind==='sleep'&&a.action.phase==='sleeping'){
+      if(a.action?.kind==='sleep'&&a.action.phase==='sleeping'&&!carryRelation){
         const slot=usesSlot?SP.getSlot(st,a.posture.slotId):null;
         if(a.posture?.kind!=='lying'||!slot?.canSleep)add('sleep_posture_invalid',`${a.name}正在 sleeping，但沒有躺在可睡眠 slot。`,{agentId:a.id,slotId:a.posture?.slotId||null});
       }

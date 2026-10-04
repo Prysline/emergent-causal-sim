@@ -8,8 +8,8 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.44.0-sleep-slot-conflict';
-const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
+const APP_VERSION='11.45.0-agent-carry-relocate';
+const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
