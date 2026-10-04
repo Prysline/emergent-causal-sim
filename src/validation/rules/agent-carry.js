@@ -18,10 +18,11 @@
       carrierIds.add(carrier.id);carriedIds.add(carried.id);
       if(relation.method!==A.METHOD)add('agent_carry_method_invalid',`Agent carry v1 只支援 ${A.METHOD}。`,{relationId:relation.id,method:relation.method});
       if(!['cooperative','sleeping'].includes(relation.responderMode))add('agent_carry_responder_mode_invalid',`Agent carry relation ${relation.id} 的 responderMode 無效。`,{relationId:relation.id,responderMode:relation.responderMode});
-      const blockedRecovery=relation.recovery?.phase==='recovery-blocked'&&relation.recovery?.owner==='carryAgent',activeCarry=carrier.action?.kind==='carryAgent';
-      if(!activeCarry&&!blockedRecovery)add('agent_carry_lifecycle_orphan',`Agent carry relation ${relation.id} 沒有 carryAgent Action 或 recovery-blocked lifecycle owner。`,{relationId:relation.id,carrierId:carrier.id,recovery:relation.recovery||null});
-      if(blockedRecovery&&carrier.action)add('agent_carry_recovery_blocked_action_conflict',`Agent carry relation ${relation.id} 已標記 recovery-blocked，但 carrier 同時仍有 Action。`,{relationId:relation.id,carrierId:carrier.id,actionKind:carrier.action?.kind});
-      if(relation.recovery?.phase==='placing'&&!activeCarry)add('agent_carry_recovery_action_missing',`Agent carry relation ${relation.id} 正在 recovery placing，但缺少 carryAgent Action。`,{relationId:relation.id,carrierId:carrier.id});
+      if(relation.recovery){
+        if(relation.recovery.owner!=='carryAgent'||!['recovery-blocked','placing'].includes(relation.recovery.phase))add('agent_carry_recovery_state_invalid',`Agent carry relation ${relation.id} 的 recovery lifecycle state 無效。`,{relationId:relation.id,recovery:relation.recovery});
+        if(relation.recovery.phase==='recovery-blocked'&&carrier.action)add('agent_carry_recovery_blocked_action_conflict',`Agent carry relation ${relation.id} 已標記 recovery-blocked，但 carrier 同時仍有 Action。`,{relationId:relation.id,carrierId:carrier.id,actionKind:carrier.action?.kind});
+        if(relation.recovery.phase==='placing'&&carrier.action?.kind!=='carryAgent')add('agent_carry_recovery_action_missing',`Agent carry relation ${relation.id} 正在 recovery placing，但缺少 carryAgent Action。`,{relationId:relation.id,carrierId:carrier.id,actionKind:carrier.action?.kind||null});
+      }
       const capability=C.agentCarryCapabilityForKind?.(carrier.kind,relation.method);
       if(!capability)add('agent_carry_capability_missing',`${carrier.name} 沒有 ${relation.method} capability。`,{carrierId:carrier.id,method:relation.method});
       else{
