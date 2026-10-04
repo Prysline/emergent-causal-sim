@@ -3,8 +3,9 @@
   if(!W?.registerInitialStateInitializer)throw new Error('systems/agent-carry.js requires world.js initial-state pipeline.');
   if(!C||!R)throw new Error('systems/agent-carry.js requires Embodiment Capabilities and Resources.');
 
-  const VERSION='11.45.0-agent-carry-relocate';
+  const VERSION='11.46.0-sleep-carry-integration';
   const METHOD='twoArmCarry';
+  const RECOVERY_RADIUS=2;
   const clone=p=>p?{...p}:null;
   const relations=st=>st?.agentCarries||{};
   const agentFor=(st,aOrId)=>typeof aOrId==='string'?st?.agents?.[aOrId]:aOrId;
@@ -44,6 +45,21 @@
   function handDemandWithExistingContainer(st,carrier,capability){
     const held=R.getCarriedHandlingProfile?.(st,carrier),containerHands=held?.handsRequired||0;
     return {containerHands,agentHands:capability?.handsRequired||0,totalHands:containerHands+(capability?.handsRequired||0),capacity:Number(carrier?.physical?.manipulation?.handCapacity)||0};
+  }
+
+  function candidateAttemptability(st,carrierOrId,observation,{method=METHOD,cooperationEvidence=null}={}){
+    const carrier=agentFor(st,carrierOrId),fail=(reason,extra={})=>Object.freeze({ok:false,reason,...extra});
+    if(!carrier)return fail('missing-carrier');
+    if(carrier.offMap)return fail('carrier-off-map');
+    if(relationForCarrier(st,carrier)||relationForCarried(st,carrier))return fail('carrier-already-in-carry-relation');
+    const capability=capabilityFor(carrier,method);if(!capability)return fail('carry-method-unsupported');
+    const hands=handDemandWithExistingContainer(st,carrier,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
+    if(!observation?.observable||!observation.targetId)return fail('target-unobserved');
+    if(!['human','animal'].includes(observation.observedAgentKind))return fail('observed-target-kind-unsupported');
+    const observedSleeping=observation.observedActionKind==='sleep';
+    const cooperative=!!cooperationEvidence?.accepted;
+    if(!observedSleeping&&!cooperative)return fail('no-observed-sleep-or-cooperation');
+    return Object.freeze({ok:true,reason:null,carrierId:carrier.id,targetId:observation.targetId,method,capability,hands,observedSleeping,cooperative});
   }
 
   function canEstablishCarry(st,carrierOrId,carriedOrId,{method=METHOD,cooperative=false}={}){
@@ -126,10 +142,32 @@
     if(target.kind==='floor'){
       const node=SP.normalizeNode?.(st,target.position||target,'floor');if(!node)return null;
       const candidates=(SP.adjacentWalkable?.(st,node)||[]).map(p=>SP.normalizeNode?.(st,p)).filter(Boolean);
-      const scored=candidates.map(p=>({p,cost:SP.traversalCost?.(st,carrier,p)??SP.pathDistance?.(st,carrier,p)??Infinity})).filter(x=>Number.isFinite(x.cost));
-      scored.sort((a,b)=>a.cost-b.cost||String(SP.nodeKey?.(st,a.p)||'').localeCompare(String(SP.nodeKey?.(st,b.p)||'')));return scored[0]?.p||null;
+      return SP.bestCandidateNode?.(st,carrier,candidates,{mode:'auto',objective:'traversalCost'})||null;
     }
     return null;
+  }
+
+  function recoveryFloorCandidates(st,carrierOrId,{radius=RECOVERY_RADIUS}={}){
+    const SP=window.SimSpatial,carrier=agentFor(st,carrierOrId),relation=relationForCarrier(st,carrier),carried=relation&&st.agents?.[relation.carriedAgentId];
+    const origin=carrier&&SP?.nodeForAgent?.(st,carrier);if(!carrier||!carried||!origin)return [];
+    const out=new Map(),z=SP.zOf?.(origin)??origin.z??0;
+    for(let dy=-radius;dy<=radius;dy++)for(let dx=-radius;dx<=radius;dx++){
+      if(Math.abs(dx)+Math.abs(dy)>radius)continue;
+      const node=SP.normalizeNode?.(st,{x:origin.x+dx,y:origin.y+dy,z,spaceId:origin.spaceId,surfaceId:'floor'},'floor');
+      if(!node||node.surfaceId!=='floor')continue;
+      if(!(SP.nodeLocomotionAccessible?.(st,node,carried)??SP.nodeWalkable?.(st,node,carried)??SP.walkable?.(st,node)))continue;
+      if((SP.nodeOccupantsAt?.(st,node,carried.id)||SP.occupantsAt?.(st,node,carried.id)||[]).length)continue;
+      const target={kind:'floor',position:{...node}},approach=bestPlacementApproach(st,carrier,target);if(!approach)continue;
+      out.set(SP.nodeKey?.(st,node)||`${node.x},${node.y},${z}`,{target,approach});
+    }
+    return [...out.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([,entry])=>entry);
+  }
+
+  function recoveryPlacement(st,carrierOrId,options={}){
+    const SP=window.SimSpatial,candidates=recoveryFloorCandidates(st,carrierOrId,options);if(!candidates.length)return null;
+    const winner=SP.bestCandidateNodeResult?.(st,carrierOrId,candidates.map(x=>x.approach),{mode:'auto',objective:'traversalCost'});if(!winner)return null;
+    const matches=candidates.filter(x=>SP.nodeSame?.(st,x.approach,winner.node));
+    return matches[0]?.target||null;
   }
 
   function placeCarriedAgent(st,carrierOrId,target){
@@ -144,5 +182,5 @@
   function initializeState(st){st.agentCarryVersion=VERSION;st.agentCarries={};return st;}
   W.registerInitialStateInitializer('agentCarry.schema',initializeState,1550);
   W.AGENT_CARRY_SCHEMA_VERSION=VERSION;
-  window.SimAgentCarry=Object.freeze({VERSION,METHOD,relationForCarried,relationForCarrier,isCarried,isCarrier,capabilityFor,carryLocalEnvelope,carryingHandlingProfile,projectedPosition,canEstablishCarry,establishCarry,surfaceManeuverSupported,placementLegality,bestPlacementApproach,placeCarriedAgent});
+  window.SimAgentCarry=Object.freeze({VERSION,METHOD,RECOVERY_RADIUS,relationForCarried,relationForCarrier,isCarried,isCarrier,capabilityFor,carryLocalEnvelope,carryingHandlingProfile,projectedPosition,candidateAttemptability,canEstablishCarry,establishCarry,surfaceManeuverSupported,placementLegality,bestPlacementApproach,recoveryFloorCandidates,recoveryPlacement,placeCarriedAgent});
 })();
