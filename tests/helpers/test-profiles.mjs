@@ -81,6 +81,7 @@ const SPATIAL_CORE_PROFILE=Object.freeze([
 const ENGINE_CORE_PROFILE=Object.freeze([
   ...SPATIAL_CORE_PROFILE,
   'systems/resources.js',
+  'systems/agent-carry.js',
   'systems/physical.js',
   'spatial/finalize.js',
   'engine.js',
@@ -122,10 +123,19 @@ function ensureRuntimeDependencies(paths){
   ensureAuthoringDependencies(paths);
   const engineIndex=paths.indexOf('engine.js');
   if(engineIndex>=0&&!paths.includes('systems/physical.js'))paths.splice(engineIndex,0,'systems/physical.js');
-  const consumerIndexes=['systems/physical.js','engine.js']
+  const physicalIndex=paths.indexOf('systems/physical.js');
+  if(physicalIndex>=0&&!paths.includes('systems/agent-carry.js'))paths.splice(physicalIndex,0,'systems/agent-carry.js');
+  const consumerIndexes=['systems/agent-carry.js','systems/physical.js','engine.js']
     .map(path=>paths.indexOf(path))
     .filter(index=>index>=0);
   if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
+  const traversalIndex=paths.indexOf('spatial-traversal.js');
+  if(traversalIndex>=0&&paths.includes('systems/agent-carry.js')&&!paths.includes('spatial-agent-carry.js')){
+    const carryIndex=paths.indexOf('systems/agent-carry.js');
+    paths.splice(Math.max(traversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
+  }
+  const validationManifestIndex=paths.indexOf('validation/manifest.js');
+  if(validationManifestIndex>=0&&!paths.includes('validation/rules/agent-carry.js'))paths.splice(validationManifestIndex,0,'validation/rules/agent-carry.js');
   return paths;
 }
 
@@ -137,6 +147,12 @@ export function authoringProfilePaths(extra=[]){
 
 export function spatialCoreProfilePaths(extra=[]){
   const paths=unique([...SPATIAL_CORE_PROFILE,...extra]);
+  assertCurrentSources(paths);
+  return paths.map(normalizePath);
+}
+
+export function engineCoreProfilePaths(extra=[]){
+  const paths=ensureRuntimeDependencies(unique([...ENGINE_CORE_PROFILE,...extra]));
   assertCurrentSources(paths);
   return paths.map(normalizePath);
 }

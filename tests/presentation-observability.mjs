@@ -4,11 +4,11 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.44.0-sleep-slot-conflict';
+const CURRENT_VERSION='11.45.0-agent-carry-relocate';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
-const PHYSICAL_VERSION='11.37.0-carried-container-feasibility';
+const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',

@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.44.0-sleep-slot-conflict';
+const CURRENT_VERSION='11.45.0-agent-carry-relocate';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -32,8 +32,11 @@ const initializerIndex=indexOf('src/world-initializer.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
 const resourcesIndex=indexOf('src/systems/resources.js');
+const agentCarryIndex=indexOf('src/systems/agent-carry.js');
 const engineIndex=indexOf('src/engine.js');
 const initialManifestIndex=indexOf('src/world/initial-state-manifest.js');
+const spatialTraversalIndex=indexOf('src/spatial-traversal.js');
+const spatialAgentCarryIndex=indexOf('src/spatial-agent-carry.js');
 const physicalIndex=indexOf('src/systems/physical.js');
 const passageIndex=indexOf('src/spatial-passage.js');
 const locomotionIndex=indexOf('src/systems/locomotion.js');
@@ -50,7 +53,7 @@ const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
 assert.ok(furnitureDefinitionsIndex<horizontalGeometryIndex&&horizontalGeometryIndex<authoringIndex,'pure horizontal geometry must load after Furniture geometry helpers and before world-authoring.js');
 const horizontalGeometrySource=readRepoFile('src/horizontal-geometry.js');
-assert.doesNotMatch(horizontalGeometrySource,/SimWorld|SimSpatial|SimEngine|SimLocomotion|SimCrowding|\\.agents\\b/,'shared horizontal geometry kernel must not depend on runtime mutable state or Agent state');
+assert.doesNotMatch(horizontalGeometrySource,/SimWorld|SimSpatial|SimEngine|SimLocomotion|SimCrowding|\.agents\b/,'shared horizontal geometry kernel must not depend on runtime mutable state or Agent state');
 assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<worldIndex,'shared embodiment capabilities must stay authoring-safe and load before initializer/runtime owners');
 const capabilitySource=readRepoFile('src/embodiment-capabilities.js');
 assert.doesNotMatch(capabilitySource,/SimEngine|SimSpatial|registerInitialStateInitializer/,'shared embodiment capability contract must stay pure and authoring-safe');
@@ -59,8 +62,10 @@ assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production mus
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
 assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
 assert.equal(resourcesIndex,releaseIndex+1,'Resources owner must load immediately after release.js');
+assert.equal(agentCarryIndex,resourcesIndex+1,'Agent Carry owner must load immediately after Resources');
+assert.ok(spatialTraversalIndex<spatialAgentCarryIndex&&agentCarryIndex<spatialAgentCarryIndex,'Agent carry position projection must load after both Agent Carry truth owner and Spatial Traversal');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
-assert.ok(resourcesIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Resources -> Physical -> Passage -> Locomotion -> Crowding');
+assert.ok(resourcesIndex<agentCarryIndex&&agentCarryIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Resources -> Agent Carry -> Physical -> Passage -> Locomotion -> Crowding');
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every simulation hook registrant');
@@ -132,7 +137,8 @@ const engineDependentSubsystemSchemas=[
   'src/systems/memory/state.js',
   'src/systems/appraisal/state.js',
   'src/systems/affect/state.js',
-  'src/systems/relationship/state.js'
+  'src/systems/relationship/state.js',
+  'src/systems/agent-carry.js'
 ];
 const engineDependentSubsystemRuntimes=[
   'src/systems/action/runtime.js',
@@ -175,7 +181,7 @@ const validatorRules=fs.readdirSync(validationRulesDir)
   .filter(name=>name.endsWith('.js'))
   .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.equal(validatorRules.length,19,'architecture guard must discover every semantic validator rule');
+assert.equal(validatorRules.length,20,'architecture guard must discover every semantic validator rule');
 for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
@@ -188,6 +194,7 @@ const A=globalThis.SimWorldAuthoring;
 const EC=globalThis.SimEmbodimentCapabilities;
 const R=globalThis.SimRelease;
 const Resources=globalThis.SimResources;
+const AgentCarry=globalThis.SimAgentCarry;
 const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
 const P=globalThis.SimPhysical;
@@ -199,8 +206,10 @@ const E=globalThis.SimEngine;
 assert.equal(FD.VERSION,'furniture-definitions-v12');
 assert.equal(A.VERSION,'world-authoring-v11');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
-assert.equal(EC.VERSION,'embodiment-capabilities-v4');
+assert.equal(EC.VERSION,'embodiment-capabilities-v5');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
+assert.equal(EC.agentCarryCapabilityForKind('human','twoArmCarry').massCapacity,35);
+assert.equal(EC.agentCarryCapabilityForKind('cat','twoArmCarry'),null);
 assert.equal(A.LEGACY_VERSION,undefined,'current-only authoring must not expose a legacy schema marker');
 assert.equal(A.migrateAuthoring,undefined,'current-only authoring must not expose production migration machinery');
 assert.equal(R.VERSION,CURRENT_VERSION);
@@ -209,8 +218,11 @@ assert.equal(W.RESOURCES_RUNTIME_VERSION,RESOURCES_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.37.0-carried-container-feasibility');
-assert.equal(P.VERSION,'11.37.0-carried-container-feasibility');
+assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(AgentCarry.VERSION,CURRENT_VERSION);
+assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,CURRENT_VERSION);
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(P.VERSION,CURRENT_VERSION);
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.38.0-carried-handling-risk');

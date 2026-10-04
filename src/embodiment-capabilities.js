@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='embodiment-capabilities-v4';
+  const VERSION='embodiment-capabilities-v5';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const deepFreeze=value=>{
     if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
@@ -82,10 +82,18 @@
       jump:{upHeightRatio:3.00,downHeightRatio:4.50,horizontalGapRatio:4.00,supportHandsRequired:0}
     }
   });
-  const ALL_POSTURES=Object.freeze(['standing','sitting','lying','kneeling','prone']);
+  const AGENT_CARRY_METHODS=deepFreeze({
+    twoArmCarry:{
+      handsRequired:2,
+      carriedGeometryCalibration:{widthFromHeightFactor:.60,lengthFromHeightFactor:.40},
+      surfaceManeuvers:{step:true,jump:false}
+    }
+  });
+  const AGENT_CARRY_CAPABILITIES=deepFreeze({human:{twoArmCarry:{massCapacity:35}},cat:{}});
+  const ALL_POSTURES=Object.freeze(['standing','sitting','lying','kneeling','prone','carried']);
   const POSTURE_BY_MODE=Object.freeze({walk:'standing',kneelCrawl:'kneeling',proneCrawl:'prone'});
   const MODE_BY_POSTURE=Object.freeze({standing:'walk',kneeling:'kneelCrawl',prone:'proneCrawl'});
-  const POSTURE_LABELS=Object.freeze({standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥'});
+  const POSTURE_LABELS=Object.freeze({standing:'站立',sitting:'坐姿',lying:'躺臥',kneeling:'跪姿',prone:'俯臥',carried:'被抱持'});
   const MODE_LABELS=Object.freeze({walk:'步行',kneelCrawl:'跪爬',proneCrawl:'匍匐'});
   const finitePositive=value=>Number.isFinite(Number(value))&&Number(value)>0;
 
@@ -118,6 +126,11 @@
     return deriveSupportFootprint(bodyGeometry,supportProfileForKind(kind,posture));
   }
   function surfaceManeuverProfileForKind(kind,family){return SURFACE_MANEUVER_PROFILES[kind]?.[family]||null;}
+  function agentCarryMethod(method){return AGENT_CARRY_METHODS[method]||null;}
+  function agentCarryCapabilityForKind(kind,method){
+    const methodProfile=agentCarryMethod(method),species=AGENT_CARRY_CAPABILITIES[kind]?.[method];
+    return methodProfile&&species?Object.freeze({...methodProfile,...species}):null;
+  }
   function poseEnvelopeFitsUsableSpace(envelope,usableSpace){
     if(!envelope||!usableSpace||!finitePositive(usableSpace.width)||!finitePositive(usableSpace.length))return false;
     for(const axis of ['width','length','height']){
@@ -142,14 +155,14 @@
     if(!DEFAULT_PHYSICAL_PROFILES[kind])return [];
     const supported=new Set(supportedLocomotionModesForKind(kind).map(postureForMode).filter(Boolean));
     supported.add('lying');
-    return ALL_POSTURES.filter(kind=>kind!=='sitting'&&supported.has(kind));
+    return ALL_POSTURES.filter(posture=>posture!=='sitting'&&posture!=='carried'&&supported.has(posture));
   }
   function slotPosturesForKind(kind,slot={}){
     if(!DEFAULT_PHYSICAL_PROFILES[kind])return [];
     const supported=new Set(freePosturesForKind(kind));
     supported.add('sitting');
     if(!slot?.canRest&&!slot?.canSleep)supported.delete('lying');
-    return ALL_POSTURES.filter(posture=>supported.has(posture));
+    return ALL_POSTURES.filter(posture=>posture!=='carried'&&supported.has(posture));
   }
   function postureLabel(posture){return POSTURE_LABELS[posture]||posture||'未知';}
   function modeLabel(mode){return MODE_LABELS[mode]||mode||'移動';}
@@ -160,6 +173,8 @@
     POSE_PROFILES,
     SUPPORT_PROFILES,
     SURFACE_MANEUVER_PROFILES,
+    AGENT_CARRY_METHODS,
+    AGENT_CARRY_CAPABILITIES,
     ALL_POSTURES,
     POSTURE_BY_MODE,
     MODE_BY_POSTURE,
@@ -171,6 +186,8 @@
     deriveSupportFootprint,
     getSupportFootprintForKind,
     surfaceManeuverProfileForKind,
+    agentCarryMethod,
+    agentCarryCapabilityForKind,
     poseEnvelopeFitsUsableSpace,
     supportedLocomotionModesForKind,
     postureForMode,
