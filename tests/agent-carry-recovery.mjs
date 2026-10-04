@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','world.js','release.js','systems/resources.js','systems/agent-carry.js',
   'spatial.js','spatial-traversal.js','spatial-agent-carry.js','systems/physical.js','spatial-passage.js','systems/locomotion.js',
-  'engine.js','runtime-hook-pipeline.js','systems/agent-carry-recovery.js'
+  'engine.js','runtime-hook-pipeline.js','systems/agent-carry-lifecycle.js'
 ]);
 
 const E=globalThis.SimEngine,A=globalThis.SimAgentCarry,AR=globalThis.SimAgentCarryRecovery,SP=globalThis.SimSpatial;
