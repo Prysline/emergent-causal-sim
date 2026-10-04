@@ -6,6 +6,7 @@
 
 - Agent carry 使用獨立的 World relation：`state.agentCarries`。
 - relation 以 carried Agent id 為 key，保存 `carrierId / carriedAgentId / method / responderMode / establishedTick`；carrier → carried reverse lookup 必須由同一份 relation 推導，不保存 competing mirror。
+- `responderMode` 記錄 carry relation 建立當下的 responder mode，屬於 establishment provenance，不是之後 responder 當前狀態的 mirror。
 - Agent carry 不使用 Container 專用的 `Agent.held`。
 - relation 成立期間，carried Agent 的 ordinary `position` 為 `null`，posture 為專用 `carried`；不得同時保存 floor / Slot occupancy truth。
 - carried Agent 的可觀察 Spatial Node / position 由 relation 指向的 carrier 投影；投影不是第二份 persistent position。
@@ -33,6 +34,8 @@ v1 支援：
 - sleeping responder。
 
 sleeping 不是 consent。awake 且沒有 cooperative input 時不得建立 carry relation。forced relocation、resistance、combat、restraint、damage 與 generic incapacitated resolution 均不屬於 v1。
+
+carry relation 一旦合法建立，`responderMode` 保留建立當下 provenance；若 responder 之後的 canonical state 改變（例如由 sleeping 變成 awake），不得把舊 `responderMode` 當成新的當前狀態 truth。v1 仍不因此建立 resistance / forced-relocation resolution。
 
 ## Lifecycle
 
@@ -82,7 +85,7 @@ v1 只支援：
 
 floor placement 必須通過現有 node accessibility / occupancy。Slot placement重用 `slotAllows / slotAvailable / slotPoseFits / slotApproachNodes` 等既有 legality；不得 fallback 到 entity position。Surface free placement 不在 v1。
 
-sleeping responder 只能在合法條件下落到 `lying`；cooperative awake responder 依合法 placement posture 落地。release posture 是 objective physical consequence，不替 responder 建立新的 Intent。
+release posture 必須依**放下當下**的 responder canonical state + Physical legality 決定，而不是照抄 relation 建立時的 `responderMode`。若 responder 在 release 當下仍 sleeping，只能在合法條件下落到 `lying`；若當下已 awake，則依合法 placement posture 落地。release posture 是 objective physical consequence，不替 responder 建立新的 Intent。
 
 ## Validation invariants
 
@@ -95,7 +98,7 @@ Validator 必須鎖定：
 - carried posture 必須有 relation，relation 必須有 carried posture；
 - projected position 與 carrier 同源；
 - carried Agent 不得持有 Container；
-- sleeping responder relation 必須仍對應 sleeping canonical Action state；
+- `responderMode` 必須是合法的 establishment provenance，但不得要求它持續等於 responder 當前 canonical state；
 - carry geometry 必須可由 authoritative bodyGeometry 推導。
 
 ## Version boundary
