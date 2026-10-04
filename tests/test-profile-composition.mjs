@@ -69,7 +69,19 @@ const releaseSource=fs.readFileSync(new URL('../src/release.js',import.meta.url)
 const currentOverallMatch=releaseSource.match(/const VERSION='([^']+)'/);
 assert.ok(currentOverallMatch,'release.js must expose the canonical overall VERSION marker');
 const currentOverallVersion=currentOverallMatch[1];
+
+const physicalSource=fs.readFileSync(new URL('../src/systems/physical.js',import.meta.url),'utf8');
+const currentPhysicalMatch=physicalSource.match(/const VERSION='([^']+)'/);
+assert.ok(currentPhysicalMatch,'systems/physical.js must expose the canonical Physical VERSION marker');
+const currentPhysicalVersion=currentPhysicalMatch[1];
+
+const embodimentSource=fs.readFileSync(new URL('../src/embodiment-capabilities.js',import.meta.url),'utf8');
+const currentEmbodimentMatch=embodimentSource.match(/const VERSION='([^']+)'/);
+assert.ok(currentEmbodimentMatch,'embodiment-capabilities.js must expose the canonical capability VERSION marker');
+const currentEmbodimentVersion=currentEmbodimentMatch[1];
+
 const staleOverallAssertions=[];
+const stalePhysicalAssertions=[];
 for(const relativePath of stateTests){
   if(relativePath==='tests/test-profile-composition.mjs')continue;
   const source=fs.readFileSync(new URL('../'+relativePath,import.meta.url),'utf8');
@@ -85,8 +97,28 @@ for(const relativePath of stateTests){
       staleOverallAssertions.push(relativePath+': '+match[1]+' expects '+expectedVersion+' via '+token+' but release.js is '+currentOverallVersion);
     }
   }
+  for(const match of source.matchAll(/assert\.(?:equal|strictEqual)\((W\.PHYSICAL_SCHEMA_VERSION|W\.PHYSICAL_RUNTIME_VERSION),\s*([^,\n\)]+)/g)){
+    const token=match[2].trim();
+    const literal=token.match(/^['"]([^'"]+)['"]$/);
+    const expectedVersion=literal?literal[1]:constants.get(token);
+    if(expectedVersion&&expectedVersion!==currentPhysicalVersion){
+      stalePhysicalAssertions.push(relativePath+': '+match[1]+' expects '+expectedVersion+' via '+token+' but systems/physical.js is '+currentPhysicalVersion);
+    }
+  }
 }
 assert.deepEqual(staleOverallAssertions,[],'Current overall release assertions must be audited together with every release marker bump:\n'+staleOverallAssertions.join('\n'));
+assert.deepEqual(stalePhysicalAssertions,[],'Current Physical assertions must be audited together with every Physical generation bump:\n'+stalePhysicalAssertions.join('\n'));
+
+const currentDocPaths=['README.md','docs/architecture.md','docs/versioning.md'];
+const staleCurrentDocs=[];
+for(const relativePath of currentDocPaths){
+  const source=fs.readFileSync(new URL('../'+relativePath,import.meta.url),'utf8');
+  if(!source.includes(currentOverallVersion))staleCurrentDocs.push(relativePath+': missing current overall marker '+currentOverallVersion);
+}
+const versioningSource=fs.readFileSync(new URL('../docs/versioning.md',import.meta.url),'utf8');
+if(!versioningSource.includes('Physical `'+currentPhysicalVersion+'`'))staleCurrentDocs.push('docs/versioning.md: missing current Physical marker '+currentPhysicalVersion);
+if(!versioningSource.includes('Embodiment Capabilities 為 `'+currentEmbodimentVersion+'`'))staleCurrentDocs.push('docs/versioning.md: missing current Embodiment marker '+currentEmbodimentVersion);
+assert.deepEqual(staleCurrentDocs,[],'Current docs must be synchronized before the long regression suite runs:\n'+staleCurrentDocs.join('\n'));
 
 const retiredNames=Object.keys(TEST_PROFILE_CONTRACT.retiredSources);
 for(const relativePath of stateTests){
