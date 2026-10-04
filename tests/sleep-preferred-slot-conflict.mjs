@@ -57,14 +57,16 @@ nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');
 const habitReasons=U.associationReasons(st,requester,'sleep',{kind:'slot',id:'bed:left'});
 assert.ok(habitReasons.some(x=>x.kind==='habit'));assert.equal(habitReasons.some(x=>x.kind==='assignment'),false);assert.equal(SC.hasPreferredSleepConflict(st,requester),true);
 
-// C: sleeping Animal can produce wait/attention but never Human request/drive-away; wake never releases the Slot by itself.
+// C: sleeping Animal retains wait/attention without Human request/drive-away. If requester-side known hand capacity excludes carry, generic attention can still win; wake never releases the Slot by itself.
 E.reset(44003);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,cat,'bed:left',{sleeping:true});st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;
+requester.physical.manipulation.handCapacity=0;
 conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');evaluation=SC.conflictCandidates(st,requester,conflict);
 assert.ok(evaluation.candidates.some(x=>x.kind==='wait'));assert.ok(evaluation.candidates.some(x=>x.kind==='attention'));
+assert.equal(evaluation.candidates.some(x=>x.kind==='carryOccupant'),false,'requester-known hand-capacity failure should exclude carry without removing other resolution mechanisms');
 assert.equal(evaluation.candidates.some(x=>x.kind==='requestYield'),false);assert.equal(evaluation.candidates.some(x=>x.kind==='driveAway'),false);
 armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);
-assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Animal no-alternate case should be able to select generic attention');
+assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Animal no-alternate case should still be able to select generic attention when carry is requester-known unavailable');
 assert.equal(requester.action?.phase,'conflictWait','attention-only resolution must enter explicit reassessment instead of falling through to core sleep target failure');
 assert.equal(requester.action?.conflictWaitSource,'attentionReassessment');
 assert.equal(SP.slotAvailable(st,'bed:left',requester.id),false,'wake consequence must not imply Slot release');
