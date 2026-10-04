@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.44.0-sleep-slot-conflict';
+const CURRENT_VERSION='11.45.0-agent-carry-relocate';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
@@ -150,7 +150,7 @@ assert.match(locomotionSource,/function transitionTicks\(fromMode,toMode\)/,'Loc
 assert.match(locomotionSource,/const requiredTicks=distance\/speed/,'Locomotion runtime must derive metric movement timing from distanceMeters and speedFactor');
 assert.match(locomotionSource,/movementCreditAfter/,'Locomotion runtime must expose fractional movement credit for consecutive same-mode edges');
 const locomotionUiSource=fs.readFileSync(new URL('../src/ui/inspectors/locomotion.js',import.meta.url),'utf8');
-assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use explicit Inspector lifecycle');
+assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use the explicit Inspector lifecycle');
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
 const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
 assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode='walk'\)/,'Crowding must expose a derived edge profile');
