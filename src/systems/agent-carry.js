@@ -46,6 +46,22 @@
     return {containerHands,agentHands:capability?.handsRequired||0,totalHands:containerHands+(capability?.handsRequired||0),capacity:Number(carrier?.physical?.manipulation?.handCapacity)||0};
   }
 
+  function carryAttemptability(st,requesterOrId,observation,{method=METHOD,cooperationEvidence=null}={}){
+    const requester=agentFor(st,requesterOrId),fail=(reason,extra={})=>Object.freeze({ok:false,reason,...extra});
+    if(!requester)return fail('missing-requester');
+    if(requester.offMap)return fail('requester-off-map');
+    if(!observation?.observable||!observation.targetId)return fail('target-not-observed');
+    if(observation.targetId===requester.id)return fail('self-carry-unsupported');
+    if(!['human','animal'].includes(observation.observedAgentKind))return fail('observed-target-kind-unsupported');
+    if(relationForCarrier(st,requester)||relationForCarried(st,requester))return fail('requester-already-in-carry-relation');
+    const capability=capabilityFor(requester,method);if(!capability)return fail('carry-method-unsupported');
+    const hands=handDemandWithExistingContainer(st,requester,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
+    const observedSleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying';
+    const cooperationMatches=!!cooperationEvidence&&cooperationEvidence.accepted===true&&cooperationEvidence.targetId===observation.targetId;
+    if(!observedSleeping&&!cooperationMatches)return fail('awake-responder-needs-cooperation');
+    return Object.freeze({ok:true,reason:null,requester,method,capability,hands,targetId:observation.targetId,responderBasis:observedSleeping?'observedSleeping':'cooperationEvidence'});
+  }
+
   function canEstablishCarry(st,carrierOrId,carriedOrId,{method=METHOD,cooperative=false}={}){
     const carrier=agentFor(st,carrierOrId),carried=agentFor(st,carriedOrId);
     const fail=(reason,extra={})=>Object.freeze({ok:false,reason,...extra});
@@ -82,12 +98,16 @@
     return true;
   }
 
+  function floorTargetCompatibility(st,carried,node){
+    const SP=window.SimSpatial,n=SP?.normalizeNode?.(st,node,'floor');if(!n||n.surfaceId!=='floor')return {ok:false,reason:'invalid-floor-node'};
+    if(!(SP.nodeLocomotionAccessible?.(st,n,carried)??SP.nodeWalkable?.(st,n,carried)??SP.walkable?.(st,n)))return {ok:false,reason:'floor-node-inaccessible'};
+    if((SP.nodeOccupantsAt?.(st,n,carried.id)||SP.occupantsAt?.(st,n,carried.id)||[]).length)return {ok:false,reason:'floor-node-occupied'};
+    return {ok:true,node:n};
+  }
+
   function floorPlacement(st,carrier,carried,target){
-    const SP=window.SimSpatial,node=SP?.normalizeNode?.(st,target?.position||target,'floor');
-    if(!node||node.surfaceId!=='floor')return {ok:false,reason:'invalid-floor-node'};
-    if(!(SP.nodeLocomotionAccessible?.(st,node,carried)??SP.nodeWalkable?.(st,node,carried)??SP.walkable?.(st,node)))return {ok:false,reason:'floor-node-inaccessible'};
-    if((SP.nodeOccupantsAt?.(st,node,carried.id)||SP.occupantsAt?.(st,node,carried.id)||[]).length)return {ok:false,reason:'floor-node-occupied'};
-    const carrierNode=SP.nodeForAgent?.(st,carrier)||SP.normalizeNode?.(st,carrier.position);
+    const SP=window.SimSpatial,compatibility=floorTargetCompatibility(st,carried,target?.position||target);if(!compatibility.ok)return compatibility;
+    const node=compatibility.node,carrierNode=SP.nodeForAgent?.(st,carrier)||SP.normalizeNode?.(st,carrier.position);
     if(!carrierNode||(!SP.nodeSame?.(st,carrierNode,node)&&(SP.manhattan?.(carrierNode,node)??Infinity)!==1))return {ok:false,reason:'carrier-not-at-placement-reach'};
     const posture=isSleeping(carried)?'lying':'standing';
     return {ok:true,kind:'floor',position:node,posture};
@@ -126,10 +146,27 @@
     if(target.kind==='floor'){
       const node=SP.normalizeNode?.(st,target.position||target,'floor');if(!node)return null;
       const candidates=(SP.adjacentWalkable?.(st,node)||[]).map(p=>SP.normalizeNode?.(st,p)).filter(Boolean);
-      const scored=candidates.map(p=>({p,cost:SP.traversalCost?.(st,carrier,p)??SP.pathDistance?.(st,carrier,p)??Infinity})).filter(x=>Number.isFinite(x.cost));
-      scored.sort((a,b)=>a.cost-b.cost||String(SP.nodeKey?.(st,a.p)||'').localeCompare(String(SP.nodeKey?.(st,b.p)||'')));return scored[0]?.p||null;
+      return SP.bestCandidateNode?.(st,carrier,candidates,{mode:'auto',objective:'traversalCost'})||null;
     }
     return null;
+  }
+
+  function nearbyRecoveryFloor(st,carrierOrId,{radius=2}={}){
+    const SP=window.SimSpatial,carrier=agentFor(st,carrierOrId),relation=relationForCarrier(st,carrier);if(!SP||!carrier||!relation)return null;
+    const carried=st.agents?.[relation.carriedAgentId],origin=SP.nodeForAgent?.(st,carrier);if(!carried||!origin)return null;
+    const pairs=[];
+    for(let dx=-radius;dx<=radius;dx++)for(let dy=-radius;dy<=radius;dy++){
+      if(Math.abs(dx)+Math.abs(dy)>radius)continue;
+      const node=SP.normalizeNode?.(st,{x:origin.x+dx,y:origin.y+dy,z:origin.z??0,spaceId:origin.spaceId,surfaceId:'floor'},'floor'),compatibility=floorTargetCompatibility(st,carried,node);
+      if(!compatibility.ok)continue;
+      const approaches=(SP.adjacentWalkable?.(st,compatibility.node)||[]).map(p=>SP.normalizeNode?.(st,p)).filter(Boolean);
+      for(const approach of approaches)pairs.push({target:compatibility.node,approach});
+    }
+    if(!pairs.length)return null;
+    const selector=SP.bestCandidateNodeResult?.(st,carrier,pairs.map(x=>x.approach),{mode:'auto',objective:'traversalCost'});if(!selector)return null;
+    const matching=pairs.filter(x=>SP.nodeSame?.(st,x.approach,selector.node)).sort((a,b)=>String(SP.nodeKey?.(st,a.target)||'').localeCompare(String(SP.nodeKey?.(st,b.target)||'')));
+    const winner=matching[0];if(!winner)return null;
+    return Object.freeze({target:Object.freeze({kind:'floor',position:Object.freeze({...winner.target})}),approach:Object.freeze({...selector.node}),selector});
   }
 
   function placeCarriedAgent(st,carrierOrId,target){
@@ -144,5 +181,5 @@
   function initializeState(st){st.agentCarryVersion=VERSION;st.agentCarries={};return st;}
   W.registerInitialStateInitializer('agentCarry.schema',initializeState,1550);
   W.AGENT_CARRY_SCHEMA_VERSION=VERSION;
-  window.SimAgentCarry=Object.freeze({VERSION,METHOD,relationForCarried,relationForCarrier,isCarried,isCarrier,capabilityFor,carryLocalEnvelope,carryingHandlingProfile,projectedPosition,canEstablishCarry,establishCarry,surfaceManeuverSupported,placementLegality,bestPlacementApproach,placeCarriedAgent});
+  window.SimAgentCarry=Object.freeze({VERSION,METHOD,relationForCarried,relationForCarrier,isCarried,isCarrier,capabilityFor,carryLocalEnvelope,carryingHandlingProfile,projectedPosition,carryAttemptability,canEstablishCarry,establishCarry,surfaceManeuverSupported,floorTargetCompatibility,placementLegality,bestPlacementApproach,nearbyRecoveryFloor,placeCarriedAgent});
 })();
