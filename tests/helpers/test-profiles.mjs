@@ -14,9 +14,7 @@ const RETIRED_SOURCES=Object.freeze({
   'action-schema-v1120.js':'systems/action/state.js',
   'action-runtime-v1120.js':'systems/action/runtime.js',
   'intent-schema-v1121.js':'systems/intent/state.js',
-  'intent-runtime-v1121.js':'systems/intent/runtime.js',
-  'interruption-schema-v1123.js':'systems/intent/state.js',
-  'intent-runtime-v1123.js':'systems/intent/replanning.js',
+  'intent-runtime-v1121.js':'systems/intent/replanning.js',
   'deliberation-schema-v1124.js':'systems/intent/state.js',
   'intent-runtime-v1124.js':'systems/intent/deliberation.js',
   'social-bid-schema-v1122.js':'systems/social/state.js',
@@ -130,7 +128,7 @@ function ensureRuntimeDependencies(paths){
     .filter(index=>index>=0);
   if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
   const traversalIndex=paths.indexOf('spatial-traversal.js');
-  if(traversalIndex>=0&&!paths.includes('spatial-agent-carry.js')){
+  if(traversalIndex>=0&&paths.includes('systems/agent-carry.js')&&!paths.includes('spatial-agent-carry.js')){
     const carryIndex=paths.indexOf('systems/agent-carry.js');
     paths.splice(Math.max(traversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
   }
@@ -147,6 +145,12 @@ export function authoringProfilePaths(extra=[]){
 
 export function spatialCoreProfilePaths(extra=[]){
   const paths=unique([...SPATIAL_CORE_PROFILE,...extra]);
+  assertCurrentSources(paths);
+  return paths.map(normalizePath);
+}
+
+export function engineCoreProfilePaths(extra=[]){
+  const paths=ensureRuntimeDependencies(unique([...ENGINE_CORE_PROFILE,...extra]));
   assertCurrentSources(paths);
   return paths.map(normalizePath);
 }
