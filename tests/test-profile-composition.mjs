@@ -73,8 +73,17 @@ const staleOverallAssertions=[];
 for(const relativePath of stateTests){
   if(relativePath==='tests/test-profile-composition.mjs')continue;
   const source=fs.readFileSync(new URL('../'+relativePath,import.meta.url),'utf8');
-  for(const match of source.matchAll(/assert\.equal\((st\.version|E\.VERSION),['"]([^'"]+)['"]/g)){
-    if(match[2]!==currentOverallVersion)staleOverallAssertions.push(relativePath+': '+match[1]+' expects '+match[2]+' but release.js is '+currentOverallVersion);
+  const constants=new Map(
+    [...source.matchAll(/\bconst\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*['"]([^'"]+)['"]/g)]
+      .map(match=>[match[1],match[2]])
+  );
+  for(const match of source.matchAll(/assert\.(?:equal|strictEqual)\((st\.version|E\.VERSION|E\.getState\(\)\.version),\s*([^,\n\)]+)/g)){
+    const token=match[2].trim();
+    const literal=token.match(/^['"]([^'"]+)['"]$/);
+    const expectedVersion=literal?literal[1]:constants.get(token);
+    if(expectedVersion&&expectedVersion!==currentOverallVersion){
+      staleOverallAssertions.push(relativePath+': '+match[1]+' expects '+expectedVersion+' via '+token+' but release.js is '+currentOverallVersion);
+    }
   }
 }
 assert.deepEqual(staleOverallAssertions,[],'Current overall release assertions must be audited together with every release marker bump:\n'+staleOverallAssertions.join('\n'));
