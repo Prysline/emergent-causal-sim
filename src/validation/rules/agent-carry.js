@@ -32,7 +32,6 @@
       if(!profile||!positive(profile.carryGeometry?.height)||!positive(profile.carryGeometry?.width)||!positive(profile.carryGeometry?.length))add('agent_carry_geometry_invalid',`${carrier.name} 無法從 carried Agent bodyGeometry 推導 carry geometry。`,{carrierId:carrier.id,carriedAgentId:carried.id});
       const handCapacity=R.handCapacity(carrier),hands=P.carriedHandsRequired?.(st,carrier);
       if(!Number.isFinite(hands)||handCapacity<hands)add('agent_carry_hand_capacity_exceeded',`${carrier.name} 的 handCapacity 不足以維持目前 Agent carry relation。`,{carrierId:carrier.id,handCapacity,handsRequired:hands});
-      if(relation.responderMode==='sleeping'&&!(carried.action?.kind==='sleep'&&carried.action?.phase==='sleeping'))add('agent_carry_sleeping_responder_state_mismatch',`${carried.name} 的 relation 標記 sleeping responder，但 canonical action 已不是 sleeping。`,{carriedAgentId:carried.id});
     }
     for(const id of carrierIds)if(carriedIds.has(id))add('agent_carry_chain_unsupported',`${st.agents[id]?.name||id} 同時是 carrier 與 carried Agent；v1 不支援 carry chain。`,{agentId:id});
     for(const a of Object.values(st?.agents||{}))if(a.posture?.kind==='carried'&&!relations[a.id])add('agent_carry_posture_orphan',`${a.name} 的 carried posture 沒有對應 canonical relation。`,{agentId:a.id});
