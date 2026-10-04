@@ -10,7 +10,7 @@ loadRuntimeProfile([
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const hasNode=(st,list,node)=>list.some(p=>SP.nodeSame(st,p,node));
-assert.equal(E.VERSION,'11.44.0-sleep-slot-conflict');
+assert.equal(E.VERSION,'11.45.0-agent-carry-relocate');
 assert.equal(SP.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
 
