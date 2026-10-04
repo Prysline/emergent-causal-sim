@@ -39,11 +39,18 @@ assert.ok(engineCore.indexOf('src/systems/agent-carry.js')<engineCore.indexOf('s
 assert.ok(engineCore.indexOf('src/systems/physical.js')<engineCore.indexOf('src/spatial/finalize.js'),'Physical initial-state registration must happen before the Spatial finalizer');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/engine.js'),'runtime profile must finalize initial state before Engine captures factories');
 
-const initialState=initialStateProfilePaths([
+const traversalOnlyInitialState=initialStateProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js'
 ]);
-assert.ok(initialState.includes('src/spatial-agent-carry.js'),'traversal profiles must install Agent carry position projection');
-assert.equal(initialState.at(-1),'src/spatial/finalize.js','initial-state profile must finish with the Spatial finalizer when Engine is absent');
+assert.equal(traversalOnlyInitialState.includes('src/spatial-agent-carry.js'),false,'traversal-only profiles must not implicitly install Agent carry projection without the Agent Carry owner');
+assert.equal(traversalOnlyInitialState.at(-1),'src/spatial/finalize.js','initial-state profile must finish with the Spatial finalizer when Engine is absent');
+
+const agentCarryTraversalInitialState=initialStateProfilePaths([
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','systems/agent-carry.js','spatial-traversal.js'
+]);
+assert.ok(agentCarryTraversalInitialState.includes('src/systems/resources.js'),'Agent Carry profiles must include the canonical Resources owner');
+assert.ok(agentCarryTraversalInitialState.includes('src/spatial-agent-carry.js'),'Agent Carry traversal profiles must install Agent carry position projection');
+assert.ok(agentCarryTraversalInitialState.indexOf('src/systems/agent-carry.js')<agentCarryTraversalInitialState.indexOf('src/spatial-agent-carry.js'),'Agent Carry owner must load before its Spatial projection');
 assert.throws(
   ()=>runtimeProfilePaths(['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-v111.js','engine.js']),
   /retired sources/,
