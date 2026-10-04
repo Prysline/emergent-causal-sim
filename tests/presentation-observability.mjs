@@ -150,7 +150,7 @@ assert.match(locomotionSource,/function transitionTicks\(fromMode,toMode\)/,'Loc
 assert.match(locomotionSource,/const requiredTicks=distance\/speed/,'Locomotion runtime must derive metric movement timing from distanceMeters and speedFactor');
 assert.match(locomotionSource,/movementCreditAfter/,'Locomotion runtime must expose fractional movement credit for consecutive same-mode edges');
 const locomotionUiSource=fs.readFileSync(new URL('../src/ui/inspectors/locomotion.js',import.meta.url),'utf8');
-assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use the explicit Inspector lifecycle');
+assert.match(locomotionUiSource,/registerInspectorDecorator\('locomotion\.view',decorateInspector,1027\)/,'Locomotion Debug must use explicit Inspector lifecycle');
 assert.match(locomotionUiSource,/speedFactor 已影響實際 edge movement timing/,'Locomotion Debug must state actual timing ownership');
 const crowdingSource=fs.readFileSync(new URL('../src/crowding-runtime-v1200.js',import.meta.url),'utf8');
 assert.match(crowdingSource,/function getCrowdingProfile\(st,aOrId,from,to,mode='walk'\)/,'Crowding must expose a derived edge profile');
