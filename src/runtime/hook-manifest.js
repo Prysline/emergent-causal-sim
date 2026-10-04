@@ -3,6 +3,7 @@
   if(!E?.finalizeRuntimeHooks)throw new Error('Runtime hook registry is unavailable.');
   E.finalizeRuntimeHooks({
     beforeTick:[
+      {id:'agentCarry.capture-lifecycle',order:50},
       {id:'socialOutcome.capture-events',order:100},
       {id:'memoryDeliberation.capture-idle',order:200},
       {id:'affect.decay',order:250},
@@ -18,6 +19,7 @@
     afterTick:[
       {id:'spatial.effects',order:100},
       {id:'sleepConflict.complete-yield',order:150},
+      {id:'agentCarry.recover-placement',order:175},
       {id:'intent.reconcile-after',order:200},
       {id:'socialBid.settle',order:300},
       {id:'intent.recover-aborts',order:400},
