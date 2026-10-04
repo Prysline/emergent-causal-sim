@@ -45,6 +45,14 @@ const traversalOnlyInitialState=initialStateProfilePaths([
 assert.equal(traversalOnlyInitialState.includes('src/spatial-agent-carry.js'),false,'traversal-only profiles must not implicitly install Agent carry projection without the Agent Carry owner');
 assert.equal(traversalOnlyInitialState.at(-1),'src/spatial/finalize.js','initial-state profile must finish with the Spatial finalizer when Engine is absent');
 
+const agentCarryOnlyInitialState=initialStateProfilePaths([
+  'world-authoring.js','world-initializer.js','world.js','spatial.js','systems/agent-carry.js'
+]);
+assert.ok(agentCarryOnlyInitialState.includes('src/systems/resources.js'),'Agent Carry-only profiles must include the canonical Resources owner');
+assert.ok(agentCarryOnlyInitialState.includes('src/systems/agent-carry.js'),'Agent Carry-only profiles must retain the Agent Carry owner');
+assert.equal(agentCarryOnlyInitialState.includes('src/spatial-agent-carry.js'),false,'Agent Carry-only profiles must not install traversal projection without Spatial Traversal');
+assert.ok(agentCarryOnlyInitialState.indexOf('src/systems/agent-carry.js')<agentCarryOnlyInitialState.indexOf('src/spatial/finalize.js'),'Agent Carry-only initializer must register before the Spatial finalizer');
+
 const agentCarryTraversalInitialState=initialStateProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','systems/agent-carry.js','spatial-traversal.js'
 ]);
