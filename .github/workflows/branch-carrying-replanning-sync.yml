@@ -45,17 +45,38 @@ jobs:
         if: steps.patch.outputs.exit_code != '0'
         run: exit 1
       - name: Static syntax and focused regressions
+        id: tests
+        shell: bash
         run: |
-          node --check src/engine.js
-          node --check src/systems/intent/replanning.js
-          node --check src/systems/intent/decision-evidence.js
-          node --check src/systems/intent/state.js
-          node --check src/systems/intent/deliberation.js
-          node tests/carrying-state-replanning.mjs
-          node tests/intent-replan-preemption.mjs
-          node tests/decision-evidence.mjs
-          node tests/agent-carry-relocate.mjs
-          node tests/soft-reconsideration-hysteresis.mjs
+          set +e
+          {
+            node --check src/engine.js &&
+            node --check src/systems/intent/replanning.js &&
+            node --check src/systems/intent/decision-evidence.js &&
+            node --check src/systems/intent/state.js &&
+            node --check src/systems/intent/deliberation.js &&
+            node tests/carrying-state-replanning.mjs &&
+            node tests/intent-replan-preemption.mjs &&
+            node tests/decision-evidence.mjs &&
+            node tests/agent-carry-relocate.mjs &&
+            node tests/soft-reconsideration-hysteresis.mjs
+          } > .test-log.txt 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat .test-log.txt
+          exit 0
+      - name: Persist test diagnostics on failure
+        if: steps.tests.outputs.exit_code != '0'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          cp .test-log.txt .github/carrying-replanning-test.log
+          git add .github/carrying-replanning-test.log
+          git commit -m 'Record carrying replanning test failure'
+          git push origin HEAD:feature/carrying-state-replanning
+      - name: Stop on test failure
+        if: steps.tests.outputs.exit_code != '0'
+        run: exit 1
       - name: Commit synchronized implementation
         run: |
           git config user.name 'github-actions[bot]'
