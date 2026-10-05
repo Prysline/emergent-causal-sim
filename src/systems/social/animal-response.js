@@ -2,6 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;
   if(!E||!W?.SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
   if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/animal-response.js requires systems/affect/runtime.js.');
+  if(typeof E.registerSocialBidResponseContract!=='function')throw new Error('systems/social/animal-response.js requires generic Social Bid responder contract.');
   const VERSION=W.SOCIAL_RESPONSE_SCHEMA_VERSION||'11.13.2a-social-response-agency';
   const PET_RESPONSE_THRESHOLDS=Object.freeze({avoidMax:.38,acceptMin:.62});
   const PET_AFFECT_RESPONSE_CAP=.12;
@@ -58,6 +59,7 @@
   }
   function settlePendingOffers(st,pending){for(const record of pending||[])resolvePendingPetOffer(st,record);}
 
+  E.registerSocialBidResponseContract('petOffer',{interactionKind:'pet',responseEventActions:['acceptPet','toleratePet','avoidPet']});
   if(!E.registerRuntimeHook)throw new Error('systems/social/animal-response.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','socialResponse.capture-pet-offers',(ctx)=>{ctx.locals.socialResponseV1132a=capturePendingPetOffers(E.getState());},400);
   E.registerRuntimeHook('afterTick','socialResponse.resolve-pet-offers',(ctx)=>settlePendingOffers(E.getState(),ctx.locals.socialResponseV1132a),600);
