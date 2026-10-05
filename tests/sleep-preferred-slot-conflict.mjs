@@ -162,7 +162,7 @@ assert.equal(requester.action?.kind,'eat');
 
 noIssues('sleep preferred Slot conflict');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,APP_VERSION);
-assert.equal(AC.VERSION,APP_VERSION);
+assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(SC.OCCUPANCY_REASSESS_TICKS,1,'occupancy wait must re-enter Deliberation instead of encoding a fixed multi-tick patience contract');
 assert.equal(SC.OCCUPANCY_WAIT_TICKS,undefined,'sleep conflict must not expose a fixed occupancy patience contract');
 assert.equal(SC.ATTENTION_REASSESS_TICKS,1,'attention-only resolution must have an explicit finite reassessment boundary');

@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.46.0-sleep-carry-integration`
+`11.47.0-social-bid-carry-cooperation`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.46.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.46.0-sleep-carry-integration`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment 與 Furniture Catalog 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.47.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.47.0-social-bid-carry-cooperation`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment 與 Furniture Catalog 不跟著 overall minor 假升。
 
 ### Version-marker synchronization rule
 
@@ -18,6 +18,14 @@
 
 完成 marker / generation 變更後，PR 驗證記錄應能明確區分：哪些 marker 本次有換代、哪些 subsystem 明確未換代，以及 Node / Browser regression 中對應 current expectation 是否已同步。
 
+
+### Current Social Bid responder contract × awake cooperative carry release
+
+`11.47.0-social-bid-carry-cooperation` 將 Social Bid responder contract 從 `petAnimal` 專用路徑泛化為可註冊的 `bidKind` contract。Social Bid 現在單一持有 directed Bid observation、requester wait / expiry、responder identity validation、response Action / Event contract，以及 responder-owned canonical `accepted` / `refused` / `delayed` response representation；所有 response 以 `responseToBid` 連回原始 World Event，validator 對缺失 contract、錯誤 requester / responder、錯誤 response action 與共享 `accepted / cooperative` lifecycle flag 明確失敗。
+
+Sleep conflict 只作為 domain consumer：awake Human / Animal occupant 必須先收到 target-specific `carryCooperation` Bid，responder 自己產生 accept / refuse / delay，requester 實際觀察 response 後重新 Deliberation。只有 requester、responder、original Bid、`sleepSlotConflict`、original Slot 與 proposed `targetPlacement` 全部一致且仍在 Social Bid evidence lifetime 內的 accepted provenance，才可派生 cooperative `carryOccupant` candidate。accept 本身不建立 carry relation；execution 仍由既有 Agent Carry `carryAgent` lifecycle 與 execution-time World-truth feasibility 擁有。Sleeping occupant path 維持既有 `11.46.0` 行為，不改成 Social Bid dependency。
+
+Version impact：overall / Presentation、Social Bid、Deliberation / Decision Evidence / Sleep Slot Conflict → `11.47.0-social-bid-carry-cooperation`。Agent Carry 與 Spatial candidate selection 維持 `11.46.0-sleep-carry-integration`；Physical 維持 `11.45.0-agent-carry-relocate`；Spatial Traversal / Route / Locomotion 維持 `11.38.0-carried-handling-risk`；Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`；World Authoring 維持 `world-authoring-v11`；Furniture Catalog 維持 `furniture-definitions-v12`；Embodiment Capabilities 維持 `embodiment-capabilities-v5`。
 
 ### Current Sleep conflict × sleeping Agent carry integration release
 

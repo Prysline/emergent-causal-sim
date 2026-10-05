@@ -50,6 +50,9 @@
 >
 > 表示層規則：**主流程圖描述 lifecycle responsibility，不把 implementation hook ID 或具體玩法動作當成架構階段名稱。** 精確 hook ID 只保留在 registry 表、source 與 regression；圖上的名稱應能在未來加入新互動類型時仍成立。
 
+> Current `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
+
+
 ## 1. 一個 `E.tick()` 的主流程
 
 ```mermaid

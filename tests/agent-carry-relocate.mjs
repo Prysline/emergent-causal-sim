@@ -20,7 +20,7 @@ const V=globalThis.SimValidator;
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 assert.equal(A.VERSION,APP_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION,'Physical own generation must not fake-bump when only carry lifecycle / selection semantics change');
-assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,APP_VERSION);
+assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(C.agentCarryCapabilityForKind('human','twoArmCarry').massCapacity,35);
 assert.equal(C.agentCarryCapabilityForKind('human','twoArmCarry').handsRequired,2);
 assert.equal(C.agentCarryCapabilityForKind('cat','twoArmCarry'),null);
