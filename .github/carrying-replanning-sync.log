@@ -1,0 +1,24 @@
+patched src/release.js overall version
+patched src/systems/intent/state.js Deliberation version
+patched src/systems/intent/deliberation.js Deliberation fallback
+patched src/systems/intent/replanning.js carrying constants + provider registry
+patched src/systems/intent/replanning.js carrying replanning functions
+patched src/systems/intent/replanning.js carrying replanning exports
+patched range src/engine.js   function beginCarryRecovery(a,p,target,reason){
+patched src/systems/intent/decision-evidence.js action targetPlacement capture
+patched src/systems/intent/decision-evidence.js action targetPlacement match
+/home/runner/work/emergent-causal-sim/emergent-causal-sim/.github/scripts/branch-carrying-replanning-sync.cjs:109
+if(!readme.includes(NEXT))throw new Error('README current marker patch failed');write('README.md',readme);
+                          ^
+
+Error: README current marker patch failed
+    at Object.<anonymous> (/home/runner/work/emergent-causal-sim/emergent-causal-sim/.github/scripts/branch-carrying-replanning-sync.cjs:109:33)
+    at Module._compile (node:internal/modules/cjs/loader:1781:14)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49
+
+Node.js v22.23.3
