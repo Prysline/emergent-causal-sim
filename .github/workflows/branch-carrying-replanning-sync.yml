@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Normalize current README marker punctuation for patching
+        run: sed -i 's/（`11.47.0-social-bid-carry-cooperation`）/ (`11.47.0-social-bid-carry-cooperation`)/' README.md
       - name: Apply carrying-state replanning implementation
         id: patch
         shell: bash
