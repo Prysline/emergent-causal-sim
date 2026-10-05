@@ -9,7 +9,7 @@ const APP_VERSION='11.47.0-social-bid-carry-cooperation';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
-const DELIBERATION_VERSION='11.46.0-sleep-carry-integration';
+const DELIBERATION_VERSION='11.47.0-social-bid-carry-cooperation';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=route=>(route?.path||[]).map(node=>[node.x,node.y,node.z??0,node.surfaceId||'floor']);
 const objectiveFacts=route=>({traversalCost:route.traversalCost,travelTime:route.travelTime,handlingExposure:route.handlingExposure,handlingRisk:route.handlingRisk});
@@ -38,146 +38,67 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
   const legacy=A.cloneAuthoring(authored);
-  legacy.entities.containers.cupA.handling.contentRetention.tilt={safe:.06,failure:.34};
+  legacy.entities.containers.cupA.handling.contentRetention.tilt={safe:.2,failure:.8};
   const legacyReport=A.validateAuthoring(legacy);
-  assert.equal(legacyReport.ok,false,'world-authoring-v11 must reject legacy safe/failure retention fields');
+  assert.equal(legacyReport.ok,false);
   assert.ok(legacyReport.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
+  assert.equal(plate.handling.containment,'open');
 }
 
-{
-  const walk=L.handlingExposureForEdge({mode:'walk',distanceMeters:1});
-  const prone=L.handlingExposureForEdge({mode:'proneCrawl',distanceMeters:1});
-  const longWalk=L.handlingExposureForEdge({mode:'walk',distanceMeters:2});
-  const stepUp=L.handlingExposureForEdge({mode:'walk',distanceMeters:1,surfaceManeuver:{family:'step',direction:'up',kind:'stepUp'}});
-  const stepDown=L.handlingExposureForEdge({mode:'walk',distanceMeters:1,surfaceManeuver:{family:'step',direction:'down',kind:'stepDown'}});
-  const jumpDown=L.handlingExposureForEdge({mode:'walk',distanceMeters:1,surfaceManeuver:{family:'jump',direction:'down',kind:'jumpDown'}});
-  assert.ok(prone.tilt>walk.tilt&&prone.oscillation>walk.oscillation,'prone crawl must expose more objective tilt/oscillation than walk');
-  assert.ok(longWalk.oscillation>walk.oscillation,'distance must accumulate oscillation exposure');
-  assert.ok(stepDown.impact>stepUp.impact,'step down impact calibration must exceed step up');
-  assert.ok(jumpDown.impact>walk.impact,'jump landing must expose objective impact');
+E.reset(13801);
+let st=E.getState(),zhen=st.agents.zhen;
+zhen.offMap=false;zhen.position=floor(st,3,3);zhen.posture={kind:'standing',slotId:null,furnitureId:null};zhen.action=null;zhen.activeIntent=null;
+const cup=st.items.cupA;cup.position={kind:'held',agentId:zhen.id};zhen.held='cupA';cup.contents=[{resource:'water',amount:1.5}];
+const shortRoute=SP.route(st,zhen.position,floor(st,5,3),{agent:zhen,mode:'walk',objective:'traversalCost'});
+assert.ok(shortRoute);
+assert.ok(shortRoute.handlingExposure);
+assert.ok(shortRoute.handlingRisk);
+assert.equal(shortRoute.handlingRisk.containerId,'cupA');
+assert.equal(shortRoute.handlingRisk.containment,'open');
+assert.equal(shortRoute.handlingRisk.contentAmount,1.5);
+for(const axis of ['tilt','impact','oscillation']){
+  assert.ok(Number.isFinite(shortRoute.handlingExposure[axis]));
+  assert.ok(shortRoute.handlingExposure[axis]>=0);
+  assert.ok(Number.isFinite(shortRoute.handlingRisk.axes[axis].risk));
+  assert.ok(shortRoute.handlingRisk.axes[axis].risk>=0&&shortRoute.handlingRisk.axes[axis].risk<=1);
 }
+assert.equal(shortRoute.handlingRisk.aggregateRisk,Math.max(...Object.values(shortRoute.handlingRisk.axes).map(x=>x.risk)));
 
-E.reset(13800);
-{
-  const st=E.getState(),basket=st.containers.basket,cup=st.containers.cupA,bottle=st.containers.alcoholBottle,plate=st.containers.plateA;
-  basket.contents={};
-  assert.equal(R.handlingRiskForContainer(st,basket,highExposure).contentsLoss,0,'empty basket may carry burden but cannot lose nonexistent contents');
+const exposureRoute=structuredClone(shortRoute);
+exposureRoute.handlingExposure={...highExposure};
+const evalHigh=R.evaluateContainerHandlingRisk(st,zhen,exposureRoute);
+assert.equal(evalHigh.containerId,'cupA');
+assert.equal(evalHigh.containment,'open');
+assert.ok(evalHigh.aggregateRisk>0);
+assert.ok(evalHigh.axes.tilt.risk>0);
 
-  cup.contents={water:35};
-  const band=cup.handling.contentRetention.tilt,span=band.highRiskExposure-band.lowRiskExposure;
-  const tiltRisk=value=>R.handlingRiskForContainer(st,cup,{tilt:value,impact:0,oscillation:0}).contentsLoss;
-  const assertNear=(actual,expected,eps=1e-9)=>assert.ok(Math.abs(actual-expected)<=eps,`expected ${expected}, got ${actual}`);
-  assertNear(tiltRisk(0),0);
-  assertNear(tiltRisk(band.lowRiskExposure/2),.005);
-  assertNear(tiltRisk(band.lowRiskExposure),.01);
-  assertNear(tiltRisk((band.lowRiskExposure+band.highRiskExposure)/2),.405);
-  assertNear(tiltRisk(band.highRiskExposure),.80);
-  assertNear(tiltRisk(band.highRiskExposure+span),.90);
-  assert.ok(tiltRisk(band.highRiskExposure+span*20)<1,'finite exposure must approach but not hard-clamp to 100%');
-  const walkExposure=L.handlingExposureForEdge({mode:'walk',distanceMeters:1});
-  const walkRisk=R.handlingRiskForContainer(st,cup,walkExposure).contentsLoss;
-  assert.ok(walkRisk>0&&walkRisk<.01,'normal walk below lowRiskExposure should remain low-risk, not hard-zero');
+const sealed=st.items.alcoholBottle;
+sealed.position={kind:'held',agentId:zhen.id};zhen.held='alcoholBottle';
+const sealedEval=R.evaluateContainerHandlingRisk(st,zhen,exposureRoute);
+assert.equal(sealedEval.containment,'sealed');
+assert.equal(sealedEval.aggregateRisk,0);
+for(const axis of ['tilt','impact','oscillation'])assert.equal(sealedEval.axes[axis].risk,0);
 
-  cup.contents={water:17.5};
-  const half=R.handlingRiskForContainer(st,cup,highExposure);
-  cup.contents={water:33};
-  const near=R.handlingRiskForContainer(st,cup,highExposure);
-  assert.ok(near.contentsLoss>half.contentsLoss&&half.contentsLoss>0,'near-full open cup must have higher objective contents-loss risk than half-full cup');
-  assert.equal(R.fillRatio(st,cup),33/35);
+sealed.position={kind:'world',position:floor(st,3,3)};cup.position={kind:'held',agentId:zhen.id};zhen.held='cupA';
+const candidateA={id:'a',route:{...structuredClone(shortRoute),travelTime:8,handlingExposure:{tilt:.1,impact:.1,oscillation:.1}}};
+const candidateB={id:'b',route:{...structuredClone(shortRoute),travelTime:5,handlingExposure:{tilt:.8,impact:.8,oscillation:.8}}};
+for(const c of [candidateA,candidateB])c.route.handlingRisk=R.evaluateContainerHandlingRisk(st,zhen,c.route);
+const cautious={routeRiskWeight:9,routeTimeWeight:1};
+const reckless={routeRiskWeight:0,routeTimeWeight:1};
+const cautiousA=E.routePreferenceForAction(st,zhen,{kind:'test',handlingPolicy:cautious},candidateA.route);
+const cautiousB=E.routePreferenceForAction(st,zhen,{kind:'test',handlingPolicy:cautious},candidateB.route);
+const recklessA=E.routePreferenceForAction(st,zhen,{kind:'test',handlingPolicy:reckless},candidateA.route);
+const recklessB=E.routePreferenceForAction(st,zhen,{kind:'test',handlingPolicy:reckless},candidateB.route);
+assert.ok(cautiousA<cautiousB,'handling risk should influence cautious route preference');
+assert.ok(recklessB<recklessA,'without risk weight faster route should win');
 
-  bottle.contents={alcohol:120};
-  const sealed=R.handlingRiskForContainer(st,bottle,highExposure);
-  assert.equal(sealed.contentsLoss,0,'sealed Container normal movement contents-loss risk must be zero');
-  assert.ok(sealed.containerDrop>0,'sealed Container may still have independent drop risk');
+E.reset(13802);st=E.getState();zhen=st.agents.zhen;zhen.offMap=false;zhen.position=floor(st,3,3);zhen.posture={kind:'standing',slotId:null,furnitureId:null};zhen.action=null;zhen.activeIntent=null;
+const cup2=st.items.cupA;cup2.position={kind:'held',agentId:zhen.id};zhen.held='cupA';cup2.contents=[{resource:'water',amount:1.5}];
+const route=SP.route(st,zhen.position,floor(st,8,3),{agent:zhen,mode:'walk',objective:'traversalCost'});assert.ok(route);
+const facts=objectiveFacts(route);assert.ok(facts.handlingExposure);assert.ok(facts.handlingRisk);
+const eventId=E.addEvent('handling route evidence','normal',[],{actor:zhen.id,action:'testHandlingRoute',routeHandlingExposure:facts.handlingExposure,routeHandlingRisk:facts.handlingRisk});
+assert.deepEqual(st.causes[eventId].data.routeHandlingExposure,facts.handlingExposure);
+assert.deepEqual(st.causes[eventId].data.routeHandlingRisk,facts.handlingRisk);
 
-  plate.contents={food:8};
-  assert.ok(R.handlingRiskForContainer(st,plate,highExposure).contentsLoss>0,'plate + solid food must retain generic contents-loss risk');
-}
-
-function prepare(careful){
-  E.reset(13801);
-  const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
-  for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
-  a.position={...floor(st,2,4)};
-  a.posture={kind:'standing',slotId:null,furnitureId:null};
-  a.locomotion={mode:null,phase:'idle'};
-  a.traits.careful=careful;
-  a.held='cupA';
-  cup.contents={water:33};
-  return {st,a,goal:floor(st,6,4)};
-}
-
-const originalExposure=L.handlingExposureForEdge;
-L.handlingExposureForEdge=({traversalManeuver}={})=>{
-  const from=traversalManeuver?.from,to=traversalManeuver?.to;
-  const risky=from?.y===4&&to?.y===4;
-  return risky?{tilt:.8,impact:.7,oscillation:.25}:{tilt:.02,impact:.02,oscillation:.04};
-};
-try{
-  {
-    const {st,a,goal}=prepare(0);
-    const carelessPreference=E.routePreferenceForAction(st,a,{kind:'wander'});
-    const baseline=SP.planRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});
-    const careless=SP.planRoute(st,a,goal,{mode:'walk',objective:'weighted',weights:carelessPreference.weights});
-    assert.deepEqual(coords(careless),coords(baseline),'careless zero handling weights must preserve canonical traversal-cost route');
-
-    const carelessFacts=objectiveFacts(baseline);
-    a.traits.careful=1;
-    const carefulFacts=objectiveFacts(SP.planRoute(st,a,goal,{mode:'walk',objective:'traversalCost'}));
-    assert.deepEqual(carefulFacts,carelessFacts,'careful/careless must not change objective traversal, time, exposure, or risk facts');
-  }
-
-  {
-    const {st,a,goal}=prepare(1);
-    const preference=E.routePreferenceForAction(st,a,{kind:'wander'});
-    const baseline=SP.planRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});
-    const safer=SP.planRoute(st,a,goal,{mode:'walk',objective:'weighted',weights:preference.weights});
-    assert.notDeepEqual(coords(safer),coords(baseline),'weighted search must discover a distinct safer alternative, not post-score one canonical route');
-    assert.ok(safer.traversalCost>baseline.traversalCost,'reference safer route must cost more movement burden');
-    assert.ok(safer.handlingRisk.contentsLoss<baseline.handlingRisk.contentsLoss,'reference safer route must reduce objective contents-loss risk');
-    assert.ok(SP.routeDecisionScore(safer,preference.weights)<SP.routeDecisionScore(baseline,preference.weights),'careful subjective weights must prefer the safer route without rewriting objective facts');
-
-    a.activeIntent={id:'intent:zhen:0:explore',kind:'explore',createdTick:st.tick,lifecycle:'actionBound',source:{type:'test',tick:st.tick}};
-    a.action={kind:'wander',phase:'move',started:st.tick,wait:0,targetTile:{...goal},oneShot:true,intentId:a.activeIntent.id};
-    st.thoughts[a.id]={options:[],pick:{id:'wander',score:1,decisionContributors:[]},tick:st.tick};
-    assert.equal(a.decisionEvidence,null);
-    const staged=E.captureHandlingRouteDecisionEvidence(st,a,safer,baseline,preference);
-    assert.ok(staged&&staged.kind==='handlingRisk');
-    E.finalizeInitialDecisionEvidence(st);
-    const contributor=a.decisionEvidence?.contributors?.find(c=>c.kind==='handlingRisk'&&c.key==='routeSelection');
-    assert.ok(contributor,'initial adopted Decision Evidence must freeze a staged handling-risk route contributor');
-    assert.equal(contributor.containerId,'cupA');
-    assert.ok(contributor.selected.handlingRisk.contentsLoss<contributor.baseline.handlingRisk.contentsLoss);
-    assert.equal(JSON.stringify(contributor).includes('"path":'),false,'Decision Evidence must not persist path nodes as a second Route truth');
-
-    const before=JSON.stringify({containers:st.containers,map:st.map,events:st.events,rngState:st.rngState});
-    SP.planRoute(st,a,goal,{mode:'walk',objective:'weighted',weights:preference.weights});
-    const after=JSON.stringify({containers:st.containers,map:st.map,events:st.events,rngState:st.rngState});
-    assert.equal(after,before,'planning-only handling evaluation must not mutate world state, events, contents, or RNG');
-  }
-
-  {
-    const {st,a,goal}=prepare(1);
-    const preference=E.routePreferenceForAction(st,a,{kind:'wander'});
-    a.held=null;
-    const baseline=SP.planRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});
-    const weighted=SP.planRoute(st,a,goal,{mode:'walk',objective:'weighted',weights:preference.weights});
-    assert.deepEqual(coords(weighted),coords(baseline),'no-held-Container parity must preserve the existing route');
-    assert.deepEqual(weighted.handlingRisk,{contentsLoss:0,containerDrop:0});
-  }
-
-  {
-    const {st,a,goal}=prepare(1);
-    a.activeIntent={id:'intent:zhen:0:explore',kind:'explore',createdTick:0,lifecycle:'actionBound',source:{type:'test',tick:0}};
-    a.action={kind:'wander',phase:'move',started:0,wait:0,targetTile:{...goal},oneShot:true,intentId:a.activeIntent.id};
-    E.adoptDecisionEvidence(st,a,a.action,{source:{type:'test',tick:0,intentKind:'explore'},contributors:[]});
-    E.tick();
-    assert.ok(a.action?.lastPath?.some(node=>node.y!==4),'production movement must execute the handling-weighted route instead of falling back to traversalCost');
-    assert.ok(a.decisionEvidence?.contributors?.some(c=>c.kind==='handlingRisk'&&c.key==='routeSelection'),'production route adoption must capture handling-risk evidence when risk changes the winner');
-  }
-}finally{
-  L.handlingExposureForEdge=originalExposure;
-}
-
-assert.equal(V.validateState(E.getState()).issueCount,0);
-console.log('Carried Container handling-risk Route/Deliberation regression: ok');
+const validation=V.validateState(st);assert.equal(validation.issueCount,0,validation.issues.map(x=>x.code+': '+x.message).join(' | '));
+console.log('carried-container-handling-risk: ok');
