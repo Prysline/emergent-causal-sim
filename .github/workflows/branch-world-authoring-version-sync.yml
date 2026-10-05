@@ -1,0 +1,29 @@
+name: Branch world authoring version sync
+
+on:
+  push:
+    branches: [feature/social-bid-carry-cooperation]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/social-bid-carry-cooperation
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/world-authoring-foundation.mjs')
+          s=p.read_text().replace("version:'11.46.0-sleep-carry-integration'", "version:'11.47.0-social-bid-carry-cooperation'")
+          p.write_text(s)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests/world-authoring-foundation.mjs
+          git commit -m "Sync world authoring runtime fixture version"
+          git push origin HEAD:feature/social-bid-carry-cooperation
