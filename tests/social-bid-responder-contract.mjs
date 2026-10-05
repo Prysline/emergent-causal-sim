@@ -33,8 +33,16 @@ assert.equal(Object.hasOwn(bid.data,'accepted'),false,'bid must not persist shar
 assert.ok(E.requesterResponseEvent(st,requester,bidId),'requester may consume only actually observed response provenance');
 noIssues('generic accepted response');
 
+response.data.responseKind='maybe';
+let validation=V.validateState(st);assert.ok(validation.issues.some(x=>x.code==='social_bid_response_kind_invalid'&&x.eventId===response.id),'unknown canonical responseKind must fail validation');
+response.data.responseKind='accepted';
+delete response.data.responseKind;
+validation=V.validateState(st);assert.ok(validation.issues.some(x=>x.code==='social_bid_response_kind_invalid'&&x.eventId===response.id),'missing canonical responseKind must fail validation');
+response.data.responseKind='accepted';
+noIssues('restored canonical response kind');
+
 const unknownId=E.addEvent('unknown bid','normal',[],{actor:requester.id,target:responder.id,action:'unknownBid',socialBid:true,bidKind:'unknownContract',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:false});st.causes[unknownId].data.bidId=unknownId;
-let validation=V.validateState(st);assert.ok(validation.issues.some(x=>x.code==='social_bid_response_contract_missing'&&x.eventId===unknownId),'unknown expectsResponse bid must fail validation instead of falling back');
+validation=V.validateState(st);assert.ok(validation.issues.some(x=>x.code==='social_bid_response_contract_missing'&&x.eventId===unknownId),'unknown expectsResponse bid must fail validation instead of falling back');
 delete st.causes[unknownId];st.events=st.events.filter(e=>e.id!==unknownId);
 
 E.reset(14702);st=E.getState();requester=st.agents.zhen;responder=st.agents.zhou;requester.position={x:5,y:5};responder.position={x:5,y:6};
