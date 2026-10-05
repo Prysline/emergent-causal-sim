@@ -24,7 +24,7 @@
   if(W.DATA_ZH){
     W.DATA_ZH.intentId='Intent ID';
     W.DATA_ZH.intentKind='Intent 類型';
-    W.DATA_ZH.priorActionKind='原 Intent';
+    W.DATA_ZH.priorActionKind='原 Action';
     W.DATA_ZH.nextActionKind='新 Action';
     W.DATA_ZH.emergencyNeed='緊急需求';
     W.DATA_ZH.emergencyValue='緊急值';
@@ -39,7 +39,7 @@
   W.DELIBERATION_SCHEMA_VERSION=DELIBERATION_VERSION;
   if(W.DATA_ZH){
     W.DATA_ZH.currentUtility='目前意圖效用';
-    W.DATA_ZH.challengerUtility='挑戰意圖效用';
+    W.DATA_ZH.challengerUtility='挑戰意圖';
     W.DATA_ZH.switchMargin='切換門檻';
     W.DATA_ZH.commitmentCost='承諾成本';
     W.DATA_ZH.switchThreshold='實際切換門檻';
