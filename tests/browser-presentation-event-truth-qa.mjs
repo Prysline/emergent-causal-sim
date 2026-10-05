@@ -24,7 +24,7 @@ let snap=await page.evaluate(()=>{
   };
 });
 assert.equal(snap.release,'11.48.0-carrying-replanning');
-assert.equal(snap.label,'v11.47.0');
+assert.equal(snap.label,'v11.48.0');
 assert.ok(snap.offer,'production talkOffer missing');
 assert.equal(snap.offer.text,'老周向阿真發出聊天邀請。');
 assert.deepEqual(snap.offer.data,{action:'talkOffer',bidKind:'talkOffer',interactionKind:'talk',socialBid:true});
@@ -48,6 +48,6 @@ assert.ok(!truthProbe.timeline.includes('聊天摸摸睡覺吃東西灑水外出
 await page.screenshot({path:`${outDir}/presentation-event-truth.png`,fullPage:true});
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
-fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,snap,truthProbe:{offerId:truthProbe.offerId,trapId:truthProbe.trapId}},null,2));
-console.log('presentation event truth browser QA: pass');
+
 await browser.close();
+console.log('browser presentation event truth QA: ok');
