@@ -10,16 +10,16 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    if: github.event.head_commit.message == 'Dev: fix audited sleep carry patch runner'
+    if: github.event.head_commit.message == 'Dev: trigger audited sleep carry patch runner'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feature/sleep-carry-sleeping-integration
-          fetch-depth: 2
+          fetch-depth: 3
       - name: Recover and apply deterministic audited patch
         shell: bash
         run: |
-          git show HEAD^:.github/workflows/apply-sleep-carry-local-patch.yml \
+          git show HEAD^^:.github/workflows/apply-sleep-carry-local-patch.yml \
             | sed -n '/^H4sI/,/^PATCH64$/p' \
             | sed '$d' > /tmp/patch.gz.b64
           test -s /tmp/patch.gz.b64
