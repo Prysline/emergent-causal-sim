@@ -138,8 +138,8 @@
       footprint:[local(0,0),local(1,0),local(0,1),local(1,1)],
       displayOffset:local(0,0),
       slots:[
-        {key:'left',label:'左側',offset:local(0,0),approachEdges:['west'],canRest:true,canSleep:true,restPosture:'lying',usableSpace:{width:.70,length:2.00},activitySuitability:{rest:.98,sleep:1}},
-        {key:'right',label:'右側',offset:local(1,0),approachEdges:['east'],canRest:true,canSleep:true,restPosture:'lying',usableSpace:{width:.70,length:2.00},activitySuitability:{rest:.98,sleep:1}}
+        {key:'left',label:'左側',offset:local(1,0),approachEdges:['east'],canRest:true,canSleep:true,restPosture:'lying',usableSpace:{width:.70,length:2.00},activitySuitability:{rest:.98,sleep:1}},
+        {key:'right',label:'右側',offset:local(0,0),approachEdges:['west'],canRest:true,canSleep:true,restPosture:'lying',usableSpace:{width:.70,length:2.00},activitySuitability:{rest:.98,sleep:1}}
       ],
       spatial:{
         solids:[
