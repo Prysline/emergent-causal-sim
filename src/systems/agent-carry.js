@@ -56,7 +56,7 @@
     const hands=handDemandWithExistingContainer(st,carrier,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
     if(!observation?.observable||!observation.targetId)return fail('target-unobserved');
     if(!['human','animal'].includes(observation.observedAgentKind))return fail('observed-target-kind-unsupported');
-    const observedSleeping=observation.observedActionKind==='sleep';
+    const observedSleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying';
     const cooperative=!!cooperationEvidence?.accepted;
     if(!observedSleeping&&!cooperative)return fail('no-observed-sleep-or-cooperation');
     return Object.freeze({ok:true,reason:null,carrierId:carrier.id,targetId:observation.targetId,method,capability,hands,observedSleeping,cooperative});
