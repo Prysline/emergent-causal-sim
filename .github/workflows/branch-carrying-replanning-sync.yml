@@ -32,6 +32,9 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           cat .sync-log.txt
           exit 0
+      - name: Fix focused profile composition
+        if: steps.patch.outputs.exit_code == '0'
+        run: sed -i "s/'systems\/intent\/decision-evidence.js','systems\/intent\/replanning.js'/'systems\/intent\/decision-evidence.js','systems\/intent\/deliberation.js','systems\/intent\/replanning.js'/" tests/carrying-state-replanning.mjs
       - name: Persist patch diagnostics on failure
         if: steps.patch.outputs.exit_code != '0'
         run: |
