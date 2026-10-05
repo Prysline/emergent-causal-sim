@@ -17,8 +17,13 @@ assert.equal(notSettledAttempt.reason,'no-observed-sleep-or-cooperation');
 
 const conflictSlot=SP.getSlot(st,'bed:left'),otherSlot=SP.getSlot(st,'bed:right');
 assert.ok(conflictSlot&&otherSlot,'default fixture must expose both bed slots');
-for(const furniture of Object.values(st.furniture||{}))for(const slot of furniture.slots||[])if(slot.id!==conflictSlot.id&&slot.id!==otherSlot.id)slot.canSleep=false;
-otherSlot.canSleep=true;otherSlot.allowKinds=['human'];
+let canonicalOtherSlot=null;
+for(const furniture of Object.values(st.furniture||{}))for(const slot of furniture.slots||[]){
+  if(slot.id===otherSlot.id)canonicalOtherSlot=slot;
+  else if(slot.id!==conflictSlot.id)slot.canSleep=false;
+}
+assert.ok(canonicalOtherSlot,'test must resolve the canonical alternate Slot');
+canonicalOtherSlot.canSleep=true;canonicalOtherSlot.allowKinds=['human'];
 const approach=SP.slotApproachNodes(st,conflictSlot,requester,'walk')[0];
 assert.ok(approach);requester.position={...approach};requester.posture={kind:'standing',slotId:null,furnitureId:null};
 const proposal=SC.sleepingRelocationProposal(st,requester,{slot:conflictSlot},observedSleeping);
