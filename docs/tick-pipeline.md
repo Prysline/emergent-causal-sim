@@ -1,3 +1,5 @@
+> Current `11.48.0-carrying-replanning`: beforeTick order 800 `intent.replan-preemption` also owns carrying-state re-deliberation before the core loop. It runs only from explicit post-pickup invalidation / wait-cadence triggers, creates a replacement `carryAgent` Decision when adopted, and does not make carrying part of ordinary order-700 soft reconsideration. Existing `recoveryBlocked` remains the core physical fallback if cognition cannot adopt a replacement.
+
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。

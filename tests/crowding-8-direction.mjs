@@ -42,7 +42,7 @@ function idleAgent(agent,node){
 }
 
 E.reset(20260926);
-assert.equal(E.getState().version,'11.47.0-social-bid-carry-cooperation');
+assert.equal(E.getState().version,'11.48.0-carrying-replanning');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 

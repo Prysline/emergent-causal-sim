@@ -402,11 +402,9 @@
   }
   function beginCarryRecovery(a,p,target,reason){
     const A=agentCarryRuntime();recordCarryRelocationFailure(a,p,target,reason);
-    const recovery=A?.recoveryPlacement?.(state,a,{radius:A.RECOVERY_RADIUS});
     delete p.spatialGoal;delete p.locomotionStep;delete p.locomotionCredit;
-    if(recovery){p.targetPlacement=recovery;p.recoveryMode=true;p.phase='toPlacement';p.recoveryRetryAtTick=null;return true;}
-    p.recoveryMode=true;p.phase='recoveryBlocked';p.recoveryRetryAtTick=state.tick+CARRY_RECOVERY_RETRY_TICKS;
-    addEvent(`${a.name}附近暫時沒有能安全放下${target.name}的位置，先繼續抱著等待。`,'normal',[p.relocationFailedEventId].filter(Boolean),{actor:a.id,target:target.id,action:'agentCarryRecoveryBlocked',retryAtTick:p.recoveryRetryAtTick,relationId:A?.relationForCarrier?.(state,a)?.id||null,position:positionRef(a.position)});
+    p.recoveryMode=true;p.phase='recoveryBlocked';p.recoveryRetryAtTick=state.tick+CARRY_RECOVERY_RETRY_TICKS;delete p.carryingWaitUntilTick;
+    addEvent(`${a.name}原本的放置方案已失效，先繼續抱著${target.name}並重新評估安全放置。`,'normal',[p.relocationFailedEventId].filter(Boolean),{actor:a.id,target:target.id,action:'agentCarryRecoveryBlocked',retryAtTick:p.recoveryRetryAtTick,relationId:A?.relationForCarrier?.(state,a)?.id||null,position:positionRef(a.position)});
     return false;
   }
   function stepCarryAgent(a,p){

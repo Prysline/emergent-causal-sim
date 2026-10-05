@@ -7,7 +7,7 @@
   function actionContext(action){
     if(!action)return null;
     const out={kind:action.kind,started:action.started};
-    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId'])if(action[key]!=null)out[key]=clone(action[key]);
+    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId','targetPlacement'])if(action[key]!=null)out[key]=clone(action[key]);
     if(action.targetTile!=null)out.targetTile=clone(action.targetTile);
     return out;
   }
@@ -16,7 +16,7 @@
     const action=a?.action,evidence=a?.decisionEvidence,ctx=evidence?.action;
     if(!action||!evidence||!ctx||action.decisionId!==evidence.id||ctx.kind!==action.kind||ctx.started!==action.started)return false;
     if(evidence.intentId&&action.intentId!==evidence.intentId)return false;
-    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId','targetTile'])if(Object.prototype.hasOwnProperty.call(ctx,key)&&!sameValue(ctx[key],action[key]))return false;
+    for(const key of ['targetAgent','targetObject','destinationId','sourceId','resource','exitId','targetPlacement','targetTile'])if(Object.prototype.hasOwnProperty.call(ctx,key)&&!sameValue(ctx[key],action[key]))return false;
     return true;
   }
   function selectedSocialTargetContributor(st,a,action,source){
