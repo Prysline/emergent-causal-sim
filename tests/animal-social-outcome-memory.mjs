@@ -25,12 +25,12 @@ Object.assign(cat.needs,{hunger:10,thirst:10,fatigue:10,sleepNeed:10,social:85})
 
 const bidId=E.addEvent('橘子主動靠近老周，想和他親近。','normal',[],{
   actor:cat.id,target:human.id,action:'seekHuman',
-  socialBid:true,bidKind:'catAffection',interactionKind:'socialAffection',expectsResponse:true,
+  socialBid:true,bidKind:'animalAffection',interactionKind:'socialAffection',expectsResponse:true,
   bidFrom:cat.id,bidTo:human.id,perceivedByTarget:true,position:E.positionRef(cat.position)
 });
 st.causes[bidId].data.bidId=bidId;
 const waitId=E.addEvent('橘子等了一會兒，沒有得到立即回應，便不再等了。','normal',[bidId],{
-  actor:cat.id,action:'socialWaitEnded',bidId,bidKind:'catAffection',interactionKind:'socialAffection',
+  actor:cat.id,action:'socialWaitEnded',bidId,bidKind:'animalAffection',interactionKind:'socialAffection',
   visibility:'private',owner:cat.id,responderContextObserved:true,
   observedResponderActionKind:null,observedResponderPosture:'standing'
 });
@@ -38,7 +38,7 @@ const memory=E.rememberRequesterSocialOutcome(st,st.causes[waitId]);
 assert.ok(memory,'animal requester no-response should form privateSocialOutcome memory');
 assert.equal(memory.episodeKind,'privateSocialOutcome');
 assert.equal(memory.experienced.kind,'socialNoResponse');
-assert.equal(memory.experienced.bidKind,'catAffection');
+assert.equal(memory.experienced.bidKind,'animalAffection');
 assert.equal(memory.experienced.interactionKind,'socialAffection');
 assert.equal(memory.experienced.counterpartId,human.id);
 assert.equal(memory.experienced.contextKind,'observedIdle');
