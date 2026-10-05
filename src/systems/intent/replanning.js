@@ -43,7 +43,7 @@
   function planOpenIntents(st){for(const a of Object.values(st.agents||{}))planOpenIntent(st,a);}
   function carryingReplanTrigger(st,a){
     const A=window.SimAgentCarry,relation=A?.relationForCarrier?.(st,a),p=a?.action;if(!relation||p?.kind!=='carryAgent'||p.phase!=='recoveryBlocked')return null;
-    const waitUntil=Number(p.carryingWaitUntilTick);if(Number.isFinite(waitUntil)&&st.tick<waitUntil)return null;
+    const waitUntil=Number(p.carryWaitUntilTick);if(Number.isFinite(waitUntil)&&st.tick<waitUntil)return null;
     return {reason:Number.isFinite(waitUntil)?'wait-cadence':'placement-invalidation',relation,priorAction:p};
   }
   function normalizeCarryingPlacement(target){if(!target||!['floor','slot'].includes(target.kind))return null;return target.kind==='floor'?{kind:'floor',position:clone(target.position)}:{kind:'slot',id:target.id,posture:target.posture||null};}
@@ -58,7 +58,7 @@
     const relation=trigger?.relation,prior=trigger?.priorAction;if(!relation||!prior||!choice)return null;const targetPlacement=choice.kind==='placement'?normalizeCarryingPlacement(choice.targetPlacement):normalizeCarryingPlacement(prior.targetPlacement);if(!targetPlacement)return null;
     const action=E.buildAction?.(a,{id:'carryAgent',targetAgent:relation.carriedAgentId,targetPlacement,originalConflictSlotId:prior.originalConflictSlotId||null,relocationContext:prior.relocationContext||null,relocationOutcome:'failed',carryEstablishedEventId:prior.carryEstablishedEventId||null});if(!action)return null;
     action.intentId=prior.intentId||a.activeIntent?.id||null;action.recoveryMode=true;action.relocationOutcome='failed';action.relocationFailedEventId=prior.relocationFailedEventId||null;action.carryEstablishedEventId=prior.carryEstablishedEventId||null;action.carryingDecisionKind=choice.kind;
-    if(choice.kind==='wait'){action.phase='recoveryBlocked';action.carryingWaitUntilTick=st.tick+CARRY_WAIT_TICKS;action.recoveryRetryAtTick=action.carryingWaitUntilTick;}
+    if(choice.kind==='wait'){action.phase='recoveryBlocked';action.carryWaitUntilTick=st.tick+CARRY_WAIT_TICKS;action.recoveryRetryAtTick=action.carryWaitUntilTick;}
     return action;
   }
   function applyCarryingReplan(st,a){

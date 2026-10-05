@@ -403,7 +403,7 @@
   function beginCarryRecovery(a,p,target,reason){
     const A=agentCarryRuntime();recordCarryRelocationFailure(a,p,target,reason);
     delete p.spatialGoal;delete p.locomotionStep;delete p.locomotionCredit;
-    p.recoveryMode=true;p.phase='recoveryBlocked';p.recoveryRetryAtTick=state.tick+CARRY_RECOVERY_RETRY_TICKS;delete p.carryingWaitUntilTick;
+    p.recoveryMode=true;p.phase='recoveryBlocked';p.recoveryRetryAtTick=state.tick+CARRY_RECOVERY_RETRY_TICKS;delete p.carryWaitUntilTick;
     addEvent(`${a.name}原本的放置方案已失效，先繼續抱著${target.name}並重新評估安全放置。`,'normal',[p.relocationFailedEventId].filter(Boolean),{actor:a.id,target:target.id,action:'agentCarryRecoveryBlocked',retryAtTick:p.recoveryRetryAtTick,relationId:A?.relationForCarrier?.(state,a)?.id||null,position:positionRef(a.position)});
     return false;
   }
