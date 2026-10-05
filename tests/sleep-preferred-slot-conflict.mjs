@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,AC=globalThis.SimAgentCarry,SC=globalThis.SimSleepConflict,V=globalThis.SimValidator;
-const APP_VERSION='11.46.0-sleep-carry-integration';
+const APP_VERSION='11.47.0-social-bid-carry-cooperation';
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 authored.usageAssignments=[{id:'zhen-sleep-left',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
@@ -162,7 +162,7 @@ assert.equal(requester.action?.kind,'eat');
 
 noIssues('sleep preferred Slot conflict');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,APP_VERSION);
-assert.equal(AC.VERSION,APP_VERSION);
+assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(SC.OCCUPANCY_REASSESS_TICKS,1,'occupancy wait must re-enter Deliberation instead of encoding a fixed multi-tick patience contract');
 assert.equal(SC.OCCUPANCY_WAIT_TICKS,undefined,'sleep conflict must not expose a fixed occupancy patience contract');
 assert.equal(SC.ATTENTION_REASSESS_TICKS,1,'attention-only resolution must have an explicit finite reassessment boundary');

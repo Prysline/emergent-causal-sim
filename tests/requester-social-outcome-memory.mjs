@@ -22,6 +22,7 @@ function addHuman(st,id,name,position){
 function calm(a,{social=70}={}){Object.assign(a.needs,{hunger:8,thirst:8,fatigue:8,sleepNeed:8,social});a.action=null;a.activeIntent=null;a.offMap=false;}
 function makeOutcome(st,requester,responder,{context='observedIdle',tick=st.tick}={}){
   st.tick=tick;
+  for(const agent of Object.values(st.agents||{}))agent.observedSocialBids=(agent.observedSocialBids||[]).filter(ref=>ref.expiresTick>=st.tick);
   const offerId=E.addEvent(`${requester.name}測試聊天邀請。`,'normal',[],{actor:requester.id,target:responder.id,action:'talkOffer',socialBid:true,bidKind:'talkOffer',bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true,position:E.positionRef(requester.position)});
   const offer=st.causes[offerId];offer.data.bidId=offerId;
   const waitId=E.addEvent(`${requester.name}沒有得到立即回應。`,'normal',[offerId],{actor:requester.id,action:'socialWaitEnded',bidId:offerId,bidKind:'talkOffer',visibility:'private',owner:requester.id,responderContextObserved:context!=='unobserved'});
@@ -34,7 +35,7 @@ function makeOutcome(st,requester,responder,{context='observedIdle',tick=st.tick
 }
 
 E.reset(11350);let st=E.getState();
-assert.equal(st.version,'11.46.0-sleep-carry-integration');
+assert.equal(st.version,'11.47.0-social-bid-carry-cooperation');
 assert.equal(E.SOCIAL_OUTCOME_MEMORY_SCHEMA_VERSION,'11.13.5-requester-social-outcome-memory');
 assert.deepEqual(E.SOCIAL_OUTCOME_CONTEXT_CONGRUENCE,{unobserved:-.22,sleeping:-.05,highCommitment:-.12,observedAction:-.28,observedIdle:-.45});
 noIssues('reset');

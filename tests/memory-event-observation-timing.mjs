@@ -18,7 +18,7 @@ const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const memoryRuntimeSource=fs.readFileSync(new URL('../src/systems/memory/runtime.js',import.meta.url),'utf8');
 assert.doesNotMatch(memoryRuntimeSource,/E\.addEvent\s*=/,'Memory runtime must not replace core addEvent');
 assert.equal(E.addEvent,E.CORE_ADD_EVENT,'core addEvent ownership must remain stable after Memory loads');
-assert.deepEqual(E.listEventCreatedListeners(),[{id:'memory.episodic-observation',order:100}],'Memory must register one named event-created listener');
+assert.deepEqual(E.listEventCreatedListeners(),[{id:'memory.episodic-observation',order:100},{id:'socialBid.observe',order:150}],'event-created listener manifest must preserve Memory before Social Bid observation');
 assert.throws(()=>E.registerEventCreatedListener('memory.episodic-observation',()=>{},200),/duplicate event-created listener/);
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const eventBy=pred=>E.getState().events.find(pred);

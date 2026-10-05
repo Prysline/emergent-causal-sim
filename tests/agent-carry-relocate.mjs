@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'engine.js','validation/registry.js','validation/rules/physical-profile.js','validation/rules/agent-carry.js'
 ]);
 
-const APP_VERSION='11.46.0-sleep-carry-integration';
+const APP_VERSION='11.47.0-social-bid-carry-cooperation';
 const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const C=globalThis.SimEmbodimentCapabilities;
 const E=globalThis.SimEngine;
@@ -18,9 +18,9 @@ const SP=globalThis.SimSpatial;
 const V=globalThis.SimValidator;
 
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
-assert.equal(A.VERSION,APP_VERSION);
+assert.equal(A.VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(P.VERSION,PHYSICAL_VERSION,'Physical own generation must not fake-bump when only carry lifecycle / selection semantics change');
-assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,APP_VERSION);
+assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(C.agentCarryCapabilityForKind('human','twoArmCarry').massCapacity,35);
 assert.equal(C.agentCarryCapabilityForKind('human','twoArmCarry').handsRequired,2);
 assert.equal(C.agentCarryCapabilityForKind('cat','twoArmCarry'),null);
@@ -30,7 +30,7 @@ assert.equal(C.freePosturesForKind('human').includes('carried'),false);
 E.reset(14500);
 let st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
 assert.equal(st.version,APP_VERSION);
-assert.equal(st.agentCarryVersion,APP_VERSION);
+assert.equal(st.agentCarryVersion,'11.46.0-sleep-carry-integration');
 assert.deepEqual(st.agentCarries,{});
 
 const sleepingObservation=Object.freeze({observable:true,targetId:cat.id,observedTick:st.tick,observedAgentKind:'animal',observedActionKind:'sleep',observedPosture:'lying'});

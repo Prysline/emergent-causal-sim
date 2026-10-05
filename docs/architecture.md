@@ -8,6 +8,9 @@
 
 目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Physical、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 tick/reset lifecycle 由 `runtime-hook-pipeline.js` 明確排序；initial-state lifecycle 由 `world.js` 的 named initializer pipeline明確排序。兩者都不以 script-wrapper 疊接順序作為正式語義。
 
+> Current `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
+
+
 ## 1. Truth boundaries
 
 ### World Truth

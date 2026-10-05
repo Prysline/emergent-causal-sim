@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.46.0-sleep-carry-integration';
+const CURRENT_VERSION='11.47.0-social-bid-carry-cooperation';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -218,14 +218,14 @@ assert.equal(W.RESOURCES_RUNTIME_VERSION,RESOURCES_VERSION);
 assert.equal(W.VERSION,CURRENT_VERSION);
 assert.equal(W.PRESENTATION_SCHEMA_VERSION,undefined,'Presentation marker must no longer live on SimWorld');
 assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Identity subsystem generation must not follow an unrelated product patch');
-assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(AgentCarry.VERSION,CURRENT_VERSION);
-assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,CURRENT_VERSION);
+assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,'11.46.0-sleep-carry-integration');
+assert.equal(AgentCarry.VERSION,'11.46.0-sleep-carry-integration');
+assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.45.0-agent-carry-relocate','Physical own generation must not fake-bump for sleeping carry integration');
 assert.equal(P.VERSION,'11.45.0-agent-carry-relocate','Physical own generation must not fake-bump for sleeping carry integration');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk','Route search generation must not fake-bump for a separate candidate selector');
-assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,CURRENT_VERSION);
+assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.38.0-carried-handling-risk');
 assert.equal(L.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
