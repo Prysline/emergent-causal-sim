@@ -99,6 +99,26 @@ assert.throws(
   'resolver must reject missing orientation instead of silently assuming north'
 );
 
+// Double-bed left/right are occupant-relative: a person facing the authored orientation keeps their own left/right side after every quarter turn.
+{
+  const definition=D.getDefinition('double-bed');
+  const expectedSides={
+    north:{left:{position:local(4,4),approachEdges:['west']},right:{position:local(5,4),approachEdges:['east']}},
+    east:{left:{position:local(4,3),approachEdges:['north']},right:{position:local(4,4),approachEdges:['south']}},
+    south:{left:{position:local(5,3),approachEdges:['east']},right:{position:local(4,3),approachEdges:['west']}},
+    west:{left:{position:local(5,4),approachEdges:['south']},right:{position:local(5,3),approachEdges:['north']}}
+  };
+  for(const orientation of D.ORIENTATIONS){
+    const resolved=D.resolveDefinitionInstance(definition,{id:'bed-'+orientation,definitionId:'double-bed',origin,orientation});
+    const byKey=Object.fromEntries(resolved.slots.map(slot=>[slot.id.split(':')[1],slot]));
+    for(const side of ['left','right']){
+      assert.equal(byKey[side].label,side==='left'?'左側':'右側',orientation+' '+side+' label');
+      assert.deepEqual(byKey[side].position,expectedSides[orientation][side].position,orientation+' '+side+' must follow occupant-relative side');
+      assert.deepEqual(byKey[side].approachEdges,expectedSides[orientation][side].approachEdges,orientation+' '+side+' approach edge must rotate with occupant-relative side');
+    }
+  }
+}
+
 // world-authoring-v11 requires orientation and round-trips its facing semantics.
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
