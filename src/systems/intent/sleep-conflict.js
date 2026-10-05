@@ -47,11 +47,12 @@
     return entries.filter(x=>sameNode(st,x.approach,winner.node)).sort((x,y)=>String(x.key).localeCompare(String(y.key)))[0]||null;
   }
   function sleepingRelocationProposal(st,a,conflict,observation){
-    if(!observation?.observable||observation.observedActionKind!=='sleep'||!['human','animal'].includes(observation.observedAgentKind))return null;
+    if(!observation?.observable||observation.observedActionKind!=='sleep'||observation.observedPosture!=='lying'||!['human','animal'].includes(observation.observedAgentKind))return null;
     const origin=SP.normalizeNode?.(st,conflict.slot.position);if(!origin)return null;
+    const observedTarget={kind:observation.observedAgentKind};
     const slotEntries=[];
     for(const slot of SP.allSlots(st)){
-      if(slot.id===conflict.slot.id||!slot.canSleep||!SP.slotAvailable?.(st,slot.id,observation.targetId))continue;
+      if(slot.id===conflict.slot.id||!slot.canSleep||!SP.slotAllows?.(slot,observedTarget)||!SP.slotAvailable?.(st,slot.id,observation.targetId))continue;
       const node=SP.normalizeNode?.(st,slot.position);if(!node||(SP.manhattan?.(origin,node)??Infinity)>RELOCATION_RADIUS)continue;
       const approach=SP.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'});if(approach)slotEntries.push({key:`slot:${slot.id}`,approach,target:{kind:'slot',id:slot.id,posture:'lying'},quality:'sleepSlot'});
     }
@@ -75,7 +76,7 @@
     if(bestAlternate)push('alternate',52-insist*1.8-clamp(Number(bestAlternate.effectiveScore)||0,-10,25)*.35,common,{target:{kind:'slot',id:bestAlternate.id}});
     push('wait',35+insist*1.4+(noAlternate?8:0),common);
     if(observation.observable){
-      const sleeping=observation.observedActionKind==='sleep';
+      const sleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying';
       push('attention',30+insist*1.1+(sleeping?12:0)+(noAlternate?5:0),common.concat([{kind:'observation',key:'occupantSleeping',role:'modifier',value:sleeping?1:0}]));
       if(observation.observedAgentKind==='human'){
         push('requestYield',36+insist*1.6+(noAlternate?6:0),common);
@@ -123,7 +124,7 @@
   function emitYieldBid(st,a,action,conflict,evaluation,mode){
     const observation=evaluation.observation,target=observation?.targetId&&st.agents?.[observation.targetId];if(!observation?.observable||!target)return beginOccupancyWait(st,a,action,conflict);
     const stimulus=mode==='driveAway'?DRIVE_STIMULUS:REQUEST_STIMULUS,attention=E.performAttentionInteraction(a,target,{stimulus});
-    const wasSleeping=observation.observedActionKind==='sleep',perceivedByTarget=!wasSleeping||attention.wake?.woke===true;
+    const wasSleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying',perceivedByTarget=!wasSleeping||attention.wake?.woke===true;
     const bidKind=mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYield',interactionKind=mode==='driveAway'?'nonPhysicalDriveAway':'requestYield';
     const text=mode==='driveAway'?a.name+'以較強硬的非物理方式要求'+target.name+'離開偏好的睡眠位置。':a.name+'要求'+target.name+'讓出偏好的睡眠位置。';
     const bidId=E.addEvent(text,'normal',attention.eventId?[attention.eventId]:[],{actor:a.id,target:target.id,action:mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYieldRequest',slot:conflict.slot.id,socialBid:true,bidKind,interactionKind,expectsResponse:true,bidFrom:a.id,bidTo:target.id,perceivedByTarget,interactionPurpose:mode==='driveAway'?'driveAwayFromSleepSlot':'requestSleepSlotYield',conflictDecisionId:action.conflictResolutionDecisionId||null,position:E.positionRef?.(a.position)||null});
