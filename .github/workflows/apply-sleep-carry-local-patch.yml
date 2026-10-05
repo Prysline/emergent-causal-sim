@@ -10,7 +10,7 @@ permissions:
 jobs:
   apply:
     runs-on: ubuntu-latest
-    if: "${{ github.event.head_commit.message == 'Dev: apply staged audited sleep carry patch' }}"
+    if: "${{ github.event.head_commit.message == 'Dev: apply staged audited sleep carry patch v2' }}"
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,6 +24,7 @@ jobs:
           printf '%s  %s\n' '5f631118429ed1b31de5cfdf6448b009199946483dac2046546e70f4b507ea8d' /tmp/patch.gz.b64 | sha256sum -c -
           base64 -d /tmp/patch.gz.b64 | gzip -d > /tmp/sleep-carry.patch
           patch --batch --forward -p1 < /tmp/sleep-carry.patch
+          rm .github/workflows/apply-sleep-carry-local-patch.yml
       - name: Focused preflight
         run: |
           node --check src/spatial-candidate-selection.js
@@ -36,7 +37,6 @@ jobs:
       - name: Commit audited fixes and remove temporary transport
         shell: bash
         run: |
-          rm .github/workflows/apply-sleep-carry-local-patch.yml
           rm -rf .github/patch-parts
           git config user.name "Boochu"
           git config user.email "mayhu1993@gmail.com"
