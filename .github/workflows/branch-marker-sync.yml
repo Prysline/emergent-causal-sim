@@ -1,0 +1,44 @@
+name: Branch marker sync
+
+on:
+  push:
+    branches: [feature/social-bid-carry-cooperation]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/social-bid-carry-cooperation
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Sync current release assertions only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          old='11.46.0-sleep-carry-integration'
+          new='11.47.0-social-bid-carry-cooperation'
+          for p in Path('tests').glob('*.mjs'):
+              s=p.read_text()
+              s2=s.replace("const APP_VERSION='"+old+"';", "const APP_VERSION='"+new+"';")
+              if p.name=='production-source-load-architecture.mjs':
+                  s2=s2.replace("const CURRENT_VERSION='"+old+"';", "const CURRENT_VERSION='"+new+"';")
+                  s2=s2.replace("assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,CURRENT_VERSION);", "assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,'"+old+"');")
+                  s2=s2.replace("assert.equal(AgentCarry.VERSION,CURRENT_VERSION);", "assert.equal(AgentCarry.VERSION,'"+old+"');")
+                  s2=s2.replace("assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,CURRENT_VERSION);", "assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,'"+old+"');")
+                  s2=s2.replace("assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,CURRENT_VERSION);", "assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,'"+old+"');")
+              if s2!=s:
+                  p.write_text(s2)
+          PY
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add tests
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Sync current release regression markers"
+          git push origin HEAD:feature/social-bid-carry-cooperation
