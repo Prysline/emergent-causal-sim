@@ -34,7 +34,9 @@ jobs:
           exit 0
       - name: Fix focused profile composition
         if: steps.patch.outputs.exit_code == '0'
-        run: sed -i "s/'systems\/intent\/decision-evidence.js','systems\/intent\/replanning.js'/'systems\/intent\/decision-evidence.js','systems\/intent\/deliberation.js','systems\/intent\/replanning.js'/" tests/carrying-state-replanning.mjs
+        run: |
+          sed -i "s/'systems\/intent\/decision-evidence.js','systems\/intent\/replanning.js'/'systems\/intent\/decision-evidence.js','systems\/intent\/deliberation.js','systems\/intent\/replanning.js'/" tests/carrying-state-replanning.mjs
+          sed -i "s/assert.equal(A.establishCarry(st,carrier,carried).ok,true);/assert.equal(A.establishCarry(st,carrier,carried).ok,true);carried.action=null;carried.activeIntent=null;/" tests/carrying-state-replanning.mjs
       - name: Persist patch diagnostics on failure
         if: steps.patch.outputs.exit_code != '0'
         run: |
