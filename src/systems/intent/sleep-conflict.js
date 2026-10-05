@@ -1,31 +1,27 @@
 (() => {
-  const E=window.SimEngine,SP=window.SimSpatial,U=window.SimUsage;
-  if(!E||!SP||!U)return;
+  const E=window.SimEngine,SP=window.SimSpatial,U=window.SimUsage,A=window.SimAgentCarry;
+  if(!E||!SP||!U||!A)return;
   if(typeof E.observeAgentContext!=='function'||typeof E.performAttentionInteraction!=='function')throw new Error('sleep-conflict.js requires shared Agent-context observation + attention.');
-  const VERSION='11.44.0-sleep-slot-conflict';
+  const VERSION='11.46.0-sleep-carry-integration';
   const OCCUPANCY_REASSESS_TICKS=1;
   const ATTENTION_REASSESS_TICKS=1;
+  const RELOCATION_RADIUS=4;
   const REQUEST_STIMULUS=Object.freeze({kind:'sound',intensity:24});
   const DRIVE_STIMULUS=Object.freeze({kind:'sound',intensity:32});
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
 
-  function associationStrength(reasons){
-    let score=0;
-    for(const r of reasons||[]){
-      if(r.direction!=='self')continue;
-      if(r.kind==='assignment')score+=8;
-      else if(r.kind==='claim')score+=5;
-      else if(r.kind==='habit')score+=4*clamp(Number(r.signal)||0,0,1);
-    }
-    return clamp(score,0,10);
+  function associationContribution(st,a,target){
+    const contributors=(U.preferenceContributors?.(st,a,'sleep',target)||[]).filter(c=>c?.direction==='self'&&['assignment','claim','habit'].includes(c.kind)&&(Number(c.delta)||0)>0);
+    return {contributors,strength:clamp(contributors.reduce((sum,c)=>sum+(Number(c.delta)||0),0),0,10)};
   }
+  function associationStrength(st,a,target){return associationContribution(st,a,target).strength;}
   function selfSleepAssociations(st,a){
     const out=[];
     for(const slot of SP.allSlots(st)){
       if(!slot.canSleep||!SP.slotAllows(slot,a)||!SP.slotPoseFits?.(slot,a,'lying'))continue;
-      const target={kind:'slot',id:slot.id},reasons=U.associationReasons(st,a,'sleep',target).filter(r=>r.direction==='self');
-      if(reasons.length)out.push({slot,target,reasons,strength:associationStrength(reasons)});
+      const target={kind:'slot',id:slot.id},reasons=U.associationReasons(st,a,'sleep',target).filter(r=>r.direction==='self'),association=associationContribution(st,a,target);
+      if(reasons.length)out.push({slot,target,reasons,associationContributors:association.contributors,strength:association.strength});
     }
     return out.sort((x,y)=>y.strength-x.strength||String(x.slot.id).localeCompare(String(y.slot.id)));
   }
@@ -45,19 +41,55 @@
     if(!occupant)return Object.freeze({observable:false,reason:'occupant-missing'});
     return E.observeAgentContext(st,a,occupant);
   }
+  function sameNode(st,a,b){return !!a&&!!b&&(SP.nodeSame?.(st,a,b)??SP.same?.(a,b));}
+  function selectPlacementByApproach(st,a,entries){
+    const winner=SP.bestCandidateNodeResult?.(st,a,entries.map(x=>x.approach),{mode:'auto',objective:'traversalCost'});if(!winner)return null;
+    return entries.filter(x=>sameNode(st,x.approach,winner.node)).sort((x,y)=>String(x.key).localeCompare(String(y.key)))[0]||null;
+  }
+  function sleepingRelocationProposal(st,a,conflict,observation){
+    if(!observation?.observable||observation.observedActionKind!=='sleep'||observation.observedPosture!=='lying'||!['human','animal'].includes(observation.observedAgentKind))return null;
+    const origin=SP.normalizeNode?.(st,conflict.slot.position);if(!origin)return null;
+    const observedTarget={kind:observation.observedAgentKind};
+    const slotEntries=[];
+    for(const slot of SP.allSlots(st)){
+      if(slot.id===conflict.slot.id||!slot.canSleep||!SP.slotAllows?.(slot,observedTarget)||!SP.slotAvailable?.(st,slot.id,observation.targetId))continue;
+      const node=SP.normalizeNode?.(st,slot.position);if(!node||(SP.manhattan?.(origin,node)??Infinity)>RELOCATION_RADIUS)continue;
+      const approach=SP.bestSlotApproachNode?.(st,slot,a,{mode:'walk',objective:'traversalCost'});if(approach)slotEntries.push({key:`slot:${slot.id}`,approach,target:{kind:'slot',id:slot.id,posture:'lying'},quality:'sleepSlot'});
+    }
+    const slotWinner=selectPlacementByApproach(st,a,slotEntries);if(slotWinner)return slotWinner;
+    const z=SP.zOf?.(origin)??origin.z??0,floorEntries=[];
+    for(let dy=-RELOCATION_RADIUS;dy<=RELOCATION_RADIUS;dy++)for(let dx=-RELOCATION_RADIUS;dx<=RELOCATION_RADIUS;dx++){
+      if(Math.abs(dx)+Math.abs(dy)>RELOCATION_RADIUS)continue;
+      const node=SP.normalizeNode?.(st,{x:origin.x+dx,y:origin.y+dy,z,spaceId:origin.spaceId,surfaceId:'floor'},'floor');if(!node||node.surfaceId!=='floor')continue;
+      if(!(SP.nodeWalkable?.(st,node)??SP.walkable?.(st,node)))continue;
+      if((SP.nodeOccupantsAt?.(st,node,observation.targetId)||SP.occupantsAt?.(st,node,observation.targetId)||[]).length)continue;
+      const target={kind:'floor',position:{...node}},approach=A.bestPlacementApproach?.(st,a,target);if(!approach)continue;
+      floorEntries.push({key:`floor:${SP.nodeKey?.(st,node)||`${node.x},${node.y},${z}`}`,approach,target,quality:'floor'});
+    }
+    return selectPlacementByApproach(st,a,floorEntries);
+  }
   function conflictCandidates(st,a,conflict){
     const legal=U.rankSleepTargets(st,a,SP.sleepTargets(st,a)),bestAlternate=legal[0]||null,observation=observationForConflict(st,a,conflict);
     const insist=conflict.strength,noAlternate=!bestAlternate,prior=lastConflictEvidence(a,conflict.slot.id),out=[];
     const push=(kind,score,contributors=[],extra={})=>out.push({kind,score:Math.round(score*1000)/1000,contributors:clone(contributors),...extra});
-    const common=[{kind:'association',key:'preferredSlotInsistence',role:'modifier',value:insist}];
+    const common=[{kind:'association',key:'preferredSlotInsistence',role:'modifier',value:insist,source:'usagePreference'}];
     if(bestAlternate)push('alternate',52-insist*1.8-clamp(Number(bestAlternate.effectiveScore)||0,-10,25)*.35,common,{target:{kind:'slot',id:bestAlternate.id}});
     push('wait',35+insist*1.4+(noAlternate?8:0),common);
     if(observation.observable){
-      const sleeping=observation.observedActionKind==='sleep';
+      const sleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying';
       push('attention',30+insist*1.1+(sleeping?12:0)+(noAlternate?5:0),common.concat([{kind:'observation',key:'occupantSleeping',role:'modifier',value:sleeping?1:0}]));
       if(observation.observedAgentKind==='human'){
         push('requestYield',36+insist*1.6+(noAlternate?6:0),common);
         push('driveAway',24+insist*1.9+(noAlternate?8:0),common);
+      }
+      const attempt=A.candidateAttemptability?.(st,a,observation),placement=attempt?.ok?sleepingRelocationProposal(st,a,conflict,observation):null;
+      if(attempt?.ok&&placement){
+        const placementDelta=placement.quality==='sleepSlot'?5:-3,socialDisruption=-6;
+        push('carryOccupant',34+insist*1.55+(noAlternate?7:0)+placementDelta+socialDisruption,common.concat([
+          {kind:'observation',key:'occupantSleeping',role:'eligibility',value:1},
+          {kind:'socialDisruption',key:'sleepingCarryWithoutCooperation',role:'modifier',value:socialDisruption},
+          {kind:'placement',key:placement.quality,role:'modifier',value:placementDelta}
+        ]),{targetAgent:observation.targetId,targetPlacement:clone(placement.target)});
       }
     }
     out.sort((x,y)=>y.score-x.score||String(x.kind).localeCompare(String(y.kind)));
@@ -69,7 +101,7 @@
       preferredSlot:{kind:'slot',id:conflict.slot.id},
       associationReasons:conflict.reasons,
       observation,
-      candidates:evaluation.candidates.map(c=>({kind:c.kind,score:c.score,target:c.target||null,contributors:c.contributors||[]})),
+      candidates:evaluation.candidates.map(c=>({kind:c.kind,score:c.score,target:c.target||null,targetAgent:c.targetAgent||null,targetPlacement:c.targetPlacement||null,contributors:c.contributors||[]})),
       selectedResolution:evaluation.selected?.kind||'none',
       contributors:evaluation.selected?.contributors||[],
       priorConflictDecisionId:evaluation.prior?.id||null
@@ -92,13 +124,30 @@
   function emitYieldBid(st,a,action,conflict,evaluation,mode){
     const observation=evaluation.observation,target=observation?.targetId&&st.agents?.[observation.targetId];if(!observation?.observable||!target)return beginOccupancyWait(st,a,action,conflict);
     const stimulus=mode==='driveAway'?DRIVE_STIMULUS:REQUEST_STIMULUS,attention=E.performAttentionInteraction(a,target,{stimulus});
-    const wasSleeping=observation.observedActionKind==='sleep',perceivedByTarget=!wasSleeping||attention.wake?.woke===true;
+    const wasSleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying',perceivedByTarget=!wasSleeping||attention.wake?.woke===true;
     const bidKind=mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYield',interactionKind=mode==='driveAway'?'nonPhysicalDriveAway':'requestYield';
     const text=mode==='driveAway'?a.name+'以較強硬的非物理方式要求'+target.name+'離開偏好的睡眠位置。':a.name+'要求'+target.name+'讓出偏好的睡眠位置。';
     const bidId=E.addEvent(text,'normal',attention.eventId?[attention.eventId]:[],{actor:a.id,target:target.id,action:mode==='driveAway'?'sleepSlotDriveAway':'sleepSlotYieldRequest',slot:conflict.slot.id,socialBid:true,bidKind,interactionKind,expectsResponse:true,bidFrom:a.id,bidTo:target.id,perceivedByTarget,interactionPurpose:mode==='driveAway'?'driveAwayFromSleepSlot':'requestSleepSlotYield',conflictDecisionId:action.conflictResolutionDecisionId||null,position:E.positionRef?.(a.position)||null});
     const bid=st.causes?.[bidId];if(bid?.data)bid.data.bidId=bidId;
     const conflictDecisionId=action.conflictResolutionDecisionId||null;a.action=null;a.activeIntent=awaitResponseIntent(st,a,bidId,conflict.slot.id,conflictDecisionId);
     return {handled:true,resolution:mode,bidId,perceivedByTarget};
+  }
+  function beginSleepingCarry(st,a,action,conflict,evaluation){
+    const selected=evaluation.selected,target=selected?.targetAgent&&st.agents?.[selected.targetAgent];if(!target||!selected?.targetPlacement)return beginOccupancyWait(st,a,action,conflict);
+    const carryAction=E.buildAction?.(a,{id:'carryAgent',targetAgent:target.id,targetPlacement:selected.targetPlacement,cooperative:false});
+    if(!carryAction){
+      E.addEvent?.(a.name+'決定嘗試搬開'+target.name+'，但實際抱持條件不成立。','normal',[],{actor:a.id,target:target.id,action:'sleepCarryExecutionRejected',slot:conflict.slot.id,conflictDecisionId:action.conflictResolutionDecisionId||null,position:E.positionRef?.(a.position)||null});
+      return beginConflictWait(st,action,conflict,{source:'carryExecutionRejected',ticks:OCCUPANCY_REASSESS_TICKS});
+    }
+    const priorDecisionId=action.decisionId||null;
+    carryAction.intentId=action.intentId||a.activeIntent?.id||null;
+    carryAction.originalConflictSlotId=conflict.slot.id;
+    carryAction.relocationContext='sleepSlotConflict';
+    carryAction.conflictResolutionDecisionId=action.conflictResolutionDecisionId||null;
+    carryAction.relocationOutcome='pending';
+    a.action=carryAction;
+    E.adoptDecisionEvidence?.(st,a,carryAction,{source:{type:'sleepSlotConflictCarry',tick:st.tick,intentKind:a.activeIntent?.kind||'sleep',preferredSlotId:conflict.slot.id,conflictDecisionId:carryAction.conflictResolutionDecisionId},contributors:selected.contributors||[],utility:selected.score,priorDecisionId});
+    return {handled:true,resolution:'carryOccupant',targetAgent:target.id,targetPlacement:clone(selected.targetPlacement)};
   }
   function resolveSleepChoice(st,a,action){
     if(action?.phase!=='chooseSurface')return {handled:false};
@@ -116,6 +165,7 @@
       }
       case'requestYield':return emitYieldBid(st,a,action,conflict,evaluation,'requestYield');
       case'driveAway':return emitYieldBid(st,a,action,conflict,evaluation,'driveAway');
+      case'carryOccupant':return beginSleepingCarry(st,a,action,conflict,evaluation);
       default:return beginOccupancyWait(st,a,action,conflict);
     }
   }
@@ -131,7 +181,7 @@
     return (E.observedBidRefs?.(st,a)||[]).map(ref=>({ref,bid:E.bidEvent?.(st,ref.bidId)})).filter(x=>['sleepSlotYield','sleepSlotDriveAway'].includes(x.bid?.data?.bidKind)&&x.bid?.data?.bidTo===a.id).sort((x,y)=>y.ref.observedTick-x.ref.observedTick)[0]||null;
   }
   function responseEvaluation(st,a,bid,observedTick){
-    const slotId=bid?.data?.slot,reasons=slotId?U.associationReasons(st,a,'sleep',{kind:'slot',id:slotId}).filter(r=>r.direction==='self'):[],own=associationStrength(reasons),sleepNeed=clamp(Number(a?.needs?.sleepNeed)||0,0,100),relationship=clamp(Number(E.relationshipSignal?.(a,bid?.data?.bidFrom))||0,-1,1),age=Math.max(0,st.tick-(observedTick||st.tick)),pressure=bid?.data?.bidKind==='sleepSlotDriveAway'?.08:0;
+    const slotId=bid?.data?.slot,target=slotId?{kind:'slot',id:slotId}:null,own=target?associationStrength(st,a,target):0,sleepNeed=clamp(Number(a?.needs?.sleepNeed)||0,0,100),relationship=clamp(Number(E.relationshipSignal?.(a,bid?.data?.bidFrom))||0,-1,1),age=Math.max(0,st.tick-(observedTick||st.tick)),pressure=bid?.data?.bidKind==='sleepSlotDriveAway'?.08:0;
     const score=clamp(.62-sleepNeed*.004-own*.025+relationship*.08+pressure+Math.min(.12,age*.04),0,1);
     const response=score>=.52?'accept':score<=.28?'refuse':'delay';
     return {score,response,sleepNeed,ownAssociationStrength:own,relationshipSignal:relationship,requestAge:age};
@@ -205,12 +255,12 @@
   }
 
   E.registerEventCreatedListener?.('sleepConflict.observe-bid',observeSleepConflictBid,150);
-  E.registerActionLabelResolver?.('sleepConflict.label',(st,a)=>a?.action?.kind==='sleep'&&a.action.phase==='conflictWait'?(a.action.conflictWaitSource==='attentionReassessment'?'睡眠・引起注意後重新觀察偏好位置':'睡眠・等待偏好的睡眠位置空出'):null,120);
+  E.registerActionLabelResolver?.('sleepConflict.label',(st,a)=>a?.action?.kind==='sleep'&&a.action.phase==='conflictWait'?(a.action.conflictWaitSource==='attentionReassessment'?'睡眠・引起注意後重新觀察偏好位置':a.action.conflictWaitSource==='carryExecutionRejected'?'睡眠・搬移嘗試失敗後重新評估':'睡眠・等待偏好的睡眠位置空出'):null,120);
   if(!E.registerRuntimeHook)throw new Error('sleep-conflict.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','sleepConflict.respond',()=>processSleepConflictResponses(E.getState()),275);
   E.registerRuntimeHook('afterTick','sleepConflict.complete-yield',()=>settleYieldCompletions(E.getState()),150);
 
-  const api={VERSION,OCCUPANCY_REASSESS_TICKS,ATTENTION_REASSESS_TICKS,associationStrength,selfSleepAssociations,hasPreferredSleepConflict,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions,observeSleepConflictBid};
+  const api={VERSION,OCCUPANCY_REASSESS_TICKS,ATTENTION_REASSESS_TICKS,RELOCATION_RADIUS,associationStrength,associationContribution,selfSleepAssociations,hasPreferredSleepConflict,sleepingRelocationProposal,conflictCandidates,resolveSleepChoice,stepSleepConflict,responseEvaluation,consumeRequesterResponses,processSleepConflictResponses,settleYieldCompletions,observeSleepConflictBid};
   window.SimSleepConflict=Object.freeze(api);
   E.SLEEP_SLOT_CONFLICT_VERSION=VERSION;
 })();

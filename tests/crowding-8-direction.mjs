@@ -42,7 +42,7 @@ function idleAgent(agent,node){
 }
 
 E.reset(20260926);
-assert.equal(E.getState().version,'11.45.0-agent-carry-relocate');
+assert.equal(E.getState().version,'11.46.0-sleep-carry-integration');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(SP.CROWDING_VERSION,'11.31.0-crowding-8-direction');
 

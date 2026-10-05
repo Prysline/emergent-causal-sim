@@ -8,7 +8,8 @@ loadRuntimeProfile([
   'engine.js','validation/registry.js','validation/rules/physical-profile.js','validation/rules/agent-carry.js'
 ]);
 
-const APP_VERSION='11.45.0-agent-carry-relocate';
+const APP_VERSION='11.46.0-sleep-carry-integration';
+const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const C=globalThis.SimEmbodimentCapabilities;
 const E=globalThis.SimEngine;
 const A=globalThis.SimAgentCarry;
@@ -18,7 +19,8 @@ const V=globalThis.SimValidator;
 
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 assert.equal(A.VERSION,APP_VERSION);
-assert.equal(P.VERSION,APP_VERSION);
+assert.equal(P.VERSION,PHYSICAL_VERSION,'Physical own generation must not fake-bump when only carry lifecycle / selection semantics change');
+assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,APP_VERSION);
 assert.equal(C.agentCarryCapabilityForKind('human','twoArmCarry').massCapacity,35);
 assert.equal(C.agentCarryCapabilityForKind('human','twoArmCarry').handsRequired,2);
 assert.equal(C.agentCarryCapabilityForKind('cat','twoArmCarry'),null);
@@ -30,6 +32,33 @@ let st=E.getState(),human=st.agents.zhen,cat=st.agents.orange;
 assert.equal(st.version,APP_VERSION);
 assert.equal(st.agentCarryVersion,APP_VERSION);
 assert.deepEqual(st.agentCarries,{});
+
+const sleepingObservation=Object.freeze({observable:true,targetId:cat.id,observedTick:st.tick,observedAgentKind:'animal',observedActionKind:'sleep',observedPosture:'lying'});
+let attempt=A.candidateAttemptability(st,human,sleepingObservation);
+assert.equal(attempt.ok,true,'candidate-time attemptability should use requester-known state + explicit observation');
+const originalMassForAttempt=cat.physical.mass;
+cat.physical.mass=999;
+attempt=A.candidateAttemptability(st,human,sleepingObservation);
+assert.equal(attempt.ok,true,'hidden target mass must not make a requester-time candidate disappear');
+let hiddenExecution=A.canEstablishCarry(st,human,cat,{cooperative:true});
+assert.equal(hiddenExecution.ok,false);
+assert.equal(hiddenExecution.reason,'mass-capacity-exceeded','execution-time World truth must still reject hidden impossible mass');
+cat.physical.mass=originalMassForAttempt;
+cat.held='cupA';
+attempt=A.candidateAttemptability(st,human,sleepingObservation);
+assert.equal(attempt.ok,true,'hidden target held state must not make a requester-time candidate disappear');
+hiddenExecution=A.canEstablishCarry(st,human,cat,{cooperative:true});
+assert.equal(hiddenExecution.ok,false);
+assert.equal(hiddenExecution.reason,'nested-held-container-unsupported');
+cat.held=null;
+const hiddenRelation={id:'agent-carry:hidden',carrierId:'zhou',carriedAgentId:cat.id,method:'twoArmCarry',responderMode:'cooperative',establishedTick:st.tick};
+st.agentCarries[cat.id]=hiddenRelation;
+attempt=A.candidateAttemptability(st,human,sleepingObservation);
+assert.equal(attempt.ok,true,'hidden target carry relation must not be read by candidate-time attemptability');
+hiddenExecution=A.canEstablishCarry(st,human,cat,{cooperative:true});
+assert.equal(hiddenExecution.ok,false);
+assert.equal(hiddenExecution.reason,'agent-already-in-carry-relation');
+delete st.agentCarries[cat.id];
 
 let feasibility=A.canEstablishCarry(st,human,cat,{cooperative:false});
 assert.equal(feasibility.ok,false);
@@ -57,6 +86,25 @@ assert.equal(feasibility.ok,false);
 assert.equal(feasibility.reason,'mass-capacity-exceeded');
 cat.physical.mass=originalMass;
 
+const originalPlanRoute=SP.planRoute;
+SP.planRoute=(state,agent,node)=>{
+  const x=Number(node?.x),picked=x===0?{traversalCost:4,pathDistance:8}:x===1||x===2?{traversalCost:4,pathDistance:7}:{traversalCost:9,pathDistance:9};
+  return {path:[node],steps:[],objective:'traversalCost',...picked};
+};
+try{
+  const candidates=[
+    SP.normalizeNode(st,{x:2,y:0,z:0,spaceId:'home',surfaceId:'floor'}),
+    SP.normalizeNode(st,{x:1,y:0,z:0,spaceId:'home',surfaceId:'floor'}),
+    SP.normalizeNode(st,{x:0,y:0,z:0,spaceId:'home',surfaceId:'floor'})
+  ].filter(Boolean);
+  const result=SP.bestCandidateNodeResult(st,human,candidates,{objective:'traversalCost'});
+  assert.ok(result);
+  assert.equal(result.objectiveCost,4);
+  assert.equal(result.pathDistance,7,'canonical candidate selector must use pathDistance after objective tie');
+  const tied=candidates.filter(n=>n.x===1||n.x===2).map(n=>SP.nodeKey(st,n)).sort()[0];
+  assert.equal(result.nodeKey,tied,'canonical candidate selector must use stable nodeKey after objective/pathDistance tie');
+}finally{SP.planRoute=originalPlanRoute;}
+
 let established=A.establishCarry(st,human,cat,{cooperative:true});
 assert.equal(established.ok,true);
 assert.equal(Object.keys(st.agentCarries).length,1);
@@ -78,6 +126,13 @@ assert.equal(validation.issueCount,0,validation.issues.map(issue=>issue.code+': 
 const carrierNode=SP.nodeForAgent(st,human);
 const floorTarget=(SP.adjacentWalkable(st,carrierNode)||[]).find(node=>(SP.nodeOccupantsAt(st,node,cat.id)||[]).length===0);
 assert.ok(floorTarget,'test world must expose an adjacent legal floor placement');
+let selectorCalls=0;
+const originalBestCandidateNode=SP.bestCandidateNode;
+SP.bestCandidateNode=(...args)=>{selectorCalls++;return originalBestCandidateNode(...args);};
+let approach;
+try{approach=A.bestPlacementApproach(st,human,{kind:'floor',position:floorTarget});}finally{SP.bestCandidateNode=originalBestCandidateNode;}
+assert.ok(approach);
+assert.ok(selectorCalls>0,'Agent Carry floor approach must delegate candidate winner selection to Spatial / Route');
 let placed=A.placeCarriedAgent(st,human,{kind:'floor',position:floorTarget});
 assert.equal(placed.ok,true);
 assert.equal(st.agentCarries[cat.id],undefined);
@@ -105,9 +160,9 @@ assert.equal(validation.issueCount,0,validation.issues.map(issue=>issue.code+': 
 
 const destinationSlot=SP.allSlots(st).find(slot=>slot.id!==sleepSlot.id&&slot.canSleep&&SP.slotAllows(slot,cat)&&SP.slotPoseFits(slot,cat,'lying')&&SP.slotAvailable(st,slot.id,cat.id));
 if(destinationSlot){
-  const approach=SP.bestSlotApproachNode(st,destinationSlot,human,{mode:'walk',objective:'traversalCost'});
-  if(approach){
-    human.position={...approach};
+  const slotApproach=SP.bestSlotApproachNode(st,destinationSlot,human,{mode:'walk',objective:'traversalCost'});
+  if(slotApproach){
+    human.position={...slotApproach};
     placed=A.placeCarriedAgent(st,human,{kind:'slot',id:destinationSlot.id});
     assert.equal(placed.ok,true);
     assert.equal(placed.posture,'lying');
@@ -154,4 +209,42 @@ assert.ok(eventActions.includes('agentPickup'));
 assert.ok(eventActions.includes('agentCarryEstablished'));
 assert.ok(eventActions.includes('agentPlacementComplete'));
 
-console.log('agent carry / relocate v1 regression: ok');
+E.reset(14504);
+st=E.getState();human=st.agents.zhen;cat=st.agents.orange;st.agents.zhou.offMap=true;
+const recoverySleepSlot=SP.allSlots(st).find(slot=>slot.canSleep&&SP.slotAllows(slot,cat)&&SP.slotPoseFits(slot,cat,'lying'));
+assert.ok(recoverySleepSlot);
+cat.position={...recoverySleepSlot.position};cat.posture={kind:'lying',slotId:recoverySleepSlot.id,furnitureId:recoverySleepSlot.furnitureId};cat.action={kind:'sleep',phase:'sleeping',started:st.tick,sleepTicks:1,wait:0};
+const recoveryPickupApproach=SP.bestSlotApproachNode(st,recoverySleepSlot,human,{mode:'walk',objective:'traversalCost'});
+human.position={...recoveryPickupApproach};human.posture={kind:'standing',slotId:null,furnitureId:null};
+established=A.establishCarry(st,human,cat);
+assert.equal(established.ok,true);
+const impossibleTarget={kind:'floor',position:{x:-999,y:-999,z:0,spaceId:'home',surfaceId:'floor'}};
+human.action=E.buildAction(human,{id:'carryAgent',targetAgent:cat.id,targetPlacement:impossibleTarget,originalConflictSlotId:recoverySleepSlot.id,relocationContext:'sleepSlotConflict',relocationOutcome:'pending'});
+assert.ok(human.action,'existing carry relation must be able to retain one carryAgent lifecycle owner');
+const originalAccessible=SP.nodeLocomotionAccessible;
+SP.nodeLocomotionAccessible=()=>false;
+try{
+  E.tick();
+  assert.equal(human.action?.kind,'carryAgent');
+  assert.equal(human.action?.phase,'recoveryBlocked','post-pickup invalidation must enter recovery-blocked rather than abort');
+  assert.equal(human.action?.relocationOutcome,'failed','original relocation must be marked failed before recovery');
+  assert.ok(A.relationForCarrier(st,human),'recovery-blocked must preserve canonical carry relation');
+  const retryAt=human.action.recoveryRetryAtTick;
+  E.tick();
+  assert.equal(human.action?.phase,'recoveryBlocked');
+  assert.ok(A.relationForCarrier(st,human));
+  assert.equal(human.action.recoveryRetryAtTick,retryAt,'retry cadence must not spin every tick before the scheduled retry');
+}finally{SP.nodeLocomotionAccessible=originalAccessible;}
+for(let i=0;i<30&&human.action;i++)E.tick();
+assert.equal(human.action,null,'recovery should eventually place safely once a legal nearby floor becomes available');
+assert.equal(A.relationForCarrier(st,human),null,'recovery completion must clear the canonical carry relation');
+const recoveryEvents=st.events.filter(event=>['agentRelocationFailed','agentCarryRecoveryBlocked','agentCarryRecoveryComplete'].includes(event.data?.action));
+assert.ok(recoveryEvents.some(event=>event.data?.action==='agentRelocationFailed'));
+assert.ok(recoveryEvents.some(event=>event.data?.action==='agentCarryRecoveryBlocked'));
+const recoveryComplete=recoveryEvents.find(event=>event.data?.action==='agentCarryRecoveryComplete');
+assert.ok(recoveryComplete);
+assert.equal(recoveryComplete.data.relocationOutcome,'failed','safe recovery must not be reported as original relocation success');
+assert.equal(recoveryComplete.data.slot,null,'v1 neutral recovery must use floor, not silently pick another comfort Slot');
+assert.equal(st.events.some(event=>event.data?.action==='agentPlacementComplete'&&event.data?.relocationContext==='sleepSlotConflict'),false,'recovery completion must not emit original relocation success');
+
+console.log('agent carry / relocate + sleeping recovery regression: ok');

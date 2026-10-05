@@ -45,6 +45,7 @@ jobs:
       - run: node tests/attention-agent-context.mjs
       - run: node tests/sleep-preferred-slot-conflict.mjs
       - run: node tests/agent-carry-relocate.mjs
+      - run: node tests/sleep-carry-observation-boundary.mjs
       - run: node tests/logistics-invariants.mjs
       - run: node tests/interaction-geometry.mjs
       - run: node tests/contact-slot-corner-8-direction.mjs

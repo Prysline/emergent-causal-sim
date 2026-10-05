@@ -2,8 +2,10 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.44.0-sleep-slot-conflict`。
+目前 runtime marker：`11.46.0-sleep-carry-integration`。
 
+> `11.46.0-sleep-carry-integration` 整合 sleeping occupant Agent carry、canonical candidate-node selection 與 post-pickup recovery，但**沒有新增、刪除或重新排序 runtime hook**。既有 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield` 的 ordering 維持 `11.44.0-sleep-slot-conflict` 已建立的 contract；candidate selection 與 carry recovery 都在既有同步 query／core `carryAgent` lifecycle 邊界內完成。
+>
 > `11.44.0-sleep-slot-conflict` 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`。275 只處理已被 responder 自己觀察到、且 responder 當下可自主回應的 sleep-slot conflict Bid；它排在 Affect decay 250 之後、Human Social prepare 300 之前，因此 responder-local accept / refuse / delay 讀到本 tick decay 後的 Current Affect/relationship-owned context，且接受後可建立 responder-private yield Intent，待 canonical Slot egress 可執行時再由 responder 自己綁定 departure Action。150 排在 Spatial Effects 100 之後、Intent reconcile 200 之前，只在 responder 已實際離開原 Slot 後建立 `completeSleepSlotYield` World Event；acceptance 本身不等於完成，也不得直接改寫 requester 或 Slot truth。requester 的 occupancy wait 本身仍在 core sleep state machine；generic Social `awaitResponse` 的 injection/timeout 繼續由 900/300 Social Bid hooks 持有。
 >
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。

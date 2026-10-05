@@ -1,6 +1,6 @@
 # Agent carry / relocate v1
 
-本文件描述 `11.45.0-agent-carry-relocate` 的 Agent carry / relocate runtime contract。它只定義第一版已實作的底層能力，不代表 Sleep preferred Slot conflict 已自動採用搬移解法，也不包含 forced relocation / combat / restraint。
+本文件描述 Agent carry / relocate 的 current runtime contract。`11.45.0-agent-carry-relocate` 建立 v1 底層能力；`11.46.0-sleep-carry-integration` 將 sleeping occupant 路徑接入 Sleep preferred Slot conflict。forced relocation / combat / restraint 與 awake cooperation 仍不在目前範圍。
 
 ## Canonical truth
 
@@ -36,6 +36,10 @@ v1 支援：
 sleeping 不是 consent。awake 且沒有 cooperative input 時不得建立 carry relation。forced relocation、resistance、combat、restraint、damage 與 generic incapacitated resolution 均不屬於 v1。
 
 carry relation 一旦合法建立，`responderMode` 保留建立當下 provenance；若 responder 之後的 canonical state 改變（例如由 sleeping 變成 awake），不得把舊 `responderMode` 當成新的當前狀態 truth。v1 仍不因此建立 resistance / forced-relocation resolution。
+
+## Candidate-time vs execution-time feasibility
+
+`SimAgentCarry.candidateAttemptability(...)` 是 read-only candidate-time query，只能消費 carrier/requester 自身 truth、explicit Agent-context observation，以及未來可由 responder 自己產生的 cooperation evidence。它不得偷讀 target hidden mass、`held`、既有 carry relation 或 body geometry。真正建立 relation 前仍必須由 `canEstablishCarry(...)` 以完整 World truth 再驗證，因此 candidate 可以存在，而 execution 仍可能因 hidden physical truth 合法失敗。
 
 ## Lifecycle
 
@@ -76,6 +80,10 @@ Passage / Route / Locomotion 不各自重算 Agent carry geometry；它們繼續
 
 Passage、Route 與 Locomotion generation 本 slice 不假升；它們的 ownership / algorithm contract 未改，只是透過既有 Physical query 消費新的 effective geometry。
 
+## Post-pickup recovery
+
+carry relation 一旦建立，原 placement 若失效，`carryAgent` 不得直接 abort 並留下 orphan relation。Action 先把原 relocation outcome 記為 failed，再尋找 bounded nearby legal neutral floor recovery。若當下沒有合法 floor，進入 `recoveryBlocked`：同一 Action、同一 canonical relation 繼續存在，按 deterministic retry cadence 重驗。不得 teleport、不得清 relation 後回普通 Deliberation、不得偷偷改成另一個 comfort Slot，也不得借用 Social Bid `awaitResponse`。recovery 成功只代表 physical safety completion，不得記成原 relocation success。
+
 ## Placement / release
 
 v1 只支援：
@@ -105,9 +113,12 @@ Validator 必須鎖定：
 
 本 slice 應提升：
 
-- overall release / Presentation projection：`11.45.0-agent-carry-relocate`
-- Physical：`11.45.0-agent-carry-relocate`
-- Embodiment Capabilities：`embodiment-capabilities-v5`
-- Agent carry：`11.45.0-agent-carry-relocate`
+- overall release / Presentation projection：`11.46.0-sleep-carry-integration`
+- Agent Carry：`11.46.0-sleep-carry-integration`
+- Spatial candidate-selection：`11.46.0-sleep-carry-integration`
+- Spatial Traversal / Route search：維持 `11.38.0-carried-handling-risk`
+- Deliberation / Decision Evidence / Sleep Slot Conflict：`11.46.0-sleep-carry-integration`
+- Physical：維持 `11.45.0-agent-carry-relocate`
+- Embodiment Capabilities：維持 `embodiment-capabilities-v5`
 
 本 slice 不應為形式一致而提升：World Authoring、Furniture Catalog、Spatial Passage、Route、Locomotion、Contact、Crowding、Sleep conflict / Deliberation 等未改 contract 的 generation。
