@@ -234,7 +234,7 @@ assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias'
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.DELIBERATION_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,CURRENT_VERSION);
+assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.47.0-social-bid-carry-cooperation','Sleep Slot Conflict own generation must not fake-bump for generic carrying replanning');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
