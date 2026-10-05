@@ -88,13 +88,7 @@ cat.physical.mass=originalMass;
 
 const originalPlanRoute=SP.planRoute;
 SP.planRoute=(state,agent,node)=>{
-  const key=SP.nodeKey(state,node);
-  const table=new Map([
-    ['home|floor|0,0,0',{traversalCost:4,pathDistance:8}],
-    ['home|floor|1,0,0',{traversalCost:4,pathDistance:7}],
-    ['home|floor|2,0,0',{traversalCost:4,pathDistance:7}]
-  ]);
-  const picked=table.get(key)||{traversalCost:9,pathDistance:9};
+  const x=Number(node?.x),picked=x===0?{traversalCost:4,pathDistance:8}:x===1||x===2?{traversalCost:4,pathDistance:7}:{traversalCost:9,pathDistance:9};
   return {path:[node],steps:[],objective:'traversalCost',...picked};
 };
 try{

@@ -33,8 +33,6 @@
   }
 
   Object.assign(SP,{
-    VERSION,
-    ROUTE_SEMANTICS_VERSION:VERSION,
     CANDIDATE_NODE_SELECTION_VERSION:VERSION,
     candidateNodeResults,
     bestCandidateNodeResult,

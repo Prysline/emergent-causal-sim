@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.45.0-agent-carry-relocate';
+const CURRENT_VERSION='11.46.0-sleep-carry-integration';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -221,19 +221,20 @@ assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Ident
 assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,CURRENT_VERSION);
 assert.equal(AgentCarry.VERSION,CURRENT_VERSION);
 assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,CURRENT_VERSION);
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(P.VERSION,CURRENT_VERSION);
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.45.0-agent-carry-relocate','Physical own generation must not fake-bump for sleeping carry integration');
+assert.equal(P.VERSION,'11.45.0-agent-carry-relocate','Physical own generation must not fake-bump for sleeping carry integration');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk','Route search generation must not fake-bump for a separate candidate selector');
+assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,CURRENT_VERSION);
 assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.38.0-carried-handling-risk');
 assert.equal(L.VERSION,'11.38.0-carried-handling-risk');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
-assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.44.0-sleep-slot-conflict');
-assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.44.0-sleep-slot-conflict');
+assert.equal(W.DELIBERATION_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,CURRENT_VERSION);
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');

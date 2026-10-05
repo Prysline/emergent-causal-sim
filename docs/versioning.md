@@ -6,9 +6,9 @@
 
 目前 current runtime marker：
 
-`11.45.0-agent-carry-relocate`
+`11.46.0-sleep-carry-integration`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.45.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.45.0-agent-carry-relocate`；Spatial Traversal `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Route `11.38.0-carried-handling-risk`；Deliberation / Decision Evidence `11.44.0-sleep-slot-conflict`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment 與 Furniture Catalog 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.46.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.46.0-sleep-carry-integration`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment 與 Furniture Catalog 不跟著 overall minor 假升。
 
 ### Version-marker synchronization rule
 
@@ -17,6 +17,17 @@
 測試或 fixture 中的硬編碼版本值必須先判斷其語意再更新：若它是在驗證「current contract / current release / current schema」，則應與本次換代同步；若它是在驗證未變更 subsystem 的 own generation，則必須保留原值，不得因 overall marker 改變而形式性假升版。換言之，stale-marker audit 是**語意核對**，不是 repo-wide blind replace。
 
 完成 marker / generation 變更後，PR 驗證記錄應能明確區分：哪些 marker 本次有換代、哪些 subsystem 明確未換代，以及 Node / Browser regression 中對應 current expectation 是否已同步。
+
+
+### Current Sleep conflict × sleeping Agent carry integration release
+
+`11.46.0-sleep-carry-integration` integrates the approved sleeping-occupant path without adding an awake-cooperation shortcut. Sleep conflict may propose `carryOccupant` only from an explicit Agent-context observation that reports a Human / Animal occupant as sleeping. Candidate-time `SimAgentCarry.candidateAttemptability(...)` uses requester-known state plus the passed observation and deliberately does not inspect target hidden mass, `held`, existing carry relation, or body geometry; canonical execution-time `canEstablishCarry(...)` remains the full World-truth legality gate.
+
+Sleep owns relocation policy and exclusions: original conflict Slot is excluded; a compatible nearby sleep-capable Slot is preferred, with bounded nearby floor as fallback. It does not call the occupant's private Usage ranking. Usage Preference remains the only owner of assignment / claim / habit deltas; Sleep consumes `preferenceContributors(...)` and only interprets their bounded positive self-association total as insistence. Spatial / Route now owns generic candidate-node winner selection with deterministic objective → `pathDistance` → stable `nodeKey` ordering; Agent Carry floor approach delegates winner selection there.
+
+Once pickup has established canonical `state.agentCarries`, placement failure cannot abort into an orphaned relation. The same `carryAgent` Action records the original relocation as failed, attempts neutral nearby floor recovery, and enters `recoveryBlocked` when no legal floor exists. `recoveryBlocked` preserves Action + relation and retries on a small deterministic cadence; it does not teleport, clear the relation, silently choose a comfort Slot, invoke Social Bid wait, or re-enter ordinary Deliberation. Safe recovery completion is distinct from original relocation success. Awake cooperative carry remains blocked on the future generic Social Bid responder contract.
+
+Version impact：overall / Presentation、Agent Carry、Spatial candidate-selection、Deliberation / Decision Evidence / Sleep Slot Conflict → `11.46.0-sleep-carry-integration`。Spatial Traversal / Route search semantics remain `11.38.0-carried-handling-risk`。Physical remains `11.45.0-agent-carry-relocate`; Memory / Usage Preference remain `11.42.0-usage-preference-sleep`; Resources remains `11.39.0-carried-contents-loss`; Spatial Passage remains `11.39.1-surface-boundary-transition`; Locomotion remains `11.38.0-carried-handling-risk`; World Authoring remains `world-authoring-v11`; Furniture Catalog remains `furniture-definitions-v12`; Embodiment Capabilities remains `embodiment-capabilities-v5`.
 
 ### Current Agent carry / relocate release
 

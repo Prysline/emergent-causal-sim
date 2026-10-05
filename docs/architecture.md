@@ -2,7 +2,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.45.0-agent-carry-relocate`。
+目前 runtime marker：`11.46.0-sleep-carry-integration`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
@@ -18,6 +18,7 @@ World Truth 包含真正發生、可被引用的物理／世界事實，例如�
 - Agent / Object 的物理位置
 - Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
 - canonical Agent carry relation：`state.agentCarries`；它與 Container-only `Agent.held` 分離，carried Agent 在 relation 存續期間不保留競爭的 ordinary floor / Slot occupancy，raw `position=null`，可觀察位置只由 carrier 即時投影
+- Agent Carry candidate-time attemptability 與 execution-time feasibility 分層：candidate-time 只能讀 carrier/requester 自身 truth + explicit observation / responder-owned cooperation evidence，不讀 target hidden mass、held、carry relation 或 body geometry；execution-time `canEstablishCarry(...)` 才用完整 World truth。Spatial / Route 持有 generic candidate-node winner selection（objective → pathDistance → stable node key）；domain consumer 只提供 candidate set。
 - authored structure / passage geometry：`map.cellSizeMeters`、layer `boundaries`、root `structures`、Door / Exit reference、Furniture Definition 的 metric local `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot `approachEdges`，以及 low-level `map.passageConstraints`
 - Container / Source / Surface Environment 的實際 resource contents
 - posture、held container、reservations
