@@ -58,7 +58,7 @@ assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED_SCHEMA,finaliz
 assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.46.0-sleep-carry-integration','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.47.0-social-bid-carry-cooperation','full production schema set must preserve current release marker');
 assert.equal(st.agentCarryVersion,'11.46.0-sleep-carry-integration');
 assert.deepEqual(st.agentCarries,{},'Agent carry canonical relation owner must initialize empty');
 for(const agent of Object.values(st.agents||{})){

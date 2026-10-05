@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.46.0-sleep-carry-integration');
-assert.equal(E.VERSION,'11.46.0-sleep-carry-integration');
+assert.equal(st.version,'11.47.0-social-bid-carry-cooperation');
+assert.equal(E.VERSION,'11.47.0-social-bid-carry-cooperation');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

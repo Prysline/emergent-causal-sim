@@ -54,7 +54,7 @@ assert.deepEqual(authored.exits.frontExit,{id:'frontExit',name:'大門外',kind:
 
 const st=I.createInitialState(authored,{seed:20260911,version:'11.46.0-sleep-carry-integration'});
 assert.equal(JSON.stringify(authored),authoredBefore,'compiler must not mutate canonical authoring package');
-assert.equal(st.version,'11.46.0-sleep-carry-integration');
+assert.equal(st.version,'11.47.0-social-bid-carry-cooperation');
 assert.equal(st.map.width,12);
 assert.equal(st.map.height,8);
 assert.equal(Object.keys(st.map.tiles).length,96);

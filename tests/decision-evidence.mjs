@@ -10,7 +10,7 @@ function quiet(a){for(const k of ['hunger','thirst','fatigue','sleepNeed','socia
 
 E.reset(3600);
 let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.46.0-sleep-carry-integration');
+assert.equal(st.version,'11.47.0-social-bid-carry-cooperation');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.46.0-sleep-carry-integration');
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
