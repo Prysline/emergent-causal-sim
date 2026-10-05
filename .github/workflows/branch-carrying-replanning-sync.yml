@@ -30,11 +30,15 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           cat .sync-log.txt
           exit 0
-      - name: Upload sync diagnostics
-        uses: actions/upload-artifact@v4
-        with:
-          name: carrying-replanning-sync-log
-          path: .sync-log.txt
+      - name: Persist patch diagnostics on failure
+        if: steps.patch.outputs.exit_code != '0'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          cp .sync-log.txt .github/carrying-replanning-sync.log
+          git add .github/carrying-replanning-sync.log
+          git commit -m 'Record carrying replanning sync failure'
+          git push origin HEAD:feature/carrying-state-replanning
       - name: Stop on patch failure
         if: steps.patch.outputs.exit_code != '0'
         run: exit 1
