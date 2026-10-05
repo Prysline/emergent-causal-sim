@@ -21,7 +21,23 @@ jobs:
         with:
           node-version: 22
       - name: Apply carrying-state replanning implementation
-        run: node .github/scripts/branch-carrying-replanning-sync.cjs
+        id: patch
+        shell: bash
+        run: |
+          set +e
+          node .github/scripts/branch-carrying-replanning-sync.cjs > .sync-log.txt 2>&1
+          code=$?
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          cat .sync-log.txt
+          exit 0
+      - name: Upload sync diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: carrying-replanning-sync-log
+          path: .sync-log.txt
+      - name: Stop on patch failure
+        if: steps.patch.outputs.exit_code != '0'
+        run: exit 1
       - name: Static syntax and focused regressions
         run: |
           node --check src/engine.js
