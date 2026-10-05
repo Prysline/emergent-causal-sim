@@ -2,7 +2,7 @@
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('systems/social/state.js requires world.js initial-state pipeline.');
 
-  const SOCIAL_BID_VERSION='11.12.2-social-bid-lifecycle';
+  const SOCIAL_BID_VERSION='11.47.0-social-bid-carry-cooperation';
   W.registerInitialStateInitializer('socialBid.schema',(st)=>{
     for(const a of Object.values(st.agents||{}))a.observedSocialBids=[];
     return st;
@@ -15,6 +15,7 @@
     W.DATA_ZH.bidTo='Bid 對象';
     W.DATA_ZH.perceivedByTarget='目標是否感知';
     W.DATA_ZH.responseToBid='回應 Bid';
+    W.DATA_ZH.responseKind='回應結果';
     W.DATA_ZH.visibility='可見性';
     W.DATA_ZH.owner='Private Owner';
   }
