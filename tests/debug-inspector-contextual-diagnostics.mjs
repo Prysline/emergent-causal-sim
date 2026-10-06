@@ -19,7 +19,9 @@ assert.match(source,/AC\.candidateAttemptability/,'carry candidate diagnostics m
 assert.match(source,/SP\.slotOccupant/,'current occupant projection must consume canonical Spatial occupancy');
 assert.match(source,/historical evidence 沒有保存 rejection reason/,'missing historical rejection reasons must remain explicitly unknown');
 assert.match(source,/function placeNavAfterOverview\(/,'category navigation must have an explicit placement step after shared Overview content');
-assert.match(source,/lastOverview\.insertAdjacentElement\('afterend',nav\)/,'category navigation must sit below leading shared Overview sections');
+assert.match(source,/if\(category==='overview'\)\{section\.hidden=false;return;\}/,'shared Overview sections must remain visible across domain views');
+assert.match(source,/for\(const section of overviewSections\)debug\.insertBefore\(section,firstDomainSection\)/,'shared Overview sections must be grouped before domain-specific sections');
+assert.match(source,/lastOverview\.insertAdjacentElement\('afterend',nav\)/,'category navigation must sit below all shared Overview sections');
 assert.match(source,/--debug-mode-bar-height/,'category navigation sticky offset must derive from the Resident\/Debug mode bar height');
 assert.match(source,/debug-structured/,'long structured diagnostics must use collapsible raw details instead of inline JSON dumps');
 assert.match(css,/\.debug-inspector-nav\{position:sticky;top:calc\(var\(--debug-mode-bar-height,44px\) \+ 2px\)/,'category navigation must be a second sticky layer beneath the Resident\/Debug mode bar');
