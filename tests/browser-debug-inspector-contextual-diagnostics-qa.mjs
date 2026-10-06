@@ -54,7 +54,7 @@ try{
   assert.equal(desktop.version,CURRENT_VERSION);
   assert.equal(desktop.debugVersion,DEBUG_VERSION);
   assert.deepEqual(desktop.views.map(x=>x.id),['overview','decision','execution','world','perception','social','all']);
-  assert.equal(desktop.views.find(x=>x.active)?.id,'overview');
+  assert.equal(desktop.views.find(x=>x.active)?.id,'all');
   assert.match(desktop.diagnosticText,/Preferred Slot\s+bed:left/);
   assert.match(desktop.diagnosticText,/Canonical current occupant\s+橘子・orange/);
   assert.match(desktop.diagnosticText,/Historical \/ adopted evidence/);
@@ -62,6 +62,7 @@ try{
   assert.match(desktop.diagnosticText,/Adopted resolution\s+wait/);
   assert.match(desktop.diagnosticText,/conflictWaitSource\s+sleepSlotOccupancy/);
   assert.match(desktop.diagnosticText,/carryOccupant/,'current probe must expose carry candidate or its rejection row');
+  assert.equal(desktop.hiddenSections.length,0,'default All view must preserve the complete existing Debug Inspector');
   assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 
   await page.click('[data-debug-inspector-view="decision"]');
