@@ -8,7 +8,7 @@
   const RESPONSE_ACTIONS=new Set(['acceptTalk','briefTalkReply','declineTalk']);
   const NEED_SHORT={hunger:'餓',thirst:'渴',fatigue:'累',sleepNeed:'睡',social:'社'};
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const priorManualBatchActive=UI.isManualBatchActive?.bind(UI)||(()=>false);
   const priorManualBatchIntermediate=UI.isManualBatchIntermediate?.bind(UI)||(()=>false);
   let debugRun=null,debugRunGeneration=0;
@@ -72,24 +72,34 @@
     input.placeholder=mode==='count'?'例如 100':mode==='tick'?'例如 500':'例如 14:30 或 2 08:30';
   }
   function isAutoplayActive(){return document.getElementById('play')?.textContent?.includes('暫停')===true;}
-  function setDebugBusy(active){
+  function setDebugBusy(active,context=debugRun){
     const ids=['step','step10','play','runtimeLayerSelect','showThoughts','loadSocialScenario','socialScenario','debugRunMode','debugRunValue','debugRunStart'];
-    for(const id of ids){const control=document.getElementById(id);if(control)control.disabled=!!active;}
-    const workspace=document.querySelector('.workspace');if(workspace){workspace.inert=!!active;if(active)workspace.setAttribute('aria-busy','true');else workspace.removeAttribute('aria-busy');}
-    const reset=document.getElementById('reset');if(reset)reset.disabled=false;
+    const reset=document.getElementById('reset'),workspace=document.querySelector('.workspace');
+    if(active&&context&&!context.controlSnapshot){
+      context.controlSnapshot=Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.disabled??null]));
+      context.resetDisabled=reset?.disabled??null;
+      context.workspaceInert=workspace?.inert??false;
+      context.workspaceBusy=workspace?.getAttribute('aria-busy')??null;
+    }
+    for(const id of ids){const control=document.getElementById(id);if(!control)continue;control.disabled=active?true:!!context?.controlSnapshot?.[id];}
+    if(reset)reset.disabled=active?false:!!context?.resetDisabled;
+    if(workspace){
+      if(active){workspace.inert=true;workspace.setAttribute('aria-busy','true');}
+      else{workspace.inert=!!context?.workspaceInert;if(context?.workspaceBusy==null)workspace.removeAttribute('aria-busy');else workspace.setAttribute('aria-busy',context.workspaceBusy);}
+    }
   }
   function updateDebugProgress(){
     if(!debugRun)return;
     if(debugRun.source==='step10')document.getElementById('step10').textContent=`執行中 ${debugRun.completed}/${debugRun.total}`;
     debugStatus(`${debugRun.label}：${debugRun.completed}/${debugRun.total} ticks`,'running');
   }
-  function finishDebugRunControls(){
+  function finishDebugRunControls(context=debugRun){
     const step10=document.getElementById('step10');if(step10)step10.textContent='10 步';
-    setDebugBusy(false);
+    setDebugBusy(false,context);
   }
   function cancelDebugRun(message='已取消'){
     if(!debugRun)return false;
-    debugRunGeneration++;debugRun=null;finishDebugRunControls();debugStatus(message,'cancelled');return true;
+    const context=debugRun;debugRunGeneration++;debugRun=null;finishDebugRunControls(context);debugStatus(message,'cancelled');return true;
   }
   function yieldToBrowser(){return new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0)));}
   function dispatchFinalStep(){
@@ -102,7 +112,7 @@
     if(!Number.isSafeInteger(total)||total<1){debugStatus('tick 數必須是大於 0 的整數。','error');return false;}
     const startTick=E.getState()?.tick;
     const context={token:++debugRunGeneration,total,completed:0,intermediate:true,label,source,startTick};
-    debugRun=context;setDebugBusy(true);updateDebugProgress();
+    debugRun=context;setDebugBusy(true,context);updateDebugProgress();
     try{
       await yieldToBrowser();
       if(debugRun!==context||context.token!==debugRunGeneration)return false;
@@ -118,9 +128,9 @@
       if(debugRun!==context||context.token!==debugRunGeneration)return false;
       const finalTick=E.getState()?.tick;
       if(finalTick!==startTick+total)throw new Error(`Debug Replay exact-stop mismatch: expected Tick ${startTick+total}, got ${finalTick}.`);
-      debugRun=null;finishDebugRunControls();debugStatus(`完成：Tick ${finalTick}`,'success');return true;
+      debugRun=null;finishDebugRunControls(context);debugStatus(`完成：Tick ${finalTick}`,'success');return true;
     }finally{
-      if(debugRun===context){debugRun=null;finishDebugRunControls();}
+      if(debugRun===context){debugRun=null;finishDebugRunControls(context);}
     }
   }
   function parseSimulationTime(raw){
@@ -160,12 +170,12 @@
   function installDebugReplayControls(bar){
     if(!bar||document.getElementById('debugRunStart'))return;
     const group=document.createElement('span');group.className='debug-replay-controls';group.innerHTML='<select id="debugRunMode" aria-label="Debug Replay mode"><option value="count">Run N</option><option value="tick">To tick</option><option value="time">To time</option></select><input id="debugRunValue" type="text" inputmode="numeric" aria-label="Debug Replay target" placeholder="例如 100"><button id="debugRunStart" type="button">快轉</button><small id="debugRunStatus" aria-live="polite"></small>';
-    const reset=document.getElementById('reset');bar.insertBefore(group,reset||null);
-    document.getElementById('debugRunMode').addEventListener('change',debugModePlaceholder);
-    document.getElementById('debugRunStart').addEventListener('click',startDebugRunFromUi);
-    document.getElementById('debugRunValue').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();startDebugRunFromUi();}});
-    document.getElementById('reset')?.addEventListener('click',()=>cancelDebugRun('已重置'),{capture:true});
-    document.getElementById('step10')?.addEventListener('click',event=>{
+    const reset=bar.querySelector('#reset'),step10=bar.querySelector('#step10');bar.insertBefore(group,reset||null);
+    group.querySelector('#debugRunMode').addEventListener('change',debugModePlaceholder);
+    group.querySelector('#debugRunStart').addEventListener('click',startDebugRunFromUi);
+    group.querySelector('#debugRunValue').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();startDebugRunFromUi();}});
+    reset?.addEventListener('click',()=>cancelDebugRun('已重置'),{capture:true});
+    step10?.addEventListener('click',event=>{
       if(debugRun)return;
       event.preventDefault();event.stopImmediatePropagation();
       void runDebugTicks(10,{label:'Run 10 ticks',source:'step10'}).catch(error=>{console.error(error);debugStatus(error.message||String(error),'error');});
