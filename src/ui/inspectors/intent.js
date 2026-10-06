@@ -1,7 +1,7 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,U=window.SimUsage,SC=window.SimSleepConflict,AC=window.SimAgentCarry,UI=window.SimUI;
   if(!E?.intentLabel||!SP||!U||!SC||!AC||typeof document==='undefined')return;
-  const DEBUG_VERSION='11.48.0-debug-inspector-contextual-diagnostics';
+  const DEBUG_VERSION='11.48.0-debug-inspector-contextual-diagnostics-layout';
   const VIEW_DEFS=Object.freeze([
     ['overview','Overview'],['decision','Decision / Intent'],['execution','Execution / Physical'],['world','World / Spatial'],['perception','Perception / Memory'],['social','Social / Affect'],['all','All']
   ]);
@@ -17,6 +17,8 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>Number.isFinite(v)?Math.round(v*10)/10:'—';
   const json=v=>esc(JSON.stringify(v??null));
+  const structuredSummary=v=>Array.isArray(v)?`${v.length} item${v.length===1?'':'s'}`:v&&typeof v==='object'?`${Object.keys(v).length} fields`:v==null?'null':String(v);
+  const rawDetails=(v,label='Raw details')=>`<details class="debug-structured"><summary>${esc(label)}<span>${esc(structuredSummary(v))}</span></summary><code>${json(v)}</code></details>`;
   const nameFor=(st,id)=>id?(st.agents?.[id]?.name||id):'—';
   const reasonLabel=reason=>({
     'target-unobserved':'目標目前不可觀察','observed-target-kind-unsupported':'觀察到的目標種類不支援 Agent Carry','no-observed-sleep-or-cooperation':'目標未被觀察為睡眠中，且沒有有效 cooperation evidence','carry-method-unsupported':'目前 carry method 不支援','hand-capacity-exceeded':'手部容量不足','carrier-already-in-carry-relation':'搬運者已處於 carry relation','carrier-off-map':'搬運者不在地圖上','missing-carrier':'找不到搬運者','no-relocation-placement-proposal':'目前找不到可形成 candidate 的 relocation placement proposal','cooperation-required':'清醒 occupant 需要有效的 carryCooperation accepted evidence','occupant-missing':'目前找不到 preferred Slot occupant','not-applicable':'目前狀態不適用'}[reason]||reason||'未知');
@@ -62,14 +64,14 @@
   function candidateRows(st,a,evaluation){
     const byKind=new Map((evaluation?.candidates||[]).map(c=>[c.kind,c]));
     return CANDIDATE_KINDS.map(kind=>{
-      const c=byKind.get(kind);if(!c)return `<div class="debug-candidate rejected"><b>${esc(kind)}</b><span>不可用・${esc(rejectionReason(st,a,evaluation,kind))}</span></div>`;
-      const target=c.targetAgent?`・target ${esc(nameFor(st,c.targetAgent))}`:'',placement=c.targetPlacement?`・placement ${json(c.targetPlacement)}`:'',cooperation=c.cooperative===true?'・cooperative':'';
-      return `<div class="debug-candidate eligible"><b>${esc(kind)}</b><span>可用・utility ${esc(c.score)}${target}${placement}${cooperation}</span><small>contributors ${json(c.contributors||[])}</small></div>`;
+      const c=byKind.get(kind);if(!c)return `<div class="debug-candidate rejected"><div class="debug-candidate-main"><b>${esc(kind)}</b><span>不可用・${esc(rejectionReason(st,a,evaluation,kind))}</span></div></div>`;
+      const target=c.targetAgent?`・target ${esc(nameFor(st,c.targetAgent))}`:'',placement=c.targetPlacement?'・placement proposed':'',cooperation=c.cooperative===true?'・cooperative':'';
+      return `<div class="debug-candidate eligible"><div class="debug-candidate-main"><b>${esc(kind)}</b><span>可用・utility ${esc(c.score)}${target}${placement}${cooperation}</span></div>${c.targetPlacement?rawDetails(c.targetPlacement,'Placement'):''}${rawDetails(c.contributors||[],'Contributors')}</div>`;
     }).join('');
   }
   function historicalCandidateRows(st,evidence){
     if(!evidence)return '<div class="debug-empty">目前沒有對應的 adopted conflict evidence。</div>';
-    const rows=(evidence.candidates||[]).map(c=>`<div class="debug-candidate eligible"><b>${esc(c.kind)}</b><span>historical utility ${esc(c.score)}${c.targetAgent?`・target ${esc(nameFor(st,c.targetAgent))}`:''}${c.targetPlacement?`・placement ${json(c.targetPlacement)}`:''}</span><small>contributors ${json(c.contributors||[])}</small></div>`).join('');
+    const rows=(evidence.candidates||[]).map(c=>`<div class="debug-candidate eligible"><div class="debug-candidate-main"><b>${esc(c.kind)}</b><span>historical utility ${esc(c.score)}${c.targetAgent?`・target ${esc(nameFor(st,c.targetAgent))}`:''}${c.targetPlacement?'・placement proposed':''}</span></div>${c.targetPlacement?rawDetails(c.targetPlacement,'Placement'):''}${rawDetails(c.contributors||[],'Contributors')}</div>`).join('');
     return rows||'<div class="debug-empty">此 historical evidence 沒有保存 candidate ranking。</div>';
   }
   function sleepDiagnostic(st,a,context){
@@ -78,9 +80,9 @@
     const contributors=conflict?.associationContributors||U.preferenceContributors?.(st,a,'sleep',{kind:'slot',id:slotId})||[],reasons=conflict?.reasons||U.associationReasons?.(st,a,'sleep',{kind:'slot',id:slotId})||[];
     const section=document.createElement('section');section.className='inspect-section contextual-diagnostic';section.dataset.debugSleepConflict='';section.dataset.debugDomain='decision';
     section.innerHTML=`<div class="debug-domain-heading"><h3>Sleep preferred Slot conflict</h3><span>Contextual diagnostic</span></div>
-      <div class="kv"><div class="k">Preferred Slot</div><div>${esc(slotId||'—')}</div><div class="k">Preference strength</div><div>${esc(conflict?.strength??'—')}</div><div class="k">Preference source</div><div>${json(reasons)}</div><div class="k">Preference contributors</div><div>${json(contributors)}</div><div class="k">Canonical current occupant</div><div>${occupant?`${esc(nameFor(st,occupant.id))}・${esc(occupant.id)}`:'無'}</div><div class="k">conflictWaitSource</div><div>${esc(action?.conflictWaitSource||'—')}</div><div class="k">conflictWaitStartedTick</div><div>${esc(action?.conflictWaitStartedTick??'—')}</div><div class="k">conflictWaitUntilTick</div><div>${esc(action?.conflictWaitUntilTick??'—')}</div></div>
-      <div class="debug-evidence-block historical"><h4>Historical / adopted evidence</h4><p class="hint">回答「當時為什麼選這個」；只讀 frozen conflict evidence，不以現在重算結果冒充歷史 ranking。</p>${evidence?`<div class="kv"><div class="k">Evidence ID</div><div>${esc(evidence.id)}</div><div class="k">Evaluated Tick</div><div>${esc(evidence.evaluatedTick)}</div><div class="k">Adopted resolution</div><div>${esc(evidence.selectedResolution||'—')}</div><div class="k">Decision-time observation</div><div>${json(evidence.observation)}</div></div>${historicalCandidateRows(st,evidence)}${CANDIDATE_KINDS.filter(kind=>!(evidence.candidates||[]).some(c=>c.kind===kind)).length?'<p class="hint">未列出的 candidate：historical evidence 沒有保存 rejection reason；此處不以 current state 回填歷史原因。</p>':''}`:'<div class="debug-empty">沒有可對應的 historical conflict evidence。</div>'}</div>
-      <div class="debug-evidence-block current"><h4>Current-derived probe</h4><p class="hint">回答「現在重新評估會怎樣」；即時計算，不是 persisted truth，也不是 historical decision。</p>${evaluation?.error?`<div class="debug-empty">Probe error：${esc(evaluation.error)}</div>`:evaluation?`<div class="kv"><div class="k">Observed now</div><div>${json(evaluation.observation)}</div><div class="k">Current selected</div><div>${esc(evaluation.selected?.kind||'none')}</div></div><div class="debug-candidates">${candidateRows(st,a,evaluation)}</div>`:'<div class="debug-empty">目前 conflict 已不存在或無法形成 current probe。</div>'}</div>`;
+      <div class="kv"><div class="k">Preferred Slot</div><div>${esc(slotId||'—')}</div><div class="k">Preference strength</div><div>${esc(conflict?.strength??'—')}</div><div class="k">Preference source</div><div>${rawDetails(reasons,'Usage reasons')}</div><div class="k">Preference contributors</div><div>${rawDetails(contributors,'Usage contributors')}</div><div class="k">Canonical current occupant</div><div>${occupant?`${esc(nameFor(st,occupant.id))}・${esc(occupant.id)}`:'無'}</div><div class="k">conflictWaitSource</div><div>${esc(action?.conflictWaitSource||'—')}</div><div class="k">conflictWaitStartedTick</div><div>${esc(action?.conflictWaitStartedTick??'—')}</div><div class="k">conflictWaitUntilTick</div><div>${esc(action?.conflictWaitUntilTick??'—')}</div></div>
+      <div class="debug-evidence-block historical"><h4>Historical / adopted evidence</h4><p class="hint">回答「當時為什麼選這個」；只讀 frozen conflict evidence，不以現在重算結果冒充歷史 ranking。</p>${evidence?`<div class="debug-result"><span>Adopted resolution</span><strong>${esc(evidence.selectedResolution||'—')}</strong></div><div class="kv"><div class="k">Evidence ID</div><div>${esc(evidence.id)}</div><div class="k">Evaluated Tick</div><div>${esc(evidence.evaluatedTick)}</div><div class="k">Decision-time observation</div><div>${rawDetails(evidence.observation,'Observation snapshot')}</div></div>${historicalCandidateRows(st,evidence)}${CANDIDATE_KINDS.filter(kind=>!(evidence.candidates||[]).some(c=>c.kind===kind)).length?'<p class="hint">未列出的 candidate：historical evidence 沒有保存 rejection reason；此處不以 current state 回填歷史原因。</p>':''}`:'<div class="debug-empty">沒有可對應的 historical conflict evidence。</div>'}</div>
+      <div class="debug-evidence-block current"><h4>Current-derived probe</h4><p class="hint">回答「現在重新評估會怎樣」；即時計算，不是 persisted truth，也不是 historical decision。</p>${evaluation?.error?`<div class="debug-empty">Probe error：${esc(evaluation.error)}</div>`:evaluation?`<div class="debug-result"><span>Current selected</span><strong>${esc(evaluation.selected?.kind||'none')}</strong></div><div class="kv"><div class="k">Observed now</div><div>${rawDetails(evaluation.observation,'Current observation')}</div></div><div class="debug-candidates">${candidateRows(st,a,evaluation)}</div>`:'<div class="debug-empty">目前 conflict 已不存在或無法形成 current probe。</div>'}</div>`;
     return section;
   }
   function categoryFor(section){
@@ -92,25 +94,43 @@
     debug.querySelectorAll(':scope > .inspect-section').forEach(section=>{
       const category=section.dataset.debugDomain||categoryFor(section);section.dataset.debugDomain=category;
       const contextual=section.hasAttribute('data-debug-sleep-conflict');
-      section.hidden=activeView!=='all'&&activeView!=='overview'&&category!==activeView&&!contextual;
-      if(activeView==='overview')section.hidden=category!=='overview'&&!contextual;
+      if(category==='overview'){section.hidden=false;return;}
+      section.hidden=activeView!=='all'&&category!==activeView&&!contextual;
+      if(activeView==='overview')section.hidden=!contextual;
     });
     debug.querySelectorAll('[data-debug-inspector-view]').forEach(button=>{const on=button.dataset.debugInspectorView===activeView;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});
   }
+  function placeNavAfterOverview(debug,nav){
+    const overviewSections=[];
+    for(const node of [...debug.children]){
+      if(node===nav||!node.classList?.contains('inspect-section'))continue;
+      const category=node.dataset.debugDomain||categoryFor(node);node.dataset.debugDomain=category;
+      if(category==='overview'&&!node.hasAttribute('data-debug-sleep-conflict'))overviewSections.push(node);
+    }
+    const firstDomainSection=[...debug.children].find(node=>node!==nav&&node.classList?.contains('inspect-section')&&node.dataset.debugDomain!=='overview')||null;
+    if(overviewSections.length){
+      if(firstDomainSection)for(const section of overviewSections)debug.insertBefore(section,firstDomainSection);
+      const lastOverview=overviewSections.at(-1);lastOverview.insertAdjacentElement('afterend',nav);
+    }else debug.prepend(nav);
+    const shell=debug.closest('[data-v1140-resident-root]'),modeBar=shell?.querySelector(':scope > .resident-mode-toggle');
+    if(shell&&modeBar)shell.style.setProperty('--debug-mode-bar-height',`${Math.ceil(modeBar.getBoundingClientRect().height)}px`);
+  }
   function installNav(debug){
-    let nav=debug.querySelector(':scope > [data-debug-inspector-nav]');if(nav)return nav;
-    nav=document.createElement('div');nav.className='debug-inspector-nav';nav.dataset.debugInspectorNav='';nav.setAttribute('role','toolbar');nav.setAttribute('aria-label','Debug Inspector views');
-    nav.innerHTML=VIEW_DEFS.map(([id,label])=>`<button type="button" data-debug-inspector-view="${id}" class="${id===activeView?'active':''}" aria-pressed="${id===activeView}">${esc(label)}</button>`).join('');
-    nav.addEventListener('click',event=>{const button=event.target.closest?.('[data-debug-inspector-view]');if(!button)return;activeView=button.dataset.debugInspectorView;applyView(debug);});
-    debug.prepend(nav);return nav;
+    let nav=debug.querySelector(':scope > [data-debug-inspector-nav]');
+    if(!nav){
+      nav=document.createElement('div');nav.className='debug-inspector-nav';nav.dataset.debugInspectorNav='';nav.setAttribute('role','toolbar');nav.setAttribute('aria-label','Debug Inspector views');
+      nav.innerHTML=VIEW_DEFS.map(([id,label])=>`<button type="button" data-debug-inspector-view="${id}" class="${id===activeView?'active':''}" aria-pressed="${id===activeView}">${esc(label)}</button>`).join('');
+      nav.addEventListener('click',event=>{const button=event.target.closest?.('[data-debug-inspector-view]');if(!button)return;activeView=button.dataset.debugInspectorView;applyView(debug);});
+    }
+    placeNavAfterOverview(debug,nav);return nav;
   }
   function scheduleDiagnostics({host,selected,state:st}){
     if(scheduled)return;scheduled=true;queueMicrotask(()=>requestAnimationFrame(()=>{
       scheduled=false;const renderHost=host||document.getElementById('inspector'),currentSelected=UI.getInspectorSelection?.()||selected,currentState=E.getState()||st;
       if(!renderHost||currentSelected?.type!=='agent')return;const a=currentState?.agents?.[currentSelected.id];if(!a)return;
       const shell=renderHost.querySelector(':scope > [data-v1140-resident-root]'),debug=shell?.querySelector('[data-v1140-debug-view]');if(!debug)return;
-      debug.querySelector(':scope > [data-debug-sleep-conflict]')?.remove();installNav(debug);
-      const context=currentConflict(currentState,a);if(context?.slotId){const section=sleepDiagnostic(currentState,a,context),nav=debug.querySelector(':scope > [data-debug-inspector-nav]');nav?.insertAdjacentElement('afterend',section);}
+      debug.querySelector(':scope > [data-debug-sleep-conflict]')?.remove();const nav=installNav(debug);
+      const context=currentConflict(currentState,a);if(context?.slotId){const section=sleepDiagnostic(currentState,a,context);nav?.insertAdjacentElement('afterend',section);}
       applyView(debug);
     }));
   }
