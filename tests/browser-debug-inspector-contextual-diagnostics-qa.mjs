@@ -30,6 +30,7 @@ async function installConflictFixture(){
   });
   await page.waitForSelector('[data-v1140-resident-root]');
   await page.click('[data-v1140-mode="debug"]');
+  await page.waitForFunction(()=>document.querySelector('[data-v1140-debug-view]')?.hidden===false);
   await page.waitForSelector('[data-debug-inspector-nav]');
   await page.waitForSelector('[data-debug-sleep-conflict]');
 }
