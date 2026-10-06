@@ -16,11 +16,10 @@ async function installConflictFixture(){
   await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await page.waitForFunction(version=>window.SimUI?.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION===version,DEBUG_VERSION);
   await page.evaluate(()=>{
-    const E=window.SimEngine,SP=window.SimSpatial,SC=window.SimSleepConflict,st=E.getState(),requester=st.agents.zhen,occupant=st.agents.orange,other=st.agents.zhou;
+    const E=window.SimEngine,SP=window.SimSpatial,SC=window.SimSleepConflict,st=E.getState(),requester=st.agents.zhen,occupant=st.agents.orange;
     const slot=SP.getSlot(st,'bed:left');
     st.usageAssignments=[...(st.usageAssignments||[]).filter(x=>x?.id!=='qa-zhen-sleep-left'),{id:'qa-zhen-sleep-left',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
-    other.offMap=true;
-    occupant.offMap=false;occupant.position={...slot.position};occupant.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};occupant.needs.sleepNeed=80;occupant.action={kind:'sleep',phase:'sleeping',sleepTicks:0,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};occupant.activeIntent=null;
+    occupant.offMap=false;occupant.position={...slot.position};occupant.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};occupant.needs.sleepNeed=80;occupant.action={kind:'sleep',phase:'sleeping',sleepTicks:0,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};occupant.activeIntent=null;E.ensureIntentForAction(st,occupant);
     const approach=SP.slotApproachNodes(st,slot,requester,'walk')[0];requester.offMap=false;requester.position={...approach};requester.posture={kind:'standing',slotId:null,furnitureId:null};requester.needs.sleepNeed=90;requester.action=E.buildAction(requester,{id:'sleep'});E.ensureIntentForAction(st,requester);
     E.adoptDecisionEvidence(st,requester,requester.action,{source:{type:'qa',tick:st.tick,intentKind:'sleep'},contributors:E.decisionContributorsForAction(requester,'sleep'),utility:E.baseUtilityForAction(requester,'sleep')});
     const conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');if(!conflict)throw new Error('QA fixture failed to form preferred Slot association');
