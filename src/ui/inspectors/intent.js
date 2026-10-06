@@ -14,7 +14,7 @@
     social:['[data-v1132-affect]','[data-v1134-memory-deliberation]','[data-v1150-relationship-debug]']
   });
   let activeView='all',scheduled=false;
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
   const num=v=>Number.isFinite(v)?Math.round(v*10)/10:'—';
   const json=v=>esc(JSON.stringify(v??null));
   const structuredSummary=v=>Array.isArray(v)?`${v.length} item${v.length===1?'':'s'}`:v&&typeof v==='object'?`${Object.keys(v).length} fields`:v==null?'null':String(v);
@@ -94,20 +94,24 @@
     debug.querySelectorAll(':scope > .inspect-section').forEach(section=>{
       const category=section.dataset.debugDomain||categoryFor(section);section.dataset.debugDomain=category;
       const contextual=section.hasAttribute('data-debug-sleep-conflict');
-      section.hidden=activeView!=='all'&&activeView!=='overview'&&category!==activeView&&!contextual;
-      if(activeView==='overview')section.hidden=category!=='overview'&&!contextual;
+      if(category==='overview'){section.hidden=false;return;}
+      section.hidden=activeView!=='all'&&category!==activeView&&!contextual;
+      if(activeView==='overview')section.hidden=!contextual;
     });
     debug.querySelectorAll('[data-debug-inspector-view]').forEach(button=>{const on=button.dataset.debugInspectorView===activeView;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});
   }
   function placeNavAfterOverview(debug,nav){
-    let lastOverview=null;
+    const overviewSections=[];
     for(const node of [...debug.children]){
       if(node===nav||!node.classList?.contains('inspect-section'))continue;
       const category=node.dataset.debugDomain||categoryFor(node);node.dataset.debugDomain=category;
-      if(category==='overview'&&!node.hasAttribute('data-debug-sleep-conflict')){lastOverview=node;continue;}
-      break;
+      if(category==='overview'&&!node.hasAttribute('data-debug-sleep-conflict'))overviewSections.push(node);
     }
-    if(lastOverview)lastOverview.insertAdjacentElement('afterend',nav);else debug.prepend(nav);
+    const firstSection=[...debug.children].find(node=>node!==nav&&node.classList?.contains('inspect-section'))||null;
+    if(overviewSections.length){
+      for(const section of overviewSections){if(firstSection)debug.insertBefore(section,firstSection);else debug.append(section);}
+      overviewSections.at(-1).insertAdjacentElement('afterend',nav);
+    }else debug.prepend(nav);
     const shell=debug.closest('[data-v1140-resident-root]'),modeBar=shell?.querySelector(':scope > .resident-mode-toggle');
     if(shell&&modeBar)shell.style.setProperty('--debug-mode-bar-height',`${Math.ceil(modeBar.getBoundingClientRect().height)}px`);
   }
