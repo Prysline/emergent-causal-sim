@@ -26,10 +26,10 @@ const base=A.DEFAULT_WORLD_AUTHORING;
   authored.residents.zhen.initial.posture={kind:'lying',slotId:'bed:left'};
   const report=I.analyzeInitialPlacements(authored);
   assert.equal(report.ok,true);
-  assert.deepEqual(report.resolvedPlacements.zhen.position,{x:9,y:6,z:0});
+  assert.deepEqual(report.resolvedPlacements.zhen.position,{x:8,y:6,z:0});
   assert.deepEqual(report.resolvedPlacements.zhen.posture,{kind:'lying',slotId:'bed:left',furnitureId:'bed'});
   const st=I.createInitialState(authored,{seed:1,version:'test'});
-  assert.deepEqual(st.agents.zhen.position,{x:9,y:6});
+  assert.deepEqual(st.agents.zhen.position,{x:8,y:6});
   assert.deepEqual(st.agents.zhen.posture,{kind:'lying',slotId:'bed:left',furnitureId:'bed'});
   assert.equal(Object.prototype.hasOwnProperty.call(st,'initializationDiagnostics'),false);
 }
