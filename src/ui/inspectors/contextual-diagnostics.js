@@ -1,7 +1,6 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,U=window.SimUsage,SC=window.SimSleepConflict,AC=window.SimAgentCarry,UI=window.SimUI;
-  if(!E||!SP||!U||!SC||!AC||typeof document==='undefined')return;
-  if(!UI?.registerInspectorDecorator)throw new Error('Debug Inspector diagnostics require inspector decorator lifecycle');
+  if(!E||!SP||!U||!SC||!AC||!UI||typeof document==='undefined')return;
 
   const VERSION='11.48.0-debug-inspector-contextual-diagnostics';
   const VIEW_DEFS=Object.freeze([
@@ -15,9 +14,9 @@
     perception:['[data-v1130-memory]','[data-v1131-appraisal]','[data-v1133-retention]','[data-v1135-social-outcome-memory]'],
     social:['[data-v1132-affect]','[data-v1134-memory-deliberation]','[data-v1150-relationship-debug]']
   });
-  let activeView='overview';
+  const observers=new WeakMap();
+  let activeView='overview',scheduled=false;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const json=v=>esc(JSON.stringify(v??null));
   const nameFor=(st,id)=>id?(st.agents?.[id]?.name||id):'—';
   const reasonLabel=reason=>({
@@ -28,7 +27,7 @@
     if(action?.kind!=='sleep'||(!slotId&&action?.phase!=='conflictWait'&&!stored))return null;
     const associations=SC.selfSleepAssociations?.(st,a)||[];
     const conflict=(slotId?associations.find(x=>x?.slot?.id===slotId):null)||associations.find(x=>SP.sleepTargetExclusion?.(st,a,x?.slot?.id)?.reason==='occupied')||null;
-    return {slotId:slotId||conflict?.slot?.id||null,conflict,stored};
+    return {slotId:slotId||conflict?.slot?.id||null,conflict};
   }
   function historicalEvidence(a,slotId){
     const current=E.currentConflictResolutionEvidence?.(a);if(current&&(!slotId||current.preferredSlot?.id===slotId))return current;
@@ -99,6 +98,10 @@
     });
     debug.querySelectorAll('[data-debug-inspector-view]').forEach(button=>{const on=button.dataset.debugInspectorView===activeView;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});
   }
+  function observeSections(debug){
+    if(observers.has(debug))return;
+    const observer=new MutationObserver(()=>applyView(debug));observer.observe(debug,{childList:true});observers.set(debug,observer);
+  }
   function installNav(debug){
     let nav=debug.querySelector(':scope > [data-debug-inspector-nav]');if(nav)return nav;
     nav=document.createElement('div');nav.className='debug-inspector-nav';nav.dataset.debugInspectorNav='';nav.setAttribute('role','toolbar');nav.setAttribute('aria-label','Debug Inspector views');
@@ -109,12 +112,15 @@
   function decorateInspector({host,selected,state:st}){
     if(!host||selected?.type!=='agent')return;const a=st?.agents?.[selected.id];if(!a)return;
     const shell=host.querySelector(':scope > [data-v1140-resident-root]'),debug=shell?.querySelector('[data-v1140-debug-view]');if(!debug)return;
-    debug.querySelector(':scope > [data-debug-sleep-conflict]')?.remove();installNav(debug);
+    observeSections(debug);debug.querySelector(':scope > [data-debug-sleep-conflict]')?.remove();installNav(debug);
     const context=currentConflict(st,a);if(context?.slotId){const section=sleepDiagnostic(st,a,context),nav=debug.querySelector(':scope > [data-debug-inspector-nav]');nav?.insertAdjacentElement('afterend',section);}
     applyView(debug);
   }
+  function scheduleDebugInspectorDiagnostics(context={}){
+    if(scheduled)return;scheduled=true;queueMicrotask(()=>requestAnimationFrame(()=>{scheduled=false;decorateInspector({host:context.host||document.getElementById('inspector'),selected:UI.getInspectorSelection?.()||context.selected,state:E.getState()});}));
+  }
 
-  UI.registerInspectorDecorator('debugInspector.contextualDiagnostics',decorateInspector,1090);
+  UI.scheduleDebugInspectorDiagnostics=scheduleDebugInspectorDiagnostics;
   UI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION=VERSION;
   UI.DEBUG_INSPECTOR_VIEWS=VIEW_DEFS.map(([id])=>id);
 })();
