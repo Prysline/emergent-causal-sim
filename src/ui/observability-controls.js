@@ -8,7 +8,7 @@
   const RESPONSE_ACTIONS=new Set(['acceptTalk','briefTalkReply','declineTalk']);
   const NEED_SHORT={hunger:'餓',thirst:'渴',fatigue:'累',sleepNeed:'睡',social:'社'};
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const priorManualBatchActive=UI.isManualBatchActive?.bind(UI)||(()=>false);
   const priorManualBatchIntermediate=UI.isManualBatchIntermediate?.bind(UI)||(()=>false);
   let debugRun=null,debugRunGeneration=0;
@@ -70,8 +70,12 @@
   function debugModePlaceholder(){
     const mode=document.getElementById('debugRunMode')?.value,input=document.getElementById('debugRunValue');if(!input)return;
     input.placeholder=mode==='count'?'例如 100':mode==='tick'?'例如 500':'例如 14:30 或 2 08:30';
+    input.inputMode=mode==='time'?'text':'numeric';
   }
-  function isAutoplayActive(){return document.getElementById('play')?.textContent?.includes('暫停')===true;}
+  function isAutoplayActive(){
+    const step=document.getElementById('step'),step10=document.getElementById('step10'),play=document.getElementById('play');
+    return step?.disabled===true&&step10?.disabled===true&&play?.disabled===false&&!priorManualBatchActive();
+  }
   function setDebugBusy(active,context=debugRun){
     const ids=['step','step10','play','runtimeLayerSelect','showThoughts','loadSocialScenario','socialScenario','debugRunMode','debugRunValue','debugRunStart'];
     const reset=document.getElementById('reset'),workspace=document.querySelector('.workspace');
