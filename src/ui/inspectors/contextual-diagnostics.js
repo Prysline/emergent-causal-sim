@@ -15,7 +15,7 @@
     social:['[data-v1132-affect]','[data-v1134-memory-deliberation]','[data-v1150-relationship-debug]']
   });
   const observers=new WeakMap();
-  let activeView='overview',scheduled=false;
+  let activeView='all',scheduled=false;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const json=v=>esc(JSON.stringify(v??null));
   const nameFor=(st,id)=>id?(st.agents?.[id]?.name||id):'—';
