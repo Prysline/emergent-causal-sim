@@ -14,7 +14,7 @@
     social:['[data-v1132-affect]','[data-v1134-memory-deliberation]','[data-v1150-relationship-debug]']
   });
   let activeView='all',scheduled=false;
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>Number.isFinite(v)?Math.round(v*10)/10:'—';
   const json=v=>esc(JSON.stringify(v??null));
   const structuredSummary=v=>Array.isArray(v)?`${v.length} item${v.length===1?'':'s'}`:v&&typeof v==='object'?`${Object.keys(v).length} fields`:v==null?'null':String(v);
@@ -107,10 +107,10 @@
       const category=node.dataset.debugDomain||categoryFor(node);node.dataset.debugDomain=category;
       if(category==='overview'&&!node.hasAttribute('data-debug-sleep-conflict'))overviewSections.push(node);
     }
-    const firstSection=[...debug.children].find(node=>node!==nav&&node.classList?.contains('inspect-section'))||null;
+    const firstDomainSection=[...debug.children].find(node=>node!==nav&&node.classList?.contains('inspect-section')&&node.dataset.debugDomain!=='overview')||null;
     if(overviewSections.length){
-      for(const section of overviewSections){if(firstSection)debug.insertBefore(section,firstSection);else debug.append(section);}
-      overviewSections.at(-1).insertAdjacentElement('afterend',nav);
+      if(firstDomainSection)for(const section of overviewSections)debug.insertBefore(section,firstDomainSection);
+      const lastOverview=overviewSections.at(-1);lastOverview.insertAdjacentElement('afterend',nav);
     }else debug.prepend(nav);
     const shell=debug.closest('[data-v1140-resident-root]'),modeBar=shell?.querySelector(':scope > .resident-mode-toggle');
     if(shell&&modeBar)shell.style.setProperty('--debug-mode-bar-height',`${Math.ceil(modeBar.getBoundingClientRect().height)}px`);
