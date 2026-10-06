@@ -31,7 +31,7 @@
     W.DATA_ZH.replanCount='Replan 次數';
   }
 
-  const DELIBERATION_VERSION='11.47.0-social-bid-carry-cooperation';
+  const DELIBERATION_VERSION='11.48.0-carrying-replanning';
   W.registerInitialStateInitializer('deliberation.schema',(st)=>{
     for(const a of Object.values(st.agents||{})){a.decisionEvidence=null;a.targetSelectionEvidence=[];a.conflictResolutionEvidence=[];}
     return st;

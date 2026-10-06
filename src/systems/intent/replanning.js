@@ -8,7 +8,11 @@
   const REPLAN_SUPPORTED=new Set([...Object.keys(REPLAN_ACTION_BY_INTENT),'respondSocialBid']);
   const EMERGENCY_PREEMPTIBLE=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
   const MAX_REPLAN_ATTEMPTS=3;
+  const CARRY_WAIT_TICKS=2,CARRY_WAIT_BASE_UTILITY=20,CARRY_NEUTRAL_PLACEMENT_BASE_UTILITY=45,CARRY_NO_PLACEMENT_WAIT_BONUS=30;
+  const carryingDecisionOptionProviders=[];
   const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+  function registerCarryingDecisionOptionProvider(id,provider,order=0){if(!id||typeof provider!=='function')throw new Error('carrying decision option provider requires id + function');if(carryingDecisionOptionProviders.some(x=>x.id===id))throw new Error(`duplicate carrying decision option provider: ${id}`);const entry={id,provider,order:Number(order)||0};carryingDecisionOptionProviders.push(entry);carryingDecisionOptionProviders.sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));return entry;}
+  function listCarryingDecisionOptionProviders(){return carryingDecisionOptionProviders.map(({id,order})=>({id,order}));}
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
   function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
@@ -37,12 +41,38 @@
   function recoverAbortedIntents(st,before,newEvents){const abortByActor=new Map();for(const e of newEvents)if(e.data?.action==='abort'&&e.data?.actor)abortByActor.set(e.data.actor,e);for(const [agentId,snap] of before){const a=st.agents?.[agentId],abort=abortByActor.get(agentId);if(!a||!abort||a.action||a.activeIntent)continue;const intent=snap.intent;if(!intent||intent.lifecycle!=='actionBound'||!REPLAN_SUPPORTED.has(intent.kind))continue;if(!intentStillValid(st,a,intent))continue;intent.lifecycle='open';intent.replanCount=(intent.replanCount||0)+1;intent.lastReplanTick=st.tick;intent.replanAttempts=0;a.activeIntent=intent;E.addEvent(`${a.name}的${E.ZH?.[snap.actionKind]||snap.actionKind}方案失效，但「${E.intentLabel?.(intent)||intent.kind}」仍成立，準備重新規劃。`,'normal',[abort.id],{actor:a.id,action:'replanAction',priorActionKind:snap.actionKind,intentId:intent.id,intentKind:intent.kind,replanCount:intent.replanCount,position:E.positionRef(a.position)});}}
   function snapshotLiveActions(st){const out=new Map();for(const a of Object.values(st.agents||{}))if(a.action&&a.activeIntent)out.set(a.id,{actionKind:actionKind(a),intent:clone(a.activeIntent)});return out;}
   function planOpenIntents(st){for(const a of Object.values(st.agents||{}))planOpenIntent(st,a);}
-  function prepareTick(st){applyEmergencyPreemption(st);planOpenIntents(st);return {before:snapshotLiveActions(st),marker:st.events?.[0]?.id||null};}
+  function carryingReplanTrigger(st,a){
+    const A=window.SimAgentCarry,relation=A?.relationForCarrier?.(st,a),p=a?.action;if(!relation||p?.kind!=='carryAgent'||p.phase!=='recoveryBlocked')return null;
+    const waitUntil=Number(p.carryWaitUntilTick);if(Number.isFinite(waitUntil)&&st.tick<waitUntil)return null;
+    return {reason:Number.isFinite(waitUntil)?'wait-cadence':'placement-invalidation',relation,priorAction:p};
+  }
+  function normalizeCarryingPlacement(target){if(!target||!['floor','slot'].includes(target.kind))return null;return target.kind==='floor'?{kind:'floor',position:clone(target.position)}:{kind:'slot',id:target.id,posture:target.posture||null};}
+  function carryingDecisionOptions(st,a,trigger){
+    const A=window.SimAgentCarry,relation=trigger?.relation||A?.relationForCarrier?.(st,a);if(!relation)return [];const out=[];
+    for(const entry of carryingDecisionOptionProviders){const value=entry.provider(st,a,{relation:clone(relation),trigger:trigger?.reason||null})??[];for(const option of Array.isArray(value)?value:[value]){const targetPlacement=normalizeCarryingPlacement(option?.targetPlacement);if(!targetPlacement||!Number.isFinite(option?.score))continue;out.push({kind:'placement',targetPlacement,score:Number(option.score),contributors:clone(option.contributors||[]),providerId:entry.id});}}
+    const neutral=normalizeCarryingPlacement(A?.recoveryPlacement?.(st,a,{radius:A.RECOVERY_RADIUS}));if(neutral)out.push({kind:'placement',targetPlacement:neutral,score:CARRY_NEUTRAL_PLACEMENT_BASE_UTILITY,contributors:[{kind:'carryingState',key:'neutralSafetyPlacement',role:'placementFallback',relationId:relation.id}],providerId:'agentCarry.neutralSafety'});
+    const hasPlacement=out.some(x=>x.kind==='placement');out.push({kind:'wait',score:CARRY_WAIT_BASE_UTILITY+(hasPlacement?0:CARRY_NO_PLACEMENT_WAIT_BONUS),contributors:[{kind:'carryingState',key:'stationaryWait',role:'fallback',relationId:relation.id,noPlacement:!hasPlacement}]});
+    return out.sort((x,y)=>y.score-x.score||x.kind.localeCompare(y.kind)||JSON.stringify(x.targetPlacement||null).localeCompare(JSON.stringify(y.targetPlacement||null)));
+  }
+  function buildCarryingReplacement(st,a,trigger,choice){
+    const relation=trigger?.relation,prior=trigger?.priorAction;if(!relation||!prior||!choice)return null;const targetPlacement=choice.kind==='placement'?normalizeCarryingPlacement(choice.targetPlacement):normalizeCarryingPlacement(prior.targetPlacement);if(!targetPlacement)return null;
+    const action=E.buildAction?.(a,{id:'carryAgent',targetAgent:relation.carriedAgentId,targetPlacement,originalConflictSlotId:prior.originalConflictSlotId||null,relocationContext:prior.relocationContext||null,relocationOutcome:'failed',carryEstablishedEventId:prior.carryEstablishedEventId||null});if(!action)return null;
+    action.intentId=prior.intentId||a.activeIntent?.id||null;action.recoveryMode=true;action.relocationOutcome='failed';action.relocationFailedEventId=prior.relocationFailedEventId||null;action.carryEstablishedEventId=prior.carryEstablishedEventId||null;action.carryingDecisionKind=choice.kind;
+    if(choice.kind==='wait'){action.phase='recoveryBlocked';action.carryWaitUntilTick=st.tick+CARRY_WAIT_TICKS;action.recoveryRetryAtTick=action.carryWaitUntilTick;}
+    return action;
+  }
+  function applyCarryingReplan(st,a){
+    const trigger=carryingReplanTrigger(st,a);if(!trigger)return false;const options=carryingDecisionOptions(st,a,trigger),pick=options[0];if(!pick)return false;const priorDecisionId=E.currentDecisionEvidence?.(a)?.id||a.action?.decisionId||null,next=buildCarryingReplacement(st,a,trigger,pick);if(!next)return false;
+    const intent=a.activeIntent;if(intent)intent.lifecycle='actionBound';a.action=next;const evidence=E.adoptDecisionEvidence?.(st,a,next,{source:{type:'carryingReplan',tick:st.tick,intentKind:intent?.kind||null,trigger:trigger.reason,decisionKind:pick.kind,providerId:pick.providerId||null},contributors:pick.contributors||[],utility:pick.score,priorDecisionId});
+    E.addEvent(`${a.name}抱持中重新評估安全放置方案，決定${pick.kind==='wait'?'先原地等待':'改採新的放置位置'}。`,'normal',[trigger.priorAction.relocationFailedEventId].filter(Boolean),{actor:a.id,target:trigger.relation.carriedAgentId,action:'carryingReplanDecision',relationId:trigger.relation.id,trigger:trigger.reason,decisionKind:pick.kind,decisionId:evidence?.id||null,priorDecisionId:priorDecisionId||null,providerId:pick.providerId||null,position:E.positionRef(a.position)});return true;
+  }
+  function applyCarryingReplans(st){for(const a of Object.values(st.agents||{}))applyCarryingReplan(st,a);}
+  function prepareTick(st){applyEmergencyPreemption(st);applyCarryingReplans(st);planOpenIntents(st);return {before:snapshotLiveActions(st),marker:st.events?.[0]?.id||null};}
   function settleTick(st,snap){if(!snap)return;const newEvents=newEventsSince(st,snap.marker);recoverAbortedIntents(st,snap.before,newEvents);E.reconcileIntents?.(st);}
 
   if(!E.registerRuntimeHook)throw new Error('systems/intent/replanning.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('beforeTick','intent.replan-preemption',(ctx)=>{ctx.locals.intentV1123=prepareTick(E.getState());},800);
   E.registerRuntimeHook('afterTick','intent.recover-aborts',(ctx)=>settleTick(E.getState(),ctx.locals.intentV1123),400);
 
-  Object.assign(E,{INTERRUPTION_SCHEMA_VERSION:VERSION,REPLAN_SUPPORTED,EMERGENCY_PREEMPTIBLE,MAX_REPLAN_ATTEMPTS,intentStillValid,planOpenIntent,emergencyChoice});
+  Object.assign(E,{INTERRUPTION_SCHEMA_VERSION:VERSION,REPLAN_SUPPORTED,EMERGENCY_PREEMPTIBLE,MAX_REPLAN_ATTEMPTS,CARRY_WAIT_TICKS,CARRY_WAIT_BASE_UTILITY,CARRY_NEUTRAL_PLACEMENT_BASE_UTILITY,CARRY_NO_PLACEMENT_WAIT_BONUS,registerCarryingDecisionOptionProvider,listCarryingDecisionOptionProviders,carryingDecisionOptions,applyCarryingReplan,intentStillValid,planOpenIntent,emergencyChoice});
 })();

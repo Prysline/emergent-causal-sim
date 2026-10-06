@@ -43,8 +43,8 @@ function assertIneligibleApplySkipsCandidateWork(label,expectedReason,setup){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.47.0-social-bid-carry-cooperation');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.47.0-social-bid-carry-cooperation');
+assert.equal(st.version,'11.48.0-carrying-replanning');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.0-carrying-replanning');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);
 noIssues('reset');

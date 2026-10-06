@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.47.0-social-bid-carry-cooperation';
+const APP_VERSION='11.48.0-carrying-replanning';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';

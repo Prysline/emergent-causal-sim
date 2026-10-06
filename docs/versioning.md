@@ -1,3 +1,7 @@
+`11.48.0-carrying-replanning`
+
+Current release: Deliberation now supports generic carrying-state re-deliberation after post-pickup placement invalidation. Canonical `agentCarries` remains Agent Carry World truth; Deliberation compares semantic/neutral placement with stationary wait, adopts a fresh `carryAgent` Action / Decision identity linked by `priorDecisionId`, and leaves geometry / route / final placement legality to Agent Carry / Spatial / Physical. Existing `recoveryBlocked` remains the physical anti-orphan safety net. `carryAgent` is not part of ordinary soft reconsideration. Social Bid remains on its own `11.47.0-social-bid-carry-cooperation` generation.
+
 # Versioning Contract
 
 本文件定義 Emergent Causal Simulator 的 current runtime marker 何時必須更新，以及哪些變更可以留在同一版本內。

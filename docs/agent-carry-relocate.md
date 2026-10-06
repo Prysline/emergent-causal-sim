@@ -1,6 +1,10 @@
+## 11.48 carrying-state re-deliberation integration
+
+Post-pickup placement invalidation now enters an explicit Deliberation carrying context before physical fallback. Deliberation may adopt a fresh `carryAgent` placement plan or stationary wait while canonical `agentCarries` stays unchanged. Every adopted replacement gets a new Decision identity and may link to the prior decision through `priorDecisionId`. Domain policy may register semantic placement proposals; Agent Carry neutral recovery placement supplies the generic safety proposal. Spatial / Route / Physical remain geometry / accessibility / legality authorities. `recoveryBlocked` stays the anti-orphan safety net and recovery completion never becomes original relocation success.
+
 # Agent carry / relocate v1
 
-本文件描述 Agent carry / relocate 的 current runtime contract。`11.45.0-agent-carry-relocate` 建立 v1 底層能力；`11.46.0-sleep-carry-integration` 將 sleeping occupant 路徑接入 Sleep preferred Slot conflict。forced relocation / combat / restraint 與 awake cooperation 仍不在目前範圍。
+本文件描述 Agent carry / relocate 的 current runtime contract。`11.45.0-agent-carry-relocate` 建立 v1 底層能力；`11.46.0-sleep-carry-integration` 將 sleeping occupant 路徑接入 Sleep preferred Slot conflict。forced relocation / combat / restraint 仍不在目前範圍；awake cooperative carry 已由 11.47 Social Bid responder contract 接入。
 
 ## Canonical truth
 

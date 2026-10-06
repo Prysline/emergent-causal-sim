@@ -12,7 +12,7 @@ const memoryFor=(agentId,eventId)=>E.getState().agents[agentId].episodicMemories
 
 E.reset(1131);
 let st=E.getState();
-assert.equal(st.version,'11.47.0-social-bid-carry-cooperation');
+assert.equal(st.version,'11.48.0-carrying-replanning');
 assert.equal(E.APPRAISAL_SCHEMA_VERSION,'11.13.1-event-appraisal');
 assert.equal(st.appraisals,undefined,'v11.13.1 must not add a global appraisal registry');
 noIssues('reset');
