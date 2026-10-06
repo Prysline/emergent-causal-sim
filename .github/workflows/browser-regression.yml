@@ -49,6 +49,10 @@ jobs:
             test: tests/browser-debug-replay-p1-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-debug-replay-p1-qa
+          - suite: debug-inspector-contextual-diagnostics
+            test: tests/browser-debug-inspector-contextual-diagnostics-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-debug-inspector-contextual-diagnostics-qa
           - suite: resident-view
             test: tests/browser-resident-view-qa.mjs
             extra_test: tests/browser-runtime-hook-pipeline-qa.mjs
