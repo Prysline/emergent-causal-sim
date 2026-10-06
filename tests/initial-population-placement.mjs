@@ -59,16 +59,61 @@ const base=A.DEFAULT_WORLD_AUTHORING;
   authored.residents.zhen.initial.posture={kind:'lying',slotId:'bed:right'};
   const report=I.analyzeInitialPlacements(authored);
   assert.equal(report.ok,false);
-  assert.ok(report.hardErrors.some(x=>x.code==='initial_posture_slot_mismatch'&&x.residentId==='zhen'));
+  assert.ok(report.hardErrors.some(x=>x.code==='initial_anchor_posture_slot_conflict'));
 }
 
 {
   const authored=clone(base);
-  authored.residents.zhen.initial.placement={mode:'anchor',anchor:{kind:'worldCell',position:{x:0,y:0,z:0}}};
-  authored.residents.zhen.initial.posture={kind:'standing'};
+  authored.residents.zhen.initial.placement={mode:'anchor',anchor:{kind:'furnitureSlot',id:'bed:left'}};
+  authored.residents.zhen.initial.posture={};
   const report=I.analyzeInitialPlacements(authored);
   assert.equal(report.ok,false);
-  assert.ok(report.hardErrors.some(x=>x.code==='initial_anchor_floor_invalid'&&x.residentId==='zhen'));
+  assert.ok(report.hardErrors.some(x=>x.code==='initial_anchor_posture_missing'));
 }
 
-console.log('initial population placement regression: ok');
+{
+  const authored=clone(base);
+  for(const id of ['zhen','zhou']){
+    authored.residents[id].initial.placement={mode:'anchor',anchor:{kind:'furnitureSlot',id:'bed:left'}};
+    authored.residents[id].initial.posture={kind:'lying'};
+  }
+  const report=I.analyzeInitialPlacements(authored);
+  assert.equal(report.ok,false);
+  assert.ok(report.hardErrors.some(x=>x.code==='initial_slot_double_assigned'&&x.slotId==='bed:left'));
+}
+
+{
+  const authored=clone(base);
+  authored.residents.zhen.initial.placement={mode:'exact',node:{x:5,y:2,z:0}};
+  let report=I.analyzeInitialPlacements(authored);
+  assert.equal(report.ok,true,'partial dining-table tile must stay usable when Human walk envelope fits the real remaining floor');
+  authored.residents.zhen.initial.placement={mode:'exact',node:{x:7,y:3,z:0}};
+  report=I.analyzeInitialPlacements(authored);
+  assert.equal(report.ok,false);
+  assert.ok(report.hardErrors.some(x=>x.code==='initial_placement_metric_clearance'&&x.residentId==='zhen'),'chair residual floor must reject Human standing when the walk envelope does not fit');
+}
+
+{
+  const authored=clone(base);
+  authored.residents.zhou.initial.placement=clone(authored.residents.zhen.initial.placement);
+  const report=I.analyzeInitialPlacements(authored);
+  assert.equal(report.ok,true);
+  assert.ok(report.diagnostics.some(x=>x.code==='initial_node_overlap'&&x.residentIds.includes('zhen')&&x.residentIds.includes('zhou')));
+  assert.doesNotThrow(()=>I.createInitialState(authored,{version:'test'}));
+}
+
+{
+  const authored=clone(base);
+  authored.residents.zhen.initial.placement={mode:'exact',node:{x:3,y:4,z:0}};
+  for(const id of ['2,4','4,4','3,3','3,5'])authored.map.layers[0].cells[id]={terrain:'wall',material:'stone'};
+  const report=I.analyzeInitialPlacements(authored);
+  assert.equal(report.ok,true);
+  assert.ok(report.diagnostics.some(x=>x.code==='initial_no_exit_route'&&x.residentId==='zhen'));
+  assert.ok(report.diagnostics.some(x=>x.code==='initial_food_unreachable'&&x.residentId==='zhen'));
+  assert.ok(report.diagnostics.some(x=>x.code==='initial_water_unreachable'&&x.residentId==='zhen'));
+  assert.ok(report.diagnostics.some(x=>x.code==='initial_sleep_unreachable'&&x.residentId==='zhen'));
+  const st=I.createInitialState(authored,{seed:7,version:'test'});
+  assert.deepEqual(st.agents.zhen.position,{x:3,y:4});
+}
+
+console.log('initial population placement: ok');
