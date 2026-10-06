@@ -4,7 +4,7 @@
 
 This slice changes Debug / Presentation observability only. It does not change simulation semantics, Sleep conflict calibration, Agent Carry legality, Spatial occupancy, Decision Evidence ownership, or any simulation subsystem generation.
 
-The overall runtime / `SimUI.PRESENTATION_VERSION` remains `11.48.0-carrying-replanning`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The new Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.48.0-debug-inspector-contextual-diagnostics`.
+The overall runtime / `SimUI.PRESENTATION_VERSION` remains `11.48.0-carrying-replanning`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.48.0-debug-inspector-contextual-diagnostics-layout`.
 
 ## Debug views
 
@@ -21,6 +21,18 @@ Agent Debug Inspector reuses the existing `registerInspectorDecorator` lifecycle
 The selected view is presentation-local ephemeral state. It is not stored in simulation state. `All` shows every existing Debug Inspector section; filtering only toggles presentation visibility.
 
 Existing section owners remain authoritative. The diagnostics layer classifies their rendered sections after the canonical Resident / Debug shell and subsystem decorators have been composed; it does not create a second Inspector framework.
+
+### Layout hierarchy and sticky navigation
+
+Shared Overview sections remain above the Debug category navigation so repeated Agent / general Debug context is read before choosing a diagnostic domain. The category navigation is inserted immediately after the leading shared Overview sections and before domain-specific content.
+
+The Resident / Debug mode toggle remains the first sticky layer at the top of the Inspector scroll container. The Debug category navigation is the second sticky layer and uses the measured mode-toggle height as its top offset, so it stays directly beneath the mode toggle without covering it. On narrow screens the category buttons scroll horizontally inside the toolbar while the native horizontal scrollbar is hidden.
+
+Contextual domain diagnostics remain content below the category navigation. An active contextual diagnostic may stay visible while another category is selected, but it does not become a third persistent header.
+
+Long structured Debug values such as Usage reasons / contributors, observation snapshots, placement proposals, and candidate contributors are summarized in the main layout and keep the complete raw value in collapsed `<details>` blocks. This is a presentation-only readability change; the raw projection is not removed or rewritten into a new truth source.
+
+On mobile, contextual diagnostic key/value rows collapse to a single column and long structured values use wrapping inside the card instead of widening the Inspector or document viewport.
 
 ## Sleep preferred Slot conflict contextual diagnostic
 
@@ -49,4 +61,4 @@ No new persisted Debug truth is introduced.
 
 ## Regression boundary
 
-Node coverage locks the presentation-only ownership, source ordering, labels, authority reuse, and version boundaries. Browser coverage uses a controlled conflict fixture rather than a fixed emergent story, then checks desktop/mobile category switching, `All` completeness, contextual diagnostic visibility, historical/current labeling, validator cleanliness, and mobile document overflow.
+Node coverage locks the presentation-only ownership, source ordering, labels, authority reuse, version boundaries, category-nav placement, second-layer sticky contract, collapsed structured values, and mobile single-column diagnostic layout. Browser coverage uses a controlled conflict fixture rather than a fixed emergent story, then checks desktop/mobile category switching, `All` completeness, shared-content-before-navigation ordering, sticky-layer offsets, contextual diagnostic visibility, historical/current labeling, validator cleanliness, internal category scrolling, and document/card overflow.
