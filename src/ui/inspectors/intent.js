@@ -13,7 +13,6 @@
     perception:['[data-v1130-memory]','[data-v1131-appraisal]','[data-v1133-retention]','[data-v1135-social-outcome-memory]'],
     social:['[data-v1132-affect]','[data-v1134-memory-deliberation]','[data-v1150-relationship-debug]']
   });
-  const observers=new WeakMap();
   let activeView='all',scheduled=false;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num=v=>Number.isFinite(v)?Math.round(v*10)/10:'—';
@@ -98,10 +97,6 @@
     });
     debug.querySelectorAll('[data-debug-inspector-view]').forEach(button=>{const on=button.dataset.debugInspectorView===activeView;button.classList.toggle('active',on);button.setAttribute('aria-pressed',String(on));});
   }
-  function observeSections(debug){
-    if(observers.has(debug))return;
-    const observer=new MutationObserver(()=>applyView(debug));observer.observe(debug,{childList:true});observers.set(debug,observer);
-  }
   function installNav(debug){
     let nav=debug.querySelector(':scope > [data-debug-inspector-nav]');if(nav)return nav;
     nav=document.createElement('div');nav.className='debug-inspector-nav';nav.dataset.debugInspectorNav='';nav.setAttribute('role','toolbar');nav.setAttribute('aria-label','Debug Inspector views');
@@ -114,7 +109,7 @@
       scheduled=false;const renderHost=host||document.getElementById('inspector'),currentSelected=UI.getInspectorSelection?.()||selected,currentState=E.getState()||st;
       if(!renderHost||currentSelected?.type!=='agent')return;const a=currentState?.agents?.[currentSelected.id];if(!a)return;
       const shell=renderHost.querySelector(':scope > [data-v1140-resident-root]'),debug=shell?.querySelector('[data-v1140-debug-view]');if(!debug)return;
-      observeSections(debug);debug.querySelector(':scope > [data-debug-sleep-conflict]')?.remove();installNav(debug);
+      debug.querySelector(':scope > [data-debug-sleep-conflict]')?.remove();installNav(debug);
       const context=currentConflict(currentState,a);if(context?.slotId){const section=sleepDiagnostic(currentState,a,context),nav=debug.querySelector(':scope > [data-debug-inspector-nav]');nav?.insertAdjacentElement('afterend',section);}
       applyView(debug);
     }));
