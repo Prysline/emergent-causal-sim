@@ -110,6 +110,7 @@ try{
   assert.equal(desktop.hiddenSections.length,0,'All view must preserve every Debug Inspector section');
 
   await page.setViewportSize({width:390,height:844});
+  await installConflictFixture();
   await clickView('decision');
   const mobile=await snapshot();
   assert.ok(mobile.documentWidth<=mobile.viewportWidth,'mobile Debug Inspector must not overflow the document viewport');
