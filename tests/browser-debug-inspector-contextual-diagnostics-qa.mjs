@@ -34,9 +34,12 @@ async function installConflictFixture(){
   await page.waitForSelector('[data-debug-inspector-nav]');
   await page.waitForSelector('[data-debug-sleep-conflict]');
 }
+function visibleViewButton(id){
+  return page.locator(`[data-v1140-debug-view]:visible [data-debug-inspector-view="${id}"]`);
+}
 async function snapshot(){
   return page.evaluate(()=>{
-    const debug=document.querySelector('[data-v1140-debug-view]'),diag=debug?.querySelector('[data-debug-sleep-conflict]'),nav=debug?.querySelector('[data-debug-inspector-nav]');
+    const debug=[...document.querySelectorAll('[data-v1140-debug-view]')].find(node=>node.checkVisibility?.()??!node.hidden),diag=debug?.querySelector('[data-debug-sleep-conflict]'),nav=debug?.querySelector('[data-debug-inspector-nav]');
     return {
       version:window.SimEngine.getState().version,debugVersion:window.SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION,
       views:[...(nav?.querySelectorAll('[data-debug-inspector-view]')||[])].map(b=>({id:b.dataset.debugInspectorView,active:b.classList.contains('active')})),
@@ -66,25 +69,25 @@ try{
   assert.equal(desktop.hiddenSections.length,0,'default All view must preserve the complete existing Debug Inspector');
   assert.equal(desktop.validator.issueCount,0,`desktop validator: ${desktop.validator.issues.map(x=>x.code).join(', ')}`);
 
-  await page.click('[data-debug-inspector-view="decision"]');
+  await visibleViewButton('decision').click();
   desktop=await snapshot();
   assert.equal(desktop.views.find(x=>x.active)?.id,'decision');
   assert.ok(desktop.visibleSections.includes('decision'),'Decision view must expose decision sections');
   assert.ok(!desktop.visibleSections.includes('execution'),'Decision view must hide execution-only sections');
   assert.match(desktop.debugText,/Sleep preferred Slot conflict/,'contextual diagnostic must remain prioritized in Decision view');
 
-  await page.click('[data-debug-inspector-view="execution"]');
+  await visibleViewButton('execution').click();
   desktop=await snapshot();
   assert.equal(desktop.views.find(x=>x.active)?.id,'execution');
   assert.ok(desktop.visibleSections.includes('execution'),'Execution view must expose Physical / Locomotion diagnostics');
   assert.ok(desktop.visibleSections.includes('decision'),'active contextual domain diagnostic must remain visible outside its category');
 
-  await page.click('[data-debug-inspector-view="all"]');
+  await visibleViewButton('all').click();
   desktop=await snapshot();
   assert.equal(desktop.hiddenSections.length,0,'All view must preserve every Debug Inspector section');
 
   await page.setViewportSize({width:390,height:844});
-  await page.click('[data-debug-inspector-view="decision"]');
+  await visibleViewButton('decision').click();
   const mobile=await snapshot();
   assert.ok(mobile.documentWidth<=mobile.viewportWidth,'mobile Debug Inspector must not overflow the document viewport');
   assert.ok(mobile.navScrollWidth>=mobile.navWidth,'mobile category toolbar may scroll internally without widening the page');
