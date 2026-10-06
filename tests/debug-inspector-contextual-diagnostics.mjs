@@ -3,11 +3,12 @@ import {readFileSync} from 'node:fs';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const source=read('src/ui/inspectors/intent.js');
+const css=read('styles/observability.css');
 const index=read('index.html');
 const release=read('src/release.js');
 const controls=read('src/ui/observability-controls.js');
 
-assert.match(source,/11\.48\.0-debug-inspector-contextual-diagnostics/,'Debug Inspector diagnostics needs an explicit presentation-only module marker');
+assert.match(source,/11\.48\.0-debug-inspector-contextual-diagnostics-layout/,'Debug Inspector diagnostics needs an explicit presentation-only module marker');
 for(const view of ['overview','decision','execution','world','perception','social','all'])assert.ok(source.includes(`['${view}'`)||source.includes(`,'${view}'`),`missing Debug Inspector view: ${view}`);
 assert.match(source,/let activeView='all'/,'complete existing Debug projection must remain the default view');
 assert.match(source,/Historical \/ adopted evidence/,'historical evidence must be explicitly labeled');
@@ -17,6 +18,13 @@ assert.match(source,/SC\.conflictCandidates/,'current probe must consume the Sle
 assert.match(source,/AC\.candidateAttemptability/,'carry candidate diagnostics must consume Agent Carry candidate-time authority');
 assert.match(source,/SP\.slotOccupant/,'current occupant projection must consume canonical Spatial occupancy');
 assert.match(source,/historical evidence 沒有保存 rejection reason/,'missing historical rejection reasons must remain explicitly unknown');
+assert.match(source,/function placeNavAfterOverview\(/,'category navigation must have an explicit placement step after shared Overview content');
+assert.match(source,/lastOverview\.insertAdjacentElement\('afterend',nav\)/,'category navigation must sit below leading shared Overview sections');
+assert.match(source,/--debug-mode-bar-height/,'category navigation sticky offset must derive from the Resident\/Debug mode bar height');
+assert.match(source,/debug-structured/,'long structured diagnostics must use collapsible raw details instead of inline JSON dumps');
+assert.match(css,/\.debug-inspector-nav\{position:sticky;top:calc\(var\(--debug-mode-bar-height,44px\) \+ 2px\)/,'category navigation must be a second sticky layer beneath the Resident\/Debug mode bar');
+assert.match(css,/scrollbar-width:none/,'mobile horizontal category navigation must hide its native scrollbar');
+assert.match(css,/\.contextual-diagnostic>\.kv,.debug-evidence-block>\.kv\{grid-template-columns:minmax\(0,1fr\)/,'mobile contextual diagnostic key\/value rows must collapse to one column');
 assert.doesNotMatch(source,/\.conflictResolutionEvidence\s*=|\.decisionEvidence\s*=|\.agentCarries\s*=|st\.[A-Za-z0-9_]+\s*=/,'Debug Inspector diagnostics must not persist competing simulation truth');
 assert.match(source,/registerInspectorDecorator\('intent\.active',decorateInspector,300\)/,'existing Intent Inspector remains the canonical decision-section owner');
 assert.equal((source.match(/registerInspectorDecorator\(/g)||[]).length,1,'contextual grouping must not create a parallel Inspector section owner');
