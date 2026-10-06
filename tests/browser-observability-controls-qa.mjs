@@ -12,7 +12,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openScenario(scenario){
   await page.goto(`http://127.0.0.1:4173/?scenario=${scenario}`,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>window.SimEngine?.UI_OBSERVABILITY_CONTROLS_VERSION==='11.13.3a-observability-controls');
+  await page.waitForFunction(()=>window.SimEngine?.UI_OBSERVABILITY_CONTROLS_VERSION==='11.48.0-debug-replay-p1');
 }
 async function snapshot(){
   return page.evaluate(()=>{
@@ -43,10 +43,10 @@ async function snapshot(){
 
 await openScenario('talk-brief');
 let desktop=await snapshot();
-assert.equal(desktop.patchVersion,'11.13.3a-observability-controls');
+assert.equal(desktop.patchVersion,'11.48.0-debug-replay-p1');
 assert.equal(desktop.controls.exists,true,'desktop: sticky turn controls missing');
 assert.equal(desktop.controls.position,'sticky','desktop: turn controls must stay sticky');
-assert.deepEqual(desktop.controls.buttons,['play','step','step10','reset']);
+assert.deepEqual(desktop.controls.buttons,['play','step','step10','debugRunStart','reset']);
 assert.equal(desktop.presentationOwnership.actionLabel,true,'desktop: UI must not replace core actionLabel');
 assert.ok(desktop.presentationOwnership.resolvers.some(x=>x.id==='uiObservability.social-status'),'desktop: social presentation resolver missing');
 await page.click('#step');
@@ -140,5 +140,5 @@ assert.ok(!catRow?.text.includes('聊天邀請'),`mobile: animal wait label must
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop,mobile,mobileSticky,mobileBrief,animalWait,pageErrors,consoleErrors},null,2));
-console.log('observability controls browser QA: desktop/mobile sticky + interaction labels pass');
+console.log('observability controls browser QA: desktop/mobile sticky + debug replay + interaction labels pass');
 await browser.close();

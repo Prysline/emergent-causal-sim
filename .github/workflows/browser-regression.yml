@@ -45,6 +45,10 @@ jobs:
             test: tests/browser-observability-controls-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-observability-controls-qa
+          - suite: debug-replay-p1
+            test: tests/browser-debug-replay-p1-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-debug-replay-p1-qa
           - suite: resident-view
             test: tests/browser-resident-view-qa.mjs
             extra_test: tests/browser-runtime-hook-pipeline-qa.mjs

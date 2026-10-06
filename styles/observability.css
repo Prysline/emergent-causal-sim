@@ -2,12 +2,22 @@
 .turn-controls button{border:1px solid #344b57;background:#1d2a31;border-radius:8px;padding:7px 12px;color:inherit;cursor:pointer}
 .turn-controls button:hover{background:#273841}
 .turn-controls #reset{background:transparent}
+.debug-replay-controls{display:flex;align-items:center;gap:5px;min-width:0;flex:1}
+.debug-replay-controls select,.debug-replay-controls input{min-width:0;border:1px solid #344b57;background:#101b21;color:inherit;border-radius:7px;padding:6px 8px}
+.debug-replay-controls select{flex:0 0 auto}
+.debug-replay-controls input{flex:1 1 150px;max-width:190px}
+.debug-replay-controls small{min-width:0;flex:1 1 120px;color:#88a4b1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.debug-replay-controls small[data-kind="error"]{color:#e9a5a5}
+.debug-replay-controls small[data-kind="success"]{color:#9fd6a9}
 .toolbar-options{margin-top:0}
 .mobile-agent-summary{display:none}
 
 @media(max-width:720px){
   .turn-controls{top:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:6px;margin-bottom:7px;border-radius:10px}
-  .turn-controls button{min-width:0;padding:7px 2px;font-size:12px;white-space:nowrap;touch-action:manipulation}
+  .turn-controls>button{min-width:0;padding:7px 2px;font-size:12px;white-space:nowrap;touch-action:manipulation}
+  .debug-replay-controls{grid-column:1/-1;display:grid;grid-template-columns:88px minmax(0,1fr) 58px;gap:5px;width:100%}
+  .debug-replay-controls select,.debug-replay-controls input,.debug-replay-controls button{width:100%;max-width:none;min-width:0;font-size:11px;padding:6px}
+  .debug-replay-controls small{grid-column:1/-1;min-height:14px;font-size:10px;line-height:1.2}
   .toolbar-options{position:static;z-index:auto}
   .mobile-agent-summary{display:grid;gap:5px;margin-top:8px}
   .mobile-agent-row{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;width:100%;min-width:0;padding:7px 8px;text-align:left;border:1px solid #2d424d;border-radius:9px;background:#0d1519;color:#dce7ee;cursor:pointer;touch-action:manipulation}

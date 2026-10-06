@@ -110,5 +110,6 @@ jobs:
       - run: node tests/relationship-target-preference.mjs
       - run: node tests/relationship-responder-bias.mjs
       - run: node tests/runtime-hook-pipeline.mjs
+      - run: node tests/debug-replay-p1.mjs
       - run: node tests/presentation-observability.mjs
       - run: node tests/presentation-event-truth.mjs
