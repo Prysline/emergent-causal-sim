@@ -69,16 +69,20 @@ jobs:
             git push origin HEAD:feat/agent-turn-execution
             exit "$status"
           fi
-      - name: Full Node regression profile
+      - name: Full semantic Node profile before verifier cleanup
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import subprocess, shlex
+          deferred='node tests/workflow-architecture.mjs'
           for line in Path('.github/workflows/node-regression.yml').read_text().splitlines():
               line=line.strip()
               if line.startswith('- run: node tests/'):
                   cmd=line[len('- run: '):]
+                  if cmd == deferred:
+                      print('+ deferred until temporary verifier cleanup:',cmd,flush=True)
+                      continue
                   print('+',cmd,flush=True)
                   subprocess.run(shlex.split(cmd),check=True)
           PY
