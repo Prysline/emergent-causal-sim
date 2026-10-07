@@ -1,0 +1,30 @@
++ node tests/slot-interaction-egress.mjs
+slot posture -> general object interaction egress regression: ok
++ node tests/slot-bound-actor-route-origin.mjs
+Slot-bound actor route-origin / need-feasibility regression: ok
++ deferred until temporary verifier cleanup: node tests/workflow-architecture.mjs
++ node tests/production-source-load-architecture.mjs
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Route search generation must not fake-bump for a separate candidate selector
++ actual - expected
+
++ '11.38.0-carried-handling-risk'
+- '11.50.0-agent-turn-execution'
+      ^
+
+    at file:///home/runner/work/emergent-causal-sim/emergent-causal-sim/tests/production-source-load-architecture.mjs:227:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: '11.38.0-carried-handling-risk',
+  expected: '11.50.0-agent-turn-execution',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.23.3
