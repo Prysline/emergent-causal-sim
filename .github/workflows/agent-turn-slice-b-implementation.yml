@@ -31,12 +31,31 @@ jobs:
       - name: Static syntax check
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Focused turn regressions
+        shell: bash
         run: |
-          node tests/agent-turn-execution.mjs
-          node tests/agent-facing-foundation.mjs
-          node tests/locomotion-execution-posture.mjs
-          node tests/locomotion-traversal-cost.mjs
-          node tests/initial-state-pipeline.mjs
+          set +e
+          : > slice-b-verifier.log
+          status=0
+          for test in \
+            tests/agent-turn-execution.mjs \
+            tests/agent-facing-foundation.mjs \
+            tests/locomotion-execution-posture.mjs \
+            tests/locomotion-traversal-cost.mjs \
+            tests/initial-state-pipeline.mjs
+          do
+            echo "+ node $test" | tee -a slice-b-verifier.log
+            node "$test" 2>&1 | tee -a slice-b-verifier.log
+            code=${PIPESTATUS[0]}
+            if [ "$code" -ne 0 ]; then status=$code; break; fi
+          done
+          if [ "$status" -ne 0 ]; then
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add slice-b-verifier.log
+            git commit -m "Capture Agent turn verifier failure"
+            git push origin HEAD:feat/agent-turn-execution
+            exit "$status"
+          fi
       - name: Full Node regression profile
         shell: bash
         run: |
@@ -55,6 +74,7 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          rm -f slice-b-verifier.log
           git checkout HEAD -- .github/workflows/node-regression.yml .github/workflows/agent-turn-slice-b-implementation.yml
           git add -A
           git status --short
