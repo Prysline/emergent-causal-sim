@@ -12,7 +12,7 @@ assert.strictEqual(P.FACING_DIRECTIONS,A.AGENT_FACING_DIRECTIONS,'Perception mus
 const st=W.createInitialState(49),observer=st.agents.zhen;
 observer.facing='north';
 const snapshot=P.captureVisualOrientationSnapshot(st,observer);
-assert.deepEqual(snapshot,{observerId:'zhen',observedTick:st.tick,facing:'north'});
+assert.deepEqual(snapshot,{observerId:'zhen',snapshotTick:st.tick,facing:'north'});
 assert.ok(Object.isFrozen(snapshot));
 assert.equal(P.visualOrientation(observer),'north');
 
@@ -28,7 +28,7 @@ const cases=[
 ];
 for(const [target,targetDirection,relativeBearing,visualClass] of cases){
   const result=P.classifyVisualBearing(snapshot,origin,target);
-  assert.deepEqual(result,{observerId:'zhen',observedTick:st.tick,facing:'north',targetDirection,relativeBearing,visualClass});
+  assert.deepEqual(result,{observerId:'zhen',snapshotTick:st.tick,facing:'north',targetDirection,relativeBearing,visualClass});
   assert.ok(Object.isFrozen(result));
 }
 
@@ -44,7 +44,7 @@ observer.facing='east';
 assert.equal(snapshot.facing,'north','a later canonical turn must not rewrite an already captured tick orientation snapshot');
 assert.equal(P.classifyVisualBearing(snapshot,origin,{x:0,y:-5}).visualClass,'direct','same-tick classification must remain tied to the captured facing snapshot');
 const laterSnapshot=P.captureVisualOrientationSnapshot(st,observer);
-assert.equal(laterSnapshot.facing,'east','a newly captured snapshot may observe the current canonical facing; runtime perception ownership will decide tick-start capture timing');
+assert.equal(laterSnapshot.facing,'east','a newly captured snapshot may read current canonical facing; the later runtime perception owner must enforce tick-start snapshot timing');
 
 assert.equal(P.classifyVisualBearing(snapshot,origin,{x:0,y:-1000}).visualClass,'direct','this slice must not silently add range attenuation or a maximum horizon');
 assert.throws(()=>P.visualOrientation({...observer,facing:'up'}),/Invalid Agent\.facing/);
