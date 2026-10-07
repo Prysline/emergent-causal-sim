@@ -1,0 +1,271 @@
+name: Agent facing Slice A implementation
+
+on:
+  push:
+    branches: [feat/agent-facing-foundation]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agent-facing-slice-a-implementation
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply deterministic Slice A migration
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json, re
+
+          OLD_RELEASE='11.48.1-sleep-perception-approach'
+          NEW_RELEASE='11.49.0-agent-facing-foundation'
+          OLD_SHORT='v11.48.1'
+          NEW_SHORT='v11.49.0'
+          OLD_SCHEMA='world-authoring-v11'
+          NEW_SCHEMA='world-authoring-v12'
+          DIRECTIONS=['north','northEast','east','southEast','south','southWest','west','northWest']
+
+          def read(path): return Path(path).read_text()
+          def write(path, text): Path(path).write_text(text)
+          def require_replace(text, old, new, path, count=None):
+              hits=text.count(old)
+              if hits == 0:
+                  raise SystemExit(f'{path}: missing expected pattern: {old[:120]!r}')
+              if count is not None and hits != count:
+                  raise SystemExit(f'{path}: expected {count} hits, found {hits}: {old[:120]!r}')
+              return text.replace(old,new)
+
+          # World Authoring owns the authored direction representation and validation.
+          path='src/world-authoring.js'
+          s=read(path)
+          s=require_replace(s,"const VERSION='world-authoring-v11';","const VERSION='world-authoring-v12';",path,1)
+          default_initial="initial:{needs:"
+          if s.count(default_initial) != 3:
+              raise SystemExit(f'{path}: expected 3 default resident initial blocks, found {s.count(default_initial)}')
+          s=s.replace(default_initial,"initial:{facing:'south',needs:")
+          orientation_line="  const FURNITURE_ORIENTATIONS=new Set(D.ORIENTATIONS||[]);\n"
+          orientation_insert=orientation_line+"  const AGENT_FACING_DIRECTIONS=Object.freeze(['north','northEast','east','southEast','south','southWest','west','northWest']);\n  const AGENT_FACING_DIRECTION_SET=new Set(AGENT_FACING_DIRECTIONS);\n"
+          s=require_replace(s,orientation_line,orientation_insert,path,1)
+          resident_id_line="      if(resident.id!==undefined&&resident.id!==key)errors.push(authoringIssue('authoring_resident_id_mismatch',`${basePath}.id`,`Resident key ${key} does not match id ${String(resident.id)}.`));\n"
+          resident_validation=resident_id_line+"      const facing=resident.initial?.facing;\n      if(facing===undefined)errors.push(authoringIssue('authoring_resident_facing_missing',`${basePath}.initial.facing`,'Resident initial.facing must be explicitly authored.'));\n      else if(!AGENT_FACING_DIRECTION_SET.has(facing))errors.push(authoringIssue('authoring_resident_facing_invalid',`${basePath}.initial.facing`,'Resident initial.facing must be north / northEast / east / southEast / south / southWest / west / northWest.',{facing}));\n"
+          s=require_replace(s,resident_id_line,resident_validation,path,1)
+          export_line="    FURNITURE_ORIENTATIONS:Object.freeze(Array.from(FURNITURE_ORIENTATIONS)),\n"
+          export_insert=export_line+"    AGENT_FACING_DIRECTIONS,\n"
+          s=require_replace(s,export_line,export_insert,path,1)
+          write(path,s)
+
+          # Runtime Agent construction copies the canonical authored fact without fallback or inference.
+          path='src/world-initializer.js'
+          s=read(path)
+          constructor="        kind:entry.kind,\n        position:runtimePosition(resolved.position),\n"
+          constructor_new="        kind:entry.kind,\n        position:runtimePosition(resolved.position),\n        facing:initial.facing,\n"
+          s=require_replace(s,constructor,constructor_new,path,1)
+          write(path,s)
+
+          # Overall runtime / Presentation marker changes because canonical runtime Agent state changed.
+          path='src/release.js'
+          s=read(path)
+          s=require_replace(s,OLD_RELEASE,NEW_RELEASE,path,1)
+          write(path,s)
+
+          # Current schema references in tests/fixtures follow the breaking authoring generation.
+          for p in Path('tests').rglob('*'):
+              if not p.is_file() or p.suffix not in {'.mjs','.js','.json'}: continue
+              s=p.read_text()
+              s=s.replace(OLD_SCHEMA,NEW_SCHEMA)
+              # Current overall expectations change, while Deliberation / Decision Evidence / Sleep Conflict own generation stays 11.48.1.
+              preserve=('DELIBERATION_SCHEMA_VERSION','DECISION_EVIDENCE_SCHEMA_VERSION','SLEEP_SLOT_CONFLICT_VERSION')
+              lines=[]
+              for line in s.splitlines(keepends=True):
+                  if OLD_RELEASE in line and not any(token in line for token in preserve):
+                      line=line.replace(OLD_RELEASE,NEW_RELEASE)
+                  line=line.replace(OLD_SHORT,NEW_SHORT)
+                  lines.append(line)
+              s=''.join(lines)
+              # Tests that replace an entire initial block must explicitly author facing too.
+              s=s.replace("initial:{placement:","initial:{facing:'south',placement:")
+              s=s.replace("initial={placement:","initial={facing:'south',placement:")
+              p.write_text(s)
+
+          # JSON fixtures are canonical documents, so every resident gets an explicit authored facing.
+          for p in Path('tests/fixtures').glob('*.json'):
+              try: data=json.loads(p.read_text())
+              except Exception: continue
+              if data.get('authoringSchema') != NEW_SCHEMA: continue
+              changed=False
+              for resident in (data.get('residents') or {}).values():
+                  initial=resident.get('initial') if isinstance(resident,dict) else None
+                  if isinstance(initial,dict) and 'facing' not in initial:
+                      initial['facing']='south'; changed=True
+              if changed:
+                  p.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+
+          # Focused regression locks the Slice A contract and proves recreated state keeps authored facing.
+          focused=Path('tests/agent-facing-foundation.mjs')
+          focused.write_text("""import fs from 'node:fs';
+          import vm from 'node:vm';
+          import assert from 'node:assert/strict';
+
+          globalThis.window=globalThis;
+          for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js']){
+            vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
+          }
+
+          const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
+          const clone=value=>JSON.parse(JSON.stringify(value));
+          const directions=['north','northEast','east','southEast','south','southWest','west','northWest'];
+
+          assert.equal(A.VERSION,'world-authoring-v12');
+          assert.deepEqual(A.AGENT_FACING_DIRECTIONS,directions,'World Authoring must own the exact canonical 8-direction representation');
+          for(const [id,resident] of Object.entries(A.DEFAULT_WORLD_AUTHORING.residents)){
+            assert.ok(directions.includes(resident.initial.facing),id+' must explicitly author a legal initial facing');
+          }
+
+          const missing=clone(A.DEFAULT_WORLD_AUTHORING);
+          delete missing.residents.zhen.initial.facing;
+          const missingReport=A.validateAuthoring(missing);
+          assert.equal(missingReport.ok,false);
+          assert.ok(missingReport.errors.some(issue=>issue.code==='authoring_resident_facing_missing'&&issue.path==='residents.zhen.initial.facing'),'missing initial.facing must fail explicitly');
+
+          const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
+          invalid.residents.zhen.initial.facing='up';
+          const invalidReport=A.validateAuthoring(invalid);
+          assert.equal(invalidReport.ok,false);
+          assert.ok(invalidReport.errors.some(issue=>issue.code==='authoring_resident_facing_invalid'&&issue.path==='residents.zhen.initial.facing'),'illegal initial.facing must fail explicitly');
+
+          const authored=clone(A.DEFAULT_WORLD_AUTHORING);
+          authored.residents.zhen.initial.facing='northWest';
+          authored.residents.zhou.initial.facing='east';
+          authored.residents.orange.initial.facing='southEast';
+          const first=I.createInitialState(authored,{seed:49,version:'test'});
+          assert.equal(first.agents.zhen.facing,'northWest');
+          assert.equal(first.agents.zhou.facing,'east');
+          assert.equal(first.agents.orange.facing,'southEast');
+          const recreated=I.createInitialState(authored,{seed:49,version:'test'});
+          assert.equal(recreated.agents.zhen.facing,'northWest','recreated state must preserve the same authored facing');
+          assert.equal(recreated.agents.zhou.facing,'east');
+          assert.equal(recreated.agents.orange.facing,'southEast');
+
+          const before=first.agents.zhen.facing;
+          first.agents.zhen.position={x:8,y:3};
+          assert.equal(first.agents.zhen.facing,before,'position change must not implicitly rewrite facing');
+
+          const worldState=W.createInitialStateFromAuthoring(authored,{seed:49});
+          assert.equal(worldState.agents.zhen.facing,'northWest','canonical World construction must preserve authored facing');
+          assert.equal(worldState.version,'11.49.0-agent-facing-foundation');
+
+          console.log('agent facing foundation: ok');
+          """.replace('          ','',1))
+
+          # Ensure CI executes the new focused regression.
+          path='.github/workflows/node-regression.yml'
+          s=read(path)
+          needle='      - run: node tests/world-authoring-foundation.mjs\n'
+          if 'node tests/agent-facing-foundation.mjs' not in s:
+              s=require_replace(s,needle,needle+'      - run: node tests/agent-facing-foundation.mjs\n',path,1)
+          write(path,s)
+
+          # README current summary and current schema facts.
+          path='README.md'
+          s=read(path)
+          s=re.sub(r'目前 runtime marker：\*\*v11\.48\.1・[^\n]+?\*\* \(`11\.48\.1-sleep-perception-approach`\)。',
+                   '目前 runtime marker：**v11.49.0・Agent facing foundation** (`11.49.0-agent-facing-foundation`)。',s,count=1)
+          s=s.replace(OLD_SCHEMA,NEW_SCHEMA)
+          write(path,s)
+
+          # Versioning: new current release; prior Sleep release remains historical and Deliberation keeps its own marker.
+          path='docs/versioning.md'
+          s=read(path)
+          s=re.sub(r'^`11\.48\.1-sleep-perception-approach`\n\nCurrent release:.*?\n\n# Versioning Contract',
+                   "`11.49.0-agent-facing-foundation`\n\nCurrent release: World Authoring now requires explicit resident `initial.facing`, and runtime Agent state carries the same canonical body orientation as an independent 8-direction fact. Slice A does not derive facing from movement or Furniture orientation and does not implement turning, FOV / LOS, auditory / tactile perception, or turn cost.\n\n# Versioning Contract",s,count=1,flags=re.S)
+          s=s.replace('目前 current runtime marker：\n\n`'+OLD_RELEASE+'`','目前 current runtime marker：\n\n`'+NEW_RELEASE+'`',1)
+          s=s.replace('玩家可見的 app 頁首 current-version display 使用短版 `'+OLD_SHORT+'`','玩家可見的 app 頁首 current-version display 使用短版 `'+NEW_SHORT+'`',1)
+          s=s.replace('World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`','World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`',1)
+          anchor='### Current Sleep preferred Slot perception boundary + approach release'
+          section="""### Current Agent facing foundation release
+
+`11.49.0-agent-facing-foundation` 建立 Perception / Agent Orientation Slice A 的 canonical body orientation foundation。World Authoring `world-authoring-v12` 要求每個 Resident 明確 author `initial.facing`，合法值只有 `north / northEast / east / southEast / south / southWest / west / northWest`；missing 或非法方向都由 authoring validator 明確失敗。Initializer 只把 authored fact 帶入 runtime `Agent.facing`，沒有固定 fallback、沒有從第一步 movement 或 Furniture orientation 推導。
+
+`Agent.facing` 與 movement direction 保持分離；本 Slice 不實作 forward / backward / strafe、turn execution / angular burden，也不讓 position update 隱式改 facing。Visual 未來可透過 shared `visualOrientation(...)` 讀取 body orientation，但 FOV / range / LOS / Lighting、Auditory / Tactile 與 same-tick perception snapshot 都不在本 release。
+
+Version impact：overall / Presentation → `11.49.0-agent-facing-foundation`；World Authoring → `world-authoring-v12`。Deliberation / Decision Evidence / Sleep Slot Conflict 維持 `11.48.1-sleep-perception-approach`；Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Furniture Catalog / Embodiment Capabilities 均未改 contract，不假升。
+
+### Previous Sleep preferred Slot perception boundary + approach release"""
+          s=require_replace(s,anchor,section,path,1)
+          write(path,s)
+
+          # Architecture/tick docs record the new current boundary without rewriting historical Sleep semantics.
+          path='docs/architecture.md'
+          s=read(path)
+          old='> Current `'+OLD_RELEASE+'`:'
+          if old in s:
+              s=s.replace(old,'> Previous `'+OLD_RELEASE+'`:',1)
+              first_break=s.find('\n\n')
+              note='> Current `'+NEW_RELEASE+'`: World Authoring requires explicit 8-direction `initial.facing`; runtime `Agent.facing` is the sole canonical body orientation. Facing is independent of movement direction, and Slice A adds no turning, FOV / LOS, auditory / tactile, or perception-hook semantics.\n\n'
+              s=s[:first_break+2]+note+s[first_break+2:]
+          write(path,s)
+
+          path='docs/tick-pipeline.md'
+          s=read(path)
+          old='> Current `'+OLD_RELEASE+'`:'
+          if old in s:
+              s=s.replace(old,'> Previous `'+OLD_RELEASE+'`:',1)
+              first_break=s.find('\n\n')
+              note='> Current `'+NEW_RELEASE+'`: Agent facing Slice A adds canonical authored/runtime orientation state only. It introduces no runtime hook, no hook-order change, and no same-tick perception snapshot semantics.\n\n'
+              s=s[:first_break+2]+note+s[first_break+2:]
+          write(path,s)
+
+          path='docs/debug-inspector-contextual-diagnostics.md'
+          s=read(path)
+          s=s.replace('The current `'+OLD_RELEASE+'` runtime','The previous `'+OLD_RELEASE+'` runtime',1)
+          write(path,s)
+
+          # Current Browser expectations follow the canonical release marker shown in the app header.
+          for p in Path('tests').glob('browser-*.mjs'):
+              s=p.read_text().replace(OLD_RELEASE,NEW_RELEASE).replace(OLD_SHORT,NEW_SHORT)
+              p.write_text(s)
+
+          print('Slice A migration applied.')
+          PY
+      - name: Static syntax check
+        run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Focused facing regression
+        run: |
+          node tests/agent-facing-foundation.mjs
+          node tests/world-authoring-foundation.mjs
+          node tests/initial-population-placement.mjs
+      - name: Full Node regression profile
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess, shlex
+          for line in Path('.github/workflows/node-regression.yml').read_text().splitlines():
+              line=line.strip()
+              if line.startswith('- run: node tests/'):
+                  cmd=line[len('- run: '):]
+                  print('+',cmd,flush=True)
+                  subprocess.run(shlex.split(cmd),check=True)
+          PY
+      - name: Commit verified implementation
+        shell: bash
+        run: |
+          rm .github/workflows/agent-facing-slice-a-implementation.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git status --short
+          git commit -m "Implement canonical agent facing foundation"
+          git push origin HEAD:feat/agent-facing-foundation
