@@ -1,6 +1,6 @@
-`11.48.1-sleep-perception-approach`
+`11.49.0-agent-facing-foundation`
 
-Current release: Sleep preferred Slot occupancy remains canonical World legality, but occupant-specific conflict reasoning is now gated by `observeAgentContext(...)`. If a preferred Slot is occupied yet its occupant is still unobserved, Deliberation keeps Sleep viable through the Agent's own Usage association plus a reachable canonical Slot approach and enters the narrow `approachPreferred` phase. Each tick recomputes observation / occupancy / approach; only a successful current observation may establish formal conflict, candidate ranking, or frozen Conflict Resolution Evidence. Occupant departure before observation falls back to normal sleep target selection with no fabricated conflict history.
+Current release: World Authoring now requires explicit resident `initial.facing`, and runtime Agent state carries the same canonical body orientation as an independent 8-direction fact. Slice A does not derive facing from movement or Furniture orientation and does not implement turning, FOV / LOS, auditory / tactile perception, or turn cost.
 
 # Versioning Contract
 
@@ -10,11 +10,19 @@ Current release: Sleep preferred Slot occupancy remains canonical World legality
 
 目前 current runtime marker：
 
-`11.48.1-sleep-perception-approach`
+`11.49.0-agent-facing-foundation`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.48.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.49.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
 
-### Current Sleep preferred Slot perception boundary + approach release
+### Current Agent facing foundation release
+
+`11.49.0-agent-facing-foundation` 建立 Perception / Agent Orientation Slice A 的 canonical body orientation foundation。World Authoring `world-authoring-v12` 要求每個 Resident 明確 author `initial.facing`，合法值只有 `north / northEast / east / southEast / south / southWest / west / northWest`；missing 或非法方向都由 authoring validator 明確失敗。Initializer 只把 authored fact 帶入 runtime `Agent.facing`，沒有固定 fallback、沒有從第一步 movement 或 Furniture orientation 推導。
+
+`Agent.facing` 與 movement direction 保持分離；本 Slice 不實作 forward / backward / strafe、turn execution / angular burden，也不讓 position update 隱式改 facing。Visual 未來可透過 shared `visualOrientation(...)` 讀取 body orientation，但 FOV / range / LOS / Lighting、Auditory / Tactile 與 same-tick perception snapshot 都不在本 release。
+
+Version impact：overall / Presentation → `11.49.0-agent-facing-foundation`；World Authoring → `world-authoring-v12`。Deliberation / Decision Evidence / Sleep Slot Conflict 維持 `11.48.1-sleep-perception-approach`；Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Furniture Catalog / Embodiment Capabilities 均未改 contract，不假升。
+
+### Previous Sleep preferred Slot perception boundary + approach release
 
 `11.48.1-sleep-perception-approach` 修正 preferred Slot canonical occupancy 被誤當成 requester knowledge 的 correctness 問題。`SP.sleepTargets()` / `sleepTargetExclusion()` 繼續持有 World-side legality；occupied preferred Slot 仍不可 settle。`SimSleepConflict` 只有在 requester 對 occupant 的 `observeAgentContext(...)` 成功時，才形成正式 conflict 並允許 alternate / wait / attention / yield / drive-away / carry 等 occupant-specific reasoning。
 

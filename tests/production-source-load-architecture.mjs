@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.48.1-sleep-perception-approach';
+const CURRENT_VERSION='11.49.0-agent-facing-foundation';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -204,7 +204,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v11');
+assert.equal(A.VERSION,'world-authoring-v12');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v5');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
@@ -232,8 +232,8 @@ assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
-assert.equal(W.DELIBERATION_SCHEMA_VERSION,CURRENT_VERSION);
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,CURRENT_VERSION);
+assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Deliberation own generation must not fake-bump for Agent facing foundation');
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence own generation must not fake-bump for Agent facing foundation');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.48.1-sleep-perception-approach','Sleep Slot Conflict must version the observation-gated conflict + preferred approach contract');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.isInitialStateRegistryFinalized(),true);

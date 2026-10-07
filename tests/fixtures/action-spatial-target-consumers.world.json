@@ -1,5 +1,5 @@
 {
-  "authoringSchema": "world-authoring-v11",
+  "authoringSchema": "world-authoring-v12",
   "doors": {
     "frontDoor": {
       "boundary": {
@@ -1015,7 +1015,8 @@
         "wellbeing": {
           "comfort": 70,
           "safety": 82
-        }
+        },
+        "facing": "south"
       },
       "kind": "cat",
       "name": "橘子",
@@ -1054,7 +1055,8 @@
         "wellbeing": {
           "comfort": 58,
           "safety": 80
-        }
+        },
+        "facing": "south"
       },
       "kind": "human",
       "name": "阿真",
@@ -1094,7 +1096,8 @@
         "wellbeing": {
           "comfort": 55,
           "safety": 80
-        }
+        },
+        "facing": "south"
       },
       "kind": "human",
       "name": "老周",

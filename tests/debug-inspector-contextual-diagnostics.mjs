@@ -37,7 +37,7 @@ assert.doesNotMatch(source,/\.conflictResolutionEvidence\s*=|\.decisionEvidence\
 assert.match(source,/registerInspectorDecorator\('intent\.active',decorateInspector,300\)/,'existing Intent Inspector remains the canonical decision-section owner');
 assert.equal((source.match(/registerInspectorDecorator\(/g)||[]).length,1,'contextual grouping must not create a parallel Inspector section owner');
 assert.doesNotMatch(index,/contextual-diagnostics\.js/,'contextual diagnostics must not add a parallel production UI source');
-assert.match(release,/11\.48\.1-sleep-perception-approach/,'Inspector must follow the canonical overall release after the semantic Sleep boundary fix');
+assert.match(release,/11\.49\.0-agent-facing-foundation/,'Inspector must follow the canonical overall release after Agent facing foundation');
 assert.match(controls,/11\.48\.0-debug-replay-p1/,'Debug Inspector work must not fake-bump the independent Debug Replay controls generation');
 
 console.log('debug-inspector-contextual-diagnostics: ok');

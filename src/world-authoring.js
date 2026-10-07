@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v11';
+  const VERSION='world-authoring-v12';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -78,9 +78,9 @@
       }
     },
     residents:{
-      zhen:{id:'zhen',name:'阿真',kind:'human',traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},initial:{needs:{hunger:34,thirst:29,fatigue:41,sleepNeed:34,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(9,3)},posture:{kind:'standing'}}},
-      zhou:{id:'zhou',name:'老周',kind:'human',traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},initial:{needs:{hunger:31,thirst:62,fatigue:46,sleepNeed:40,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(7,4)},posture:{kind:'standing'}}},
-      orange:{id:'orange',name:'橘子',kind:'cat',traits:{curious:.7,careful:.62,social:.78,exertionSensitivity:.90,recoveryRate:1.10},initial:{needs:{hunger:26,thirst:22,fatigue:30,sleepNeed:44,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},placement:{mode:'exact',node:pos(2,6)},posture:{kind:'standing'}}}
+      zhen:{id:'zhen',name:'阿真',kind:'human',traits:{alcoholLike:.25,social:.55,careful:.82,animalAffinity:.72,exertionSensitivity:.95,recoveryRate:1.05},initial:{facing:'south',needs:{hunger:34,thirst:29,fatigue:41,sleepNeed:34,social:38},wellbeing:{comfort:58,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(9,3)},posture:{kind:'standing'}}},
+      zhou:{id:'zhou',name:'老周',kind:'human',traits:{alcoholLike:.72,social:.32,careful:.48,animalAffinity:.46,exertionSensitivity:1.05,recoveryRate:.95},initial:{facing:'south',needs:{hunger:31,thirst:62,fatigue:46,sleepNeed:40,social:24},wellbeing:{comfort:55,safety:80},status:{intoxication:0},placement:{mode:'exact',node:pos(7,4)},posture:{kind:'standing'}}},
+      orange:{id:'orange',name:'橘子',kind:'cat',traits:{curious:.7,careful:.62,social:.78,exertionSensitivity:.90,recoveryRate:1.10},initial:{facing:'south',needs:{hunger:26,thirst:22,fatigue:30,sleepNeed:44,social:28,groomingNeed:75},wellbeing:{comfort:70,safety:82},status:{intoxication:0},placement:{mode:'exact',node:pos(2,6)},posture:{kind:'standing'}}}
     }
   };
 
@@ -91,6 +91,8 @@
   const STRUCTURALLY_OPEN_TERRAINS=new Set(['floor']);
   const furnitureInstanceFields=new Set(['id','definitionId','origin','orientation','name']);
   const FURNITURE_ORIENTATIONS=new Set(D.ORIENTATIONS||[]);
+  const AGENT_FACING_DIRECTIONS=Object.freeze(['north','northEast','east','southEast','south','southWest','west','northWest']);
+  const AGENT_FACING_DIRECTION_SET=new Set(AGENT_FACING_DIRECTIONS);
   const BOUNDARY_ID_PATTERN=/^([vh]):(-?\d+),(-?\d+)$/;
   const BOUNDARY_KINDS=new Set(['wall','opening']);
   const DOOR_STATES=new Set(['open','closed']);
@@ -453,6 +455,9 @@
       const basePath=`residents.${key}`;
       if(!isRecord(resident)){errors.push(authoringIssue('authoring_resident_invalid',basePath,'Resident entry must be an object.'));continue;}
       if(resident.id!==undefined&&resident.id!==key)errors.push(authoringIssue('authoring_resident_id_mismatch',`${basePath}.id`,`Resident key ${key} does not match id ${String(resident.id)}.`));
+      const facing=resident.initial?.facing;
+      if(facing===undefined)errors.push(authoringIssue('authoring_resident_facing_missing',`${basePath}.initial.facing`,'Resident initial.facing must be explicitly authored.'));
+      else if(!AGENT_FACING_DIRECTION_SET.has(facing))errors.push(authoringIssue('authoring_resident_facing_invalid',`${basePath}.initial.facing`,'Resident initial.facing must be north / northEast / east / southEast / south / southWest / west / northWest.',{facing}));
       const placement=resident.initial?.placement;
       if(placement?.mode==='exact')validatePosition(placement.node,`${basePath}.initial.placement.node`);
       if(placement?.mode==='anchor'&&placement.anchor?.kind==='furnitureSlot'){
@@ -657,6 +662,7 @@
     VERSION,
     FURNITURE_CATALOG_VERSION,
     FURNITURE_ORIENTATIONS:Object.freeze(Array.from(FURNITURE_ORIENTATIONS)),
+    AGENT_FACING_DIRECTIONS,
     CELL_SIZE_METERS,
     DEFAULT_WORLD_AUTHORING:deepFreeze(DEFAULT_WORLD_AUTHORING),
     cloneAuthoring:clone,

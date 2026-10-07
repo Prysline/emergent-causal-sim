@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'engine.js','validation/registry.js','validation/rules/physical-profile.js','validation/rules/agent-carry.js'
 ]);
 
-const APP_VERSION='11.48.1-sleep-perception-approach';
+const APP_VERSION='11.49.0-agent-facing-foundation';
 const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const C=globalThis.SimEmbodimentCapabilities;
 const E=globalThis.SimEngine;

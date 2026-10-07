@@ -2,7 +2,7 @@
 
 ## Scope
 
-The original Debug Inspector slice changes Debug / Presentation observability only. The current `11.48.1-sleep-perception-approach` runtime separately changes Sleep semantics; this document only describes how the existing Inspector projects that new boundary without becoming a truth owner.
+The original Debug Inspector slice changes Debug / Presentation observability only. The previous `11.48.1-sleep-perception-approach` runtime separately changes Sleep semantics; this document only describes how the existing Inspector projects that new boundary without becoming a truth owner.
 
 The overall runtime / `SimUI.PRESENTATION_VERSION` now follows `11.48.1-sleep-perception-approach`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.48.1-debug-inspector-sleep-perception-approach`.
 
