@@ -1,6 +1,8 @@
 name: Agent turn Slice B implementation
 
 on:
+  push:
+    branches: [feat/agent-turn-execution]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -9,12 +11,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: agent-turn-slice-b-implementation-${{ github.event.pull_request.number }}
+  group: agent-turn-slice-b-implementation-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   implement:
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/agent-turn-execution' && github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && ((github.event_name == 'push' && github.ref_name == 'feat/agent-turn-execution') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'feat/agent-turn-execution'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
