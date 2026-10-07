@@ -53,6 +53,10 @@ jobs:
             test: tests/browser-debug-inspector-contextual-diagnostics-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-debug-inspector-contextual-diagnostics-qa
+          - suite: debug-inspector-desktop-nav-scroll
+            test: tests/browser-debug-inspector-desktop-nav-scroll-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-debug-inspector-desktop-nav-scroll-qa
           - suite: resident-view
             test: tests/browser-resident-view-qa.mjs
             extra_test: tests/browser-runtime-hook-pipeline-qa.mjs
