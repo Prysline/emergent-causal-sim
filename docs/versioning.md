@@ -1,6 +1,8 @@
-`11.49.0-agent-facing-foundation`
+`11.50.0-agent-turn-execution`
 
-Current release: World Authoring now requires explicit resident `initial.facing`, and runtime Agent state carries the same canonical body orientation as an independent 8-direction fact. Slice A does not derive facing from movement or Furniture orientation and does not implement turning, FOV / LOS, auditory / tactile perception, or turn cost.
+Current release: Locomotion now owns explicit Agent turn execution. Turn preparation records deterministic unitless angular burden without changing canonical `Agent.facing`; only successful completion commits the new facing. The P1 45°-step burden is a centralized baseline, not tick/seconds duration or final physical calibration. Route optimization, forward/backward/strafe policy, Visual / Auditory / Tactile implementation and micro-time scheduling remain out of scope.
+
+Previous release: `11.49.0-agent-facing-foundation` established canonical authored/runtime facing.
 
 # Versioning Contract
 
@@ -10,11 +12,21 @@ Current release: World Authoring now requires explicit resident `initial.facing`
 
 目前 current runtime marker：
 
-`11.49.0-agent-facing-foundation`
+`11.50.0-agent-turn-execution`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.49.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.50.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.0-agent-turn-execution`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
 
-### Current Agent facing foundation release
+### Current Agent turn execution release
+
+`11.50.0-agent-turn-execution` 建立 Perception / Agent Orientation Slice B 的 turn execution foundation。`SimWorld.AGENT_FACING_DIRECTIONS` 只引用 World Authoring 的 frozen 8-direction canonical representation；`SimLocomotion` 由同一 authority 計算 shortest angular delta，並以集中式 `ANGULAR_BURDEN_BY_DELTA` 提供 P1 unitless baseline：0°/45°/90°/135°/180° → 0/1/2/3/4。這些值只保留 deterministic monotonic burden，不代表 tick、秒數或最終 physical calibration。
+
+`beginTurnExecution(agent,toFacing)` 只建立 frozen `fromFacing / toFacing / angularDelta / angularCost` evidence，不修改 Agent。`completeTurnExecution(...)` 會重新驗證 evidence 與 current `Agent.facing`；只有 `succeeded === true` 才 commit canonical facing，failed 或尚未完成的 execution 都不提前改 facing，stale / forged evidence 明確失敗。Turn 不改 position，也沒有把 movement direction、interaction target 或 Presentation 變成 facing authority。
+
+Same-tick perception contract 不變：本 Slice 不新增 runtime hook，也不實作 Visual perception；未來一般 perception 必須使用 tick-start canonical facing snapshot，本 tick 才完成的 turn 不得回寫已形成的同 tick observation。Route turn-aware cost、forward/backward/strafe locomotion policy、maneuver planner、Visual / Auditory / Tactile 與 micro-time scheduler 均 deferred。
+
+Version impact：overall / Presentation、Locomotion → `11.50.0-agent-turn-execution`；World Authoring 維持 `world-authoring-v12`。Spatial Traversal / Route 維持 `11.38.0-carried-handling-risk`；Physical、Agent Carry、Social Bid、Spatial Passage、Deliberation / Decision Evidence / Sleep Slot Conflict、Memory / Usage、Affect、Contact、Dynamic Congestion、Furniture Catalog、Embodiment Capabilities 均未改 contract，不假升。
+
+### Previous Agent facing foundation release
 
 `11.49.0-agent-facing-foundation` 建立 Perception / Agent Orientation Slice A 的 canonical body orientation foundation。World Authoring `world-authoring-v12` 要求每個 Resident 明確 author `initial.facing`，合法值只有 `north / northEast / east / southEast / south / southWest / west / northWest`；missing 或非法方向都由 authoring validator 明確失敗。Initializer 只把 authored fact 帶入 runtime `Agent.facing`，沒有固定 fallback、沒有從第一步 movement 或 Furniture orientation 推導。
 

@@ -12,7 +12,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const APP_VERSION='11.49.0-agent-facing-foundation';
+const APP_VERSION='11.50.0-agent-turn-execution';
 const AFFECT_VERSION='11.35.0-affect-responder-bias';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const near=(actual,expected,eps=.001,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
