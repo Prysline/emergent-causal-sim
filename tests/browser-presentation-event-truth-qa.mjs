@@ -45,6 +45,26 @@ const truthProbe=await page.evaluate(()=>{
 assert.ok(truthProbe.timeline.includes('中性結構化邀請測試'),'summary membership must follow structured talkOffer action even when readable text has no legacy keyword');
 assert.ok(!truthProbe.timeline.includes('聊天摸摸睡覺吃東西灑水外出回到放進。'),'keyword-only readable text must not create summary semantics');
 
+await page.evaluate(()=>{
+  const E=window.SimEngine;
+  const noWakeCause=E.addEvent('摘要測試：老周試著引起橘子的注意。','normal',[],{actor:'zhou',target:'orange',action:'attentionStimulus',interactionPurpose:'gainAttention',stimulusKind:'sound',stimulusIntensity:0});
+  E.addEvent('摘要測試：橘子沒有因這次刺激醒來。','normal',[noWakeCause],{actor:'zhou',target:'orange',action:'sleepDisturbance',stimulusKind:'sound',stimulusIntensity:0,wakeChance:0,wakeRoll:50});
+  const wakeCause=E.addEvent('摘要測試：老周再次試著引起橘子的注意。','normal',[],{actor:'zhou',target:'orange',action:'attentionStimulus',interactionPurpose:'gainAttention',stimulusKind:'sound',stimulusIntensity:24});
+  E.addEvent('摘要測試：橘子被老周的刺激喚醒。','normal',[wakeCause],{actor:'orange',action:'sleepWake',wakeReason:'被老周的引起注意互動驚動而醒來',sleepTicks:4,sleepNeed:48,fatigue:0});
+  document.querySelector('[data-logmode="full"]')?.click();
+  document.querySelector('[data-logmode="summary"]')?.click();
+});
+await page.waitForFunction(()=>{
+  const text=document.getElementById('timeline')?.innerText||'';
+  return text.includes('摘要測試：老周試著引起橘子的注意。')&&text.includes('摘要測試：橘子沒有因這次刺激醒來。')&&text.includes('摘要測試：老周再次試著引起橘子的注意。')&&text.includes('摘要測試：橘子被老周的刺激喚醒。');
+});
+const causalSummary=await page.locator('#timeline').innerText();
+assert.ok(causalSummary.includes('摘要測試：老周試著引起橘子的注意。'),'no-wake summary consequence must retain its direct attention cause');
+assert.ok(causalSummary.includes('摘要測試：橘子沒有因這次刺激醒來。'),'no-wake summary consequence must remain visible');
+assert.ok(causalSummary.includes('摘要測試：老周再次試著引起橘子的注意。'),'wake summary consequence must retain its direct attention cause');
+assert.ok(causalSummary.includes('摘要測試：橘子被老周的刺激喚醒。'),'attention-caused sleepWake must become summary-visible');
+assert.equal(await page.evaluate(()=>window.SimUI?.TIMELINE_CAUSAL_SUMMARY_VERSION),'timeline-causal-summary-v1');
+
 await page.screenshot({path:`${outDir}/presentation-event-truth.png`,fullPage:true});
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);
 assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
