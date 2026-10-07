@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.48.1-sleep-perception-approach';
+const CURRENT_VERSION='11.49.0-agent-facing-foundation';
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';

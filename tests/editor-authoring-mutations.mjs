@@ -13,7 +13,7 @@ const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(A.VERSION,'world-authoring-v11');
+assert.equal(A.VERSION,'world-authoring-v12');
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 
 {

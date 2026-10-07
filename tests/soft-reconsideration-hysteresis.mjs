@@ -43,7 +43,7 @@ function assertIneligibleApplySkipsCandidateWork(label,expectedReason,setup){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.48.1-sleep-perception-approach');
+assert.equal(st.version,'11.49.0-agent-facing-foundation');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);

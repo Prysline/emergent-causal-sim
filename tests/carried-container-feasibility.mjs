@@ -8,7 +8,7 @@ loadRuntimeProfile([
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
 
-const APP_VERSION='11.48.1-sleep-perception-approach';
+const APP_VERSION='11.49.0-agent-facing-foundation';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
@@ -24,7 +24,7 @@ const V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=path=>path.map(node=>[node.x,node.y]);
 
-assert.equal(A.VERSION,'world-authoring-v11');
+assert.equal(A.VERSION,'world-authoring-v12');
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);

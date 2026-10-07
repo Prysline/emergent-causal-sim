@@ -10,7 +10,7 @@ const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=glob
 const clone=value=>JSON.parse(JSON.stringify(value));
 
 assert.equal(D.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v11');
+assert.equal(A.VERSION,'world-authoring-v12');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -25,7 +25,7 @@ const imported=A.parseAuthoringJSON(exported);
 assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'export → import must preserve authoring semantics');
 assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
-assert.equal(imported.authoringSchema,'world-authoring-v11');
+assert.equal(imported.authoringSchema,'world-authoring-v12');
 assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v12');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
@@ -121,7 +121,7 @@ const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
 assert.ok(definitionScript>=0&&authoringScript>definitionScript&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be Furniture Definitions → authoring → shared capabilities → compatibility initializer → preview bridge → mutation owner → UI');
 assert.ok(editorHtml.includes('世界建構 · <span id="authoringVersion">—</span>'),'Editor header must expose a runtime-bound authoring version target');
-assert.ok(!editorHtml.includes('世界建構 · world-authoring-v11'),'Editor HTML must not duplicate the World Authoring version literal');
+assert.ok(!editorHtml.includes('世界建構 · world-authoring-v12'),'Editor HTML must not duplicate the World Authoring version literal');
 const editorUiSource=fs.readFileSync(new URL('../src/editor-ui.js',import.meta.url),'utf8');
 assert.match(editorUiSource,/\$\('authoringVersion'\)\.textContent=A\.VERSION/,'Editor header must read the canonical SimWorldAuthoring.VERSION owner');
 assert.ok(editorHtml.includes('id="furnitureCatalog"'),'Editor-2 must expose the system Furniture Catalog as the new-instance source');

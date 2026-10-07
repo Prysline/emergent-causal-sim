@@ -550,6 +550,7 @@
         name:entry.name||id,
         kind:entry.kind,
         position:runtimePosition(resolved.position),
+        facing:initial.facing,
         needs:clone(initial.needs||{}),
         wellbeing:clone(initial.wellbeing||{}),
         status:clone(initial.status||{}),
