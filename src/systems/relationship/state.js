@@ -9,7 +9,8 @@
     declineTalk:.6,
     petAnimal:1,
     avoidPet:.6,
-    socialNoResponse:.25
+    socialNoResponse:.25,
+    attentionStimulus:.6
   });
   W.registerInitialStateInitializer('relationship.schema',(st)=>{
     
