@@ -1,0 +1,31 @@
++ node tests/agent-turn-execution.mjs
+agent turn execution: ok
++ node tests/agent-facing-foundation.mjs
+agent facing foundation: ok
++ node tests/locomotion-execution-posture.mjs
+v11.24.0 locomotion execution + objective burden regression: ok
++ node tests/locomotion-traversal-cost.mjs
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ '11.38.0-carried-handling-risk'
+- '11.50.0-agent-turn-execution'
+      ^
+
+    at file:///home/runner/work/emergent-causal-sim/emergent-causal-sim/tests/locomotion-traversal-cost.mjs:46:8
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '11.38.0-carried-handling-risk',
+  expected: '11.50.0-agent-turn-execution',
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v22.23.3
