@@ -35,7 +35,7 @@
   function captureVisualOrientationSnapshot(st,observer){
     if(!st||!Number.isInteger(st.tick)||st.tick<0)throw new Error('Visual orientation snapshot requires a non-negative integer state tick.');
     if(!observer?.id)throw new Error('Visual orientation snapshot requires an observer id.');
-    return Object.freeze({observerId:observer.id,observedTick:st.tick,facing:visualOrientation(observer)});
+    return Object.freeze({observerId:observer.id,snapshotTick:st.tick,facing:visualOrientation(observer)});
   }
 
   function directionToward(observerPosition,targetPosition){
@@ -62,13 +62,13 @@
   }
 
   function classifyVisualBearing(snapshot,observerPosition,targetPosition){
-    if(!snapshot?.observerId||!Number.isInteger(snapshot.observedTick))throw new Error('classifyVisualBearing requires a visual orientation snapshot.');
+    if(!snapshot?.observerId||!Number.isInteger(snapshot.snapshotTick))throw new Error('classifyVisualBearing requires a visual orientation snapshot.');
     const facing=requireFacing(snapshot.facing,'snapshot.facing');
     const targetDirection=directionToward(observerPosition,targetPosition);
     const relativeBearing=relativeBearingDegrees(facing,targetDirection);
     return Object.freeze({
       observerId:snapshot.observerId,
-      observedTick:snapshot.observedTick,
+      snapshotTick:snapshot.snapshotTick,
       facing,
       targetDirection,
       relativeBearing,
