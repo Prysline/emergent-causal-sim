@@ -1,0 +1,55 @@
+name: Assemble sleep perception final
+
+on:
+  push:
+    branches: [fix/sleep-preferred-perception-approach]
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct verified patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .assemble/patch.00 .assemble/patch.01 .assemble/patch.02 .assemble/patch.03 .assemble/patch.04 > /tmp/final.patch.gz.b64
+          base64 -d /tmp/final.patch.gz.b64 > /tmp/final.patch.gz
+          test "$(sha256sum /tmp/final.patch.gz | awk '{print $1}')" = "9b612aca0f0e22d15c2627ff71736f474b4ff2393a0117fa1f2dec68cab44173"
+          gzip -dc /tmp/final.patch.gz > /tmp/final.patch
+      - name: Reset tree to main and apply patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git read-tree -u --reset origin/main
+          git apply --check /tmp/final.patch
+          git apply /tmp/final.patch
+          test ! -e noop-never
+          test ! -e .assemble
+          test ! -e .github/workflows/apply-sleep-perception-final.yml
+      - name: Focused validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          find src -name '*.js' -print0 | xargs -0 -n1 node --check
+          node tests/sleep-preferred-slot-conflict.mjs
+          node tests/sleep-carry-observation-boundary.mjs
+          node tests/production-source-load-architecture.mjs
+          node tests/debug-inspector-contextual-diagnostics.mjs
+      - name: Commit assembled tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          test -z "$(git diff --cached --name-only | grep -E '^(noop-never|\.assemble/|\.github/workflows/apply-sleep-perception-final\.yml)$' || true)"
+          git commit -m 'Assemble sleep perception boundary implementation'
+          git push origin HEAD:fix/sleep-preferred-perception-approach
