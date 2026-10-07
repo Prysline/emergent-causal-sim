@@ -78,6 +78,7 @@ assert.equal(labelsIndex,uiIndex+1,'Presentation labels owner must load immediat
 const expectedUiSources=[
   'src/ui/core.js',
   'src/ui/labels.js',
+  'src/ui/timeline-causal-summary.js',
   'src/ui/spatial/observability.js',
   'src/ui/spatial/environment.js',
   'src/ui/inspectors/intent.js',
