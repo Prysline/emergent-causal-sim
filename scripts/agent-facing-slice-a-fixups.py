@@ -11,6 +11,11 @@ s=path.read_text()
 s=s.replace("assert.equal(E.DELIBERATION_SCHEMA_VERSION,APP_VERSION);","assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Deliberation own generation must not fake-bump for Agent facing foundation');")
 path.write_text(s)
 
+path=Path('tests/carried-container-handling-risk.mjs')
+s=path.read_text()
+s=s.replace("const DELIBERATION_VERSION='11.49.0-agent-facing-foundation';","const DELIBERATION_VERSION='11.48.1-sleep-perception-approach';")
+path.write_text(s)
+
 path=Path('tests/agent-facing-foundation.mjs')
 s=path.read_text()
 old="""import fs from 'node:fs';
