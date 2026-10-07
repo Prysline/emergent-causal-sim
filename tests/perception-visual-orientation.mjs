@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-loadInitialStateProfile(['world-authoring.js','world-initializer.js','world.js','systems/perception/visual-orientation.js']);
+loadInitialStateProfile(['world-authoring.js','world-initializer.js','world.js','systems/perception/visual-orientation.js','spatial.js']);
 
 const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,P=globalThis.SimPerception;
 assert.equal(P.VISUAL_ORIENTATION_VERSION,'perception-visual-orientation-v1');
