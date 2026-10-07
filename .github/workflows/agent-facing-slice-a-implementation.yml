@@ -26,6 +26,8 @@ jobs:
           node-version: 22
       - name: Apply deterministic Slice A migration
         run: python scripts/agent-facing-slice-a-migrate.py
+      - name: Apply stale-version fixups
+        run: python scripts/agent-facing-slice-a-fixups.py
       - name: Static syntax check
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Focused facing regression
