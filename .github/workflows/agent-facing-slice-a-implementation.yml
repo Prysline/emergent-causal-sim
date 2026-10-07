@@ -53,6 +53,11 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          # The Actions token may write repository contents but cannot create/update workflow files.
+          # Keep workflow paths at their branch-head versions for this push; the canonical Node
+          # regression entry and temporary-workflow cleanup are applied through the authorized
+          # GitHub connector immediately after this verified implementation commit lands.
+          git checkout HEAD -- .github/workflows/node-regression.yml .github/workflows/agent-facing-slice-a-implementation.yml
           git add -A
           git status --short
           git commit -m "Implement canonical agent facing foundation"
