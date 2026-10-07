@@ -41,6 +41,7 @@ jobs:
               fixed=fixed.replace(f"const TRAVERSAL_VERSION='{new}';",f"const TRAVERSAL_VERSION='{old}';")
               for owner in ('SP.VERSION','globalThis.SimSpatial.VERSION','SP.ROUTE_SEMANTICS_VERSION','globalThis.SimSpatial.ROUTE_SEMANTICS_VERSION'):
                   fixed=fixed.replace(f"{owner},'{new}'",f"{owner},'{old}'")
+              fixed=fixed.replace(r'11\.49\.0-agent-facing-foundation',r'11\.50\.0-agent-turn-execution')
               if fixed != text:
                   path.write_text(fixed)
           PY
