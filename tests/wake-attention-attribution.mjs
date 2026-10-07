@@ -20,6 +20,7 @@ function sleep(st,target){
   target.position={...slot.position};
   target.posture={kind:'lying',slotId:slot.id,furnitureId:slot.furnitureId};
   target.action={kind:'sleep',phase:'sleeping',sleepTicks:4,sleepTarget:{kind:'slot',id:slot.id,position:{...slot.position}},started:st.tick,wait:0};
+  E.ensureIntentForAction(st,target);
   return slot;
 }
 function attentionEvent(st,requester,target){
@@ -55,7 +56,7 @@ E.reset(49103);
 st=E.getState();pair=placePair(st);requester=pair.requester;target=pair.target;sleep(st,target);
 attentionId=attentionEvent(st,requester,target);
 assert.equal(target.episodicMemories.some(m=>m.sourceEventId===attentionId),false,'attention must initially remain unavailable while target is sleeping');
-target.action=null;target.posture={kind:'standing',slotId:null,furnitureId:null};
+target.action=null;target.posture={kind:'standing',slotId:null,furnitureId:null};E.reconcileIntents(st);
 const wakeId=E.addEvent(`${target.name}被${requester.name}的引起注意互動驚動而醒來。`,'normal',[attentionId],{actor:target.id,action:'sleepWake',wakeReason:`被${requester.name}的引起注意互動驚動而醒來`,sleepTicks:4,fatigue:0,sleepNeed:48,sleepEfficiency:1,circadianBias:0,sleepPropensity:48,position:E.positionRef(target.position)});
 memory=E.rememberObservedEvent(st,target,st.causes[attentionId],st.tick);
 assert.ok(memory,'awakened target should be able to form its own episodic memory of the causal attention event');
