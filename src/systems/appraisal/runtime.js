@@ -1,6 +1,7 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP||!E.MEMORY_SCHEMA_VERSION)return;
+  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
   const VERSION=W.APPRAISAL_SCHEMA_VERSION||'11.13.1-event-appraisal';
+  const WAKE_ATTENTION_ATTRIBUTION_VERSION='wake-attention-attribution-v1';
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
   const normNeed=v=>clamp((Number(v)||0)/100,0,1);
@@ -35,7 +36,15 @@
     let relevanceDelta=0,congruenceDelta=0;if(d===0){relevanceDelta=.35;congruenceDelta=-.55;}else if(d===1){relevanceDelta=.28;congruenceDelta=-.45;}else if(d===2){relevanceDelta=.18;congruenceDelta=-.30;}else if(d<=4){relevanceDelta=.08;congruenceDelta=-.12;}
     if(relevanceDelta||congruenceDelta)addFactor(ctx,{kind:'spillProximity',distance:d,relevanceDelta,congruenceDelta});
   }
-  const APPRAISAL_RULES=Object.freeze({petAnimal:petAnimalRule,spill:spillRule});
+  function wakeConsequenceForAttention(st,a,memory){
+    if(!st||!a||memory?.observed?.targetId!==a.id||!memory?.sourceEventId)return null;
+    return Object.values(st.causes||{}).find(e=>e?.data?.action==='sleepWake'&&e.data.actor===a.id&&(e.causeIds||[]).includes(memory.sourceEventId))||null;
+  }
+  function attentionStimulusRule(ctx){
+    const {st,a,memory}=ctx,wake=wakeConsequenceForAttention(st,a,memory);if(!wake)return;
+    addFactor(ctx,{kind:'sleepWakeInterruption',wakeEventId:wake.id,relevanceDelta:.30,congruenceDelta:-.45});
+  }
+  const APPRAISAL_RULES=Object.freeze({petAnimal:petAnimalRule,spill:spillRule,attentionStimulus:attentionStimulusRule});
   function appraiseEpisodicMemory(st,a,memory){
     if(!memory||memory.kind!=='episodic'||memory.appraisal)return memory?.appraisal||null;
     const ctx={st,a,memory,relevance:0,goalCongruence:0,factors:[]};applyRoleBaseline(ctx);const action=memory.observed?.action||'',rule=APPRAISAL_RULES[action]||null;if(rule)rule(ctx);
@@ -45,5 +54,5 @@
   if(!E.registerRuntimeHook)throw new Error('systems/appraisal/runtime.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','appraisal.base',(ctx)=>{ctx.result=appraiseEpisodicMemory(ctx.state,ctx.agent,ctx.memory);},100);
 
-  Object.assign(E,{APPRAISAL_SCHEMA_VERSION:VERSION,APPRAISAL_RULES,appraiseEpisodicMemory});
+  Object.assign(E,{APPRAISAL_SCHEMA_VERSION:VERSION,WAKE_ATTENTION_ATTRIBUTION_VERSION,APPRAISAL_RULES,wakeConsequenceForAttention,appraiseEpisodicMemory});
 })();
