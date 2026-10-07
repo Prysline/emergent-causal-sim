@@ -16,6 +16,15 @@ s=path.read_text()
 s=s.replace("const DELIBERATION_VERSION='11.49.0-agent-facing-foundation';","const DELIBERATION_VERSION='11.48.1-sleep-perception-approach';")
 path.write_text(s)
 
+path=Path('tests/debug-inspector-contextual-diagnostics.mjs')
+s=path.read_text()
+old="assert.match(release,/11\\.48\\.1-sleep-perception-approach/,'Inspector must follow the canonical overall release after the semantic Sleep boundary fix');"
+new="assert.match(release,/11\\.49\\.0-agent-facing-foundation/,'Inspector must follow the canonical overall release after Agent facing foundation');"
+if old not in s:
+    raise SystemExit('Debug Inspector overall-release expectation changed unexpectedly')
+s=s.replace(old,new,1)
+path.write_text(s)
+
 path=Path('tests/agent-facing-foundation.mjs')
 s=path.read_text()
 old="""import fs from 'node:fs';
