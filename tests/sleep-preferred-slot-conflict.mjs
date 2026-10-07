@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,AC=globalThis.SimAgentCarry,SC=globalThis.SimSleepConflict,V=globalThis.SimValidator;
-const APP_VERSION='11.48.0-carrying-replanning';
+const APP_VERSION='11.48.1-sleep-perception-approach';
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 authored.usageAssignments=[{id:'zhen-sleep-left',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];
@@ -20,6 +20,7 @@ const placeAtSlot=(st,a,slotId,{sleeping=false}={})=>{
 const nearSlot=(st,a,slotId)=>{
   const slot=SP.getSlot(st,slotId),node=SP.slotApproachNodes?.(st,slot,a,'walk')?.[0]||slot.position;a.offMap=false;a.position={...node};a.posture={kind:'standing',slotId:null,furnitureId:null};a.action=null;a.activeIntent=null;return slot;
 };
+const farFromPreferred=(a)=>{a.offMap=false;a.position={x:1,y:1,spaceId:'room1',surfaceId:'floor'};a.posture={kind:'standing',slotId:null,furnitureId:null};a.action=null;a.activeIntent=null;};
 const armSleep=(st,a)=>{
   a.needs.sleepNeed=90;a.needs.hunger=12;a.needs.thirst=12;a.needs.fatigue=25;
   a.action=E.buildAction(a,{id:'sleep'});E.ensureIntentForAction(st,a);
@@ -160,8 +161,38 @@ E.tick();
 assert.notEqual(requester.activeIntent?.kind,'sleep','emergency hunger must be able to preempt occupancy wait');
 assert.equal(requester.action?.kind,'eat');
 
+// H: canonical occupancy is not Agent knowledge. A reachable preferred Slot stays worth approaching until its occupant is actually observed.
+E.reset(20260911);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
+farFromPreferred(requester);placeAtSlot(st,cat,'bed:left',{sleeping:true});requester.needs.sleepNeed=90;requester.needs.hunger=12;requester.needs.thirst=12;requester.needs.fatigue=25;
+assert.equal(SP.sleepTargetExclusion(st,requester,'bed:left').reason,'occupied','canonical World legality must still reject the occupied preferred Slot');
+assert.ok(SP.sleepTargets(st,requester).some(x=>x.id==='bed:right'),'fixture must preserve a legal alternate while preferred occupancy is unobserved');
+assert.deepEqual(E.observeAgentContext(st,requester,cat),{observable:false,reason:'out-of-range'});
+assert.equal(SC.hasPreferredSleepConflict(st,requester),false,'unobserved occupancy must not establish formal preferred-Slot conflict');
+const farAssociation=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');assert.ok(farAssociation);
+const farEvaluation=SC.conflictCandidates(st,requester,farAssociation);
+assert.equal(farEvaluation.selected,null);assert.deepEqual(farEvaluation.candidates,[],'unobserved occupancy must not produce wait/alternate/occupant-specific conflict candidates');
+const approachOpportunity=SC.preferredSleepApproachOpportunity(st,requester);assert.equal(approachOpportunity?.slot?.id,'bed:left');assert.ok(approachOpportunity?.approach,'reachable preferred Slot must expose an approach opportunity without occupant identity');
+assert.equal(Object.hasOwn(approachOpportunity,'occupant'),false);assert.ok(E.baseUtilityForAction(requester,'sleep')>0,'preferred approach must keep Sleep viable even though preferred Slot is canonically occupied');
+armSleep(st,requester);const beforeApproach={...requester.position};const approachResolution=SC.resolveSleepChoice(st,requester,requester.action);
+assert.equal(approachResolution.resolution,'approachPreferred');assert.equal(requester.action.phase,'approachPreferred');assert.equal(requester.action.preferredApproachSlotId,'bed:left');assert.equal(requester.conflictResolutionEvidence.length,0,'approach-before-observation must not freeze conflict evidence');
+E.tick();assert.notDeepEqual(requester.position,beforeApproach,'approachPreferred must move using canonical Slot approach geometry');assert.equal(requester.conflictResolutionEvidence.length,0);
+
+// H2: once the occupant becomes observable, approach ends first; only the subsequent normal Sleep step may establish formal conflict evidence.
+requester.position={...SP.slotApproachNodes(st,SP.getSlot(st,'bed:left'),requester,'walk')[0]};
+assert.equal(E.observeAgentContext(st,requester,cat).observable,true);
+E.tick();assert.equal(requester.action?.phase,'chooseSurface');assert.equal(requester.action?.preferredApproachSlotId,undefined);assert.equal(requester.conflictResolutionEvidence.length,0,'observation transition itself must not fabricate a conflict decision');
+E.tick();assert.ok(requester.conflictResolutionEvidence.length>=1,'formal conflict may be adopted only after current observation authority succeeds');
+assert.equal(requester.conflictResolutionEvidence.at(-1).observation.targetId,cat.id);
+
+// I: if the unseen occupant leaves during approach, Sleep returns to normal target selection with no fake conflict history.
+E.reset(20260911);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
+farFromPreferred(requester);placeAtSlot(st,cat,'bed:left',{sleeping:true});armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);assert.equal(requester.action.phase,'approachPreferred');
+cat.offMap=true;cat.position=null;cat.posture={kind:'standing',slotId:null,furnitureId:null};cat.action=null;cat.activeIntent=null;
+E.tick();assert.equal(requester.action?.phase,'chooseSurface');assert.equal(requester.conflictResolutionEvidence.length,0);
+E.tick();assert.equal(requester.action?.sleepTarget?.id,'bed:left','normal Usage ranking should select the now-legal preferred Slot after unseen occupancy clears');assert.equal(requester.conflictResolutionEvidence.length,0,'occupant leaving before observation must not create conflict history');
+
 noIssues('sleep preferred Slot conflict');
-assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.47.0-social-bid-carry-cooperation','Sleep Slot Conflict own generation must not fake-bump for generic carrying replanning');
+assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.48.1-sleep-perception-approach','Sleep Slot Conflict must version the observation-gated conflict + preferred approach contract');
 assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(SC.OCCUPANCY_REASSESS_TICKS,1,'occupancy wait must re-enter Deliberation instead of encoding a fixed multi-tick patience contract');
 assert.equal(SC.OCCUPANCY_WAIT_TICKS,undefined,'sleep conflict must not expose a fixed occupancy patience contract');

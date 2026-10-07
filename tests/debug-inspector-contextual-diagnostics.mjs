@@ -8,7 +8,7 @@ const index=read('index.html');
 const release=read('src/release.js');
 const controls=read('src/ui/observability-controls.js');
 
-assert.match(source,/11\.48\.0-debug-inspector-contextual-diagnostics-layout/,'Debug Inspector diagnostics needs an explicit presentation-only module marker');
+assert.match(source,/11\.48\.1-debug-inspector-sleep-perception-approach/,'Debug Inspector diagnostics needs an explicit module marker for the preferred-Slot approach projection');
 for(const view of ['overview','decision','execution','world','perception','social','all'])assert.ok(source.includes(`['${view}'`)||source.includes(`,'${view}'`),`missing Debug Inspector view: ${view}`);
 assert.match(source,/let activeView='all'/,'complete existing Debug projection must remain the default view');
 assert.match(source,/Historical \/ adopted evidence/,'historical evidence must be explicitly labeled');
@@ -17,6 +17,12 @@ assert.match(source,/currentConflictResolutionEvidence/,'historical conflict pro
 assert.match(source,/SC\.conflictCandidates/,'current probe must consume the Sleep conflict resolver query instead of inventing a parallel ranking');
 assert.match(source,/AC\.candidateAttemptability/,'carry candidate diagnostics must consume Agent Carry candidate-time authority');
 assert.match(source,/SP\.slotOccupant/,'current occupant projection must consume canonical Spatial occupancy');
+assert.match(source,/preferredApproachSlotId/,'preferred approach phase must activate the same contextual diagnostic instead of creating a parallel Inspector owner');
+assert.match(source,/observedPreferredSleepConflict/,'formal current conflict projection must consume the observation-gated Sleep query');
+assert.match(source,/preferredSleepApproachOpportunity/,'unobserved preferred approach projection must consume the Sleep-owned derived query');
+assert.match(source,/Canonical current occupant \(Debug World\)/,'Debug World occupancy must be explicitly separated from Agent knowledge');
+assert.match(source,/Agent-context observation \(current-derived\)/,'requester observation must be shown as a separate current-derived probe');
+assert.match(source,/formal conflict 尚未成立/,'unobserved approach must not display occupant-specific candidate ranking as if conflict were established');
 assert.match(source,/historical evidence 沒有保存 rejection reason/,'missing historical rejection reasons must remain explicitly unknown');
 assert.match(source,/function placeNavAfterOverview\(/,'category navigation must have an explicit placement step after shared Overview content');
 assert.match(source,/if\(category==='overview'\)\{section\.hidden=false;return;\}/,'shared Overview sections must remain visible across domain views');
@@ -31,7 +37,7 @@ assert.doesNotMatch(source,/\.conflictResolutionEvidence\s*=|\.decisionEvidence\
 assert.match(source,/registerInspectorDecorator\('intent\.active',decorateInspector,300\)/,'existing Intent Inspector remains the canonical decision-section owner');
 assert.equal((source.match(/registerInspectorDecorator\(/g)||[]).length,1,'contextual grouping must not create a parallel Inspector section owner');
 assert.doesNotMatch(index,/contextual-diagnostics\.js/,'contextual diagnostics must not add a parallel production UI source');
-assert.match(release,/11\.48\.0-carrying-replanning/,'Presentation-only Debug Inspector work must not bump overall simulation marker');
+assert.match(release,/11\.48\.1-sleep-perception-approach/,'Inspector must follow the canonical overall release after the semantic Sleep boundary fix');
 assert.match(controls,/11\.48\.0-debug-replay-p1/,'Debug Inspector work must not fake-bump the independent Debug Replay controls generation');
 
 console.log('debug-inspector-contextual-diagnostics: ok');

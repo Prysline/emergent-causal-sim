@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
-const CURRENT_VERSION='11.48.0-carrying-replanning';
-const DEBUG_VERSION='11.48.0-debug-inspector-contextual-diagnostics-layout';
+const CURRENT_VERSION='11.48.1-sleep-perception-approach';
+const DEBUG_VERSION='11.48.1-debug-inspector-sleep-perception-approach';
 const outDir='artifacts/browser-debug-inspector-contextual-diagnostics-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -81,7 +81,7 @@ try{
   assert.equal(desktop.navPosition,'sticky','Debug category navigation must be the second sticky layer');
   assert.ok(desktop.navTop>=desktop.modeHeight,'Debug category navigation sticky offset must clear the mode toggle');
   assert.match(desktop.diagnosticText,/Preferred Slot\s+bed:left/);
-  assert.match(desktop.diagnosticText,/Canonical current occupant\s+橘子・orange/);
+  assert.match(desktop.diagnosticText,/Canonical current occupant \(Debug World\)\s+橘子・orange/);
   assert.match(desktop.diagnosticText,/Historical \/ adopted evidence/);
   assert.match(desktop.diagnosticText,/Current-derived probe/);
   assert.match(desktop.diagnosticText,/Adopted resolution\s+wait/);
@@ -97,7 +97,7 @@ try{
   assert.equal(desktop.views.find(x=>x.active)?.id,'decision');
   assert.ok(desktop.visibleSections.includes('decision'),'Decision view must expose decision sections');
   assert.ok(!desktop.visibleSections.includes('execution'),'Decision view must hide execution-only sections');
-  assert.match(desktop.debugText,/Sleep preferred Slot conflict/,'contextual diagnostic must remain prioritized in Decision view');
+  assert.match(desktop.debugText,/Sleep preferred Slot approach \/ conflict/,'contextual diagnostic must remain prioritized in Decision view');
 
   await clickView('execution');
   desktop=await snapshot();

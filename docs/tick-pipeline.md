@@ -1,4 +1,4 @@
-> Current `11.48.0-carrying-replanning`: beforeTick order 800 `intent.replan-preemption` also owns carrying-state re-deliberation before the core loop. It runs only from explicit post-pickup invalidation / wait-cadence triggers, creates a replacement `carryAgent` Decision when adopted, and does not make carrying part of ordinary order-700 soft reconsideration. Existing `recoveryBlocked` remains the core physical fallback if cognition cannot adopt a replacement.
+> Current `11.48.1-sleep-perception-approach`: Sleep preferred-Slot perception gating adds no runtime hook and does not change hook order or same-tick visibility. `approachPreferred` is a narrow existing `sleep` Action phase evaluated inside the normal core Action step. The existing beforeTick order 800 `intent.replan-preemption` carrying-state contract from `11.48.0-carrying-replanning` remains unchanged.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 

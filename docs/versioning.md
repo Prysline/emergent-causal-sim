@@ -1,6 +1,6 @@
-`11.48.0-carrying-replanning`
+`11.48.1-sleep-perception-approach`
 
-Current release: Deliberation now supports generic carrying-state re-deliberation after post-pickup placement invalidation. Canonical `agentCarries` remains Agent Carry World truth; Deliberation compares semantic/neutral placement with stationary wait, adopts a fresh `carryAgent` Action / Decision identity linked by `priorDecisionId`, and leaves geometry / route / final placement legality to Agent Carry / Spatial / Physical. Existing `recoveryBlocked` remains the physical anti-orphan safety net. `carryAgent` is not part of ordinary soft reconsideration. Social Bid remains on its own `11.47.0-social-bid-carry-cooperation` generation.
+Current release: Sleep preferred Slot occupancy remains canonical World legality, but occupant-specific conflict reasoning is now gated by `observeAgentContext(...)`. If a preferred Slot is occupied yet its occupant is still unobserved, Deliberation keeps Sleep viable through the Agent's own Usage association plus a reachable canonical Slot approach and enters the narrow `approachPreferred` phase. Each tick recomputes observation / occupancy / approach; only a successful current observation may establish formal conflict, candidate ranking, or frozen Conflict Resolution Evidence. Occupant departure before observation falls back to normal sleep target selection with no fabricated conflict history.
 
 # Versioning Contract
 
@@ -10,9 +10,21 @@ Current release: Deliberation now supports generic carrying-state re-deliberatio
 
 目前 current runtime marker：
 
-`11.47.0-social-bid-carry-cooperation`
+`11.48.1-sleep-perception-approach`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.47.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.47.0-social-bid-carry-cooperation`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Affect / Relationship / Surface Environment 與 Furniture Catalog 不跟著 overall minor 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.48.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.38.0-carried-handling-risk`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v11`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
+
+### Current Sleep preferred Slot perception boundary + approach release
+
+`11.48.1-sleep-perception-approach` 修正 preferred Slot canonical occupancy 被誤當成 requester knowledge 的 correctness 問題。`SP.sleepTargets()` / `sleepTargetExclusion()` 繼續持有 World-side legality；occupied preferred Slot 仍不可 settle。`SimSleepConflict` 只有在 requester 對 occupant 的 `observeAgentContext(...)` 成功時，才形成正式 conflict 並允許 alternate / wait / attention / yield / drive-away / carry 等 occupant-specific reasoning。
+
+在 occupant 尚未觀察時，Sleep 只可由 requester 自己的 Usage association、preferred Slot identity 與 `bestSlotApproachNode(..., objective:'traversalCost')` 形成 derived `preferredSleepApproachOpportunity`。Engine 使用既有 `sleep` Action 的 `approachPreferred` phase，每 tick重新查詢 observation / canonical occupancy / Slot approach，不保存 cross-tick route result，也不建立 occupant identity / sleep state / mass / held / carry relation的 private mirror。若途中 observation 成立，先回 `chooseSurface`，下一個正常 Sleep step才可建立正式 conflict；若 occupant 在 observation 前離開，則回正常 `sleepTargets()` + Usage ranking，沒有 fake conflict history。
+
+Debug Inspector 只投影此邊界：Canonical current occupant 明確標為 Debug World projection，Agent-context observation 另列為 current-derived probe；unobserved approach 不執行 occupant-specific candidate ranking。Inspector internal marker為 `11.48.1-debug-inspector-sleep-perception-approach`；`UI_OBSERVABILITY_CONTROLS_VERSION` 仍維持 `11.48.0-debug-replay-p1`。
+
+### Previous Carrying-state replanning release
+
+`11.48.0-carrying-replanning` 讓 Deliberation 在 canonical `agentCarries` relation 已存在後，仍可於 post-pickup placement invalidation 重新比較 semantic / neutral placement 與 stationary wait，採納新的 `carryAgent` Action / Decision identity 並以 `priorDecisionId` 串接。Agent Carry / Spatial / Physical 仍持有 World-truth execution、geometry、route與placement legality；`recoveryBlocked`仍是 physical anti-orphan safety net。Social Bid own generation維持 `11.47.0-social-bid-carry-cooperation`。
 
 ### Version-marker synchronization rule
 
