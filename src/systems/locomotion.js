@@ -2,7 +2,7 @@
   const W=window.SimWorld,P=window.SimPhysical,C=window.SimEmbodimentCapabilities;if(!W||!P?.getMovementEnvelope)return;
   if(!C?.postureForMode||!C?.modeFromPosture)throw new Error('systems/locomotion.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/locomotion.js requires world.js initial-state pipeline.');
-  const VERSION='11.38.0-carried-handling-risk';
+  const VERSION='11.50.0-agent-turn-execution';
 
   W.registerInitialStateInitializer('locomotion.schema',(st)=>{
     for(const a of Object.values(st.agents||{})){
@@ -14,6 +14,9 @@
 
   const POSTURE_BY_MODE=C.POSTURE_BY_MODE;
   const MODE_BY_POSTURE=C.MODE_BY_POSTURE;
+  const FACING_DIRECTIONS=W.AGENT_FACING_DIRECTIONS;if(!Array.isArray(FACING_DIRECTIONS)||FACING_DIRECTIONS.length!==8)throw new Error('systems/locomotion.js requires canonical Agent facing directions from world.js.');
+  const FACING_INDEX=new Map(FACING_DIRECTIONS.map((direction,index)=>[direction,index]));
+  const ANGULAR_BURDEN_BY_DELTA=Object.freeze({0:0,45:1,90:2,135:3,180:4});
   const MODE_TRAVERSAL_BURDEN=Object.freeze({walk:0,kneelCrawl:1,proneCrawl:2});
   const MODE_TRANSITION_BURDEN=1;
   const SURFACE_TRAVERSAL_BURDEN_BY_KIND=Object.freeze({human:4,cat:1.1});
@@ -29,6 +32,11 @@
     const posture=typeof agentOrPosture==='string'?agentOrPosture:agentOrPosture?.posture?.kind;
     return C.modeFromPosture(posture);
   }
+  function assertFacing(facing,label='facing'){if(!FACING_INDEX.has(facing))throw new Error(`Invalid ${label}: ${String(facing)}`);return facing;}
+  function angularDelta(fromFacing,toFacing){assertFacing(fromFacing,'fromFacing');assertFacing(toFacing,'toFacing');const raw=Math.abs(FACING_INDEX.get(fromFacing)-FACING_INDEX.get(toFacing)),steps=Math.min(raw,FACING_DIRECTIONS.length-raw);return steps*45;}
+  function angularCost(fromFacing,toFacing){const delta=angularDelta(fromFacing,toFacing),cost=ANGULAR_BURDEN_BY_DELTA[delta];if(!Number.isFinite(cost))throw new Error(`Unsupported angular delta: ${delta}`);return cost;}
+  function beginTurnExecution(agent,toFacing){if(!agent)throw new Error('Turn execution requires an Agent.');const fromFacing=assertFacing(agent.facing,'Agent.facing');assertFacing(toFacing,'toFacing');const delta=angularDelta(fromFacing,toFacing);return Object.freeze({kind:'turn',fromFacing,toFacing,angularDelta:delta,angularCost:angularCost(fromFacing,toFacing)});}
+  function completeTurnExecution(agent,evidence,{succeeded=true}={}){if(!agent)throw new Error('Turn completion requires an Agent.');if(!evidence||evidence.kind!=='turn')throw new Error('Turn completion requires turn execution evidence.');const fromFacing=assertFacing(evidence.fromFacing,'evidence.fromFacing'),toFacing=assertFacing(evidence.toFacing,'evidence.toFacing'),delta=angularDelta(fromFacing,toFacing),cost=angularCost(fromFacing,toFacing);if(evidence.angularDelta!==delta||evidence.angularCost!==cost)throw new Error('Turn execution evidence does not match canonical angular burden.');if(agent.facing!==fromFacing)throw new Error(`Stale turn execution evidence: Agent.facing=${String(agent.facing)}, fromFacing=${fromFacing}.`);const ok=succeeded===true;if(ok)agent.facing=toFacing;return Object.freeze({...evidence,completed:true,succeeded:ok});}
   function transitionTicks(fromMode,toMode){return fromMode===toMode?0:1;}
   function normalizedMovementCredit(value){const credit=Number(value);return Number.isFinite(credit)&&credit>0?Math.min(credit,1-1e-9):0;}
   function movementTiming(agent,mode,distanceMeters=1,movementCredit=0){
@@ -88,5 +96,5 @@
   }
   function clearState(agent){return setState(agent,null,'idle');}
 
-  window.SimLocomotion={VERSION,POSTURE_BY_MODE,MODE_BY_POSTURE,MODE_TRAVERSAL_BURDEN,MODE_TRANSITION_BURDEN,SURFACE_TRAVERSAL_BURDEN_BY_KIND,SURFACE_MANEUVER_BURDEN_BY_KIND,postureForMode,modeFromPosture,transitionTicks,movementTiming,edgeMoveTicks,modeTraversalBurden,modeTransitionBurden,isSurfaceManeuver,surfaceManeuverKey,surfaceTraversalBurden,surfaceManeuverBurden,surfaceManeuverTiming,selectSurfaceManeuver,HANDLING_EXPOSURE_BY_MODE,HANDLING_EXPOSURE_BY_MANEUVER,HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION,handlingExposureForEdge,executeSurfaceManeuver,modeLabel,setState,clearState};
+  window.SimLocomotion={VERSION,FACING_DIRECTIONS,ANGULAR_BURDEN_BY_DELTA,POSTURE_BY_MODE,MODE_BY_POSTURE,MODE_TRAVERSAL_BURDEN,MODE_TRANSITION_BURDEN,SURFACE_TRAVERSAL_BURDEN_BY_KIND,SURFACE_MANEUVER_BURDEN_BY_KIND,postureForMode,modeFromPosture,angularDelta,angularCost,beginTurnExecution,completeTurnExecution,transitionTicks,movementTiming,edgeMoveTicks,modeTraversalBurden,modeTransitionBurden,isSurfaceManeuver,surfaceManeuverKey,surfaceTraversalBurden,surfaceManeuverBurden,surfaceManeuverTiming,selectSurfaceManeuver,HANDLING_EXPOSURE_BY_MODE,HANDLING_EXPOSURE_BY_MANEUVER,HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION,handlingExposureForEdge,executeSurfaceManeuver,modeLabel,setState,clearState};
 })();

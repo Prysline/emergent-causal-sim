@@ -12,8 +12,8 @@ loadRuntimeProfile([
 ]);
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.49.0-agent-facing-foundation';
-const LOCOMOTION_VERSION='11.38.0-carried-handling-risk';
+const APP_VERSION='11.50.0-agent-turn-execution';
+const LOCOMOTION_VERSION='11.50.0-agent-turn-execution';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 const verticalAuthoring=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);

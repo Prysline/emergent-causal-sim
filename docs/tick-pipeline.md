@@ -1,6 +1,8 @@
 > Previous `11.48.1-sleep-perception-approach`: Sleep preferred-Slot perception gating adds no runtime hook and does not change hook order or same-tick visibility. `approachPreferred` is a narrow existing `sleep` Action phase evaluated inside the normal core Action step. The existing beforeTick order 800 `intent.replan-preemption` carrying-state contract from `11.48.0-carrying-replanning` remains unchanged.
 
-> Current `11.49.0-agent-facing-foundation`: Agent facing Slice A adds canonical authored/runtime orientation state only. It introduces no runtime hook, no hook-order change, and no same-tick perception snapshot semantics.
+> Previous `11.49.0-agent-facing-foundation`: Agent facing Slice A adds canonical authored/runtime orientation state only. It introduces no runtime hook, no hook-order change, and no same-tick perception snapshot semantics.
+
+> Current `11.50.0-agent-turn-execution`: turn execution adds no runtime hook or phase. `beginTurnExecution()` is non-mutating evidence construction; successful `completeTurnExecution()` is the sole turn commit point. Same-tick Visual remains a future consumer obligation: perception must snapshot canonical facing at tick start rather than reread a later same-tick turn result.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 

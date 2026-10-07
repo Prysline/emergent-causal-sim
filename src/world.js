@@ -85,7 +85,7 @@
   }
 
   window.SimWorld={
-    WORLD_SCHEMA_VERSION,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring,
+    WORLD_SCHEMA_VERSION,AGENT_FACING_DIRECTIONS:A.AGENT_FACING_DIRECTIONS,WIDTH,HEIGHT,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState,createInitialStateFromAuthoring,
     INITIAL_STATE_PIPELINE_VERSION:'initial-state-pipeline-2',INITIAL_STATE_PHASES,
     registerInitialStateInitializer,registerInitialStateFinalizer,runInitialStateInitializers,listInitialStateInitializers,
     currentInitialStateManifest,assertInitialStateManifest,finalizeInitialStateRegistry,

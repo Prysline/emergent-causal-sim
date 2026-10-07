@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,V=globalThis.SimValidator;
-const APP_VERSION='11.49.0-agent-facing-foundation';
+const APP_VERSION='11.50.0-agent-turn-execution';
 
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,label+': '+v.issues.map(x=>x.code+': '+x.message).join(' | '));};
 

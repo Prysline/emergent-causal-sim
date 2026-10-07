@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.49.0-agent-facing-foundation';
+const APP_VERSION='11.50.0-agent-turn-execution';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const dropEventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&e.data?.action==='containerDrop');
