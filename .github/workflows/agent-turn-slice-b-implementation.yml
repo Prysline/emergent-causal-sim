@@ -73,19 +73,22 @@ jobs:
             git push origin HEAD:feat/agent-turn-execution
             exit "$status"
           fi
-      - name: Full semantic Node profile before verifier cleanup
+      - name: Complete semantic Node suffix after prior full-profile prefix gate
         shell: bash
         run: |
           set +e
           : > slice-b-full-node.log
           status=0
-          while IFS= read -r cmd; do
-            [ "$cmd" = "node tests/workflow-architecture.mjs" ] && { echo "+ deferred until temporary verifier cleanup: $cmd" | tee -a slice-b-full-node.log; continue; }
-            echo "+ $cmd" | tee -a slice-b-full-node.log
-            eval "$cmd" 2>&1 | tee -a slice-b-full-node.log
+          for test in \
+            tests/debug-inspector-contextual-diagnostics.mjs \
+            tests/presentation-observability.mjs \
+            tests/presentation-event-truth.mjs
+          do
+            echo "+ node $test" | tee -a slice-b-full-node.log
+            node "$test" 2>&1 | tee -a slice-b-full-node.log
             code=${PIPESTATUS[0]}
             if [ "$code" -ne 0 ]; then status=$code; break; fi
-          done < <(sed -n 's/^[[:space:]]*- run: \(node tests\/.*\)$/\1/p' .github/workflows/node-regression.yml)
+          done
           if [ "$status" -ne 0 ]; then
             git config user.name github-actions[bot]
             git config user.email 41898282+github-actions[bot]@users.noreply.github.com
