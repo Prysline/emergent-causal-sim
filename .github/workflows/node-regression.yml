@@ -44,6 +44,7 @@ jobs:
       - run: node tests/sleep-eligibility-before-query.mjs
       - run: node tests/social-sleep-interaction.mjs
       - run: node tests/attention-agent-context.mjs
+      - run: node tests/wake-attention-attribution.mjs
       - run: node tests/sleep-preferred-slot-conflict.mjs
       - run: node tests/agent-carry-relocate.mjs
       - run: node tests/carrying-state-replanning.mjs
