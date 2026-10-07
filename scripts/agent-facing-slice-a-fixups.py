@@ -21,7 +21,7 @@ new="""import assert from 'node:assert/strict';
 import {loadInitialStateProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-loadInitialStateProfile(['world-authoring.js','world-initializer.js','world.js','release.js']);
+loadInitialStateProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js']);
 """
 if old not in s:
     raise SystemExit('focused facing regression load block changed unexpectedly')
