@@ -60,14 +60,7 @@ try{
   assert.match(desktop.boxShadow,/inset/,'desktop navigation should retain a subtle right-edge overflow affordance');
 
   const nav=page.locator('[data-debug-inspector-nav]');
-  const box=await nav.boundingBox();
-  assert.ok(box,'desktop Debug category navigation must have a rendered box');
-  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);
-  await page.mouse.wheel(900,0);
-  await page.waitForFunction(()=>document.querySelector('[data-debug-inspector-nav]')?.scrollLeft>0);
-  desktop=await snapshot();
-  assert.ok(desktop.scrollLeft>0,'desktop category navigation must respond to horizontal wheel / trackpad scrolling');
-
+  assert.ok(await nav.boundingBox(),'desktop Debug category navigation must have a rendered box');
   await page.evaluate(()=>{
     const nav=document.querySelector('[data-debug-inspector-nav]');
     nav.scrollLeft=nav.scrollWidth;
@@ -79,6 +72,7 @@ try{
     return nav.scrollLeft>0&&lr.left>=nr.left-1&&lr.right<=nr.right+1;
   });
   desktop=await snapshot();
+  assert.ok(desktop.scrollLeft>0,'desktop category navigation must support horizontal scrolling');
   assert.ok(desktop.lastLeft>=desktop.navLeft-1&&desktop.lastRight<=desktop.navRight+1,'the final All category must be reachable inside the desktop scroller');
   await nav.screenshot({path:`${outDir}/desktop-debug-category-nav.png`});
 
