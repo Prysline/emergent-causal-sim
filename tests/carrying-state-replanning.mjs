@@ -6,7 +6,7 @@ loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','rele
 
 const E=globalThis.SimEngine,A=globalThis.SimAgentCarry,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const noIssues=label=>{const result=V.validateState(E.getState());assert.equal(result.issueCount,0,label+': '+result.issues.map(x=>x.code+': '+x.message).join(' | '));};
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.0-carrying-replanning');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach');
 assert.deepEqual(E.listCarryingDecisionOptionProviders(),[]);
 assert.throws(()=>E.registerCarryingDecisionOptionProvider('',()=>[]),/requires id/);
 E.registerCarryingDecisionOptionProvider('test.domain',()=>[]);

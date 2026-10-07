@@ -18,7 +18,7 @@ function bind(a,kind,intentKind,extra={}){
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.48.0-carrying-replanning');
+assert.equal(st.version,'11.48.1-sleep-perception-approach');
 assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.12.3-replan-preemption');
 noIssues('reset');
 

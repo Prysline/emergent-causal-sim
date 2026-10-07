@@ -1,7 +1,7 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,U=window.SimUsage,SC=window.SimSleepConflict,AC=window.SimAgentCarry,UI=window.SimUI;
   if(!E?.intentLabel||!SP||!U||!SC||!AC||typeof document==='undefined')return;
-  const DEBUG_VERSION='11.48.0-debug-inspector-contextual-diagnostics-layout';
+  const DEBUG_VERSION='11.48.1-debug-inspector-sleep-perception-approach';
   const VIEW_DEFS=Object.freeze([
     ['overview','Overview'],['decision','Decision / Intent'],['execution','Execution / Physical'],['world','World / Spatial'],['perception','Perception / Memory'],['social','Social / Affect'],['all','All']
   ]);
@@ -24,11 +24,10 @@
     'target-unobserved':'目標目前不可觀察','observed-target-kind-unsupported':'觀察到的目標種類不支援 Agent Carry','no-observed-sleep-or-cooperation':'目標未被觀察為睡眠中，且沒有有效 cooperation evidence','carry-method-unsupported':'目前 carry method 不支援','hand-capacity-exceeded':'手部容量不足','carrier-already-in-carry-relation':'搬運者已處於 carry relation','carrier-off-map':'搬運者不在地圖上','missing-carrier':'找不到搬運者','no-relocation-placement-proposal':'目前找不到可形成 candidate 的 relocation placement proposal','cooperation-required':'清醒 occupant 需要有效的 carryCooperation accepted evidence','occupant-missing':'目前找不到 preferred Slot occupant','not-applicable':'目前狀態不適用'}[reason]||reason||'未知');
 
   function currentConflict(st,a){
-    const action=a?.action,stored=E.currentConflictResolutionEvidence?.(a)||null,slotId=action?.preferredConflictSlotId||stored?.preferredSlot?.id||null;
-    if(action?.kind!=='sleep'||(!slotId&&action?.phase!=='conflictWait'&&!stored))return null;
-    const associations=SC.selfSleepAssociations?.(st,a)||[];
-    const conflict=(slotId?associations.find(x=>x?.slot?.id===slotId):null)||associations.find(x=>SP.sleepTargetExclusion?.(st,a,x?.slot?.id)?.reason==='occupied')||null;
-    return {slotId:slotId||conflict?.slot?.id||null,conflict};
+    const action=a?.action,stored=E.currentConflictResolutionEvidence?.(a)||null,slotId=action?.preferredConflictSlotId||action?.preferredApproachSlotId||stored?.preferredSlot?.id||null;
+    if(action?.kind!=='sleep'||(!slotId&&!['conflictWait','approachPreferred'].includes(action?.phase)&&!stored))return null;
+    const conflict=slotId?SC.observedPreferredSleepConflict?.(st,a,slotId)||null:null,approach=slotId?SC.preferredSleepApproachOpportunity?.(st,a,slotId)||null:null;
+    return {slotId:slotId||conflict?.slot?.id||approach?.slot?.id||null,conflict,approach};
   }
   function historicalEvidence(a,slotId){
     const current=E.currentConflictResolutionEvidence?.(a);if(current&&(!slotId||current.preferredSlot?.id===slotId))return current;
@@ -75,14 +74,15 @@
     return rows||'<div class="debug-empty">此 historical evidence 沒有保存 candidate ranking。</div>';
   }
   function sleepDiagnostic(st,a,context){
-    const slotId=context.slotId,conflict=context.conflict,evidence=historicalEvidence(a,slotId),action=a.action,occupant=slotId?SP.slotOccupant?.(st,slotId,a.id):null;
+    const slotId=context.slotId,conflict=context.conflict,approach=context.approach,evidence=historicalEvidence(a,slotId),action=a.action,occupant=slotId?SP.slotOccupant?.(st,slotId,a.id):null;
+    const observation=occupant?E.observeAgentContext?.(st,a,occupant)||{observable:false,reason:'observation-unavailable'}:{observable:false,reason:'occupant-missing'};
     let evaluation=null;if(conflict){try{evaluation=SC.conflictCandidates?.(st,a,conflict)||null;}catch(error){evaluation={error:error?.message||String(error),candidates:[]};}}
-    const contributors=conflict?.associationContributors||U.preferenceContributors?.(st,a,'sleep',{kind:'slot',id:slotId})||[],reasons=conflict?.reasons||U.associationReasons?.(st,a,'sleep',{kind:'slot',id:slotId})||[];
+    const association=conflict||approach,contributors=association?.associationContributors||U.preferenceContributors?.(st,a,'sleep',{kind:'slot',id:slotId})||[],reasons=association?.reasons||U.associationReasons?.(st,a,'sleep',{kind:'slot',id:slotId})||[];
     const section=document.createElement('section');section.className='inspect-section contextual-diagnostic';section.dataset.debugSleepConflict='';section.dataset.debugDomain='decision';
-    section.innerHTML=`<div class="debug-domain-heading"><h3>Sleep preferred Slot conflict</h3><span>Contextual diagnostic</span></div>
-      <div class="kv"><div class="k">Preferred Slot</div><div>${esc(slotId||'—')}</div><div class="k">Preference strength</div><div>${esc(conflict?.strength??'—')}</div><div class="k">Preference source</div><div>${rawDetails(reasons,'Usage reasons')}</div><div class="k">Preference contributors</div><div>${rawDetails(contributors,'Usage contributors')}</div><div class="k">Canonical current occupant</div><div>${occupant?`${esc(nameFor(st,occupant.id))}・${esc(occupant.id)}`:'無'}</div><div class="k">conflictWaitSource</div><div>${esc(action?.conflictWaitSource||'—')}</div><div class="k">conflictWaitStartedTick</div><div>${esc(action?.conflictWaitStartedTick??'—')}</div><div class="k">conflictWaitUntilTick</div><div>${esc(action?.conflictWaitUntilTick??'—')}</div></div>
+    section.innerHTML=`<div class="debug-domain-heading"><h3>Sleep preferred Slot approach / conflict</h3><span>Contextual diagnostic</span></div>
+      <div class="kv"><div class="k">Preferred Slot</div><div>${esc(slotId||'—')}</div><div class="k">Action phase</div><div>${esc(action?.phase||'—')}</div><div class="k">Preference strength</div><div>${esc(association?.strength??'—')}</div><div class="k">Preference source</div><div>${rawDetails(reasons,'Usage reasons')}</div><div class="k">Preference contributors</div><div>${rawDetails(contributors,'Usage contributors')}</div><div class="k">Canonical current occupant (Debug World)</div><div>${occupant?`${esc(nameFor(st,occupant.id))}・${esc(occupant.id)}`:'無'}</div><div class="k">Agent-context observation (current-derived)</div><div>${rawDetails(observation,'Current observation')}</div><div class="k">Formal conflict</div><div>${conflict?'已由 current observation 成立':approach?'尚未成立・目前只存在 preferred approach':'目前未成立'}</div><div class="k">conflictWaitSource</div><div>${esc(action?.conflictWaitSource||'—')}</div><div class="k">conflictWaitStartedTick</div><div>${esc(action?.conflictWaitStartedTick??'—')}</div><div class="k">conflictWaitUntilTick</div><div>${esc(action?.conflictWaitUntilTick??'—')}</div></div>
       <div class="debug-evidence-block historical"><h4>Historical / adopted evidence</h4><p class="hint">回答「當時為什麼選這個」；只讀 frozen conflict evidence，不以現在重算結果冒充歷史 ranking。</p>${evidence?`<div class="debug-result"><span>Adopted resolution</span><strong>${esc(evidence.selectedResolution||'—')}</strong></div><div class="kv"><div class="k">Evidence ID</div><div>${esc(evidence.id)}</div><div class="k">Evaluated Tick</div><div>${esc(evidence.evaluatedTick)}</div><div class="k">Decision-time observation</div><div>${rawDetails(evidence.observation,'Observation snapshot')}</div></div>${historicalCandidateRows(st,evidence)}${CANDIDATE_KINDS.filter(kind=>!(evidence.candidates||[]).some(c=>c.kind===kind)).length?'<p class="hint">未列出的 candidate：historical evidence 沒有保存 rejection reason；此處不以 current state 回填歷史原因。</p>':''}`:'<div class="debug-empty">沒有可對應的 historical conflict evidence。</div>'}</div>
-      <div class="debug-evidence-block current"><h4>Current-derived probe</h4><p class="hint">回答「現在重新評估會怎樣」；即時計算，不是 persisted truth，也不是 historical decision。</p>${evaluation?.error?`<div class="debug-empty">Probe error：${esc(evaluation.error)}</div>`:evaluation?`<div class="debug-result"><span>Current selected</span><strong>${esc(evaluation.selected?.kind||'none')}</strong></div><div class="kv"><div class="k">Observed now</div><div>${rawDetails(evaluation.observation,'Current observation')}</div></div><div class="debug-candidates">${candidateRows(st,a,evaluation)}</div>`:'<div class="debug-empty">目前 conflict 已不存在或無法形成 current probe。</div>'}</div>`;
+      <div class="debug-evidence-block current"><h4>Current-derived probe</h4><p class="hint">回答「現在重新評估會怎樣」；即時計算，不是 persisted truth，也不是 historical decision。Canonical World occupancy 與 requester observation 分欄顯示，Debug projection 不把前者升格成 Agent knowledge。</p>${evaluation?.error?`<div class="debug-empty">Probe error：${esc(evaluation.error)}</div>`:evaluation?`<div class="debug-result"><span>Current selected</span><strong>${esc(evaluation.selected?.kind||'none')}</strong></div><div class="debug-candidates">${candidateRows(st,a,evaluation)}</div>`:approach?'<div class="debug-empty">occupant 尚未被 requester 觀察；formal conflict 尚未成立，因此不產生 occupant-specific candidate ranking。</div>':'<div class="debug-empty">目前 conflict 已不存在或無法形成 current probe。</div>'}</div>`;
     return section;
   }
   function categoryFor(section){

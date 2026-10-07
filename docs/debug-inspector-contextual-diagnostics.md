@@ -2,9 +2,9 @@
 
 ## Scope
 
-This slice changes Debug / Presentation observability only. It does not change simulation semantics, Sleep conflict calibration, Agent Carry legality, Spatial occupancy, Decision Evidence ownership, or any simulation subsystem generation.
+The original Debug Inspector slice changes Debug / Presentation observability only. The current `11.48.1-sleep-perception-approach` runtime separately changes Sleep semantics; this document only describes how the existing Inspector projects that new boundary without becoming a truth owner.
 
-The overall runtime / `SimUI.PRESENTATION_VERSION` remains `11.48.0-carrying-replanning`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.48.0-debug-inspector-contextual-diagnostics-layout`.
+The overall runtime / `SimUI.PRESENTATION_VERSION` now follows `11.48.1-sleep-perception-approach`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.48.1-debug-inspector-sleep-perception-approach`.
 
 ## Debug views
 
@@ -36,10 +36,12 @@ On mobile, contextual diagnostic key/value rows collapse to a single column and 
 
 ## Sleep preferred Slot conflict contextual diagnostic
 
-When the selected Agent is in a current sleep preferred-Slot conflict context, the Inspector prioritizes a Sleep conflict diagnostic. It projects:
+When the selected Agent is in a current sleep preferred-Slot approach or formal conflict context, the Inspector prioritizes the same contextual diagnostic. It projects:
 
 - preferred Slot and Usage-owned preference sources / contributors / strength,
-- canonical current Spatial occupant,
+- canonical current Spatial occupant explicitly labeled as Debug World projection,
+- requester `Agent-context observation` as a separate current-derived probe,
+- whether formal conflict has actually been established or the Action is still `approachPreferred`,
 - current `conflictWaitSource`, `conflictWaitStartedTick`, and `conflictWaitUntilTick`,
 - frozen conflict Decision Evidence when available,
 - current Sleep resolver candidate probe,
@@ -53,7 +55,7 @@ Agent Carry candidate-time explanations consume `SimAgentCarry.candidateAttempta
 The UI renders two explicitly separated blocks:
 
 - **Historical / adopted evidence** reads `currentConflictResolutionEvidence(...)` or the Agent's frozen `conflictResolutionEvidence`. It answers why the decision was adopted at that time.
-- **Current-derived probe** calls the current `SimSleepConflict.conflictCandidates(...)` query. It answers what the resolver would currently see.
+- **Current-derived probe** calls `SimSleepConflict.conflictCandidates(...)` only after `observedPreferredSleepConflict(...)` succeeds. During unobserved `approachPreferred`, it shows the observation boundary and does not fabricate occupant-specific candidate ranking.
 
 If historical evidence did not store a candidate rejection reason, the UI says so. It never fills a historical gap with a current-state recomputation.
 

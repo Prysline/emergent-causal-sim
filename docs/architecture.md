@@ -1,16 +1,18 @@
-> Current `11.48.0-carrying-replanning`: Deliberation may plan while a canonical `agentCarries` relation exists, but it never owns or mirrors that relation. Carrying-state replanning is Agent-private cognition over placement/wait candidates; Agent Carry / Spatial / Physical retain World-truth execution, geometry, route and placement legality. Replacement plans use new Decision identities with `priorDecisionId`; `recoveryBlocked` remains the anti-orphan physical fallback.
+> Current `11.48.1-sleep-perception-approach`: preferred-Slot occupancy remains canonical World legality, but formal Sleep conflict is Agent-observation-gated. Before the requester observes the occupant, Deliberation may only approach its own preferred Slot through canonical Slot approach geometry; it must not create occupant-specific candidates or frozen conflict evidence. Observation success transitions back through normal `chooseSurface`; occupant departure before observation returns to normal target selection. No new runtime hook, persistent observation cache, Spatial truth, or Agent Carry semantics are introduced.
+
+> Previous `11.48.0-carrying-replanning`: Deliberation may plan while a canonical `agentCarries` relation exists, but it never owns or mirrors that relation. Carrying-state replanning is Agent-private cognition over placement/wait candidates; Agent Carry / Spatial / Physical retain World-truth execution, geometry, route and placement legality. Replacement plans use new Decision identities with `priorDecisionId`; `recoveryBlocked` remains the anti-orphan physical fallback.
 
 # Architecture — Current Runtime Contract
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.46.0-sleep-carry-integration`。
+目前 runtime marker：`11.48.1-sleep-perception-approach`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 
 目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Physical、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 tick/reset lifecycle 由 `runtime-hook-pipeline.js` 明確排序；initial-state lifecycle 由 `world.js` 的 named initializer pipeline明確排序。兩者都不以 script-wrapper 疊接順序作為正式語義。
 
-> Current `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
+> Previous `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
 
 
 ## 1. Truth boundaries

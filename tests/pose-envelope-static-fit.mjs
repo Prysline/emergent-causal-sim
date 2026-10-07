@@ -25,7 +25,7 @@ const cat=st.agents.orange;
 
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 assert.equal(P.VERSION,'11.45.0-agent-carry-relocate');
-assert.equal(st.version,'11.48.0-carrying-replanning');
+assert.equal(st.version,'11.48.1-sleep-perception-approach');
 
 const humanStanding=P.getPoseEnvelope(human,'standing');
 near(humanStanding.height,1.65,'Human standing height');
