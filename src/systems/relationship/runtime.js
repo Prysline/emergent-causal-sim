@@ -2,6 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld;
   if(!E||!W?.RELATIONSHIP_SCHEMA_VERSION||!E.APPRAISAL_SCHEMA_VERSION)return;
   const VERSION=W.RELATIONSHIP_SCHEMA_VERSION;
+  const WAKE_ATTENTION_RELATIONSHIP_VERSION='wake-attention-relationship-v1';
   const MIN_RELEVANCE=W.RELATIONSHIP_MIN_RELEVANCE??.15;
   const FAMILIARITY_RATE=W.RELATIONSHIP_FAMILIARITY_RATE??.08;
   const AFFINITY_RATE=W.RELATIONSHIP_AFFINITY_RATE??.10;
@@ -15,7 +16,8 @@
     briefTalkReply:{roles:new Set(['actor','target'])},
     declineTalk:{roles:new Set(['actor','target'])},
     petAnimal:{roles:new Set(['actor','target'])},
-    avoidPet:{roles:new Set(['actor','target'])}
+    avoidPet:{roles:new Set(['actor','target'])},
+    attentionStimulus:{roles:new Set(['target'])}
   });
 
   function relationshipRole(a,memory){
@@ -24,6 +26,7 @@
     if(o.targetId===a?.id)return 'target';
     return null;
   }
+  function isWakeCausingAttentionMemory(memory){return memory?.observed?.action==='attentionStimulus'&&memory?.appraisal?.factors?.some(f=>f?.kind==='sleepWakeInterruption'&&f.wakeEventId);}
   function relationshipEvidenceForMemory(st,a,memory){
     const p=memory?.appraisal;
     if(!a||!memory||!p)return null;
@@ -36,6 +39,7 @@
     }
     const action=memory?.observed?.action||'',rule=OBSERVED_RULES[action];if(!rule)return null;
     const role=relationshipRole(a,memory);if(!role||!rule.roles.has(role))return null;
+    if(action==='attentionStimulus'&&!isWakeCausingAttentionMemory(memory))return null;
     const o=memory.observed||{},counterpartId=role==='actor'?o.targetId:o.actorId;
     if(!counterpartId||counterpartId===a.id||!st?.agents?.[counterpartId])return null;
     const weight=Number(WEIGHTS[action]);
@@ -72,5 +76,5 @@
   if(!E.registerRuntimeHook)throw new Error('systems/relationship/runtime.js requires runtime-hook-pipeline.js');
   E.registerRuntimeHook('episodicMemoryCreated','relationship.consolidate',(ctx)=>{const result=consolidateRelationshipFromMemory(ctx.state,ctx.agent,ctx.memory);if(result)ctx.locals.relationship=result;},350);
 
-  Object.assign(E,{RELATIONSHIP_SCHEMA_VERSION:VERSION,RELATIONSHIP_MIN_RELEVANCE:MIN_RELEVANCE,RELATIONSHIP_FAMILIARITY_RATE:FAMILIARITY_RATE,RELATIONSHIP_AFFINITY_RATE:AFFINITY_RATE,RELATIONSHIP_TARGET_CAP:TARGET_CAP,RELATIONSHIP_OBSERVED_RULES:OBSERVED_RULES,relationshipRole,relationshipEvidenceForMemory,relationshipEntry,relationshipSignal,relationshipTargetDelta,consolidateRelationshipFromMemory});
+  Object.assign(E,{RELATIONSHIP_SCHEMA_VERSION:VERSION,WAKE_ATTENTION_RELATIONSHIP_VERSION,RELATIONSHIP_MIN_RELEVANCE:MIN_RELEVANCE,RELATIONSHIP_FAMILIARITY_RATE:FAMILIARITY_RATE,RELATIONSHIP_AFFINITY_RATE:AFFINITY_RATE,RELATIONSHIP_TARGET_CAP:TARGET_CAP,RELATIONSHIP_OBSERVED_RULES:OBSERVED_RULES,relationshipRole,isWakeCausingAttentionMemory,relationshipEvidenceForMemory,relationshipEntry,relationshipSignal,relationshipTargetDelta,consolidateRelationshipFromMemory});
 })();
