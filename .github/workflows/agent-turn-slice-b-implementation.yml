@@ -28,6 +28,19 @@ jobs:
           node-version: 22
       - name: Apply deterministic Slice B migration
         run: python scripts/agent-turn-slice-b-migrate.py
+      - name: Preserve unchanged subsystem marker expectations
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          new='11.50.0-agent-turn-execution'
+          old='11.38.0-carried-handling-risk'
+          for path in Path('tests').rglob('*.mjs'):
+              text=path.read_text()
+              fixed=text.replace(f"const ROUTE_VERSION='{new}';",f"const ROUTE_VERSION='{old}';")
+              fixed=fixed.replace(f"const TRAVERSAL_VERSION='{new}';",f"const TRAVERSAL_VERSION='{old}';")
+              if fixed != text:
+                  path.write_text(fixed)
+          PY
       - name: Static syntax check
         run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Focused turn regressions
