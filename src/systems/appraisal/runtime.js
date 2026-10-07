@@ -1,5 +1,5 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
+  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP||!E.MEMORY_SCHEMA_VERSION)return;
   const VERSION=W.APPRAISAL_SCHEMA_VERSION||'11.13.1-event-appraisal';
   const WAKE_ATTENTION_ATTRIBUTION_VERSION='wake-attention-attribution-v1';
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
