@@ -72,26 +72,30 @@ jobs:
       - name: Full semantic Node profile before verifier cleanup
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
-          import subprocess, shlex
-          deferred='node tests/workflow-architecture.mjs'
-          for line in Path('.github/workflows/node-regression.yml').read_text().splitlines():
-              line=line.strip()
-              if line.startswith('- run: node tests/'):
-                  cmd=line[len('- run: '):]
-                  if cmd == deferred:
-                      print('+ deferred until temporary verifier cleanup:',cmd,flush=True)
-                      continue
-                  print('+',cmd,flush=True)
-                  subprocess.run(shlex.split(cmd),check=True)
-          PY
+          set +e
+          : > slice-b-full-node.log
+          status=0
+          while IFS= read -r cmd; do
+            [ "$cmd" = "node tests/workflow-architecture.mjs" ] && { echo "+ deferred until temporary verifier cleanup: $cmd" | tee -a slice-b-full-node.log; continue; }
+            echo "+ $cmd" | tee -a slice-b-full-node.log
+            eval "$cmd" 2>&1 | tee -a slice-b-full-node.log
+            code=${PIPESTATUS[0]}
+            if [ "$code" -ne 0 ]; then status=$code; break; fi
+          done < <(sed -n 's/^[[:space:]]*- run: \(node tests\/.*\)$/\1/p' .github/workflows/node-regression.yml)
+          if [ "$status" -ne 0 ]; then
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git add slice-b-full-node.log
+            git commit -m "Capture Slice B full Node failure"
+            git push origin HEAD:feat/agent-turn-execution
+            exit "$status"
+          fi
       - name: Commit verified implementation
         shell: bash
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          rm -f slice-b-verifier.log
+          rm -f slice-b-verifier.log slice-b-full-node.log
           git checkout HEAD -- .github/workflows/node-regression.yml .github/workflows/agent-turn-slice-b-implementation.yml
           git add -A
           git status --short
