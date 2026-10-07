@@ -70,7 +70,13 @@ const responderRel=relation(target,requester.id);
 assert.ok(responderRel?.familiarity>0,'wake-causing attention should leave a directional familiarity trace');
 assert.ok(responderRel?.affinity<0,'wake-causing attention should consolidate the responder historical appraisal negatively');
 assert.equal(relation(requester,target.id),null,'the requester must not receive the mirrored target-side Relationship update');
-E.rememberObservedEvent(st,target,st.causes[attentionId],st.tick+1);
+const originalMemoryId=memory.id,originalAppraisal=JSON.stringify(memory.appraisal);
+st.tick+=1;
+E.observeEventForMemories(st,st.causes[attentionId],st.tick);
+const revisited=target.episodicMemories.find(m=>m.sourceEventId===attentionId);
+assert.equal(revisited.id,originalMemoryId,'re-observation must reuse the existing canonical episodic memory');
+assert.equal(revisited.lastObservedTick,st.tick,'re-observation metadata must not advance beyond canonical state time');
+assert.equal(JSON.stringify(revisited.appraisal),originalAppraisal,'re-observation must not silently reappraise historical meaning');
 assert.deepEqual(relation(target,requester.id),responderRel,'re-observing the same source memory must not consolidate twice');
 noIssues('wake-causing attention attribution');
 
