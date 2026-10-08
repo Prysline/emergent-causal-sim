@@ -83,9 +83,9 @@ jobs:
             const oldPrev='Previous release: `11.50.0-agent-turn-execution` established explicit Agent turn execution and deterministic angular burden.';
             if(!source.includes(oldPrev))throw new Error('versioning previous summary not found');
             source=source.replace(oldPrev,'Previous release: `11.50.1-prone-transition-burden` calibrated objective prone transition burden without changing per-meter crawl burden, timing or feasibility.\n\nPrevious release before that: `11.50.0-agent-turn-execution` established explicit Agent turn execution and deterministic angular burden.');
-            const currentBlock='目前 current runtime marker：\n\n`11.50.1-prone-transition-burden`';
-            if(!source.includes(currentBlock))throw new Error('versioning current marker block not found');
-            source=source.replace(currentBlock,'目前 current runtime marker：\n\n`11.51.0-activity-concurrency`');
+            const currentMarker=/目前 current runtime marker：\r?\n\r?\n`11\.50\.1-prone-transition-burden`/;
+            if(!currentMarker.test(source))throw new Error('versioning current marker block not found');
+            source=source.replace(currentMarker,'目前 current runtime marker：\n\n`11.51.0-activity-concurrency`');
             source=source.replace('玩家可見的 app 頁首 current-version display 使用短版 `v11.50.1`；','玩家可見的 app 頁首 current-version display 使用短版 `v11.51.0`；');
             source=source.replace('Current subsystem markers：Resources','Current subsystem markers：Action `11.51.0-activity-concurrency`；Human Social Response `11.51.0-activity-concurrency`；Resources');
             const proneHeader='### Current prone transition burden release';
