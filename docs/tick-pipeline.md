@@ -4,13 +4,17 @@
 
 > Previous `11.50.0-agent-turn-execution`: turn execution adds no runtime hook or phase. `beginTurnExecution()` is non-mutating evidence construction; successful `completeTurnExecution()` is the sole turn commit point. Same-tick Visual remains a future consumer obligation.
 
-> Current `11.50.1-prone-transition-burden`: prone transition calibration changes only synchronous Locomotion objective burden consumed by Route queries. It adds no runtime hook, phase, same-tick visibility change or RNG ordering change.
+> Previous `11.50.1-prone-transition-burden`: prone transition calibration changes only synchronous Locomotion objective burden consumed by Route queries. It adds no runtime hook, phase, same-tick visibility change or RNG ordering change.
+
+> Current `11.51.0-activity-concurrency`: the first Activity Concurrency slice adds no runtime hook or phase. Existing beforeTick 300 `humanSocial.prepare` may schedule one execution-local Social transient for the upcoming core tick; core eating consumes the resulting primary-progress scale during `eatingPlate / eatingDirect`; afterTick 700 `humanSocial.resolve` settles canonical Social response / talk events and clears the transient. This ordering is explicit through the existing named hook manifest and core checkpoint, not script load order.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.50.1-prone-transition-burden`。
+目前 runtime marker：`11.51.0-activity-concurrency`。
+
+Activity Concurrency v1 不建立新 scheduler hook。`humanSocial.prepare` 仍在 core 前完成 talkOffer / responder preparation，並只在 compatibility contract允許時排入單一 execution-local `socialListening` / `socialSpeaking` transient；core tick推進 `state.tick` 後，Eating 只讀該 tick 的 derived progress scale（listening=1、speaking=0），不交出 eating Action / Intent ownership。`humanSocial.resolve` 仍在 afterTick 700 建立 responder-owned response與既有 canonical `talk` outcome，並在該 execution tick 結束清除 transient。Sleeping + speaking沒有 compatibility rule，仍必須先經正式 wake / transition；Social Bid provenance、requester wait與 responder agency ordering不變。
 
 > `11.46.0-sleep-carry-integration` 整合 sleeping occupant Agent carry、canonical candidate-node selection 與 post-pickup recovery，但**沒有新增、刪除或重新排序 runtime hook**。既有 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield` 的 ordering 維持 `11.44.0-sleep-slot-conflict` 已建立的 contract；candidate selection 與 carry recovery 都在既有同步 query／core `carryAgent` lifecycle 邊界內完成。
 >
@@ -116,7 +120,7 @@ flowchart TD
 | 200 | `memoryDeliberation.capture-idle` | Memory → Deliberation | 記住 core 前真正 idle 的 Agent | afterTick 800 只應 correction 本來由 core 新做初始 deliberation 的 Agent |
 | 250 | `affect.decay` | Affect | 將 current Affect decay 到即將進入的新 tick | Human / animal responder preparation 與後續 core decision 都必須讀到同一個 decay 後 Current Affect phase |
 | 275 | `sleepConflict.respond` | Sleep Slot Conflict / Deliberation | 處理已觀察到的 Human sleep-slot yield / nonphysical drive-away bid，建立 responder-local accept / refuse / delay 與必要的 departure Intent | 必須晚於 Affect decay、早於其他 responder preparation 與 core agent loop；response 不得直接改寫 requester 或 Slot truth |
-| 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder | responder candidate 的 Affect score 必須已完成本 tick decay；非 core-loop event 經 core event-created notification 同步形成合法 observation |
+| 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder；若 primary Action 與 Social transient 相容，可排入 upcoming core tick 的 execution-local listening / speaking transient | responder candidate 的 Affect score 必須已完成本 tick decay；transient 只協調本 tick execution，不取代 Eating / Intent truth；非 core-loop event 經 core event-created notification 同步形成合法 observation |
 | 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
 | 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
@@ -132,6 +136,8 @@ Runtime pipeline 只呼叫 canonical core `tick()` **一次**。
 
 Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Action / decision。Canonical event creator 仍是同一個 core `addEvent`；event-created notification 會標示 `duringCoreTick`。Memory 對這類事件只排入 runtime-local ephemeral FIFO，不在 Agent loop 中立即形成心理 state，並於 afterTick 500 統一 flush。
 
+Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 core checkpoint。Eating 的 `eatingPlate / eatingDirect` 在自己的 canonical Action step只查詢當 tick derived `primaryActivityProgressScale`：沒有 transient或 listening 時為1，speaking時為0並只跳過該 tick 的 consumption/progress；Action、Intent、food contents與 completion owner都不搬到 concurrency runtime。這個 query不消耗 RNG、不建立 World Event，也不跨 tick保存 route／progress mirror。
+
 這一段必須保持為同一個明確 checkpoint：若把 core-loop event 改成 event-created 時立即觸發全部 Memory → Appraisal → Relationship → Affect，後執行 Agent 可能在同一 core tick 提前讀到舊 runtime 原本還不可見的 Agent-private state，會改變 emergent decision semantics。
 
 ## 4. afterTick
@@ -145,12 +151,12 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 | 400 | `intent.recover-aborts` | Intent / Interruption | 從本 tick abort event 恢復仍有效的 open Intent | 必須在 Memory Observation Process 前完成本 tick interruption lifecycle |
 | 500 | `memory.process-events` | Episodic Memory | FIFO flush core-loop event-created notifications | 保留 core event 在 Agent loop 結束後才形成 Memory/Appraisal/Relationship/Affect 的既有語義 |
 | 600 | `socialResponse.resolve-pet-offers` | Social Response | settle captured response interaction，建立對應 world events | 非 core-loop event 經 event-created consumer 同步形成 Memory/Appraisal/Relationship/Affect；hook ID 只是目前 implementation owner |
-| 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見 |
+| 700 | `humanSocial.resolve` | Human Social Response | settle Human social response，建立對應 world events；settle / clear本 tick Human Social transient | event-created consumer 同步 observe，結果仍在 800 前可被目前心理層看見；transient cleanup不能改寫 primary Eating Action / Intent |
 | 800 | `memoryDeliberation.correct-initial` | Memory → Deliberation | 修正本 tick core 初始 social target / utility choice | 因此 600/700 的 psychological update 若延後到 800 之後會改變現況 |
 | 850 | `deliberation.finalize-decision-evidence` | Deliberation | 將 correction 後仍存活的 initial Action 與 selected structured contributors freeze 成 adopted Decision Evidence | 必須晚於 800，否則會把 provisional target誤標成 final；Presentation只能在此之後讀取 final evidence |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
 
-v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
+v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
 
 ## 4.1 Presentation runtime observers
 
@@ -164,7 +170,7 @@ Presentation observer registry與 simulation runtime-hook manifest分離。Simul
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection |
 
-Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。\n\n### afterReset observers
+Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context標示 intermediate時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。\n\n### afterReset observers
 
 | Order | Observer ID | Owner | 責任 |
 |---:|---|---|---|
@@ -254,6 +260,7 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 9. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
 10. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
 11. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
+12. Activity Concurrency transient 被排到 `humanSocial.prepare → core eating progress → humanSocial.resolve` 之外，或跨 execution tick 殘留並影響後續 primary progress；這會改變同 tick compatibility / interference semantics。
 
 這些變更都應同步更新：
 
@@ -268,6 +275,7 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 - hook registry：`E.listRuntimeHooks(phase)`。
 - event-created consumer registry：`E.listEventCreatedListeners()`。
 - architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 exact simulation hook ID / order，並拒絕 extension-owned lifecycle wrapper。
+- Activity Concurrency causal guard：`tests/activity-concurrency-eating-social.mjs` 鎖 baseline eating、listening zero-penalty、speaking local pause、same-Action continuation、Social provenance、sleep incompatibility與 transient cleanup；本 slice不新增 hook-order assertion，因它重用既有 300/core/700 checkpoints。
 - Relationship Foundation causal guard：`tests/relationship-foundation.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
 - Relationship Target Preference causal guard：`tests/relationship-target-preference.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility isolation、負向不 hard-ban，以及 generic animal affordance eligibility。
 - Relationship Responder Bias causal guard：`tests/relationship-responder-bias.mjs` 鎖 responder → requester directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy 與 no persistent score cache。
