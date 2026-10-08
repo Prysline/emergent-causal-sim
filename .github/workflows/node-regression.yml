@@ -34,6 +34,7 @@ jobs:
       - run: node tests/production-source-load-architecture.mjs
       - run: node tests/application-bootstrap-lifecycle.mjs
       - run: node tests/test-profile-composition.mjs
+      - run: node tests/browser-version-marker-preflight.mjs
       - run: node tests/embodiment-capabilities.mjs
       - run: node tests/surface-static-fit-transition.mjs
       - run: node tests/geometry-query-performance.mjs
