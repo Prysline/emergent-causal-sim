@@ -2,7 +2,7 @@
   const W=window.SimWorld,P=window.SimPhysical,C=window.SimEmbodimentCapabilities;if(!W||!P?.getMovementEnvelope)return;
   if(!C?.postureForMode||!C?.modeFromPosture)throw new Error('systems/locomotion.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/locomotion.js requires world.js initial-state pipeline.');
-  const VERSION='11.50.0-agent-turn-execution';
+  const VERSION='11.50.1-prone-transition-burden';
 
   W.registerInitialStateInitializer('locomotion.schema',(st)=>{
     for(const a of Object.values(st.agents||{})){
@@ -19,6 +19,7 @@
   const ANGULAR_BURDEN_BY_DELTA=Object.freeze({0:0,45:1,90:2,135:3,180:4});
   const MODE_TRAVERSAL_BURDEN=Object.freeze({walk:0,kneelCrawl:1,proneCrawl:2});
   const MODE_TRANSITION_BURDEN=1;
+  const PRONE_MODE_TRANSITION_BURDEN=2;
   const SURFACE_TRAVERSAL_BURDEN_BY_KIND=Object.freeze({human:4,cat:1.1});
   const SURFACE_MANEUVER_BURDEN_BY_KIND=Object.freeze({human:9,cat:1.6});
   const SURFACE_MANEUVER_FAMILIES=new Set(['step','climb','jump']);
@@ -53,7 +54,8 @@
   }
   function modeTransitionBurden(agent,fromMode,toMode){
     if(fromMode===toMode)return 0;
-    return Number.isFinite(modeTraversalBurden(agent,toMode))?MODE_TRANSITION_BURDEN:Infinity;
+    if(!Number.isFinite(modeTraversalBurden(agent,toMode)))return Infinity;
+    return fromMode==='proneCrawl'||toMode==='proneCrawl'?PRONE_MODE_TRANSITION_BURDEN:MODE_TRANSITION_BURDEN;
   }
   function calibratedKindBurden(table,agent){
     const burden=table[agent?.kind]??table.human;
@@ -96,5 +98,5 @@
   }
   function clearState(agent){return setState(agent,null,'idle');}
 
-  window.SimLocomotion={VERSION,FACING_DIRECTIONS,ANGULAR_BURDEN_BY_DELTA,POSTURE_BY_MODE,MODE_BY_POSTURE,MODE_TRAVERSAL_BURDEN,MODE_TRANSITION_BURDEN,SURFACE_TRAVERSAL_BURDEN_BY_KIND,SURFACE_MANEUVER_BURDEN_BY_KIND,postureForMode,modeFromPosture,angularDelta,angularCost,beginTurnExecution,completeTurnExecution,transitionTicks,movementTiming,edgeMoveTicks,modeTraversalBurden,modeTransitionBurden,isSurfaceManeuver,surfaceManeuverKey,surfaceTraversalBurden,surfaceManeuverBurden,surfaceManeuverTiming,selectSurfaceManeuver,HANDLING_EXPOSURE_BY_MODE,HANDLING_EXPOSURE_BY_MANEUVER,HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION,handlingExposureForEdge,executeSurfaceManeuver,modeLabel,setState,clearState};
+  window.SimLocomotion={VERSION,FACING_DIRECTIONS,ANGULAR_BURDEN_BY_DELTA,POSTURE_BY_MODE,MODE_BY_POSTURE,MODE_TRAVERSAL_BURDEN,MODE_TRANSITION_BURDEN,PRONE_MODE_TRANSITION_BURDEN,SURFACE_TRAVERSAL_BURDEN_BY_KIND,SURFACE_MANEUVER_BURDEN_BY_KIND,postureForMode,modeFromPosture,angularDelta,angularCost,beginTurnExecution,completeTurnExecution,transitionTicks,movementTiming,edgeMoveTicks,modeTraversalBurden,modeTransitionBurden,isSurfaceManeuver,surfaceManeuverKey,surfaceTraversalBurden,surfaceManeuverBurden,surfaceManeuverTiming,selectSurfaceManeuver,HANDLING_EXPOSURE_BY_MODE,HANDLING_EXPOSURE_BY_MANEUVER,HANDLING_EXPOSURE_BY_VERTICAL_DIRECTION,handlingExposureForEdge,executeSurfaceManeuver,modeLabel,setState,clearState};
 })();
