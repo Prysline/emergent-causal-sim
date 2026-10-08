@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   determine-runner:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     concurrency:
       group: runner-determination
       cancel-in-progress: false
