@@ -24,7 +24,7 @@ function resetFixture({detour='short',clearanceHeight=.70,posture='standing',kne
   }
   const direct=[[1,3],[2,3],[3,3]];
   const shortDetour=[[1,4],[2,4],[3,4]];
-  const longDetour=[[1,4],[1,5],[2,5],[3,5],[4,5],[4,4],[4,3]];
+  const longDetour=[[1,4],[1,5],[1,6],[2,6],[3,6],[4,6],[4,5],[4,4],[4,3]];
   const extra=detour==='short'?shortDetour:detour==='long'?longDetour:[];
   for(const [x,y] of [...direct,...extra]){
     const tile=st.map.tiles[`${x},${y}`];
@@ -78,10 +78,12 @@ assert.equal(easiest.travelTime,4);
 
 // B: sufficiently long walk detour can still lose to crawl when crawl has the lower total objective burden.
 f=resetFixture({detour:'long'});
+const walkDetour=SP.planRoute(f.st,f.human,f.goal,{mode:'walk',objective:'traversalCost'});
 easiest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(easiest.pathDistance,2);
 assert.deepEqual(easiest.steps.map(step=>step.mode),['proneCrawl','proneCrawl']);
 assert.equal(easiest.traversalCost,8);
+assert.ok(walkDetour.traversalCost>easiest.traversalCost,'long detour must lose because crawl has lower objective burden, not only a travel-time tie-break');
 assert.equal(easiest.travelTime,7);
 
 // C: already being prone removes transition burden without making prone movement free.
