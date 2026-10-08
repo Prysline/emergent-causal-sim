@@ -96,13 +96,14 @@
       settleTalkResponse(st,responder,action.responseToBid);responder.action=null;if(responder.activeIntent?.source?.bidId===action.responseToBid)responder.activeIntent=null;
     }
     for(const responder of Object.values(st.agents||{})){
-      const transient=E.transientExecutionFor?.(st,responder);if(responder.kind!=='human'||transient?.kind!=='socialSpeaking'||!transient.sourceId)continue;
-      settleTalkResponse(st,responder,transient.sourceId);E.clearTransientExecution?.(responder,{sourceId:transient.sourceId});
+      const transient=E.transientExecutionFor?.(st,responder);if(responder.kind!=='human'||!transient)continue;
+      if(transient.kind==='socialSpeaking'&&transient.sourceId)settleTalkResponse(st,responder,transient.sourceId);
+      if(transient.kind==='socialSpeaking'||transient.kind==='socialListening')E.clearTransientExecution?.(responder,{sourceId:transient.sourceId});
     }
   }
   function noResponseInterpretationWeight(waitEvent){const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;if(d.responderContextObserved!==true)return .22;const kind=d.observedResponderActionKind||null;if(kind==='sleep'||d.observedResponderPosture==='lying'&&kind==='sleep')return .05;if(kind&&HIGH_COMMITMENT_ACTIONS.has(kind))return .12;if(kind)return .28;return .45;}
   function prepareHumanTalkScenario(mode='talk-engage',seed=11331){
-    const st=resetForScenario(seed),requester=st.agents?.zhou,responder=st.agents?.zhen,cat=st.agents?.orange;if(!requester||!responder)return st;
+    const st=resetForScenario(seed),requester=st.agents?.zhou,responder=st.agents?.zhen,cat=st.agents.orange;if(!requester||!responder)return st;
     requester.position={x:5,y:5};responder.position={x:5,y:6};if(cat)cat.offMap=true;requester.offMap=false;responder.offMap=false;requester.action=null;requester.activeIntent=null;responder.action=null;responder.activeIntent=null;
     Object.assign(requester.needs,{hunger:18,thirst:18,fatigue:18,sleepNeed:18,social:70});const social=mode==='talk-engage'?90:mode==='talk-brief'?35:mode==='talk-decline'?0:80;Object.assign(responder.needs,{hunger:18,thirst:mode==='talk-no-response'?95:18,fatigue:18,sleepNeed:18,social});
     requester.action={kind:'talk',phase:'interact',targetAgent:responder.id,started:st.tick,wait:0};E.ensureIntentForAction?.(st,requester);return st;
