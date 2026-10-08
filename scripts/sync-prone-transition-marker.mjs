@@ -4,9 +4,10 @@ import path from 'node:path';
 const OLD='11.50.0-agent-turn-execution';
 const NEXT='11.50.1-prone-transition-burden';
 const changed=[];
+const readText=file=>fs.readFileSync(file,'utf8').replace(/\r\n/g,'\n');
 
 function writeIfChanged(file,next){
-  const current=fs.readFileSync(file,'utf8');
+  const current=readText(file);
   if(current===next)return;
   fs.writeFileSync(file,next);
   changed.push(file.replaceAll('\\','/'));
@@ -20,7 +21,7 @@ function walk(dir){
     const full=path.join(dir,entry.name);
     if(entry.isDirectory())walk(full);
     else if(entry.isFile()&&entry.name.endsWith('.mjs')){
-      const current=fs.readFileSync(full,'utf8');
+      const current=readText(full);
       if(current.includes(OLD))writeIfChanged(full,current.replaceAll(OLD,NEXT));
     }
   }
@@ -32,7 +33,7 @@ walk('tests');
 
 {
   const file='README.md';
-  let text=fs.readFileSync(file,'utf8');
+  let text=readText(file);
   text=replaceRequired(
     text,
     '目前 runtime marker：**v11.50.0・Agent turn execution** (`11.50.0-agent-turn-execution`)。',
@@ -44,7 +45,7 @@ walk('tests');
 
 {
   const file='docs/versioning.md';
-  let text=fs.readFileSync(file,'utf8');
+  let text=readText(file);
   const headerEnd='Previous release: `11.49.0-agent-facing-foundation` established canonical authored/runtime facing.';
   const headerEndIndex=text.indexOf(headerEnd);
   if(!text.startsWith('`'+OLD+'`')||headerEndIndex<0)throw new Error('Unexpected docs/versioning.md release header');
@@ -77,7 +78,7 @@ Version impact：overall / Presentation、Locomotion → \`${NEXT}\`。Spatial T
 
 {
   const file='docs/architecture.md';
-  let text=fs.readFileSync(file,'utf8');
+  let text=readText(file);
   const oldQuote="> Current `11.50.0-agent-turn-execution`: Locomotion owns explicit turn execution and unitless deterministic angular burden. Begin records evidence without changing facing; only successful completion commits canonical `Agent.facing`. Position updates, movement direction, interaction targets and Presentation remain non-authoritative. No turn-aware route policy, Visual / Auditory / Tactile implementation, new runtime hook or micro-time scheduler is introduced.";
   const replacement=`> Previous \`11.50.0-agent-turn-execution\`: Locomotion established explicit turn execution and unitless deterministic angular burden; successful completion remains the sole canonical \`Agent.facing\` commit point.
 
@@ -89,7 +90,7 @@ Version impact：overall / Presentation、Locomotion → \`${NEXT}\`。Spatial T
 
 {
   const file='docs/tick-pipeline.md';
-  let text=fs.readFileSync(file,'utf8');
+  let text=readText(file);
   const oldQuote="> Current `11.50.0-agent-turn-execution`: turn execution adds no runtime hook or phase. `beginTurnExecution()` is non-mutating evidence construction; successful `completeTurnExecution()` is the sole turn commit point. Same-tick Visual remains a future consumer obligation: perception must snapshot canonical facing at tick start rather than reread a later same-tick turn result.";
   const replacement=`> Previous \`11.50.0-agent-turn-execution\`: turn execution adds no runtime hook or phase. \`beginTurnExecution()\` is non-mutating evidence construction; successful \`completeTurnExecution()\` is the sole turn commit point. Same-tick Visual remains a future consumer obligation.
 
