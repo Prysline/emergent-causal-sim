@@ -4,12 +4,20 @@ import assert from 'node:assert/strict';
 const workflowDir=new URL('../.github/workflows/',import.meta.url);
 const testDir=new URL('./',import.meta.url);
 const workflows=fs.readdirSync(workflowDir).filter(name=>name.endsWith('.yml')).sort();
-assert.deepEqual(workflows,['browser-regression.yml','node-regression.yml'],'current workflow ownership must stay consolidated to Node + Browser regression');
+assert.deepEqual(workflows,['browser-regression.yml','node-regression-github.yml','node-regression.yml'],'current workflow ownership must stay consolidated to Browser + canonical Node + manual GitHub fallback');
 
 const node=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');
+const nodeGithub=fs.readFileSync(new URL('../.github/workflows/node-regression-github.yml',import.meta.url),'utf8');
 const browser=fs.readFileSync(new URL('../.github/workflows/browser-regression.yml',import.meta.url),'utf8');
 assert.doesNotMatch(node,/feature\//,'Node regression must not retain historical feature-branch triggers');
 assert.doesNotMatch(browser,/feature\//,'Browser regression must not retain historical feature-branch triggers');
+assert.match(node,/workflow_call:/,'Canonical Node regression must remain reusable by the manual GitHub fallback workflow');
+assert.match(node,/default:\s*self-hosted/,'Canonical Node regression must default directly to the self-hosted runner');
+assert.doesNotMatch(node,/runner-fallback-action|determine-runner|SELF_HOSTED_RUNNER_STATUS_TOKEN/,'Canonical Node regression must not depend on a GitHub-hosted selector before self-hosted execution');
+assert.match(nodeGithub,/workflow_dispatch:/,'GitHub-hosted Node fallback must remain manual-only');
+assert.doesNotMatch(nodeGithub,/\bpush:|pull_request:/,'GitHub-hosted Node fallback must not run automatically');
+assert.match(nodeGithub,/uses:\s*\.\/\.github\/workflows\/node-regression\.yml/,'Manual GitHub fallback must reuse the canonical Node regression workflow');
+assert.match(nodeGithub,/runner:\s*ubuntu-latest/,'Manual GitHub fallback must explicitly select ubuntu-latest');
 
 const semanticNodeTests=[
   'tests/state-regression.mjs',
