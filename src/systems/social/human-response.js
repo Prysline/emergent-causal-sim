@@ -2,7 +2,8 @@
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;
   if(!E||!W?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
   if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/human-response.js requires systems/affect/runtime.js.');
-  const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.13.3a-human-social-response';
+  if(typeof E.registerActivityCompatibility!=='function'||typeof E.scheduleTransientExecution!=='function')throw new Error('systems/social/human-response.js requires systems/action/runtime.js activity concurrency contract.');
+  const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.51.0-activity-concurrency';
   const TALK_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,engageMin:.62});
   const TALK_AFFECT_RESPONSE_CAP=.12;
   const TALK_RELATIONSHIP_RESPONSE_CAP=.18;
@@ -12,6 +13,9 @@
   const actionKind=a=>E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;
   const resetForScenario=E.reset;
   const counterpartId=counterpart=>typeof counterpart==='string'?counterpart:counterpart?.id||null;
+
+  E.registerActivityCompatibility('humanSocial.eat-listening',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect'],transientKind:'socialListening',primaryProgressScale:1});
+  E.registerActivityCompatibility('humanSocial.eat-speaking',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect'],transientKind:'socialSpeaking',primaryProgressScale:0});
 
   function talkBaseEngagementScore(human){const social=clamp((Number(human?.needs?.social)||0)/100,0,1),rawTrait=Number(human?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1);return round(social*.70+sociability*.30);}
   function talkAffectResponseDelta(human){const signal=Number(E.affectResponseSignal(human))||0;return round(clamp(signal*TALK_AFFECT_RESPONSE_CAP,-TALK_AFFECT_RESPONSE_CAP,TALK_AFFECT_RESPONSE_CAP));}
@@ -38,9 +42,14 @@
     if(softSnapshot)E.addEvent(`${a.name}重新權衡後，改先回應聊天邀請。`,'normal',[],{actor:a.id,action:'intentReconsider',priorIntentId:priorIntent?.id||null,priorIntentKind:priorIntent?.kind||null,priorActionKind:priorActionKind||null,intentId:intent.id,intentKind:intent.kind,nextActionKind:'talk',challengerIntentKind:'respondSocialBid',currentUtility:softSnapshot.currentUtility,challengerUtility:c.utility,switchMargin:softSnapshot.switchMargin,commitmentCost:softSnapshot.commitmentCost,switchThreshold:softSnapshot.switchThreshold,position:E.positionRef?.(a.position)||null});
     return true;
   }
+  function scheduleConcurrentResponse(st,a,c){
+    const compatibility=E.activityCompatibilityFor?.(a,'socialSpeaking');if(!compatibility?.allowed)return false;
+    const result=E.scheduleTransientExecution(st,a,{kind:'socialSpeaking',sourceId:c.bidId,executionTick:st.tick+1,data:{bidId:c.bidId,targetAgent:c.targetAgent}});return result?.scheduled===true;
+  }
   function promoteTalkResponses(st){
     for(const a of Object.values(st.agents||{})){
       if(a.kind!=='human'||a.offMap||E.isSleeping?.(a)||a.activeIntent?.kind==='respondSocialBid')continue;const c=talkResponseCandidate(st,a);if(!c)continue;
+      if(scheduleConcurrentResponse(st,a,c))continue;
       if(!a.action&&!a.activeIntent){const best=E.candidateIntents?.(st,a)?.[0]||null;if(best&&best.utility>c.utility)continue;bindResponse(st,a,c);continue;}
       const snap=E.reconsiderationSnapshot?.(st,a);if(!snap?.ok||!Number.isFinite(snap.commitmentCost)||c.utility<=snap.switchThreshold)continue;bindResponse(st,a,c,{softSnapshot:snap});
     }
@@ -59,11 +68,12 @@
     const id=E.addEvent(`${requester.name}向${responder.name}發出聊天邀請。`,'normal',[],{actor:requester.id,target:responder.id,action:'talkOffer',position,socialBid:true,bidKind:'talkOffer',interactionKind:'talk',expectsResponse:true,bidFrom:requester.id,bidTo:responder.id,perceivedByTarget:true});
     const event=st.causes?.[id];if(event?.data)event.data.bidId=id;return id;
   }
+  function scheduleConcurrentListening(st,responder,bidId){const compatibility=E.activityCompatibilityFor?.(responder,'socialListening');if(!compatibility?.allowed)return false;return E.scheduleTransientExecution(st,responder,{kind:'socialListening',sourceId:bidId,executionTick:st.tick+1,data:{bidId}})?.scheduled===true;}
   function emitTalkOffers(st,records){
     for(const record of records){
       const requester=st.agents?.[record.requesterId],responder=st.agents?.[record.responderId];if(!requester||!responder||requester.action!==record.action||actionKind(requester)!=='talk'||requester.action.phase!=='talkOfferPending')continue;
       if(responder.offMap||E.isSleeping?.(responder)||!SP.isAtInteraction(st,requester,{kind:'agent',id:responder.id},'social')){requester.action.phase='move';continue;}
-      const offerId=addTalkOffer(st,requester,responder,record.position),offer=st.causes?.[offerId];E.addObservedBid?.(st,responder,offer,st.tick);requester.action=null;requester.activeIntent=awaitIntent(st,requester,offer);
+      const offerId=addTalkOffer(st,requester,responder,record.position),offer=st.causes?.[offerId];E.addObservedBid?.(st,responder,offer,st.tick);scheduleConcurrentListening(st,responder,offerId);requester.action=null;requester.activeIntent=awaitIntent(st,requester,offer);
     }
   }
   function settleObservedBid(a,bidId){if(a)a.observedSocialBids=(a.observedSocialBids||[]).filter(ref=>ref.bidId!==bidId);}
@@ -75,12 +85,19 @@
   }
   function applyFullTalk(st,requester,responder,bidId,responseId){const id=E.addEvent(`${requester.name}和${responder.name}聊了一會兒。`,'good',[bidId,responseId],{actor:requester.id,target:responder.id,action:'talk',talkOfferId:bidId,talkResponseEventId:responseId,talkResponse:'engage',position:E.positionRef?.(requester.position)||`${requester.position.x},${requester.position.y}`});requester.needs.social=clamp((Number(requester.needs?.social)||0)-E.rand(12,20),0,100);responder.needs.social=clamp((Number(responder.needs?.social)||0)-E.rand(8,15),0,100);E.addNoise?.(requester.position,8,2,'talk');return id;}
   function applyBriefReply(requester,responder){requester.needs.social=clamp((Number(requester.needs?.social)||0)-3,0,100);responder.needs.social=clamp((Number(responder.needs?.social)||0)-1,0,100);E.addNoise?.(requester.position,2,1,'talk');}
+  function settleTalkResponse(st,responder,bidId){
+    const bid=E.bidEvent?.(st,bidId),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
+    if(!bid||bid.data?.bidKind!=='talkOffer'||bid.data.bidTo!==responder.id||!requester||requester.offMap||responder.offMap||E.isSleeping?.(responder)||!SP.isAtInteraction(st,responder,{kind:'agent',id:requester.id},'social'))return false;
+    const response=talkResponseFor(responder,requester),responseId=addTalkResponse(st,responder,requester,bid.id,response);settleObservedBid(responder,bid.id);settleRequesterWait(requester,bid.id);if(response==='engage')applyFullTalk(st,requester,responder,bid.id,responseId);else if(response==='brief')applyBriefReply(requester,responder);return true;
+  }
   function resolveTalkResponses(st){
     for(const responder of Object.values(st.agents||{})){
       const action=responder.action;if(responder.kind!=='human'||!action||actionKind(responder)!=='talk'||action.phase!=='respondBid'||!action.responseToBid)continue;
-      const bid=E.bidEvent?.(st,action.responseToBid),requester=bid?.data?.bidFrom&&st.agents?.[bid.data.bidFrom];
-      if(!bid||bid.data?.bidKind!=='talkOffer'||bid.data.bidTo!==responder.id||!requester||requester.offMap||responder.offMap||E.isSleeping?.(responder)||!SP.isAtInteraction(st,responder,{kind:'agent',id:requester.id},'social')){responder.action=null;if(responder.activeIntent?.source?.bidId===action.responseToBid)responder.activeIntent=null;continue;}
-      const response=talkResponseFor(responder,requester),responseId=addTalkResponse(st,responder,requester,bid.id,response);settleObservedBid(responder,bid.id);settleRequesterWait(requester,bid.id);if(response==='engage')applyFullTalk(st,requester,responder,bid.id,responseId);else if(response==='brief')applyBriefReply(requester,responder);responder.action=null;if(responder.activeIntent?.source?.bidId===bid.id)responder.activeIntent=null;
+      settleTalkResponse(st,responder,action.responseToBid);responder.action=null;if(responder.activeIntent?.source?.bidId===action.responseToBid)responder.activeIntent=null;
+    }
+    for(const responder of Object.values(st.agents||{})){
+      const transient=E.transientExecutionFor?.(st,responder);if(responder.kind!=='human'||transient?.kind!=='socialSpeaking'||!transient.sourceId)continue;
+      settleTalkResponse(st,responder,transient.sourceId);E.clearTransientExecution?.(responder,{sourceId:transient.sourceId});
     }
   }
   function noResponseInterpretationWeight(waitEvent){const d=waitEvent?.data||{};if(d.action!=='socialWaitEnded'||d.bidKind!=='talkOffer')return null;if(d.responderContextObserved!==true)return .22;const kind=d.observedResponderActionKind||null;if(kind==='sleep'||d.observedResponderPosture==='lying'&&kind==='sleep')return .05;if(kind&&HIGH_COMMITMENT_ACTIONS.has(kind))return .12;if(kind)return .28;return .45;}
