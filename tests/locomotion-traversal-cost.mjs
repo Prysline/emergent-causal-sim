@@ -9,9 +9,9 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.50.0-agent-turn-execution';
+const APP_VERSION='11.50.1-prone-transition-burden';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
-const LOCOMOTION_VERSION='11.50.0-agent-turn-execution';
+const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({detour='short',clearanceHeight=.70,posture='standing',kneelSpeed=null}={}){
@@ -24,7 +24,7 @@ function resetFixture({detour='short',clearanceHeight=.70,posture='standing',kne
   }
   const direct=[[1,3],[2,3],[3,3]];
   const shortDetour=[[1,4],[2,4],[3,4]];
-  const longDetour=[[1,4],[1,5],[2,5],[3,5],[4,5],[4,4],[4,3]];
+  const longDetour=[[1,4],[1,5],[1,6],[2,6],[3,6],[4,6],[4,5],[4,4],[4,3]];
   const extra=detour==='short'?shortDetour:detour==='long'?longDetour:[];
   for(const [x,y] of [...direct,...extra]){
     const tile=st.map.tiles[`${x},${y}`];
@@ -50,7 +50,12 @@ let f=resetFixture();
 assert.equal(L.modeTraversalBurden(f.human,'walk'),0);
 assert.equal(L.modeTraversalBurden(f.human,'kneelCrawl'),1);
 assert.equal(L.modeTraversalBurden(f.human,'proneCrawl'),2);
-assert.equal(L.modeTransitionBurden(f.human,'walk','proneCrawl'),1);
+assert.equal(L.modeTransitionBurden(f.human,'walk','kneelCrawl'),1);
+assert.equal(L.modeTransitionBurden(f.human,'kneelCrawl','walk'),1);
+assert.equal(L.modeTransitionBurden(f.human,'walk','proneCrawl'),2);
+assert.equal(L.modeTransitionBurden(f.human,'proneCrawl','walk'),2);
+assert.equal(L.modeTransitionBurden(f.human,'kneelCrawl','proneCrawl'),2);
+assert.equal(L.modeTransitionBurden(f.human,'proneCrawl','kneelCrawl'),2);
 assert.equal(L.modeTransitionBurden(f.human,'proneCrawl','proneCrawl'),0);
 
 // A: two-edge prone shortcut must not beat a four-edge walk detour only because it is shorter.
@@ -58,7 +63,7 @@ let shortest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'pathDistan
 let easiest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(shortest.pathDistance,2);
 assert.deepEqual(shortest.steps.map(step=>step.mode),['proneCrawl','proneCrawl']);
-assert.equal(shortest.traversalCost,7,'selected short crawl path still reports its full objective burden');
+assert.equal(shortest.traversalCost,8,'selected short crawl path still reports its full objective burden');
 assert.equal(shortest.travelTime,7,'pathDistance remains distinct from both cost and execution time');
 const batchTargets=[f.mid,f.goal,floor(f.st,1,4),floor(f.st,3,4)];
 assert.deepEqual(
@@ -73,10 +78,12 @@ assert.equal(easiest.travelTime,4);
 
 // B: sufficiently long walk detour can still lose to crawl when crawl has the lower total objective burden.
 f=resetFixture({detour:'long'});
+const walkDetour=SP.planRoute(f.st,f.human,f.goal,{mode:'walk',objective:'traversalCost'});
 easiest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(easiest.pathDistance,2);
 assert.deepEqual(easiest.steps.map(step=>step.mode),['proneCrawl','proneCrawl']);
-assert.equal(easiest.traversalCost,7);
+assert.equal(easiest.traversalCost,8);
+assert.ok(walkDetour.traversalCost>easiest.traversalCost,'long detour must lose because crawl has lower objective burden, not only a travel-time tie-break');
 assert.equal(easiest.travelTime,7);
 
 // C: already being prone removes transition burden without making prone movement free.
@@ -95,4 +102,4 @@ assert.deepEqual(easiest.steps.map(step=>step.mode),['kneelCrawl','kneelCrawl'])
 assert.equal(easiest.traversalCost,5);
 assert.equal(easiest.travelTime,9,'speed override changes executable time without silently redefining objective burden');
 
-console.log('v11.24.0 locomotion traversal cost completeness regression: ok');
+console.log('v11.50.1 locomotion traversal cost / prone transition calibration regression: ok');

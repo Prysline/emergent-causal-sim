@@ -12,8 +12,8 @@ loadRuntimeProfile([
 ]);
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,C=globalThis.SimEmbodimentCapabilities,P=globalThis.SimPhysical,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.50.0-agent-turn-execution';
-const LOCOMOTION_VERSION='11.50.0-agent-turn-execution';
+const APP_VERSION='11.50.1-prone-transition-burden';
+const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 const verticalAuthoring=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -22,7 +22,6 @@ verticalAuthoring.structures={
   stairA:{id:'stairA',kind:'stair',lower:{x:8,y:4,z:0},upper:{x:8,y:4,z:1},clearanceWidth:.8,clearanceHeight:2}
 };
 E.configureResetStateSource('locomotion-vertical-fixture',seed=>W.createInitialStateFromAuthoring(verticalAuthoring,seed));
-
 
 function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
   E.reset(11900);
@@ -80,7 +79,8 @@ assert.equal(L.edgeMoveTicks(human,'proneCrawl'),3);
 assert.equal(L.modeTraversalBurden(human,'walk'),0);
 assert.equal(L.modeTraversalBurden(human,'kneelCrawl'),1);
 assert.equal(L.modeTraversalBurden(human,'proneCrawl'),2);
-assert.equal(L.modeTransitionBurden(human,'walk','proneCrawl'),1);
+assert.equal(L.modeTransitionBurden(human,'walk','proneCrawl'),2,'prone objective transition burden is higher than the ordinary mode-change baseline');
+assert.equal(L.transitionTicks('walk','proneCrawl'),1,'objective prone burden must not redefine the one-tick posture transition timing');
 assert.deepEqual(L.SURFACE_TRAVERSAL_BURDEN_BY_KIND,{human:4,cat:1.1},'Surface traversal calibration must move intact from Spatial into Locomotion ownership');
 assert.deepEqual(L.SURFACE_MANEUVER_BURDEN_BY_KIND,{human:9,cat:1.6},'Surface transition calibration must move intact from Spatial into maneuver-owned Locomotion policy');
 assert.equal(L.surfaceManeuverBurden(human,{family:'climb',kind:'climbUp',direction:'up'}),9);
@@ -213,4 +213,4 @@ f.human.action.locomotionStep.surfaceManeuver={family:'teleport',kind:'teleportU
 validation=V.validateState(f.st);
 assert.ok(validation.issues.some(x=>x.code==='locomotion_step_surface_maneuver_invalid'),'validator must reject invented pending Surface maneuver identities');
 
-console.log('v11.24.0 locomotion execution + objective burden regression: ok');
+console.log('v11.50.1 locomotion execution + objective burden regression: ok');

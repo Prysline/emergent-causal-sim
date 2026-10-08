@@ -92,6 +92,7 @@ jobs:
       - run: node tests/metric-route-locomotion.mjs
       - run: node tests/locomotion-execution-posture.mjs
       - run: node tests/locomotion-traversal-cost.mjs
+      - run: node tests/dining-table-prone-shortcut.mjs
       - run: node tests/dynamic-congestion.mjs
       - run: node tests/crowding-8-direction.mjs
       - run: node tests/action-terminology.mjs

@@ -2,13 +2,15 @@
 
 > Previous `11.49.0-agent-facing-foundation`: Agent facing Slice A adds canonical authored/runtime orientation state only. It introduces no runtime hook, no hook-order change, and no same-tick perception snapshot semantics.
 
-> Current `11.50.0-agent-turn-execution`: turn execution adds no runtime hook or phase. `beginTurnExecution()` is non-mutating evidence construction; successful `completeTurnExecution()` is the sole turn commit point. Same-tick Visual remains a future consumer obligation: perception must snapshot canonical facing at tick start rather than reread a later same-tick turn result.
+> Previous `11.50.0-agent-turn-execution`: turn execution adds no runtime hook or phase. `beginTurnExecution()` is non-mutating evidence construction; successful `completeTurnExecution()` is the sole turn commit point. Same-tick Visual remains a future consumer obligation.
+
+> Current `11.50.1-prone-transition-burden`: prone transition calibration changes only synchronous Locomotion objective burden consumed by Route queries. It adds no runtime hook, phase, same-tick visibility change or RNG ordering change.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.46.0-sleep-carry-integration`。
+目前 runtime marker：`11.50.1-prone-transition-burden`。
 
 > `11.46.0-sleep-carry-integration` 整合 sleeping occupant Agent carry、canonical candidate-node selection 與 post-pickup recovery，但**沒有新增、刪除或重新排序 runtime hook**。既有 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield` 的 ordering 維持 `11.44.0-sleep-slot-conflict` 已建立的 contract；candidate selection 與 carry recovery 都在既有同步 query／core `carryAgent` lifecycle 邊界內完成。
 >

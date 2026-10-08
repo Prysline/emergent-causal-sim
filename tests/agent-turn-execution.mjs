@@ -5,8 +5,8 @@ globalThis.window=globalThis;
 loadInitialStateProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','systems/locomotion.js']);
 
 const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,L=globalThis.SimLocomotion;
-assert.equal(W.VERSION,'11.50.0-agent-turn-execution');
-assert.equal(L.VERSION,'11.50.0-agent-turn-execution');
+assert.equal(W.VERSION,'11.50.1-prone-transition-burden');
+assert.equal(L.VERSION,'11.50.1-prone-transition-burden');
 assert.strictEqual(W.AGENT_FACING_DIRECTIONS,A.AGENT_FACING_DIRECTIONS,'runtime World must reference the canonical authored facing representation');
 assert.strictEqual(L.FACING_DIRECTIONS,W.AGENT_FACING_DIRECTIONS,'Locomotion must consume the same canonical facing representation');
 assert.deepEqual(L.ANGULAR_BURDEN_BY_DELTA,{0:0,45:1,90:2,135:3,180:4});

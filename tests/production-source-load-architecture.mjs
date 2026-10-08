@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.50.0-agent-turn-execution';
+const CURRENT_VERSION='11.50.1-prone-transition-burden';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -227,8 +227,8 @@ assert.equal(P.VERSION,'11.45.0-agent-carry-relocate','Physical own generation m
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk','Route search generation must not fake-bump for a separate candidate selector');
 assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,'11.46.0-sleep-carry-integration');
-assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.50.0-agent-turn-execution');
-assert.equal(L.VERSION,'11.50.0-agent-turn-execution');
+assert.equal(W.LOCOMOTION_SCHEMA_VERSION,'11.50.1-prone-transition-burden');
+assert.equal(L.VERSION,'11.50.1-prone-transition-burden');
 assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
