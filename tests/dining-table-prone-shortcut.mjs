@@ -8,7 +8,8 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const VERSION='11.51.0-activity-concurrency';
+const CURRENT_VERSION='11.51.0-activity-concurrency';
+const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 E.reset(20261008);
@@ -21,8 +22,8 @@ human.locomotion={mode:null,phase:'idle'};
 human.action=null;
 human.held=null;
 
-assert.equal(st.version,VERSION);
-assert.equal(L.VERSION,VERSION);
+assert.equal(st.version,CURRENT_VERSION);
+assert.equal(L.VERSION,LOCOMOTION_VERSION);
 assert.ok(st.furniture.diningTable,'regression must use the current default dining table');
 for(const id of ['chairNW','chairNE','chairSW','chairSE'])assert.ok(st.furniture[id],`regression must keep current dining chair ${id}`);
 assert.equal(st.containers.cupB.position.x,6,'regression must use the current cupB table-side x placement');
