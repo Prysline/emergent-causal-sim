@@ -97,7 +97,7 @@ for(const relativePath of stateTests){
     [...source.matchAll(/\bconst\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*['"]([^'"]+)['"]/g)]
       .map(match=>[match[1],match[2]])
   );
-  for(const match of source.matchAll(/assert\.(?:equal|strictEqual)\((st\.version|E\.VERSION|E\.getState\(\)\.version),\s*([^,\n\)]+)/g)){
+  for(const match of source.matchAll(/assert\.(?:equal|strictEqual)\(((?:[A-Za-z_$][A-Za-z0-9_$]*\.version)|E\.VERSION|E\.getState\(\)\.version|W\.VERSION),\s*([^,\n\)]+)/g)){
     const token=match[2].trim();
     const literal=token.match(/^['"]([^'"]+)['"]$/);
     const expectedVersion=literal?literal[1]:constants.get(token);
