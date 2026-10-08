@@ -26,7 +26,7 @@ const state={tick:42};
 const observer={id:'observer',kind:'human',facing:'east',physical:physical(),position:{x:2,y:4,z:0},posture:{kind:'standing'}};
 const target={id:'target',kind:'human',facing:'west',physical:physical(),position:{x:4,y:4,z:0},posture:{kind:'standing'}};
 const authored=JSON.parse(JSON.stringify(A.DEFAULT_WORLD_AUTHORING));
-const clearProjection=P.projectStaticVisualOpacity(authored,0);
+const clearProjection=Object.freeze([]);
 
 assert.equal(P.VISUAL_ORIENTATION_VERSION,'perception-visual-orientation-v1');
 assert.equal(P.VISUAL_RANGE_VERSION,'perception-visual-range-v1');
