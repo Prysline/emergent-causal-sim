@@ -46,6 +46,7 @@ function armEating({seed=15100,withRequester=false,responderSocial=90}={}){
   E.tick();
   assert.equal(E.amountAt(plate.id,'food'),0,'listening-compatible execution must leave baseline eating progress unchanged');
   assert.equal(responder.action,null);
+  assert.equal(E.transientExecutionFor(E.getState(),responder),null,'the listening transient must settle after its execution tick');
   noIssues('listening');
 }
 
