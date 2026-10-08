@@ -75,6 +75,18 @@ node tests/pr-preflight.mjs
 - [ ] manual fallback 沒有被 `push` / `pull_request` 自動觸發。
 - [ ] fallback 仍重用 canonical Node workflow，而不是維護第二份 test list。
 
+### 多 PR 併行時的 runner 策略
+
+只有一台 self-hosted runner、同時有多個 PR 等 Node CI 時，可以人工把後續 PR 暫時排去 GitHub-hosted fallback，以提高兩邊 runner 的利用率：
+
+1. 第一個 PR 保留 canonical `Node regression`，繼續排／使用 `self-hosted`。
+2. 第二個 PR 若還在等 self-hosted，可取消該次 canonical Node run。
+3. 手動啟動 `Node regression (GitHub fallback)`，branch 選第二個 PR 的 branch，讓它排 `ubuntu-latest`。
+4. 若 GitHub-hosted runner 先開始，就讓 fallback 跑完。
+5. 若第一個 PR 的 self-hosted run 先完成，而第二個 PR 的 GitHub fallback **仍是 queued、尚未開始**，可取消 fallback，再對第二個 PR 原本被取消的 canonical `Node regression` 執行 Re-run，讓它回到 `self-hosted`。
+
+這是一個人工 opportunistic scheduling 流程，不改變 canonical runner contract。避免讓同一個 PR 同時實際執行 self-hosted 與 GitHub-hosted Node regression，以免浪費資源。Browser regression 不需要參與這個切換，因為它本來就是 GitHub-hosted。
+
 ## Preflight 通過後仍要做什麼
 
 Preflight 只代表便宜的結構性錯誤已排除。之後仍需依變更風險執行：
