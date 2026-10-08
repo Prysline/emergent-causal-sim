@@ -59,6 +59,7 @@ jobs:
       - run: node tests/perception-visual-range.mjs
       - run: node tests/perception-visual-los.mjs
       - run: node tests/perception-visual-sight-samples.mjs
+      - run: node tests/perception-visual-availability.mjs
       - run: node tests/initial-population-placement.mjs
       - run: node tests/initializer-horizontal-reachability.mjs
       - run: node tests/world-authoring-editor-contract.mjs
