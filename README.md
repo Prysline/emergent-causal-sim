@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.50.1・Prone transition burden** (`11.50.1-prone-transition-burden`)。
+目前 runtime marker：**v11.51.0・Activity concurrency** (`11.51.0-activity-concurrency`)。
 
 > README 只保存目前架構概要；跨 subsystem 工程契約見 [`docs/architecture.md`](docs/architecture.md)，版本升級規則見 [`docs/versioning.md`](docs/versioning.md)，Interaction Geometry 細節見 [`docs/interaction-geometry.md`](docs/interaction-geometry.md)。版本演進以 Git history / PR 為準，不在 README 堆逐版 changelog。\n\n「10 步」現在由 Presentation / UI 層持有 manual batch scheduling：`step(1)` 仍是同步完整 tick；`step(10)` 在第一個 tick 前與每個完整 `E.tick()` 之間讓出瀏覽器主執行緒，intermediate tick 不做 core full render，Mobile Summary / Resident View / Relationship View 延後到 final tick 對齊同一份 canonical state。Reset 可在 tick boundary 取消 batch；autoplay 與 manual batch 維持單一 tick source。 Autoplay 由同一 Presentation owner 改為 completion-aware scheduling：名目 start cadence 維持約 700ms；若完整 `tick + render` 超過週期，不追趕 overdue interval，而是在 callback 完成後先跨過兩個 browser animation-frame opportunities，再依剩餘 cadence 安排下一 tick。Pause / Reset 可取消 pending timeout / frame；simulation tick 仍保持同步原子。
 
@@ -73,6 +73,7 @@
 
 - Needs、fatigue / sleepNeed 分離、species circadian profile、rest / sleep / wake stimulus。
 - canonical `action.kind` Action state machine。
+- **Activity concurrency first slice**：Action runtime 提供「一個 ongoing primary Action + 一個 execution-local transient behavior」的 compatibility seam；它不建立第二份 primary progress truth，也不是任意 N-channel scheduler。第一個 consumer 只涵蓋 eating 的 `eatingPlate / eatingDirect` phase 與 Human Social：`socialListening` 保持 primary progress scale 1，`socialSpeaking` 在該 execution tick 使用 scale 0，因此說話會暫停當 tick 的 eating progress，transient 結束後繼續同一個 eating Action / Intent。Sleeping + speaking 沒有 compatibility rule，必須走既有 wake / transition。Social Bid / response / `talk` World Event provenance 不變，也不建立 persistent `Conversation` state。
 - Agent-private Active Intent。
 - hard replan / emergency preemption。
 - soft reconsideration / hysteresis。
@@ -179,6 +180,7 @@ State regression 目前涵蓋：
 - Physical Profile 的 authoritative individual state、multi-mode derived MovementEnvelope、`standing → walk` terminology boundary、default behavior parity、individual geometry override、validator 與 no-cache boundary；
 - Passage Profile 的 edge-derived height / width、`null = unconstrained`、normal / low / lower / width-only deterministic fixture，以及 **v11.17 isolated Passage focused regression** 所鎖的「crawl query 可行但當時 A* 不自動 crawl」subsystem boundary；current production v11.19+ 的 mode-aware crawl execution 由 Locomotion regression 另行驗證；
 - Action terminology / canonical construction；
+- Activity concurrency 的 baseline eating、listening zero-penalty、speaking local pause、continuation、Social causality、sleep incompatibility與 transient cleanup；
 - Active Intent / Social Bid / replan / soft reconsideration；
 - Episodic Memory / Appraisal / Affect / salience；
 - Human / Pet responder agency；
