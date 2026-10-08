@@ -10,6 +10,8 @@ const node=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',im
 const browser=fs.readFileSync(new URL('../.github/workflows/browser-regression.yml',import.meta.url),'utf8');
 assert.doesNotMatch(node,/feature\//,'Node regression must not retain historical feature-branch triggers');
 assert.doesNotMatch(browser,/feature\//,'Browser regression must not retain historical feature-branch triggers');
+assert.match(node,/determine-runner:\s*[\s\S]*?runs-on:\s*ubuntu-slim/,'Node runner selector must use the lightweight GitHub-hosted ubuntu-slim runner');
+assert.match(node,/fallback-runner:\s*ubuntu-latest/,'Node regression fallback must remain ubuntu-latest');
 
 const semanticNodeTests=[
   'tests/state-regression.mjs',
