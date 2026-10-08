@@ -13,8 +13,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  node-regression:
+  determine-runner:
     runs-on: ubuntu-latest
+    concurrency:
+      group: runner-determination
+      cancel-in-progress: false
+    outputs:
+      runner: ${{ steps.set-runner.outputs.use-runner }}
+    steps:
+      - name: Wait for runner allocation state to settle
+        run: sleep 15
+      - name: Prefer self-hosted runner when available
+        id: set-runner
+        uses: mikehardy/runner-fallback-action@v1
+        with:
+          primary-runner: self-hosted
+          fallback-runner: ubuntu-latest
+          primaries-required: 1
+          fallback-on-error: true
+          github-token: ${{ github.token }}
+
+  node-regression:
+    needs: determine-runner
+    runs-on: ${{ fromJson(needs.determine-runner.outputs.runner) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
