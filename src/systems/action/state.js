@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;if(!W)return;
   if(!W.registerInitialStateInitializer)throw new Error('systems/action/state.js requires world.js initial-state pipeline.');
-  const VERSION='11.12.0-action-terminology';
+  const VERSION='11.51.0-activity-concurrency';
   W.registerInitialStateInitializer('action.schema',(st)=>{
     
     return st;
