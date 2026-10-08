@@ -13,14 +13,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  node-regression:
+  determine-runner:
     runs-on: ubuntu-latest
+    concurrency:
+      group: runner-determination
+      cancel-in-progress: false
+    outputs:
+      runner: ${{ steps.set-runner.outputs.use-runner }}
+    steps:
+      - name: Wait for runner allocation state to settle
+        run: sleep 15
+      - name: Prefer self-hosted runner when available
+        id: set-runner
+        uses: mikehardy/runner-fallback-action@v1
+        with:
+          primary-runner: self-hosted
+          fallback-runner: ubuntu-latest
+          primaries-required: 1
+          fallback-on-error: true
+          github-token: ${{ secrets.SELF_HOSTED_RUNNER_STATUS_TOKEN }}
+
+  node-regression:
+    needs: determine-runner
+    runs-on: ${{ fromJson(needs.determine-runner.outputs.runner) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: node tests/check-source-syntax.mjs
       - run: node tests/slot-interaction-egress.mjs
       - run: node tests/slot-bound-actor-route-origin.mjs
       - run: node tests/workflow-architecture.mjs
