@@ -25,7 +25,9 @@ assert.equal(st.version,VERSION);
 assert.equal(L.VERSION,VERSION);
 assert.ok(st.furniture.diningTable,'regression must use the current default dining table');
 for(const id of ['chairNW','chairNE','chairSW','chairSE'])assert.ok(st.furniture[id],`regression must keep current dining chair ${id}`);
-assert.deepEqual(st.containers.cupB.position,{x:6,y:3,z:0},'regression must use the current cupB placement across the table');
+assert.equal(st.containers.cupB.position.x,6,'regression must use the current cupB table-side x placement');
+assert.equal(st.containers.cupB.position.y,3,'regression must use the current cupB table-side y placement');
+assert.equal(st.containers.cupB.position.surfaceId,'diningTable:surface','regression must preserve cupB on the canonical dining-table Surface');
 
 const pickup=SP.bestInteractionPositionResult(st,human,{kind:'object',id:'cupB'},'pickup');
 assert.ok(pickup,'cupB must remain reachable through canonical interaction geometry');
