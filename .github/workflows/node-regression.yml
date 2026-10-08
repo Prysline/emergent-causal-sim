@@ -41,7 +41,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: find src -name '*.js' -print0 | xargs -0 -n1 node --check
+      - run: node tests/check-source-syntax.mjs
       - run: node tests/slot-interaction-egress.mjs
       - run: node tests/slot-bound-actor-route-origin.mjs
       - run: node tests/workflow-architecture.mjs
