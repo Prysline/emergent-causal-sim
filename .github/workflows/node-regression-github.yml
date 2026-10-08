@@ -1,0 +1,10 @@
+name: Node regression (GitHub fallback)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  node-regression:
+    uses: ./.github/workflows/node-regression.yml
+    with:
+      runner: ubuntu-latest
