@@ -11,9 +11,9 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.50.1-prone-transition-burden');
-assert.equal(E.VERSION,'11.50.1-prone-transition-burden');
-assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
+assert.equal(st.version,'11.51.0-activity-concurrency');
+assert.equal(E.VERSION,'11.51.0-activity-concurrency');
+assert.equal(E.ACTION_SCHEMA_VERSION,'11.51.0-activity-concurrency');
 noIssues('reset');
 
 // Engine-created actions persist canonical kind only. No compatibility alias is installed.
@@ -74,4 +74,4 @@ for(let i=0;i<500;i++){
   noIssues(`tick ${i+1}`);
 }
 
-console.log('v11.12.0 canonical action.kind terminology regression: ok');
+console.log('v11.51.0 canonical action + activity concurrency regression: ok');
