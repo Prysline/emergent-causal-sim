@@ -1,9 +1,10 @@
 (() => {
-  const A=window.SimWorldAuthoring,P=window.SimPerception;
-  if(!A?.CELL_SIZE_METERS)throw new Error('systems/perception/visual-los.js requires canonical World Authoring geometry scale.');
+  const A=window.SimWorldAuthoring,D=window.SimFurnitureDefinitions,P=window.SimPerception;
+  if(!A?.CELL_SIZE_METERS||!A?.resolveFurnitureInstance)throw new Error('systems/perception/visual-los.js requires canonical World Authoring geometry.');
+  if(!D?.VISUAL_OPACITY_VERSION)throw new Error('systems/perception/visual-los.js requires canonical Furniture visual opacity metadata.');
   if(!P?.VISUAL_RANGE_VERSION)throw new Error('systems/perception/visual-los.js requires visual-range.js.');
 
-  const VERSION='perception-visual-los-v1';
+  const VERSION='perception-visual-los-v2';
   const CELL_SIZE_METERS=Number(A.CELL_SIZE_METERS);
   const EPS=1e-9;
   const BOUNDARY_ID_PATTERN=/^([vh]):(-?\d+),(-?\d+)$/;
@@ -37,6 +38,29 @@
     });
   }
 
+  function furnitureSolidOccluder(instance,solid){
+    if(solid?.visualOpacity===undefined)return null;
+    if(solid.visualOpacity!=='opaque')throw new Error(`Unsupported Furniture visual opacity: ${String(solid.visualOpacity)}`);
+    const bounds=solid.bounds;
+    if(!bounds||![bounds.x,bounds.y,bounds.width,bounds.depth].every(value=>Number.isFinite(Number(value)))||Number(bounds.width)<=0||Number(bounds.depth)<=0){
+      throw new Error(`Invalid Furniture visual opacity geometry: ${String(instance?.id)}:${String(solid?.key)}`);
+    }
+    const minX=(Number(bounds.x)-.5)*CELL_SIZE_METERS,minY=(Number(bounds.y)-.5)*CELL_SIZE_METERS;
+    return deepFreeze({
+      id:`furniture:${instance.id}:${solid.key}`,
+      opacity:'opaque',
+      sourceType:'furniture-solid',
+      source:{furnitureId:instance.id,definitionId:instance.definitionId,solidKey:solid.key},
+      geometry:{
+        kind:'axis-aligned-rect',
+        minX,
+        maxX:minX+Number(bounds.width)*CELL_SIZE_METERS,
+        minY,
+        maxY:minY+Number(bounds.depth)*CELL_SIZE_METERS
+      }
+    });
+  }
+
   function projectStaticVisualOpacity(authoring,layerZ){
     if(!Number.isInteger(layerZ))throw new Error('Static visual opacity projection requires an explicit integer layer z.');
     const layers=authoring?.map?.layers;
@@ -49,22 +73,52 @@
       const occluder=authoredWallOccluder(layerZ,boundaryId,boundary);
       if(occluder)occluders.push(occluder);
     }
+    for(const [furnitureId,authoredInstance] of Object.entries(authoring?.furniture||{}).sort(([left],[right])=>left.localeCompare(right))){
+      const instance=A.resolveFurnitureInstance(authoredInstance);
+      if(instance.id!==furnitureId)throw new Error(`Furniture authoring key / id mismatch during visual opacity projection: ${furnitureId}.`);
+      for(const solid of instance.spatial?.solids||[]){
+        if(solid.layerZ!==layerZ)continue;
+        const occluder=furnitureSolidOccluder({...instance,definitionId:authoredInstance.definitionId},solid);
+        if(occluder)occluders.push(occluder);
+      }
+    }
     occluders.sort((left,right)=>left.id.localeCompare(right.id));
     return deepFreeze(occluders);
   }
 
   function segmentCrossingParameter(from,to,occluder){
     const geometry=occluder?.geometry;
-    if(occluder?.opacity!=='opaque'||geometry?.kind!=='vertical-segment'||!['x','y'].includes(geometry.axis))throw new Error(`Invalid visual opacity geometry: ${String(occluder?.id)}`);
-    const coordinate=Number(geometry.coordinate),start=Number(geometry.spanStart),end=Number(geometry.spanEnd);
-    if(!Number.isFinite(coordinate)||!Number.isFinite(start)||!Number.isFinite(end)||end<start)throw new Error(`Invalid visual opacity geometry: ${String(occluder?.id)}`);
-    const along=geometry.axis,across=along==='x'?'y':'x',delta=to[along]-from[along];
-    if(Math.abs(delta)<=EPS)return null;
-    const t=(coordinate-from[along])/delta;
-    if(!(t>EPS&&t<1-EPS))return null;
-    const crossing=from[across]+t*(to[across]-from[across]);
-    if(crossing<start-EPS||crossing>end+EPS)return null;
-    return t;
+    if(occluder?.opacity!=='opaque')throw new Error(`Invalid visual opacity geometry: ${String(occluder?.id)}`);
+    if(geometry?.kind==='vertical-segment'&&['x','y'].includes(geometry.axis)){
+      const coordinate=Number(geometry.coordinate),start=Number(geometry.spanStart),end=Number(geometry.spanEnd);
+      if(!Number.isFinite(coordinate)||!Number.isFinite(start)||!Number.isFinite(end)||end<start)throw new Error(`Invalid visual opacity geometry: ${String(occluder?.id)}`);
+      const along=geometry.axis,across=along==='x'?'y':'x',delta=to[along]-from[along];
+      if(Math.abs(delta)<=EPS)return null;
+      const t=(coordinate-from[along])/delta;
+      if(!(t>EPS&&t<1-EPS))return null;
+      const crossing=from[across]+t*(to[across]-from[across]);
+      if(crossing<start-EPS||crossing>end+EPS)return null;
+      return t;
+    }
+    if(geometry?.kind==='axis-aligned-rect'){
+      const minX=Number(geometry.minX),maxX=Number(geometry.maxX),minY=Number(geometry.minY),maxY=Number(geometry.maxY);
+      if(![minX,maxX,minY,maxY].every(Number.isFinite)||maxX<=minX||maxY<=minY)throw new Error(`Invalid visual opacity geometry: ${String(occluder?.id)}`);
+      let enter=0,exit=1;
+      for(const axis of ['x','y']){
+        const min=axis==='x'?minX:minY,max=axis==='x'?maxX:maxY,delta=to[axis]-from[axis];
+        if(Math.abs(delta)<=EPS){
+          if(from[axis]<min-EPS||from[axis]>max+EPS)return null;
+          continue;
+        }
+        const first=(min-from[axis])/delta,second=(max-from[axis])/delta;
+        enter=Math.max(enter,Math.min(first,second));
+        exit=Math.min(exit,Math.max(first,second));
+        if(exit<enter-EPS)return null;
+      }
+      const interiorStart=Math.max(enter,EPS),interiorEnd=Math.min(exit,1-EPS);
+      return interiorEnd-interiorStart>EPS?interiorStart:null;
+    }
+    throw new Error(`Invalid visual opacity geometry: ${String(occluder?.id)}`);
   }
 
   function classifyStaticVisualLos(observerOrigin,targetRepresentativePosition,opacityProjection){
