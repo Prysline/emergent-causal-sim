@@ -170,7 +170,7 @@ Presentation observer registry與 simulation runtime-hook manifest分離。Simul
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection |
 
-Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context標示 intermediate時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。\n\n### afterReset observers
+Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。\n\n### afterReset observers
 
 | Order | Observer ID | Owner | 責任 |
 |---:|---|---|---|

@@ -12,7 +12,7 @@ const memories=id=>E.getState().agents[id].episodicMemories;
 
 E.reset(1130);
 let st=E.getState();
-assert.equal(st.version,'11.50.1-prone-transition-burden');
+assert.equal(st.version,'11.51.0-activity-concurrency');
 assert.equal(E.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(E.MAX_EPISODIC_MEMORIES,64);
 assert.equal(E.EPISODIC_OBSERVATION_RANGE,4);
