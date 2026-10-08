@@ -10,7 +10,7 @@
     if(!id||typeof id!=='string')throw new Error('Activity compatibility requires a non-empty id.');
     if(compatibilityRules.some(rule=>rule.id===id))throw new Error(`Duplicate activity compatibility rule: ${id}`);
     if(!primaryActionKind||typeof primaryActionKind!=='string'||!transientKind||typeof transientKind!=='string')throw new Error(`Activity compatibility ${id} requires primaryActionKind + transientKind.`);
-    const scale=Number(primaryProgressScale);if(!Number.isFinite(scale)||scale<0||scale>1)throw new Error(`Activity compatibility ${id} primaryProgressScale must be within [0, 1].`);
+    const scale=Number(primaryProgressScale);if(scale!==0&&scale!==1)throw new Error(`Activity compatibility ${id} primaryProgressScale v1 must be exactly 0 or 1.`);
     const rule=Object.freeze({id,primaryActionKind,primaryPhases:normalizePhases(primaryPhases),transientKind,primaryProgressScale:scale});compatibilityRules.push(rule);return rule;
   }
   function listActivityCompatibility(){return compatibilityRules.map(rule=>({...rule,primaryPhases:rule.primaryPhases?[...rule.primaryPhases]:null}));}
