@@ -27,6 +27,7 @@ jobs:
         with:
           node-version: 22
       - run: node tests/check-source-syntax.mjs
+      - run: node tests/activity-concurrency-eating-social.mjs
       - run: node tests/slot-interaction-egress.mjs
       - run: node tests/slot-bound-actor-route-origin.mjs
       - run: node tests/workflow-architecture.mjs
@@ -117,7 +118,6 @@ jobs:
       - run: node tests/social-response-agency.mjs
       - run: node tests/memory-salience-pruning.mjs
       - run: node tests/human-social-response-agency.mjs
-      - run: node tests/activity-concurrency-eating-social.mjs
       - run: node tests/memory-deliberation-influence.mjs
       - run: node tests/memory-route-reuse.mjs
       - run: node tests/requester-social-outcome-memory.mjs
