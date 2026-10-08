@@ -14,9 +14,6 @@ on:
         type: string
         default: self-hosted
 
-permissions:
-  contents: write
-
 concurrency:
   group: node-regression-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -26,26 +23,9 @@ jobs:
     runs-on: ${{ inputs.runner || 'self-hosted' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Fix prone-transition versioning note on PR branch
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'fix/prone-transition-burden' && github.event.pull_request.head.repo.full_name == github.repository }}
-        run: node scripts/fix-prone-versioning-note.mjs
-      - name: Commit prone-transition versioning note
-        if: ${{ github.event_name == 'pull_request' && github.head_ref == 'fix/prone-transition-burden' && github.event.pull_request.head.repo.full_name == github.repository }}
-        shell: pwsh
-        run: |
-          $changes = git status --porcelain docs/versioning.md
-          if ($changes) {
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add docs/versioning.md
-            git commit -m "Correct prone transition version impact note"
-            git push origin HEAD:${{ github.head_ref }}
-          }
       - run: node tests/check-source-syntax.mjs
       - run: node tests/slot-interaction-egress.mjs
       - run: node tests/slot-bound-actor-route-origin.mjs
