@@ -45,7 +45,7 @@
     if(!bounds||![bounds.x,bounds.y,bounds.width,bounds.depth].every(value=>Number.isFinite(Number(value)))||Number(bounds.width)<=0||Number(bounds.depth)<=0){
       throw new Error(`Invalid Furniture visual opacity geometry: ${String(instance?.id)}:${String(solid?.key)}`);
     }
-    const minX=Number(bounds.x)*CELL_SIZE_METERS,minY=Number(bounds.y)*CELL_SIZE_METERS;
+    const minX=(Number(bounds.x)-.5)*CELL_SIZE_METERS,minY=(Number(bounds.y)-.5)*CELL_SIZE_METERS;
     return deepFreeze({
       id:`furniture:${instance.id}:${solid.key}`,
       opacity:'opaque',
