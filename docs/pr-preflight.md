@@ -48,12 +48,13 @@ node tests/pr-preflight.mjs
 
 ## Regression / workflow 自檢
 
-若新增、刪除或改名 regression：
+若新增、修改、刪除或改名 regression：
 
 - [ ] 新的 canonical Node regression 已掛入 `.github/workflows/node-regression.yml`（若它應屬完整 Node CI）。
 - [ ] Browser QA 已掛入 Browser matrix（若它是 browser-observable contract）。
 - [ ] retired test path 不再留在 current workflow / architecture assertions。
 - [ ] focused test 使用 production composition / canonical helper，不自行建立第二套假的 load order 或 fallback lifecycle。
+- [ ] **新增或修改 focused regression 後，push 前至少單獨執行該 test 一次**；確認 fixture、canonical node identity / evidence shape 與 expected literals 符合 current contract，而不是只確認 syntax 或 workflow registration。
 
 ## API / fixture 自檢
 
