@@ -9,9 +9,9 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.50.0-agent-turn-execution';
+const APP_VERSION='11.50.1-prone-transition-burden';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
-const LOCOMOTION_VERSION='11.50.0-agent-turn-execution';
+const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
 function resetFixture({detour='short',clearanceHeight=.70,posture='standing',kneelSpeed=null}={}){
@@ -50,7 +50,12 @@ let f=resetFixture();
 assert.equal(L.modeTraversalBurden(f.human,'walk'),0);
 assert.equal(L.modeTraversalBurden(f.human,'kneelCrawl'),1);
 assert.equal(L.modeTraversalBurden(f.human,'proneCrawl'),2);
-assert.equal(L.modeTransitionBurden(f.human,'walk','proneCrawl'),1);
+assert.equal(L.modeTransitionBurden(f.human,'walk','kneelCrawl'),1);
+assert.equal(L.modeTransitionBurden(f.human,'kneelCrawl','walk'),1);
+assert.equal(L.modeTransitionBurden(f.human,'walk','proneCrawl'),2);
+assert.equal(L.modeTransitionBurden(f.human,'proneCrawl','walk'),2);
+assert.equal(L.modeTransitionBurden(f.human,'kneelCrawl','proneCrawl'),2);
+assert.equal(L.modeTransitionBurden(f.human,'proneCrawl','kneelCrawl'),2);
 assert.equal(L.modeTransitionBurden(f.human,'proneCrawl','proneCrawl'),0);
 
 // A: two-edge prone shortcut must not beat a four-edge walk detour only because it is shorter.
@@ -58,7 +63,7 @@ let shortest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'pathDistan
 let easiest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(shortest.pathDistance,2);
 assert.deepEqual(shortest.steps.map(step=>step.mode),['proneCrawl','proneCrawl']);
-assert.equal(shortest.traversalCost,7,'selected short crawl path still reports its full objective burden');
+assert.equal(shortest.traversalCost,8,'selected short crawl path still reports its full objective burden');
 assert.equal(shortest.travelTime,7,'pathDistance remains distinct from both cost and execution time');
 const batchTargets=[f.mid,f.goal,floor(f.st,1,4),floor(f.st,3,4)];
 assert.deepEqual(
@@ -76,7 +81,7 @@ f=resetFixture({detour:'long'});
 easiest=SP.planRoute(f.st,f.human,f.goal,{mode:'auto',objective:'traversalCost'});
 assert.equal(easiest.pathDistance,2);
 assert.deepEqual(easiest.steps.map(step=>step.mode),['proneCrawl','proneCrawl']);
-assert.equal(easiest.traversalCost,7);
+assert.equal(easiest.traversalCost,8);
 assert.equal(easiest.travelTime,7);
 
 // C: already being prone removes transition burden without making prone movement free.
@@ -95,4 +100,4 @@ assert.deepEqual(easiest.steps.map(step=>step.mode),['kneelCrawl','kneelCrawl'])
 assert.equal(easiest.traversalCost,5);
 assert.equal(easiest.travelTime,9,'speed override changes executable time without silently redefining objective burden');
 
-console.log('v11.24.0 locomotion traversal cost completeness regression: ok');
+console.log('v11.50.1 locomotion traversal cost / prone transition calibration regression: ok');
