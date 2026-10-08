@@ -11,8 +11,8 @@ const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issu
 
 E.reset(20260911);
 let st=E.getState();
-assert.equal(st.version,'11.50.0-agent-turn-execution');
-assert.equal(E.VERSION,'11.50.0-agent-turn-execution');
+assert.equal(st.version,'11.50.1-prone-transition-burden');
+assert.equal(E.VERSION,'11.50.1-prone-transition-burden');
 assert.equal(E.ACTION_SCHEMA_VERSION,'11.12.0-action-terminology');
 noIssues('reset');
 

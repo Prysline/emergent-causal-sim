@@ -45,6 +45,6 @@ assert.equal(first.agents.zhen.facing,before,'position change must not implicitl
 
 const worldState=W.createInitialStateFromAuthoring(authored,{seed:49});
 assert.equal(worldState.agents.zhen.facing,'northWest','canonical World construction must preserve authored facing');
-assert.equal(worldState.version,'11.50.0-agent-turn-execution');
+assert.equal(worldState.version,'11.50.1-prone-transition-burden');
 
 console.log('agent facing foundation: ok');

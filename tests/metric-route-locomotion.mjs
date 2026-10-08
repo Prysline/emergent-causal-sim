@@ -32,7 +32,7 @@ function resetOpenGrid(){
 
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk');
 assert.equal(SP.VERSION,'11.38.0-carried-handling-risk');
-assert.equal(L.VERSION,'11.50.0-agent-turn-execution');
+assert.equal(L.VERSION,'11.50.1-prone-transition-burden');
 
 {
   const {st,human,start,middle,goal}=resetOpenGrid();

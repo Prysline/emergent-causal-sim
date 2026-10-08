@@ -2,7 +2,9 @@
 
 > Previous `11.49.0-agent-facing-foundation`: World Authoring requires explicit 8-direction `initial.facing`; runtime `Agent.facing` is the sole canonical body orientation. Facing is independent of movement direction.
 
-> Current `11.50.0-agent-turn-execution`: Locomotion owns explicit turn execution and unitless deterministic angular burden. Begin records evidence without changing facing; only successful completion commits canonical `Agent.facing`. Position updates, movement direction, interaction targets and Presentation remain non-authoritative. No turn-aware route policy, Visual / Auditory / Tactile implementation, new runtime hook or micro-time scheduler is introduced.
+> Previous `11.50.0-agent-turn-execution`: Locomotion established explicit turn execution and unitless deterministic angular burden; successful completion remains the sole canonical `Agent.facing` commit point.
+
+> Current `11.50.1-prone-transition-burden`: Locomotion keeps per-meter crawl burden and route feasibility unchanged but raises any transition entering or leaving `proneCrawl` to objective burden 2; `walk <-> kneelCrawl` remains 1. Short prone shortcuts must therefore justify both getting down and getting back up instead of winning over a small walk detour.
 
 > Previous `11.48.0-carrying-replanning`: Deliberation may plan while a canonical `agentCarries` relation exists, but it never owns or mirrors that relation. Carrying-state replanning is Agent-private cognition over placement/wait candidates; Agent Carry / Spatial / Physical retain World-truth execution, geometry, route and placement legality. Replacement plans use new Decision identities with `priorDecisionId`; `recoveryBlocked` remains the anti-orphan physical fallback.
 
@@ -10,7 +12,7 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.50.0-agent-turn-execution`。
+目前 runtime marker：`11.50.1-prone-transition-burden`。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 

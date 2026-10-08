@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring,SP=globalThis.SimSpatial,U=globalThis.SimUsage,AC=globalThis.SimAgentCarry,SC=globalThis.SimSleepConflict,V=globalThis.SimValidator;
-const APP_VERSION='11.50.0-agent-turn-execution';
+const APP_VERSION='11.50.1-prone-transition-burden';
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 authored.usageAssignments=[{id:'zhen-sleep-left',principal:{kind:'agent',id:'zhen'},activity:'sleep',target:{kind:'slot',id:'bed:left'}}];

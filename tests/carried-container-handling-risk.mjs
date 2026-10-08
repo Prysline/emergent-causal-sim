@@ -5,10 +5,10 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
-const APP_VERSION='11.50.0-agent-turn-execution';
+const APP_VERSION='11.50.1-prone-transition-burden';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
-const LOCOMOTION_VERSION='11.50.0-agent-turn-execution';
+const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const DELIBERATION_VERSION='11.48.1-sleep-perception-approach';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=route=>(route?.path||[]).map(node=>[node.x,node.y,node.z??0,node.surfaceId||'floor']);

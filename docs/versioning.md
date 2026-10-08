@@ -1,8 +1,8 @@
-`11.50.0-agent-turn-execution`
+`11.50.1-prone-transition-burden`
 
-Current release: Locomotion now owns explicit Agent turn execution. Turn preparation records deterministic unitless angular burden without changing canonical `Agent.facing`; only successful completion commits the new facing. The P1 45°-step burden is a centralized baseline, not tick/seconds duration or final physical calibration. Route optimization, forward/backward/strafe policy, Visual / Auditory / Tactile implementation and micro-time scheduling remain out of scope.
+Current release: Locomotion calibrates objective mode-transition burden so entering or leaving `proneCrawl` costs 2 while `walk <-> kneelCrawl` remains 1. Per-meter crawl burden, timing, feasibility and subjective route preference are unchanged; sufficiently long detours may still make crawling the lower objective-cost route.
 
-Previous release: `11.49.0-agent-facing-foundation` established canonical authored/runtime facing.
+Previous release: `11.50.0-agent-turn-execution` established explicit Agent turn execution and deterministic angular burden.
 
 # Versioning Contract
 
@@ -12,11 +12,19 @@ Previous release: `11.49.0-agent-facing-foundation` established canonical author
 
 目前 current runtime marker：
 
-`11.50.0-agent-turn-execution`
+`11.50.1-prone-transition-burden`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.50.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.0-agent-turn-execution`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.50.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.1-prone-transition-burden`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Locomotion / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
 
-### Current Agent turn execution release
+### Current prone transition burden release
+
+`11.50.1-prone-transition-burden` 只校準 Locomotion 的客觀 mode-transition burden：同 mode 維持 0，`walk <-> kneelCrawl` 維持 1，任何進入或離開 `proneCrawl` 的 transition 為 2。`MODE_TRAVERSAL_BURDEN`、MovementEnvelope、speed / travelTime、Passage feasibility、Furniture geometry、Crowding 與 subjective route preference 都不變。
+
+這使 default dining table + 四張餐椅附近的短距離 `walk -> proneCrawl -> walk` shortcut 不再只為少走極少距離而勝過正常步行繞路；但足夠長的 walk detour 仍可由 canonical `traversalCost` 自然輸給 crawl，不加入桌底特判或 blanket crawl ban。
+
+Version impact：overall / Presentation、Locomotion → `11.50.1-prone-transition-burden`。Spatial Traversal / Route 維持 `11.38.0-carried-handling-risk`；Physical、Spatial Passage、Dynamic Congestion、World Authoring、Furniture Catalog、Embodiment Capabilities 與其他 subsystem generation 均未改 contract，不假升。
+
+### Previous Agent turn execution release
 
 `11.50.0-agent-turn-execution` 建立 Perception / Agent Orientation Slice B 的 turn execution foundation。`SimWorld.AGENT_FACING_DIRECTIONS` 只引用 World Authoring 的 frozen 8-direction canonical representation；`SimLocomotion` 由同一 authority 計算 shortest angular delta，並以集中式 `ANGULAR_BURDEN_BY_DELTA` 提供 P1 unitless baseline：0°/45°/90°/135°/180° → 0/1/2/3/4。這些值只保留 deterministic monotonic burden，不代表 tick、秒數或最終 physical calibration。
 
