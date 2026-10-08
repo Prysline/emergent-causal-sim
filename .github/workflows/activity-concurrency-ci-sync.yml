@@ -1,0 +1,75 @@
+name: Activity concurrency CI sync
+
+on:
+  push:
+    branches:
+      - activity-concurrency-eating-social
+
+permissions:
+  contents: write
+
+jobs:
+  sync-stale-regressions:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: activity-concurrency-eating-social
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply exact regression marker updates
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $files = @{
+            'tests/dining-table-prone-shortcut.mjs' = @(
+              @("const VERSION='11.51.0-activity-concurrency';", "const CURRENT_VERSION='11.51.0-activity-concurrency';`nconst LOCOMOTION_VERSION='11.50.1-prone-transition-burden';"),
+              @('assert.equal(st.version,VERSION);', 'assert.equal(st.version,CURRENT_VERSION);'),
+              @('assert.equal(L.VERSION,VERSION);', 'assert.equal(L.VERSION,LOCOMOTION_VERSION);')
+            );
+            'tests/browser-resident-view-qa.mjs' = @(
+              @("const CURRENT_VERSION='11.50.1-prone-transition-burden';", "const CURRENT_VERSION='11.51.0-activity-concurrency';"),
+              @("assert.equal(desktop.releaseLabel,'v11.50.1','app header must project the short release label from canonical SimRelease.VERSION');", "assert.equal(desktop.releaseLabel,'v11.51.0','app header must project the short release label from canonical SimRelease.VERSION');")
+            );
+            'tests/browser-debug-inspector-contextual-diagnostics-qa.mjs' = @(
+              @("const CURRENT_VERSION='11.50.1-prone-transition-burden';", "const CURRENT_VERSION='11.51.0-activity-concurrency';")
+            );
+            'tests/browser-presentation-event-truth-qa.mjs' = @(
+              @("window.SimRelease?.VERSION==='11.50.1-prone-transition-burden'", "window.SimRelease?.VERSION==='11.51.0-activity-concurrency'"),
+              @("assert.equal(snap.release,'11.50.1-prone-transition-burden');", "assert.equal(snap.release,'11.51.0-activity-concurrency');"),
+              @("assert.equal(snap.label,'v11.50.1');", "assert.equal(snap.label,'v11.51.0');")
+            );
+            'tests/browser-human-social-response-qa.mjs' = @(
+              @("11.13.3a-human-social-response", "11.51.0-activity-concurrency")
+            )
+          }
+          foreach ($path in $files.Keys) {
+            $text = [IO.File]::ReadAllText($path)
+            foreach ($pair in $files[$path]) {
+              $old = $pair[0]; $new = $pair[1]
+              if (-not $text.Contains($old)) { throw "Missing expected text in ${path}: ${old}" }
+              $text = $text.Replace($old, $new)
+            }
+            [IO.File]::WriteAllText($path, $text, (New-Object Text.UTF8Encoding($false)))
+          }
+      - name: Verify focused regressions and preflight
+        shell: pwsh
+        run: |
+          node tests/check-source-syntax.mjs
+          node tests/activity-concurrency-eating-social.mjs
+          node tests/dining-table-prone-shortcut.mjs
+          node tests/test-profile-composition.mjs
+          node tests/pr-preflight.mjs
+          git diff --check
+      - name: Commit sync and remove temporary workflow
+        shell: pwsh
+        run: |
+          git rm .github/workflows/activity-concurrency-ci-sync.yml
+          git add tests/dining-table-prone-shortcut.mjs tests/browser-resident-view-qa.mjs tests/browser-debug-inspector-contextual-diagnostics-qa.mjs tests/browser-presentation-event-truth-qa.mjs tests/browser-human-social-response-qa.mjs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Fix stale release markers in Node and browser regressions'
+          git push origin HEAD:activity-concurrency-eating-social
