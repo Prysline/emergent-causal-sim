@@ -29,8 +29,14 @@ jobs:
           source=Path('.github/workflows/reading-activity-bootstrap.yml').read_text()
           start=source.index("          python - <<'PY'\n")+len("          python - <<'PY'\n")
           end=source.index("\n          PY\n",start)
-          lines=source[start:end].splitlines()
-          code='\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
+          fixed=[]
+          for line in source[start:end].splitlines():
+              body=line[10:] if line.startswith('          ') else line
+              if "ordinary_validation+" in body and "Object.entries(authoring.entities?.containers||{})" in body:
+                  target="    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){\n      const basePath=`entities.containers.${key}`;"
+                  body=f"rep('src/world-authoring.js', {target!r}, ordinary_validation+{target!r})"
+              fixed.append(body)
+          code='\n'.join(fixed)
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
           '@
           $extract | python -
