@@ -66,14 +66,12 @@ jobs:
           Remove-Item .github/workflows/reading-activity-bootstrap.yml, .github/workflows/reading-activity-bootstrap-pr.yml
           node tests/pr-preflight.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Package clean implementation
+      - name: Package complete clean implementation
         shell: pwsh
         run: |
-          git diff origin/main -- . ':(exclude).github/workflows/*' | Out-File -Encoding utf8 final.patch
-          Copy-Item tests/mental-regulation-reading-activity.mjs reading-regression.mjs
+          git add -A
+          git diff --cached origin/main -- . ':(exclude).github/workflows/*' | Out-File -Encoding utf8 final.patch
       - uses: actions/upload-artifact@v4
         with:
           name: reading-implementation-final
-          path: |
-            final.patch
-            reading-regression.mjs
+          path: final.patch
