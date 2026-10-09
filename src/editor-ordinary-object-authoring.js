@@ -182,6 +182,13 @@
     return result;
   };
 
+  function markCleanBaseline(){
+    baselineFingerprint=E.semanticFingerprint();
+    pending=null;
+    status='';
+    queueRender();
+  }
+
   function syncDirtyUi(){
     const pill=$('dirtyStatus');
     if(!pill)return;
@@ -384,6 +391,7 @@
     event.returnValue='';
   });
 
+  $('exportWorld')?.addEventListener('click',()=>setTimeout(markCleanBaseline,0));
   $('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{
     baselineFingerprint=E.semanticFingerprint();
     pending=null;selectedId=null;status='';queueRender();
