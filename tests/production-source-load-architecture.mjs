@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.51.0-activity-concurrency';
+const CURRENT_VERSION='11.52.0-daily-life-routine';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -94,7 +94,7 @@ const expectedUiSources=[
   'src/ui/inspectors/relationship.js',
   'src/ui/inspectors/physical.js',
   'src/ui/inspectors/locomotion.js',
-  'src/ui/entity-readable.js'
+  'src/ui/entity-readable.js',
 ];
 assert.deepEqual(scripts.filter(path=>path.startsWith('src/ui/')),expectedUiSources,'production UI must use only semantic current source paths in stable order');
 assert.equal(bootstrapIndex,scripts.length-1,'app bootstrap must be the final production script');
@@ -182,7 +182,7 @@ const validatorRules=fs.readdirSync(validationRulesDir)
   .filter(name=>name.endsWith('.js'))
   .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.equal(validatorRules.length,20,'architecture guard must discover every semantic validator rule');
+assert.equal(validatorRules.length,21,'architecture guard must discover every semantic validator rule');
 for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
@@ -262,7 +262,7 @@ const uiStartupFiles=[
   'src/ui/observability-controls.js',
   'src/ui/resident-view.js',
   'src/ui/inspectors/relationship.js',
-  'src/ui/entity-readable.js'
+  'src/ui/entity-readable.js',
 ];
 for(const path of uiStartupFiles){
   assert.ok(readRepoFile(path).includes('registerStartupExtension('),path+' must defer UI side effects to SimUI.start()');

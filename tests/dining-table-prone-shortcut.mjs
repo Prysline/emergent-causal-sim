@@ -8,7 +8,7 @@ loadRuntimeProfile([
 ]);
 
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const CURRENT_VERSION='11.51.0-activity-concurrency';
+const CURRENT_VERSION='11.52.0-daily-life-routine';
 const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 

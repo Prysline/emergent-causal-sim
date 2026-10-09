@@ -134,3 +134,14 @@ Preflight 只代表便宜的結構性錯誤已排除。之後仍需依變更風�
 - 涉及 UI / browser behavior 時的 Browser regression。
 
 不要把 `PR preflight: ok` 宣稱成完整 Node / Browser runtime 驗證。
+
+## Presentation integration completeness
+
+新增使用者可觀察的 canonical entity、Need 或 state field 時，PR 前必須明確檢查其 Presentation integration，而不是只確認 simulation state / Node regression：
+
+- [ ] Resident View：該資訊是否應以玩家可理解形式投影；若刻意不顯示，已明確確認原因。
+- [ ] Debug Inspector：是否能從 canonical truth 追查，且 label / identifier 不會因缺少 presentation mapping 而意外暴露 raw internal key。
+- [ ] Map rendering / selection：新增 canonical entity 若具有世界位置，是否應在主畫面可見、可選取並能進入 Inspector；若刻意不投影，已明確確認原因。
+- [ ] Browser regression：若上述任一 browser-observable surface 改變，已執行必要 Browser QA；Node regression / static source check 不得代替實際 browser 驗證。
+
+這是 completeness gate，不代表每個 canonical field 都必須出現在所有 UI；要求的是逐一確認「應投影／刻意不投影」並留下可驗證契約，避免 simulation truth 已新增而 Presentation 靜默漏接。

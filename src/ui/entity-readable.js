@@ -6,7 +6,7 @@
   const VERSION=UI.PRESENTATION_VERSION;
   if(!VERSION)throw new Error('Entity Readable View requires presentation version');
   const host=document.getElementById('inspector');if(!host)return;
-  const SUPPORTED=new Set(['container','source','furniture','tile','room','event']);
+  const SUPPORTED=new Set(['container','object','source','furniture','tile','room','event']);
   let currentKey=null,mode='readable';
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -78,6 +78,11 @@
       support?fact('放置於',support.name):''
     ])}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有額外用途。')}${recentCard(st,'container',id)}`;
   }
+  function objectView(st,id){
+    const o=st.objects?.[id];if(!o)return '';
+    const p=SP.objectPosition(st,id),support=o.supportId&&st.furniture?.[o.supportId],abilities=(o.affordances||[]).map(x=>x==='read'?'可以閱讀':x);
+    return `${hero(o.icon||'◻',o.name||id,p?placeText(st,p):'位置不明')}${support?factCard('放置位置',[fact('承載於',support.name)]):''}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
+  }
   function sourceView(st,id){
     const o=st.sources?.[id];if(!o)return '';
     const p=SP.objectPosition(st,id),supply=o.infinite?'可以持續取用':`目前約剩 ${amount(o.amount)}`;
@@ -120,6 +125,7 @@
     const type=ref.slice(0,i),id=ref.slice(i+1);
     if(type==='agent'&&st.agents?.[id])return {type,id,label:st.agents[id].name,icon:st.agents[id].kind==='cat'?'🐈':'👤'};
     if(type==='container'&&st.containers?.[id])return {type,id,label:st.containers[id].name,icon:st.containers[id].icon||'◻'};
+    if(type==='object'&&st.objects?.[id])return {type,id,label:st.objects[id].name||id,icon:st.objects[id].icon||'◻'};
     if(type==='source'&&st.sources?.[id])return {type,id,label:st.sources[id].name,icon:st.sources[id].icon||'◉'};
     if(type==='furniture'&&st.furniture?.[id])return {type,id,label:st.furniture[id].name,icon:st.furniture[id].icon||'▰'};
     if(type==='room'&&st.map?.rooms?.[id])return {type,id,label:st.map.rooms[id].name||id,icon:'🏠'};
@@ -133,6 +139,7 @@
   }
   function readableBody(st,selected){
     if(selected.type==='container')return containerView(st,selected.id);
+    if(selected.type==='object')return objectView(st,selected.id);
     if(selected.type==='source')return sourceView(st,selected.id);
     if(selected.type==='furniture')return furnitureView(st,selected.id);
     if(selected.type==='tile')return tileView(st,selected.id);
