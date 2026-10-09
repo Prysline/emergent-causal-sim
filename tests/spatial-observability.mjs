@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.50.1-prone-transition-burden');
-assert.equal(E.VERSION,'11.50.1-prone-transition-burden');
+assert.equal(st.version,'11.51.0-activity-concurrency');
+assert.equal(E.VERSION,'11.51.0-activity-concurrency');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

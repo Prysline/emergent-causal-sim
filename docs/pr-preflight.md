@@ -16,6 +16,7 @@ node tests/pr-preflight.mjs
 2. `tests/workflow-architecture.mjs`
 3. `tests/production-source-load-architecture.mjs`
 4. `tests/presentation-observability.mjs`
+5. `tests/browser-version-marker-preflight.mjs`
 
 任一項失敗就先修正，不要先 push 等完整 CI 重跑。
 
@@ -32,6 +33,16 @@ node tests/pr-preflight.mjs
 - [ ] 若 World Authoring / Furniture Catalog / Embodiment Capabilities generation 改變，相關 authored fixtures 與 validator expectations 已同步。
 
 這是語意 audit，不是 repo-wide blind replace。
+
+### Browser current-marker audit
+
+`tests/browser-version-marker-preflight.mjs` 會從 canonical Browser workflow 取得已註冊的 Browser regressions，並只檢查可辨識為 **current contract** 的版本期待，例如：
+
+- overall/current release 常數與 `SimRelease.VERSION` wait；
+- Human Social Response current schema wait；
+- current release label。
+
+它的目的，是在完整 Browser regression 前提早抓出 stale current marker；**不應**把未變更 subsystem 的 own generation、歷史 fixture 或其他非 current-contract literal 當成 overall release 做盲目替換。schema marker 必須從 canonical schema owner 讀取，不從 consumer 內的 fallback / projection 猜測權威版本。
 
 ## Production composition 自檢
 
@@ -75,6 +86,12 @@ node tests/pr-preflight.mjs
 - [ ] 沒有重新引入必須先佔用 GitHub-hosted runner 的 selector job。
 - [ ] manual fallback 沒有被 `push` / `pull_request` 自動觸發。
 - [ ] fallback 仍重用 canonical Node workflow，而不是維護第二份 test list。
+
+### CI automation-originated commit 注意事項
+
+不要假設 workflow / `github-actions[bot]` 自己建立的新 commit 一定會自然再觸發同一組 PR workflows。若用 automation 修正 branch，必須重新確認 **exact head** 上實際出現且執行的是哪一組 checks；沒有 exact-head run 時，不得把前一個 head 的綠燈當成新 head 的驗證。
+
+最終要作為 PR 驗證依據的 head，應有可追溯的 exact-head CI；必要時使用正常使用者更新或受控的 workflow rerun / dispatch，而不是把 bot push 本身視為已完成 CI retrigger。
 
 ### 多 PR 併行時的 runner 策略
 

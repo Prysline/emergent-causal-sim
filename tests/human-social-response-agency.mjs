@@ -32,6 +32,7 @@ function armDirectTalk(social,{seed=11331,thirst=18}={}){
 }
 
 E.reset(11330);let st=E.getState(),responder=st.agents.zhen;
+assert.equal(E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,'11.51.0-activity-concurrency');
 responder.needs.social=0;assert.equal(E.talkResponseFor(responder),'decline');
 responder.needs.social=35;assert.equal(E.talkResponseFor(responder),'brief');
 responder.needs.social=90;assert.equal(E.talkResponseFor(responder),'engage');
@@ -41,7 +42,7 @@ assert.ok(E.talkEngagementScore(responder)<scoreBefore,'negative responder Affec
 responder.affect=neutral;noIssues('response bands');
 
 armDirectTalk(90,{seed:21331});E.tick();st=E.getState();
-assert.equal(st.version,'11.50.1-prone-transition-burden');
+assert.equal(st.version,'11.51.0-activity-concurrency');
 const engageOffer=eventBy(e=>e.data?.action==='talkOffer'),accept=eventBy(e=>e.data?.action==='acceptTalk'&&e.data?.responseToBid===engageOffer?.id),talk=eventBy(e=>e.data?.action==='talk'&&e.data?.talkOfferId===engageOffer?.id);
 assert.ok(engageOffer?.data?.socialBid);assert.ok(accept);assert.ok(talk);
 assert.equal(talk.data.talkResponseEventId,accept.id);assert.equal(talk.data.talkResponse,'engage');assert.equal(Object.hasOwn(talk.data,'responseToBid'),false,'full talk is an outcome, not a second responder event');
@@ -72,4 +73,4 @@ assert.ok(weight('sleep',true,'lying')<weight('eat')&&weight('eat')<weight('wand
 assert.ok(weight('sleep',true,'lying')<weight(null,false)&&weight(null,false)<weight(null));
 
 E.reset(61331);for(let i=0;i<500;i++){E.tick();for(const a of Object.values(E.getState().agents))for(const key of ['talkResponseDecision','talkResponseScore','talkResponseUtility','socialResponsePriority','ignoredBy'])assert.equal(Object.hasOwn(a,key),false);noIssues(`tick ${i+1}`);}
-console.log('v11.13.3a human social response agency regression: ok');
+console.log('v11.51.0 human social response + activity concurrency regression: ok');

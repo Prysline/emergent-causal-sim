@@ -1,8 +1,10 @@
-`11.50.1-prone-transition-burden`
+`11.51.0-activity-concurrency`
 
-Current release: Locomotion calibrates objective mode-transition burden so entering or leaving `proneCrawl` costs 2 while `walk <-> kneelCrawl` remains 1. Per-meter crawl burden, timing, feasibility and subjective route preference are unchanged; sufficiently long detours may still make crawling the lower objective-cost route.
+Current release: Activity Concurrency v1 adds a minimal generic ongoing-primary + execution-local transient compatibility/progress-interference seam. Eating remains the sole owner of food consumption and completion; Human Social listening keeps local eating progress at scale 1 while speaking pauses it at scale 0 for that execution tick. Existing Social Bid / canonical response / talk provenance remains authoritative; no persistent Conversation truth or arbitrary N-channel scheduler is introduced.
 
-Previous release: `11.50.0-agent-turn-execution` established explicit Agent turn execution and deterministic angular burden.
+Previous release: `11.50.1-prone-transition-burden` calibrated objective prone transition burden without changing per-meter crawl burden, timing or feasibility.
+
+Previous release before that: `11.50.0-agent-turn-execution` established explicit Agent turn execution and deterministic angular burden.
 
 # Versioning Contract
 
@@ -12,11 +14,19 @@ Previous release: `11.50.0-agent-turn-execution` established explicit Agent turn
 
 目前 current runtime marker：
 
-`11.50.1-prone-transition-burden`
+`11.51.0-activity-concurrency`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.50.1`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.1-prone-transition-burden`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.51.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Action `11.51.0-activity-concurrency`；Human Social Response `11.51.0-activity-concurrency`；Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.1-prone-transition-burden`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v12`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
 
-### Current prone transition burden release
+### Current activity concurrency release
+
+`11.51.0-activity-concurrency` establishes the first minimal generic Activity Concurrency contract. `src/systems/action/runtime.js` owns explicit compatibility registration plus one execution-local transient record; it does not own primary-domain progress or completion. The first consumer is Eating × Human Social: `socialListening` is compatible at `primaryProgressScale = 1`, while `socialSpeaking` uses `0` so speaking pauses only that core execution tick. After the Social transient settles, the original eating Action / Intent continues remaining progress.
+
+Human Social still emits and consumes the existing canonical `talkOffer → responder response → talk` World Event chain. The transient record is not a Conversation object, is not persisted into Agent/World state, and is cleared after its execution tick. Sleeping + speaking has no compatibility rule and therefore remains transition-required. No new runtime hook is added: existing beforeTick 300 `humanSocial.prepare`, core Action execution, and afterTick 700 `humanSocial.resolve` define deterministic same-tick ordering.
+
+Version impact：overall / Presentation、Action、Human Social Response → `11.51.0-activity-concurrency`。Social Bid remains `11.47.0-social-bid-carry-cooperation`；Deliberation / Decision Evidence / Sleep Slot Conflict remains `11.48.1-sleep-perception-approach`；Locomotion remains `11.50.1-prone-transition-burden`；Physical、Agent Carry、Spatial / Route、Memory / Usage、Affect、Relationship、World Authoring、Furniture Catalog、Embodiment Capabilities are unchanged and are not formally bumped.
+
+### Previous prone transition burden release
 
 `11.50.1-prone-transition-burden` 只校準 Locomotion 的客觀 mode-transition burden：同 mode 維持 0，`walk <-> kneelCrawl` 維持 1，任何進入或離開 `proneCrawl` 的 transition 為 2。`MODE_TRAVERSAL_BURDEN`、MovementEnvelope、speed / travelTime、Passage feasibility、Furniture geometry、Crowding 與 subjective route preference 都不變。
 

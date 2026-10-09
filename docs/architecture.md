@@ -4,7 +4,9 @@
 
 > Previous `11.50.0-agent-turn-execution`: Locomotion established explicit turn execution and unitless deterministic angular burden; successful completion remains the sole canonical `Agent.facing` commit point.
 
-> Current `11.50.1-prone-transition-burden`: Locomotion keeps per-meter crawl burden and route feasibility unchanged but raises any transition entering or leaving `proneCrawl` to objective burden 2; `walk <-> kneelCrawl` remains 1. Short prone shortcuts must therefore justify both getting down and getting back up instead of winning over a small walk detour.
+> Previous `11.50.1-prone-transition-burden`: Locomotion keeps per-meter crawl burden and route feasibility unchanged but raises any transition entering or leaving `proneCrawl` to objective burden 2; `walk <-> kneelCrawl` remains 1. Short prone shortcuts must therefore justify both getting down and getting back up instead of winning over a small walk detour.
+
+> Current `11.51.0-activity-concurrency`: Action runtime now owns a minimal generic compatibility seam for one ongoing primary Action plus one execution-local transient behavior. Eating remains the sole owner of food/progress/completion; Human Social uses `socialListening` with progress scale 1 and `socialSpeaking` with scale 0 for that execution tick. Social Bid / response / canonical `talk` provenance is unchanged, no persistent Conversation truth is introduced, and incompatible sleeping + speaking still requires formal wake / transition.
 
 > Previous `11.48.0-carrying-replanning`: Deliberation may plan while a canonical `agentCarries` relation exists, but it never owns or mirrors that relation. Carrying-state replanning is Agent-private cognition over placement/wait candidates; Agent Carry / Spatial / Physical retain World-truth execution, geometry, route and placement legality. Replacement plans use new Decision identities with `priorDecisionId`; `recoveryBlocked` remains the anti-orphan physical fallback.
 
@@ -12,7 +14,9 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.50.1-prone-transition-burden`。
+目前 runtime marker：`11.51.0-activity-concurrency`。
+
+Activity Concurrency v1 不建立第二份 primary progress truth，也不建立任意 N-channel scheduler。compatibility / transient record 是 execution-local 協調資料；Eating 的 canonical Action / Intent identity 保留，Human Social 仍透過既有 World Event / observation / responder agency lifecycle 形成結果。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 

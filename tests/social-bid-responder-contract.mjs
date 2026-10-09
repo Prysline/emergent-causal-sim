@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,V=globalThis.SimValidator;
-const APP_VERSION='11.50.1-prone-transition-burden';
+const APP_VERSION='11.51.0-activity-concurrency';
 
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,label+': '+v.issues.map(x=>x.code+': '+x.message).join(' | '));};
 
