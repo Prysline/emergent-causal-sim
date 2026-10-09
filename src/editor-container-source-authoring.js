@@ -272,9 +272,11 @@
   function decorateSelectionActions(){
     const actions=$('selectionActions');
     if(!actions)return;
-    actions.querySelectorAll('[data-container-source-action]').forEach(node=>node.remove());
+    const existing=actions.querySelector('[data-container-source-action="remove"]');
     const selection=E.getSession().selection;
-    if(selection?.kind!=='entity'||!['container','source'].includes(selection.type))return;
+    const eligible=selection?.kind==='entity'&&['container','source'].includes(selection.type);
+    if(!eligible){existing?.remove();return;}
+    if(existing)return;
     const button=document.createElement('button');
     button.type='button';
     button.className='danger-action';
