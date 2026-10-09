@@ -63,7 +63,7 @@ jobs:
             artifact: artifacts/browser-resident-view-qa
           - suite: world-authoring-editor
             test: tests/browser-world-authoring-editor-qa.mjs
-            extra_test: ''
+            extra_test: tests/browser-editor-ordinary-object-authoring-qa.mjs
             artifact: artifacts/browser-world-authoring-editor-qa
           - suite: step-batch-lifecycle
             test: tests/browser-step-batch-lifecycle-qa.mjs
