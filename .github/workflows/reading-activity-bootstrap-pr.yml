@@ -35,6 +35,10 @@ jobs:
               if "ordinary_validation+" in body and "Object.entries(authoring.entities?.containers||{})" in body:
                   target="    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){\n      const basePath=`entities.containers.${key}`;"
                   body=f"rep('src/world-authoring.js', {target!r}, ordinary_validation+{target!r})"
+              if "explore:'探索環境'" in body and "restockResource:'補充容器資源'" in body:
+                  old="    explore:'探索／閒晃',restockResource:'補充室內資源',replenishSupply:'外出補給'"
+                  new="    read:'閱讀',explore:'探索／閒晃',restockResource:'補充室內資源',replenishSupply:'外出補給'"
+                  body=f"rep('src/systems/intent/runtime.js', {old!r}, {new!r})"
               fixed.append(body)
           code='\n'.join(fixed)
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
