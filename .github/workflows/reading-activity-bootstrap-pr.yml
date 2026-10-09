@@ -1,0 +1,53 @@
+name: Reading activity PR bootstrap
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    if: github.head_ref == 'reading-activity-readable-object-v1'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply checked implementation patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+          source=Path('.github/workflows/reading-activity-bootstrap.yml').read_text()
+          start=source.index("          python - <<'PY'\n")+len("          python - <<'PY'\n")
+          end=source.index("\n          PY\n",start)
+          code=textwrap.dedent(source[start:end])
+          exec(compile(code,'reading-activity-bootstrap','exec'),{})
+          PY
+      - name: Focused verification
+        shell: bash
+        run: |
+          node tests/check-source-syntax.mjs
+          node tests/world-authoring-foundation.mjs
+          node tests/interaction-geometry.mjs
+          node tests/active-intent-foundation.mjs
+          node tests/mental-regulation-engagement-relaxation.mjs
+          node tests/mental-regulation-reading-activity.mjs
+          node tests/pr-preflight.mjs
+      - name: Commit implementation
+        shell: bash
+        run: |
+          rm .github/workflows/reading-activity-bootstrap.yml .github/workflows/reading-activity-bootstrap-pr.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add minimal reading activity and readable objects"
+          git push origin HEAD:reading-activity-readable-object-v1
