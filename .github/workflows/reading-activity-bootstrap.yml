@@ -1,0 +1,240 @@
+name: Reading activity implementation bootstrap
+
+on:
+  push:
+    branches: [reading-activity-readable-object-v1]
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply minimal reading activity slice
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          def text(path): return Path(path).read_text()
+          def write(path, value): Path(path).write_text(value)
+          def rep(path, old, new, expected=1):
+              s=text(path); n=s.count(old)
+              if n != expected: raise SystemExit(f'{path}: expected {expected} occurrences, found {n}: {old[:100]!r}')
+              write(path, s.replace(old,new,expected))
+          def sub(path, pattern, repl, expected=1, flags=0):
+              s=text(path); out,n=re.subn(pattern,repl,s,count=expected,flags=flags)
+              if n != expected: raise SystemExit(f'{path}: expected {expected} regex replacements, found {n}: {pattern}')
+              write(path,out)
+
+          # World Authoring: formal ordinary-object collection and one concrete readable object.
+          rep('src/world-authoring.js', "const VERSION='world-authoring-v12';", "const VERSION='world-authoring-v13';")
+          rep('src/world-authoring.js', "    entities:{\n      containers:{", "    entities:{\n      objects:{\n        bookA:{id:'bookA',name:'一本書',icon:'📖',affordances:['read'],position:pos(5,2),supportId:'diningTable',interactions:{read:{mode:'supportReach'}}}\n      },\n      containers:{")
+          ordinary_validation = """    const ordinaryObjects=authoring.entities?.objects||{},containerEntries=authoring.entities?.containers||{},sourceEntries=authoring.entities?.sources||{};
+    for(const [key,object] of Object.entries(ordinaryObjects)){
+      const basePath=`entities.objects.${key}`;
+      if(!isRecord(object)){errors.push(authoringIssue('authoring_object_invalid',basePath,'Ordinary object entry must be an object.'));continue;}
+      if(object.id!==key)errors.push(authoringIssue('authoring_object_id_mismatch',`${basePath}.id`,`Object key ${key} does not match id ${String(object.id)}.`));
+      const affordances=object.affordances;
+      if(!Array.isArray(affordances)||!affordances.length||affordances.some(value=>typeof value!=='string'||!value.trim()))errors.push(authoringIssue('authoring_object_affordances_invalid',`${basePath}.affordances`,'Ordinary object affordances must be a non-empty array of strings.'));
+      else if(new Set(affordances).size!==affordances.length)errors.push(authoringIssue('authoring_object_affordances_duplicate',`${basePath}.affordances`,'Ordinary object affordances must not contain duplicates.'));
+      if(!object.position)errors.push(authoringIssue('authoring_object_position_missing',`${basePath}.position`,'Ordinary object must define a canonical position.'));
+      else validatePosition(object.position,`${basePath}.position`);
+      if(object.interactions!==undefined&&!isRecord(object.interactions))errors.push(authoringIssue('authoring_object_interactions_invalid',`${basePath}.interactions`,'Ordinary object interactions must be an object when provided.'));
+      else for(const [affordance,rule] of Object.entries(object.interactions||{}))if(!isRecord(rule)||!['supportReach','reach','occupy'].includes(rule.mode))errors.push(authoringIssue('authoring_object_interaction_invalid',`${basePath}.interactions.${affordance}`,'Ordinary object interaction mode must be supportReach, reach, or occupy.'));
+      if(object.supportId){
+        const support=resolvedFurniture[object.supportId];
+        if(!support)errors.push(authoringIssue('authoring_object_support_missing',`${basePath}.supportId`,`Ordinary object supportId ${object.supportId} does not exist.`,{supportId:object.supportId}));
+        else if(object.position&&!((support.footprint||[]).some(p=>samePosition(p,object.position))))errors.push(authoringIssue('authoring_object_support_position_mismatch',`${basePath}.position`,`Ordinary object ${key} is positioned outside support ${object.supportId} footprint.`,{objectId:key,supportId:object.supportId}));
+      }
+    }
+    for(const key of Object.keys(ordinaryObjects))if(containerEntries[key]||sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Ordinary object id ${key} collides with another authored entity id.`,{id:key}));
+
+"""
+          rep('src/world-authoring.js', "    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){", ordinary_validation+"    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){")
+
+          # Initializer: authored ordinary objects compile into canonical runtime state once.
+          rep('src/world-initializer.js', "  function buildContainers(authoring){", "  function buildObjects(authoring){\n    const objects=clone(authoring.entities?.objects||{});\n    for(const object of Object.values(objects))if(object.position)object.position=runtimePosition(object.position);\n    return objects;\n  }\n\n  function buildContainers(authoring){")
+          rep('src/world-initializer.js', "      containers:buildContainers(authoring),\n      sources:buildSources(authoring),", "      objects:buildObjects(authoring),\n      containers:buildContainers(authoring),\n      sources:buildSources(authoring),")
+
+          # Base Spatial interaction geometry: kind:'object' resolves ordinary objects or Containers without conflating ownership.
+          rep('src/spatial.js', "  function objectPosition(st,id){const c=st.containers?.[id];if(c){const holder=holderOf(st,id);return holder?clonePos(holder.position):clonePos(c.position);}return clonePos(st.sources?.[id]?.position);}", "  function objectPosition(st,id){const c=st.containers?.[id];if(c){const holder=holderOf(st,id);return holder?clonePos(holder.position):clonePos(c.position);}const object=st.objects?.[id];if(object)return clonePos(object.position);return clonePos(st.sources?.[id]?.position);}")
+          sub('src/spatial.js', r"    if\(target\.kind==='object'\)\{\n.*?\n    \}\n    if\(target\.kind==='source'\)\{", """    if(target.kind==='object'){
+      const c=st.containers?.[target.id],object=st.objects?.[target.id],entity=object||c;if(!entity)return {mode:'none',positions:[],target,affordance};const holder=c?holderOf(st,target.id):null,p=objectPosition(st,target.id);if(!p)return {mode:'none',positions:[],target,affordance};
+      if(holder){const positions=holder.id===agent?.id?[clonePos(agent.position)]:reachPositions(st,p);return {mode:'heldReach',positions,target,affordance,holderId:holder.id};}
+      const rule=interactionRule(entity,affordance);
+      if(rule?.mode==='port'){const positions=interactionPortPositions(st,entity,affordance);return {mode:'port',positions,target,affordance,ports:entity.interactionPorts||[]};}
+      if(rule?.mode==='supportReach'&&entity.supportId)return {mode:'supportReach',positions:supportReachPositions(st,entity.supportId),target,affordance,supportId:entity.supportId};
+      if(rule?.mode==='occupy'&&walkable(st,p))return {mode:'occupy',positions:[clonePos(p)],target,affordance};
+      if(rule?.mode==='reach')return {mode:'reach',positions:reachPositions(st,p),target,affordance};
+      if(entity.supportId)return {mode:'supportReach',positions:supportReachPositions(st,entity.supportId),target,affordance,supportId:entity.supportId};
+      return {mode:'reach',positions:reachPositions(st,p),target,affordance};
+    }
+    if(target.kind==='source'){""", flags=re.S)
+
+          # Traversal-aware canonical geometry uses the same ordinary-object truth; route semantics themselves stay unchanged.
+          rep('src/spatial-traversal.js', "    const c=st.containers?.[id],s=st.sources?.[id],obj=c||s;if(!obj?.position)return null;\n    let surfaceId=obj.position.surfaceId||FLOOR;\n    if(c?.supportId){const entry=supportSurfaceForFurniture(st,c.supportId);if(entry)surfaceId=entry.surface.id;}", "    const c=st.containers?.[id],object=st.objects?.[id],s=st.sources?.[id],obj=c||object||s;if(!obj?.position)return null;\n    let surfaceId=obj.position.surfaceId||FLOOR;\n    if(obj?.supportId){const entry=supportSurfaceForFurniture(st,obj.supportId);if(entry)surfaceId=entry.surface.id;}")
+          rep('src/spatial-traversal.js', "      const c=st.containers?.[target.id];if(!c)return {mode:'none',positions:[],target,affordance};\n      const holder=SP.holderOf(st,target.id),node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};", "      const c=st.containers?.[target.id],object=st.objects?.[target.id],entity=object||c;if(!entity)return {mode:'none',positions:[],target,affordance};\n      const holder=c?SP.holderOf(st,target.id):null,node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};")
+          rep('src/spatial-traversal.js', "      const rule=c.interactions?.[affordance]||c.interactions?.default||null;", "      const rule=entity.interactions?.[affordance]||entity.interactions?.default||null;")
+          rep('src/spatial-traversal.js', "      if(rule?.mode==='supportReach'&&c.supportId)return {mode:'supportReach',positions:supportContactNodes(st,c.supportId,agent),target,affordance,supportId:c.supportId};", "      if(rule?.mode==='supportReach'&&entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};")
+          rep('src/spatial-traversal.js', "        if(c.supportId)return {mode:'supportReach',positions:supportContactNodes(st,c.supportId,agent),target,affordance,supportId:c.supportId};", "        if(entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};")
+          rep('src/spatial-traversal.js', "      if(rule?.mode==='reach'||(!rule&&!c.supportId))return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};", "      if(rule?.mode==='reach'||(!rule&&!entity.supportId))return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};")
+          rep('src/spatial-traversal.js', "ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',", "ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v1',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',")
+
+          # Concrete sustained read Action. One valid reading execution tick yields one feedback unit; no Need is written here.
+          rep('src/engine.js', "      case'groom':action={...base,phase:'groom'};break;\n      case'wander':", "      case'groom':action={...base,phase:'groom'};break;\n      case'read':{const object=state.objects?.[choice.targetObject],target=object?{kind:'object',id:object.id}:null,valid=a.kind==='human'&&object?.affordances?.includes('read')&&Number.isFinite(targetTraversalCost(a,target,'read'));action=valid?{...base,phase:SP.isAtInteraction(state,a,target,'read')?'reading':'move',targetObject:object.id,feedbackUnits:0,feedbackGoal:6}:null;break;}\n      case'wander':")
+          read_step = """  function stepRead(a,p){
+    const object=state.objects?.[p.targetObject],target=object?{kind:'object',id:object.id}:null;
+    if(a.kind!=='human'||!object?.affordances?.includes('read')){abortAction(a,'原本的閱讀物件已經無法閱讀',{dropHeld:false});return;}
+    if(p.phase==='move'){if(!moveToInteraction(a,target,`前往${object.name}的閱讀位置`,'read'))return;p.phase='reading';return;}
+    if(p.phase==='reading'){
+      if(!SP.isAtInteraction(state,a,target,'read')){p.phase='move';return;}
+      p.feedbackUnits=(p.feedbackUnits||0)+1;
+      if(p.feedbackUnits>=(p.feedbackGoal||6)){addEvent(`${a.name}讀了一會兒${object.name}。`,'good',[],{actor:a.id,action:'read',target:object.id,feedbackUnits:p.feedbackUnits,entities:[`object:${object.id}`],position:positionRef(a.position)});finishAction(a,{dropHeld:false});}
+      return;
+    }
+    abortAction(a,'未知的閱讀階段',{dropHeld:false});
+  }
+"""
+          rep('src/engine.js', "  function stepWander(a,p){", read_step+"  function stepWander(a,p){")
+          rep('src/engine.js', "case'groom':stepGroom(a,p);break;case'wander':stepWander(a,p);break;", "case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'wander':stepWander(a,p);break;")
+
+          # Human-readable Action / Intent vocabulary and activity-specific capability marker.
+          rep('src/world.js', "groom:'舔毛清潔',wander:'閒晃',externalSupply:'外出補給'", "groom:'舔毛清潔',read:'閱讀',wander:'閒晃',externalSupply:'外出補給'")
+          rep('src/systems/intent/runtime.js', "    wander:'explore',restockContainer:'restockResource',externalSupply:'replenishSupply'", "    read:'read',wander:'explore',restockContainer:'restockResource',externalSupply:'replenishSupply'")
+          rep('src/systems/intent/runtime.js', "    explore:'探索環境',restockResource:'補充容器資源'", "    read:'閱讀',explore:'探索環境',restockResource:'補充容器資源'")
+          rep('src/systems/action/runtime.js', "  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,", "  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,READ_ACTIVITY_VERSION:'read-activity-v1',")
+
+          # Mental Regulation owns the regulation profile and realized-effect consumption, not Action progress.
+          rep('src/systems/mental-regulation/state.js', "const VERSION='mental-regulation-v1';", "const VERSION='mental-regulation-v2';")
+          rep('src/systems/mental-regulation/state.js', "    wander:Object.freeze({engagementProvision:1.4,mentalLoad:.12,relaxationProvision:.5})", "    wander:Object.freeze({engagementProvision:1.4,mentalLoad:.12,relaxationProvision:.5}),\n    read:Object.freeze({engagementProvision:1.8,mentalLoad:.35,relaxationProvision:.65})")
+          rep('src/systems/mental-regulation/runtime.js', "  E.registerDecisionOptionProvider('mentalRegulation.wander',(st,a)=>M.decisionOptionFor(a,'wander'),450);", """  E.registerDecisionOptionProvider('mentalRegulation.wander',(st,a)=>M.decisionOptionFor(a,'wander'),450);
+  E.registerDecisionOptionProvider('mentalRegulation.read',(st,a)=>{
+    const option=M.decisionOptionFor(a,'read');if(!option)return null;
+    const candidates=Object.values(st.objects||{}).filter(object=>object?.affordances?.includes('read')).map(object=>{const result=SP.bestInteractionPositionResult?.(st,a,{kind:'object',id:object.id},'read');return result&&Number.isFinite(result.traversalCost)?{object,result}:null;}).filter(Boolean).sort((x,y)=>x.result.traversalCost-y.result.traversalCost||String(x.object.id).localeCompare(String(y.object.id)));
+    const best=candidates[0];if(!best)return null;
+    const traversalCost=best.result.traversalCost,accessPenalty=Math.min(18,traversalCost*1.5);
+    return {...option,targetObject:best.object.id,score:Math.max(0,option.score-accessPenalty),decisionContributors:[...(option.decisionContributors||[]),{kind:'spatial',key:'readAccessTraversalCost',role:'cost',value:traversalCost}]};
+  },455);""")
+          rep('src/systems/mental-regulation/runtime.js', "    ctx.locals.mentalRegulationExecution=executingWander;", """    ctx.locals.mentalRegulationExecution=executingWander;
+    const executingRead=Object.create(null);
+    for(const a of Object.values(st?.agents||{}))if(a.action?.kind==='read'&&a.action.phase==='reading')executingRead[a.id]={action:a.action,feedbackUnits:Number(a.action.feedbackUnits)||0};
+    ctx.locals.mentalRegulationReadExecution=executingRead;""")
+          rep('src/systems/mental-regulation/runtime.js', "    for(const [agentId,positionBefore] of Object.entries(before)){\n      const a=st?.agents?.[agentId];\n      if(!a?.position||samePosition(positionBefore,a.position))continue;\n      M.applyRealizedActivityFeedback(a,'wander',{feedbackUnits:1});\n    }", """    for(const [agentId,positionBefore] of Object.entries(before)){
+      const a=st?.agents?.[agentId];
+      if(!a?.position||samePosition(positionBefore,a.position))continue;
+      M.applyRealizedActivityFeedback(a,'wander',{feedbackUnits:1});
+    }
+    for(const [agentId,capture] of Object.entries(ctx.locals.mentalRegulationReadExecution||{})){
+      const a=st?.agents?.[agentId],realized=Math.max(0,(Number(capture.action?.feedbackUnits)||0)-capture.feedbackUnits);
+      if(!a||realized<=0)continue;
+      M.applyRealizedActivityFeedback(a,'read',{feedbackUnits:realized});
+    }""")
+
+          # Existing wander regression remains focused on wander; new reading regression covers the new consumer.
+          rep('tests/mental-regulation-engagement-relaxation.mjs', "'mental-regulation-v1'", "'mental-regulation-v2'", expected=3)
+          rep('tests/mental-regulation-engagement-relaxation.mjs', "for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;", "for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;\ndelete st.objects.bookA;")
+
+          # Current World Authoring assertions/fixtures follow the formal schema bump; archived prose is intentionally not blind-replaced.
+          for path in Path('tests').glob('*.mjs'):
+              s=path.read_text()
+              if 'world-authoring-v12' in s:path.write_text(s.replace('world-authoring-v12','world-authoring-v13'))
+          rep('README.md', 'schema generation 為 `world-authoring-v12`', 'schema generation 為 `world-authoring-v13`')
+          rep('README.md', '`world-authoring-v12` 的 Furniture Instance', '`world-authoring-v13` 的 Furniture Instance')
+          rep('docs/versioning.md', 'World Authoring = `world-authoring-v12`，Furniture Catalog', 'World Authoring = `world-authoring-v13`，Furniture Catalog')
+
+          # Focused regression for ordinary-object authority + sustained read execution + realized Mental Regulation effects.
+          Path('tests/mental-regulation-reading-activity.mjs').write_text(r'''import assert from 'node:assert/strict';
+import {loadProductionBefore} from './helpers/production-loader.mjs';
+
+globalThis.window=globalThis;
+loadProductionBefore('src/ui/core.js');
+
+const E=globalThis.SimEngine,M=globalThis.SimMentalRegulation,SP=globalThis.SimSpatial,A=globalThis.SimWorldAuthoring,V=globalThis.SimValidator;
+assert.equal(A.VERSION,'world-authoring-v13');
+assert.equal(M.VERSION,'mental-regulation-v2');
+assert.equal(E.READ_ACTIVITY_VERSION,'read-activity-v1');
+assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v1');
+assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='mentalRegulation.read'));
+
+const authored=A.DEFAULT_WORLD_AUTHORING,bookAuthored=authored.entities.objects.bookA;
+assert.equal(bookAuthored.supportId,'diningTable');
+assert.deepEqual(bookAuthored.affordances,['read']);
+assert.equal(bookAuthored.interactions.read.mode,'supportReach');
+assert.equal(A.validateAuthoring(authored).ok,true);
+const collision=A.cloneAuthoring(authored);collision.entities.objects.cupA={...collision.entities.objects.bookA,id:'cupA'};
+assert.ok(A.validateAuthoring(collision).errors.some(x=>x.code==='authoring_object_id_collision'),'ordinary object ids must not ambiguously collide with existing object/source identities');
+
+E.reset(15300);
+let st=E.getState(),a=st.agents.zhen,book=st.objects.bookA;
+assert.ok(book&&book.id==='bookA','authored ordinary object must compile into state.objects exactly once');
+assert.equal(M.decisionOptionFor(a,'read'),null,'neutral Mental Regulation pressure must not fabricate a reading motive');
+const geometry=SP.interactionGeometry(st,{kind:'object',id:book.id},a,'read');
+assert.equal(geometry.mode,'supportReach');
+const access=SP.bestInteractionPositionResult(st,a,{kind:'object',id:book.id},'read');
+assert.ok(access&&Number.isFinite(access.traversalCost),'read target must use canonical Interaction Geometry + traversal cost');
+
+for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+Object.assign(a.needs,{hunger:0,thirst:0,fatigue:0,sleepNeed:0,social:0,engagement:80,relaxation:60});
+a.traits.alcoholLike=0;a.traits.social=0;a.traits.animalAffinity=0;
+E.tick();st=E.getState();a=st.agents.zhen;
+const readOption=st.thoughts.zhen.options.find(option=>option.id==='read');
+assert.equal(readOption?.decisionProviderId,'mentalRegulation.read');
+assert.equal(readOption?.targetObject,'bookA');
+assert.ok(readOption?.decisionContributors.some(x=>x.kind==='spatial'&&x.key==='readAccessTraversalCost'));
+
+// Arm the canonical read Action at a valid interaction position so the next core tick is genuine reading execution.
+a.action=null;a.activeIntent=null;a.position={...SP.bestInteractionPositionResult(st,a,{kind:'object',id:'bookA'},'read').position};
+const armed=E.buildAction(a,{id:'read',targetObject:'bookA'});assert.equal(armed?.kind,'read');assert.equal(armed.phase,'reading');a.action=armed;E.ensureIntentForAction(st,a);assert.equal(a.activeIntent?.kind,'read');
+const before={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
+E.tick();st=E.getState();a=st.agents.zhen;
+assert.equal(a.action?.kind,'read');assert.equal(a.action.feedbackUnits,1,'one valid reading execution tick must realize exactly one feedback unit');
+assert.ok(a.needs.engagement<before.engagement,'realized reading feedback must reduce Engagement pressure through Mental Regulation');
+assert.ok(a.needs.relaxation<before.relaxation,'realized reading feedback must apply net Relaxation effect through Mental Regulation');
+
+const realized={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
+a.action=null;a.activeIntent=null;
+assert.deepEqual({engagement:a.needs.engagement,relaxation:a.needs.relaxation},realized,'interrupting reading must not roll back realized effects');
+
+a.action={kind:'read',phase:'move',started:st.tick,wait:0,targetObject:'bookA',feedbackUnits:0,feedbackGoal:6};E.ensureIntentForAction(st,a);
+const beforeMove={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
+E.tick();st=E.getState();a=st.agents.zhen;
+assert.equal(a.needs.engagement,beforeMove.engagement,'moving toward a reading target must not grant Engagement relief before realized reading feedback');
+assert.equal(a.needs.relaxation,beforeMove.relaxation,'moving toward a reading target must not grant Relaxation relief before realized reading feedback');
+assert.equal(V.validateState(st).issueCount,0);
+assert.equal(Object.prototype.hasOwnProperty.call(a.needs,'overload'),false);
+assert.equal(Object.prototype.hasOwnProperty.call(a,'activityEffectiveness'),false);
+console.log('mental-regulation-reading-activity: ok');
+''')
+          rep('.github/workflows/node-regression.yml', '      - run: node tests/mental-regulation-engagement-relaxation.mjs\n', '      - run: node tests/mental-regulation-engagement-relaxation.mjs\n      - run: node tests/mental-regulation-reading-activity.mjs\n')
+
+          Path('docs/reading-activity.md').write_text('''# Reading Activity v1\n\nCurrent capability marker: `read-activity-v1`. World Authoring: `world-authoring-v13`. Mental Regulation: `mental-regulation-v2`. Ordinary-object interaction: `ordinary-object-interaction-v1`.\n\n## Canonical ownership\n\n- `entities.objects -> state.objects` is the canonical ordinary-object path. A readable book is not disguised as a Container or Source.\n- `read` is a sustained Human Action / `read` Intent targeting an ordinary object with the explicit `read` affordance. Target feasibility and access consume canonical Interaction Geometry and `traversalCost`; entity position is not an interaction shortcut.\n- The Action owns reading execution progress only. Each valid `reading` execution tick realizes one feedback unit; merely choosing the Intent, moving toward the target, or holding a timer does not.\n- Mental Regulation owns `ACTIVITY_PROFILES.read` and converts realized feedback into Engagement / Relaxation effects. The Activity never writes Needs directly.\n- Interruption keeps already-realized effects and does not introduce a resume lifecycle.\n\n## First concrete object\n\n`bookA` is authored on the existing dining-table Surface with `interactions.read.mode = supportReach`. Existing Furniture geometry is reused; no read-specific Furniture suitability, seat requirement, hand/gaze model, or new Furniture definition is introduced.\n\n## Deliberation\n\nThe Mental Regulation provider contributes `read` only when canonical Engagement / Relaxation pressure exists and a readable object has finite canonical interaction traversal cost. The nearest reachable readable object is selected deterministically by traversal cost then id; access burden is a bounded decision cost. Neutral `0 / 0` Mental Regulation defaults therefore do not change the default simulation merely because a book exists.\n\n## Deferred\n\nThis slice does not model book content, literacy, genre preference, novelty/familiarity, learning, Memory of content, bookshelves, reading posture, detailed hands/gaze, Environment Interference, generic leisure taxonomy, Mental Need drift, or generic Activity resume/continuity.\n''')
+          rep('docs/versioning.md', '### Current activity concurrency release', """### Current Reading Activity capability\n\n`read-activity-v1` adds the first concrete high-information leisure Activity without changing the overall `11.51.0-activity-concurrency` release marker: Mental Regulation still initializes at neutral `0 / 0`, so the new provider remains dormant in the default simulation until canonical pressure exists. World Authoring advances to `world-authoring-v13` for `entities.objects`; Mental Regulation advances to `mental-regulation-v2`; Spatial exposes `ordinary-object-interaction-v1`. Action / Human Social / Route / Furniture generations otherwise remain unchanged.\n\n`read` is a sustained Human Action with a `read` Intent. `bookA` is an ordinary authored object on the existing dining table, not a fake Container/Source. Interaction legality and access use existing Interaction Geometry / traversal cost. One valid reading execution tick is one realized feedback unit; movement, Intent creation, or nominal timers grant no regulation effect. See `docs/reading-activity.md`.\n\n### Current activity concurrency release""")
+          PY
+      - name: Focused verification
+        shell: bash
+        run: |
+          node tests/check-source-syntax.mjs
+          node tests/world-authoring-foundation.mjs
+          node tests/interaction-geometry.mjs
+          node tests/active-intent-foundation.mjs
+          node tests/mental-regulation-engagement-relaxation.mjs
+          node tests/mental-regulation-reading-activity.mjs
+          node tests/pr-preflight.mjs
+      - name: Commit implementation
+        shell: bash
+        run: |
+          rm .github/workflows/reading-activity-bootstrap.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add minimal reading activity and readable objects"
+          git push origin HEAD:reading-activity-readable-object-v1
