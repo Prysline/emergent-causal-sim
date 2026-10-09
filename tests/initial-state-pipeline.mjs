@@ -36,6 +36,7 @@ const EXPECTED_SCHEMA=[
   {id:'humanSocialResponse.schema',order:1100},
   {id:'memoryDeliberation.schema',order:1200},
   {id:'socialOutcomeMemory.schema',order:1300},
+  {id:'mentalRegulation.schema',order:1400},
   {id:'relationship.schema',order:1500},
   {id:'agentCarry.schema',order:1550},
   {id:'physical.schema',order:1600},
