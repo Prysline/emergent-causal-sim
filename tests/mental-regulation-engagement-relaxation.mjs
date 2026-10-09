@@ -13,8 +13,11 @@ assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='mentalRegulation.wande
 
 E.reset(15200);
 let st=E.getState(),a=st.agents.zhen;
-assert.notEqual(a.needs.engagement,a.needs.relaxation,'Engagement and Relaxation must remain separate canonical Agent-private values');
-for(const key of M.NEED_KEYS)assert.ok(Number.isFinite(a.needs[key])&&a.needs[key]>=0&&a.needs[key]<=100,`${key} must initialize as a bounded canonical Need`);
+for(const key of M.NEED_KEYS){
+  assert.ok(Object.prototype.hasOwnProperty.call(a.needs,key),`${key} must be an explicit canonical Agent-private Need`);
+  assert.equal(a.needs[key],0,`${key} must initialize neutral until an approved generation policy exists`);
+}
+assert.equal(M.decisionOptionFor(a,'wander'),null,'zero Mental Regulation pressure must not add a new deliberation candidate');
 assert.equal(V.validateState(st).issueCount,0,'adding Mental Regulation state must preserve existing canonical validation invariants');
 
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
@@ -39,8 +42,8 @@ assert.equal(decision?.source?.providerId,'mentalRegulation.wander','Decision Ev
 assert.ok(decision?.contributors?.some(x=>x.kind==='need'&&x.key==='engagement'));
 assert.ok(decision?.contributors?.some(x=>x.kind==='need'&&x.key==='relaxation'));
 assert.deepEqual(a.position,beforeIntentOnly.position,'forming the Intent/Action must not itself fabricate execution progress');
-assert.ok(a.needs.engagement>=beforeIntentOnly.engagement,'unexecuted Intent must not reduce Engagement Need');
-assert.ok(a.needs.relaxation>=beforeIntentOnly.relaxation,'unexecuted Intent must not reduce Relaxation Need');
+assert.equal(a.needs.engagement,beforeIntentOnly.engagement,'unexecuted Intent must not reduce Engagement Need');
+assert.equal(a.needs.relaxation,beforeIntentOnly.relaxation,'unexecuted Intent must not reduce Relaxation Need');
 
 let moved=false,preMove=null,postMove=null;
 for(let i=0;i<20&&!moved;i++){
@@ -58,14 +61,14 @@ const realized={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
 a.action=null;a.activeIntent=null;
 Object.assign(a.needs,{hunger:95,thirst:0,fatigue:0,sleepNeed:0,social:0});
 E.tick();st=E.getState();a=st.agents.zhen;
-assert.ok(a.needs.engagement>=realized.engagement,'interruption/replacement must not roll back already realized Engagement effect');
-assert.ok(a.needs.relaxation>=realized.relaxation,'interruption/replacement must not roll back already realized Relaxation effect');
+assert.equal(a.needs.engagement,realized.engagement,'interruption/replacement must not roll back already realized Engagement effect');
+assert.equal(a.needs.relaxation,realized.relaxation,'interruption/replacement must not roll back already realized Relaxation effect');
 
 const beforeNoFeedback={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
 a.action={kind:'wander',phase:'move',started:st.tick,targetTile:{...a.position}};
 E.tick();st=E.getState();a=st.agents.zhen;
-assert.ok(a.needs.engagement>=beforeNoFeedback.engagement,'a nominal wander tick with no realized movement must not grant Engagement relief');
-assert.ok(a.needs.relaxation>=beforeNoFeedback.relaxation,'a nominal wander tick with no realized movement must not grant Relaxation relief');
+assert.equal(a.needs.engagement,beforeNoFeedback.engagement,'a nominal wander tick with no realized movement must not grant Engagement relief');
+assert.equal(a.needs.relaxation,beforeNoFeedback.relaxation,'a nominal wander tick with no realized movement must not grant Relaxation relief');
 
 assert.equal(Object.prototype.hasOwnProperty.call(a.needs,'overload'),false,'first slice must not create a persistent Overload Need');
 assert.equal(Object.prototype.hasOwnProperty.call(a,'activityEffectiveness'),false,'first slice must not create a universal activityEffectiveness truth');
