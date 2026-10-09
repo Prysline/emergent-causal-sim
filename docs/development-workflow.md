@@ -23,6 +23,20 @@ node tests/pr-preflight.mjs
 - Browser 是否必要，以 browser-observable contract 判斷；若 repository policy 將它設為 required check，則以當時 policy 為準。
 - CI 狀態必須區分 `queued`、`in_progress`、`success`、`failure`、`cancelled`，不得用「有跑」替代結果。
 
+### Branch provenance
+
+工作 branch 的歸屬資訊不得只存在於 assistant conversation state。任何為同一 workstream 建立的正式、staging、temp、retry、clean、rebuild 或 final branch，都必須在建立當下留下可由 GitHub durable state 重建的共同 work identifier。
+
+建議直接讓 branch 名稱攜帶共同 prefix，例如：
+
+```text
+work/routine-slice-a/staging-01
+work/routine-slice-a/rebuild
+work/routine-slice-a/final
+```
+
+branch 建立本身就是 provenance write；不得先建立無法辨識歸屬的 branch，再依賴後續聊天記憶補記。PR / handoff 可以再記錄 work identifier 與 canonical branch，作為第二份 durable evidence。
+
 ## 3. Merge Gate
 
 「可以合併」與「已經合併」是不同事實。
@@ -48,7 +62,7 @@ Closeout 至少包含：
 3. 同步直接相關 current authority / navigation / factual status；不得趁收尾改寫未獲核准的 simulation semantic、需求或優先順序。
 4. Active TODO 若完成條件已進 current `main`，將完成項移出，只保留真正尚未完成的 deferred / handoff。
 5. Completed TODO Archive 留精簡完成紀錄：完成範圍、merge / 驗證證據、version boundary、deferred / handoff、authority link。
-6. fresh-check 本次工作產生的 branch，移除已沒有保留理由的多餘 branch。
+6. 依本 workstream 的 durable work identifier 找回其完整 branch inventory，移除已沒有保留理由的多餘 branch；不得只檢查 final branch 或目前 PR head。
 7. 完成報告分開列出 branch / commit / PR / CI / deploy / Notion 的實際狀態，以及未執行檢查、阻礙與未確認事項。
 
 ## 5. 「收尾」與「合併和收尾」
@@ -63,16 +77,30 @@ Closeout 至少包含：
 
 不得只把舊項目標成 done 後長期留在 Active TODO。後續新工作若有自己的完成條件，應成為新的 Active TODO / handoff，而不是讓舊 merge gate 繼續占位。
 
-## 7. Branch cleanup 安全規則
+## 7. Branch provenance recovery 與 cleanup 安全規則
 
-Closeout 可以包含工作 branch 清理，但只有在全部條件都能確認時才刪除：
+正常 Closeout 只處理**本 workstream** 的 branch inventory，不應因為某一窗收尾就把其他平行 workstream 的 branch 納入清理判斷。
 
-- branch 已 merge，或其所有有效 commit 已完整包含於 current `main`；
+正常 discovery 順序：
+
+1. 由 durable work identifier 列舉本 workstream 的所有 remote branches；
+2. 以 PR head、handoff 與已知 canonical/final branch 交叉確認；
+3. 對這個 inventory 逐條判斷 `preserve`、`safe-delete` 或 `uncertain`。
+
+若聊天中斷、換窗或上下文遺失，使 work identifier / provenance 無法直接取得，可以使用 repository-wide branch inventory 作 **recovery mechanism**，但目的只是在重建本工作 branch 的歸屬，不是審核或清理整個 repo。
+
+只有在全部條件都能確認時才刪除 branch：
+
+- branch 已 merge，或其有效產品工作已被 current `main` / canonical final implementation 完整取代；
 - 沒有 open PR 仍引用它；
-- 沒有獨立未整合 commit；
+- 沒有仍需保留的獨立未整合工作；
 - 沒有明確的保留、比較、hotfix 或 handoff 理由。
 
-任一條無法確認時保留 branch，並在完成報告列為待處理；不得因「收尾」而盲目刪除 branch。
+`ahead of main` 不能單獨證明 branch 必須保留。若 final implementation 是重建 commit history，舊 staging branch 即使仍顯示 ahead，也可以在有直接證據證明其有效工作已被取代後列為 `safe-delete`。
+
+任一條無法確認時保留 branch，並在完成報告列為 `uncertain` / 待處理；不得因「收尾」而盲目刪除 branch。
+
+Closeout 的完成聲明應是「本 workstream 的 branch cleanup complete」，除非任務本身就是 repository-wide branch cleanup，否則不得宣稱整個 repository 沒有殘留 branch。
 
 ## 8. 證據與狀態用語
 
@@ -94,7 +122,8 @@ Closeout 可以包含工作 branch 清理，但只有在全部條件都能確認
 - production source-load architecture；
 - 已知 current marker consistency；
 - regression registration / retired path；
-- 唯讀 lifecycle evidence collection。
+- 唯讀 lifecycle evidence collection；
+- 依 durable work identifier 列舉本 workstream branch inventory。
 
 仍需人工／模型判斷：
 
@@ -104,6 +133,7 @@ Closeout 可以包含工作 branch 清理，但只有在全部條件都能確認
 - Active TODO 是否真的完成；
 - deferred / handoff 的產品意義；
 - branch 是否安全可刪；
+- provenance recovery 後某 branch 是否真的屬於本 workstream；
 - cancelled CI 是否可接受；
 - merge / deploy 權限。
 
