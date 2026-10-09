@@ -3,7 +3,7 @@ name: Reading activity PR bootstrap
 on:
   pull_request:
     branches: [main]
-    types: [opened]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -21,9 +21,9 @@ jobs:
         with:
           node-version: 22
       - name: Apply checked implementation patch
-        shell: bash
+        shell: pwsh
         run: |
-          python - <<'PY'
+          $extract = @'
           from pathlib import Path
           import textwrap
           source=Path('.github/workflows/reading-activity-bootstrap.yml').read_text()
@@ -31,9 +31,10 @@ jobs:
           end=source.index("\n          PY\n",start)
           code=textwrap.dedent(source[start:end])
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
-          PY
+          '@
+          $extract | python -
       - name: Focused verification
-        shell: bash
+        shell: pwsh
         run: |
           node tests/check-source-syntax.mjs
           node tests/world-authoring-foundation.mjs
@@ -43,9 +44,9 @@ jobs:
           node tests/mental-regulation-reading-activity.mjs
           node tests/pr-preflight.mjs
       - name: Commit implementation
-        shell: bash
+        shell: pwsh
         run: |
-          rm .github/workflows/reading-activity-bootstrap.yml .github/workflows/reading-activity-bootstrap-pr.yml
+          Remove-Item .github/workflows/reading-activity-bootstrap.yml, .github/workflows/reading-activity-bootstrap-pr.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
