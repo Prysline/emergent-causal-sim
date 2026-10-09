@@ -8,7 +8,9 @@
 
 > Previous `11.51.0-activity-concurrency`: Action runtime established a minimal generic compatibility seam for one ongoing primary Action plus one execution-local transient behavior. Eating remains the sole owner of food/progress/completion; Human Social uses `socialListening` with progress scale 1 and `socialSpeaking` with scale 0 for that execution tick. Social Bid / response / canonical `talk` provenance is unchanged, no persistent Conversation truth is introduced, and incompatible sleeping + speaking still requires formal wake / transition.
 
-> Current `11.52.0-daily-life-routine`: Daily Life Routine owns Agent-private DAY 0 soft anchors and contributes only bounded Decision Evidence through the existing provider seam. It does not create a World-level schedule, Action, Active Intent, or second ranking truth; existing Deliberation remains authoritative and existing Activity feasibility must already succeed.
+> Previous `11.52.0-daily-life-routine`: Daily Life Routine owns Agent-private DAY 0 soft anchors and contributes only bounded Decision Evidence through the existing provider seam. It does not create a World-level schedule, Action, Active Intent, or second ranking truth; existing Deliberation remains authoritative and existing Activity feasibility must already succeed.
+
+> Current `11.53.0-mental-regulation-generation`: Mental Regulation keeps `Agent.needs.stimulation` / `Agent.needs.relaxation` as the only persistent private truth. Eligible awake Humans receive a slow Stimulation baseline; realized `wander` / `read` execution contributes Stimulation relief plus independent Relaxation load / provision. All same-tick contributors settle once through `settleMentalRegulation(...)` after core execution and clamp once, so there is no ordering-dependent floor artifact or parallel workload / last-feedback truth.
 
 > Previous `11.48.0-carrying-replanning`: Deliberation may plan while a canonical `agentCarries` relation exists, but it never owns or mirrors that relation. Carrying-state replanning is Agent-private cognition over placement/wait candidates; Agent Carry / Spatial / Physical retain World-truth execution, geometry, route and placement legality. Replacement plans use new Decision identities with `priorDecisionId`; `recoveryBlocked` remains the anti-orphan physical fallback.
 
@@ -16,9 +18,9 @@
 
 本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
 
-目前 runtime marker：`11.52.0-daily-life-routine`。
+目前 runtime marker：`11.53.0-mental-regulation-generation`。
 
-Daily Life Routine Slice A 不建立第二份 candidate ranking truth，也不建立 World / Household schedule。`Agent.routine.anchors` 是 Agent-private canonical truth；Routine provider 只把 active temporal context 投影成 bounded candidate evidence，並重用 existing Activity feasibility / Deliberation。Activity Concurrency v1 的 execution-local compatibility 契約保持不變。
+Mental Regulation v4 延續 `Agent.needs.stimulation` / `Agent.needs.relaxation` 的單一 Agent-private authority；只有 eligible Human 的 awake baseline 與 actual realized Activity experience 能形成本 slice 的 regulation contributors。`mentalRegulation.capture-execution` 只保存 execution-local snapshot，`mentalRegulation.settle` 在 core execution 後一次原子結算；UI / Inspector 只投影結算後 canonical Need。Daily Life Routine、Activity Concurrency、Fatigue physiology、Environment Interference 與其他未改 subsystem contract 保持既有 authority。
 
 版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
 

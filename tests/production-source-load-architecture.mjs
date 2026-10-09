@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.52.0-daily-life-routine';
+const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();

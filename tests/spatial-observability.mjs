@@ -8,8 +8,8 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260911);
 const st=E.getState(),orange=st.agents.orange,zhen=st.agents.zhen;
-assert.equal(st.version,'11.52.0-daily-life-routine');
-assert.equal(E.VERSION,'11.52.0-daily-life-routine');
+assert.equal(st.version,'11.53.0-mental-regulation-generation');
+assert.equal(E.VERSION,'11.53.0-mental-regulation-generation');
 
 let obs=SP.agentObservation(st,orange);
 assert.equal(obs.surfaceId,'floor');

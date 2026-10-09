@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-const CURRENT_VERSION='11.52.0-daily-life-routine';
+const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/physical.js',
   'systems/action/state.js','systems/intent/state.js','systems/social/state.js',

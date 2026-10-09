@@ -2,7 +2,7 @@
 
 湧現式因果模擬器。這個專案用少量可組合的底層規則，觀察角色、物件、資源、記憶、關係與環境如何自行形成沒有被作者逐條寫死的因果鏈。
 
-目前 runtime marker：**v11.52.0・Daily Life Routine** (`11.52.0-daily-life-routine`)。
+目前 runtime marker：**v11.53.0・Mental Regulation Generation** (`11.53.0-mental-regulation-generation`)。
 
 Mental Regulation current identifier uses Agent-private `needs.stimulation` + `needs.relaxation`; `engagement` is retired rather than retained as a parallel Need. Resident / Debug presentation shares Chinese Need labels, and positioned ordinary `state.objects` are visible/selectable on the runtime map.
 

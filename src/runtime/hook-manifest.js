@@ -17,7 +17,7 @@
       {id:'mentalRegulation.capture-execution',order:1200}
     ],
     afterTick:[
-      {id:'mentalRegulation.apply-realized-feedback',order:50},
+      {id:'mentalRegulation.settle',order:50},
       {id:'spatial.effects',order:100},
       {id:'sleepConflict.complete-yield',order:150},
       {id:'intent.reconcile-after',order:200},

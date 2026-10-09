@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.52.0-daily-life-routine';
+const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -117,7 +117,7 @@ assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
 assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
 assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
 assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.52.0','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.releaseLabel,'v11.53.0','app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},

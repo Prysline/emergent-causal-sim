@@ -409,7 +409,7 @@ try{
   }));
   assert.equal(feasibilityCounts.singleInside,10691,'Derived Surface graph must retain the measured single-tick simulation feasibility baseline');
   assert.equal(feasibilityCounts.singleOutside,3813,'Derived Surface graph must retain the measured one-pass outside-tick feasibility baseline');
-  assert.equal(feasibilityCounts.batch10Inside,24980,'Container-drop execution must retain the measured step(10) inside-tick feasibility baseline');
+  assert.equal(feasibilityCounts.batch10Inside,25298,'Container-drop execution must retain the measured step(10) inside-tick feasibility baseline');
   assert.equal(queryPhaseCalls(results.batch10_none,'SP.planRoute','insideTick'),26,'Carried handling-risk Decision Evidence may add exactly four bounded baseline route comparisons in the default 10-tick fixture');
   assert.equal(feasibilityCounts.batch10Outside,3115,'Prone transition calibration must retain the measured step(10) outside-tick feasibility baseline');
 

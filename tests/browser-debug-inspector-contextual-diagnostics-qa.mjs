@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
-const CURRENT_VERSION='11.52.0-daily-life-routine';
+const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const DEBUG_VERSION='11.48.1-debug-inspector-sleep-perception-approach';
 const outDir='artifacts/browser-debug-inspector-contextual-diagnostics-qa';
 fs.mkdirSync(outDir,{recursive:true});

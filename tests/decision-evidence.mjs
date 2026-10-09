@@ -10,7 +10,7 @@ function quiet(a){for(const k of ['hunger','thirst','fatigue','sleepNeed','socia
 
 E.reset(3600);
 let st=E.getState(),a=st.agents.zhen;
-assert.equal(st.version,'11.52.0-daily-life-routine');
+assert.equal(st.version,'11.53.0-mental-regulation-generation');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach');
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;

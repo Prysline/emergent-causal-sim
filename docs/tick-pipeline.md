@@ -8,15 +8,17 @@
 
 > Previous `11.51.0-activity-concurrency`: the first Activity Concurrency slice adds no runtime hook or phase. Existing beforeTick 300 `humanSocial.prepare` may schedule one execution-local Social transient for the upcoming core tick; core eating consumes the resulting primary-progress scale during `eatingPlate / eatingDirect`; afterTick 700 `humanSocial.resolve` settles canonical Social response / talk events and clears the transient. This ordering is explicit through the existing named hook manifest and core checkpoint, not script load order.
 
-> Current `11.52.0-daily-life-routine`: Routine Slice A adds no runtime hook, phase, or hook-order change. Its Agent-private DAY 0 state is installed by the explicit initial-state initializer registry; `dailyLifeRoutine.read` participates only when the existing core chooser gathers Decision Option Providers. It therefore changes candidate evidence, not same-tick execution ordering.
+> Previous `11.52.0-daily-life-routine`: Routine Slice A adds no runtime hook, phase, or hook-order change. Its Agent-private DAY 0 state is installed by the explicit initial-state initializer registry; `dailyLifeRoutine.read` participates only when the existing core chooser gathers Decision Option Providers. It therefore changes candidate evidence, not same-tick execution ordering.
+
+> Current `11.53.0-mental-regulation-generation`: beforeTick 1200 `mentalRegulation.capture-execution` snapshots eligible Human awake state plus pre-core realized-execution evidence; core execution remains authoritative; afterTick 50 `mentalRegulation.settle` converts actual movement / reading feedback into atomic Stimulation / Relaxation settlement before all later afterTick simulation hooks and before Presentation observers. New Need values therefore cannot affect the core execution that produced them, but are canonical for subsequent lifecycle / Presentation and the next new Deliberation.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.52.0-daily-life-routine`。
+目前 runtime marker：`11.53.0-mental-regulation-generation`。
 
-Routine Slice A 不建立新 scheduler hook；其 initializer 與 provider registration 都走既有 explicit registry / load contract。Activity Concurrency v1 的 beforeTick 300 `humanSocial.prepare`、core progress-scale consumption、afterTick 700 `humanSocial.resolve` ordering完全不變。Routine 只在既有 core candidate collection時提供 bounded evidence，不建立 same-tick visibility shortcut。
+Mental Regulation v4 新增明確 named-hook ordering：beforeTick 1200 `mentalRegulation.capture-execution` 只保存 execution-local snapshot；core tick 真正執行 Action；afterTick 50 `mentalRegulation.settle` 才依 actual realized execution 原子更新 canonical Needs。它不讓 baseline 或 relief 回寫已完成的同 tick deliberation / execution；Presentation observer 只會看到 settlement 後 state。
 
 > `11.46.0-sleep-carry-integration` 整合 sleeping occupant Agent carry、canonical candidate-node selection 與 post-pickup recovery，但**沒有新增、刪除或重新排序 runtime hook**。既有 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield` 的 ordering 維持 `11.44.0-sleep-slot-conflict` 已建立的 contract；candidate selection 與 carry recovery 都在既有同步 query／core `carryAgent` lifecycle 邊界內完成。
 >
@@ -83,9 +85,11 @@ flowchart TD
     B900 --> B1000[1000 Intent Reconcile]
     B1000 --> B1100[1100 Spatial Capture]
 
-    B1100 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical world events]
+    B1100 --> B1200[1200 Mental Regulation Execution Capture]
+    B1200 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical world events]
 
-    CORE --> A100[afterTick 100\nSpatial Effects]
+    CORE --> A50[afterTick 50\nMental Regulation Settlement]
+    A50 --> A100[afterTick 100\nSpatial Effects]
     A100 --> A150[150 Sleep Conflict Yield Completion]
     A150 --> A200[200 Intent Reconcile]
     A200 --> A300[300 Social Bid Settle]
@@ -129,6 +133,7 @@ flowchart TD
 | 900 | `socialBid.prepare` | Social Bid | waiting action injection、response provenance snapshot | 為 afterTick settlement 保留本 tick 之前的 responder/requester 狀態 |
 | 1000 | `intent.reconcile-before` | Active Intent | Action ↔ Intent linkage 收斂 | core tick 前避免 live Action / Intent linkage 漂移 |
 | 1100 | `spatial.capture` | Spatial Effects | 保存 core 前位置與 event snapshot | afterTick 100 用來判斷本 tick movement / spill effects |
+| 1200 | `mentalRegulation.capture-execution` | Mental Regulation | 保存 eligible Human 的 pre-core awake / wander position / read feedback counter execution-local snapshot | afterTick settlement 必須比較 core 前後 actual execution；snapshot 本身不改 Need |
 
 `memory.capture-events` / beforeTick 600 marker 已不再存在；Memory 不再掃 `state.events` 推斷哪些事件「剛發生」。
 
@@ -146,6 +151,7 @@ Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 cor
 
 | Order | Implementation Hook ID | Owner | 主要責任 | 為什麼順序有語義 |
 |---:|---|---|---|---|
+| 50 | `mentalRegulation.settle` | Mental Regulation | 由 pre-core snapshot + core 後 canonical execution 結果產生 awake baseline / realized Activity contributors，原子更新 Stimulation / Relaxation | 必須晚於 core actual execution，且先完成 canonical Need settlement；不回寫本 tick 已發生的 execution |
 | 100 | `spatial.effects` | Spatial Effects | 根據 pre-core snapshot 套用 movement / contact / spill 衍生效果 | 要先把物理結果寫回世界，再讓後續 lifecycle 看到正式 world state |
 | 150 | `sleepConflict.complete-yield` | Sleep Slot Conflict / Deliberation | responder 實際離開被占用 Slot 後，建立完成讓位的 canonical World Event | 必須晚於 Spatial Effects 確認正式位置、早於 Intent reconcile；不得把 accept response 本身當成 Slot 已釋放 |
 | 200 | `intent.reconcile-after` | Active Intent | core Action 結果後先收斂 Intent linkage | 後續 Social Bid / abort recovery 應讀一致 linkage |
@@ -158,7 +164,7 @@ Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 cor
 | 850 | `deliberation.finalize-decision-evidence` | Deliberation | 將 correction 後仍存活的 initial Action 與 selected structured contributors freeze 成 adopted Decision Evidence | 必須晚於 800，否則會把 provisional target誤標成 final；Presentation只能在此之後讀取 final evidence |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
 
-v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
+v11.53.0 新增 beforeTick 1200 `mentalRegulation.capture-execution` 與 afterTick 50 `mentalRegulation.settle`；這兩個 hook 共同鎖定「先 actual execution、後 Mental Regulation settlement」的因果邊界。v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
 
 ## 4.1 Presentation runtime observers
 

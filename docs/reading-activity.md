@@ -1,6 +1,6 @@
 # Reading Activity v1
 
-Current capability marker: `read-activity-v1`. World Authoring: `world-authoring-v13`. Mental Regulation: `mental-regulation-v3`. Ordinary-object interaction: `ordinary-object-interaction-v1`.
+Current capability marker: `read-activity-v1`. World Authoring: `world-authoring-v13`. Mental Regulation: `mental-regulation-v4`. Ordinary-object interaction: `ordinary-object-interaction-v1`.
 
 ## Canonical ownership
 
@@ -16,8 +16,8 @@ Current capability marker: `read-activity-v1`. World Authoring: `world-authoring
 
 ## Deliberation
 
-The Mental Regulation provider contributes `read` only when canonical Stimulation / Relaxation pressure exists and a readable object has finite canonical interaction traversal cost. The nearest reachable readable object is selected deterministically by traversal cost then id; access burden is a bounded decision cost. Neutral `0 / 0` Mental Regulation defaults therefore do not change the default simulation merely because a book exists.
+The Mental Regulation provider contributes `read` only when canonical Stimulation / Relaxation pressure exists and a readable object has finite canonical interaction traversal cost. The nearest reachable readable object is selected deterministically by traversal cost then id; access burden is a bounded decision cost. Initial Mental Regulation state remains neutral `0 / 0`, but current `mental-regulation-v4` gradually generates Stimulation pressure for eligible awake Humans; `read` can therefore become competitive in the production default only after that canonical pressure actually exists, not merely because a book exists.
 
 ## Deferred
 
-This slice does not model book content, literacy, genre preference, novelty/familiarity, learning, Memory of content, bookshelves, reading posture, detailed hands/gaze, Environment Interference, generic leisure taxonomy, Mental Need drift, or generic Activity resume/continuity.
+This slice does not model book content, literacy, genre preference, novelty/familiarity, learning, Memory of content, bookshelves, reading posture, detailed hands/gaze, Environment Interference, generic leisure taxonomy, Activity-specific Need-generation policy beyond the shared Mental Regulation settlement, or generic Activity resume/continuity.

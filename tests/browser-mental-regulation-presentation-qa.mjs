@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.52.0-daily-life-routine';
+const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const outDir='artifacts/browser-mental-regulation-presentation-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -24,7 +24,7 @@ assert.ok(canonical.book,'bookA must exist in canonical state.objects');
 
 await page.click('[data-entity="agent:zhen"]');
 await page.waitForSelector('[data-v1140-resident-root]');
-const resident=await page.evaluate(()=>({
+let resident=await page.evaluate(()=>({
   text:document.querySelector('[data-v1140-resident-view]')?.innerText||'',
   stimulation:document.querySelector('[data-v1140-resident-view] [data-need="stimulation"]')?.innerText||'',
   relaxation:document.querySelector('[data-v1140-resident-view] [data-need="relaxation"]')?.innerText||''
@@ -32,11 +32,20 @@ const resident=await page.evaluate(()=>({
 assert.match(resident.stimulation,/刺激需求/,'Resident View must project canonical stimulation through the shared presentation label');
 assert.match(resident.relaxation,/放鬆需求/,'Resident View must project canonical relaxation through the shared presentation label');
 
+await page.evaluate(()=>window.SimEngine.tick());
+await page.waitForFunction(()=>window.SimEngine.getState().agents.zhen.needs.stimulation>0);
+resident=await page.evaluate(()=>({
+  stimulation:document.querySelector('[data-v1140-resident-view] [data-need="stimulation"]')?.innerText||'',
+  canonical:window.SimEngine.getState().agents.zhen.needs.stimulation
+}));
+assert.ok(resident.canonical>0,'production awake runtime must generate canonical Stimulation pressure after execution');
+assert.match(resident.stimulation,/刺激需求/,'Resident View must continue projecting the changed canonical Need');
+
 await page.click('[data-v1140-mode="debug"]');
 const debugText=await page.locator('[data-v1140-debug-view]').innerText();
-assert.match(debugText,/刺激需求\s+0/,'Debug Inspector must use the shared Chinese stimulation label');
-assert.match(debugText,/放鬆需求\s+0/,'Debug Inspector must use the shared Chinese relaxation label');
-assert.ok(!/\bstimulation\s+0\b/.test(debugText),'Debug Inspector must not expose raw stimulation identifier as the Need label');
+assert.match(debugText,/刺激需求/,'Debug Inspector must use the shared Chinese stimulation label');
+assert.match(debugText,/放鬆需求/,'Debug Inspector must use the shared Chinese relaxation label');
+assert.ok(!/\bstimulation\s+[\d.]+\b/.test(debugText),'Debug Inspector must not expose raw stimulation identifier as the Need label');
 
 await page.evaluate(()=>window.SimUI.setCurrentZ(0));
 const marker=page.locator('[data-entity="object:bookA"]');
