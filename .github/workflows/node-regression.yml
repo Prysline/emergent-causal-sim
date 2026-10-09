@@ -52,6 +52,7 @@ jobs:
       - run: node tests/initializer-horizontal-reachability.mjs
       - run: node tests/world-authoring-editor-contract.mjs
       - run: node tests/editor-authoring-mutations.mjs
+      - run: node tests/editor-ordinary-object-authoring.mjs
       - run: node tests/geometry-derived-horizontal-topology.mjs
       - run: node tests/horizontal-geometry-foundation.mjs
       - run: node tests/initial-state-pipeline.mjs
