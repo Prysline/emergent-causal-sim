@@ -19,10 +19,10 @@
 
   E.registerRuntimeHook('afterTick','mentalRegulation.apply-realized-feedback',(ctx)=>{
     const st=ctx.state||E.getState(),before=ctx.locals.mentalRegulationExecution;
-    for(const a of Object.values(st?.agents||{})){
-      M.applyBaselineDrift(a,{awake:!a.offMap&&!E.isSleeping?.(a)});
-      const positionBefore=before?.[a.id];
-      if(!positionBefore||!a.position||samePosition(positionBefore,a.position))continue;
+    if(!before)return;
+    for(const [agentId,positionBefore] of Object.entries(before)){
+      const a=st?.agents?.[agentId];
+      if(!a?.position||samePosition(positionBefore,a.position))continue;
       M.applyRealizedActivityFeedback(a,'wander',{feedbackUnits:1});
     }
   },50);
