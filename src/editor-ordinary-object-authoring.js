@@ -158,6 +158,7 @@
   const nativeLoadDocument=E.loadDocument.bind(E);
   const nativeGetSession=E.getSession.bind(E);
   let baselineFingerprint=E.semanticFingerprint();
+  let inheritedDirty=nativeGetSession().dirty===true;
   let pending=null;
   let selectedId=null;
   let status='';
@@ -170,11 +171,12 @@
   paletteSection.innerHTML='<h2>一般物件目錄</h2><p class="hint scene-hint">從最小 authoring template 建立 canonical ordinary object；Furniture 仍使用上方 system-owned Furniture Catalog。</p><div id="ordinaryObjectCatalog" class="scene-list" aria-label="一般物件 authoring template 目錄"></div><div id="ordinaryObjectOperation" class="validation-list" aria-live="polite"></div>';
   sceneSection?.before(paletteSection);
 
-  function dirty(){return E.semanticFingerprint()!==baselineFingerprint;}
+  function dirty(){return inheritedDirty||E.semanticFingerprint()!==baselineFingerprint;}
   E.getSession=()=>({...nativeGetSession(),dirty:dirty()});
   E.loadDocument=next=>{
     const result=nativeLoadDocument(next);
     baselineFingerprint=E.semanticFingerprint();
+    inheritedDirty=false;
     pending=null;
     selectedId=null;
     status='';
@@ -184,6 +186,7 @@
 
   function markCleanBaseline(){
     baselineFingerprint=E.semanticFingerprint();
+    inheritedDirty=false;
     pending=null;
     status='';
     queueRender();
@@ -394,10 +397,12 @@
   $('exportWorld')?.addEventListener('click',()=>setTimeout(markCleanBaseline,0));
   $('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{
     baselineFingerprint=E.semanticFingerprint();
+    inheritedDirty=false;
     pending=null;selectedId=null;status='';queueRender();
   },0));
   $('importWorld')?.addEventListener('change',()=>setTimeout(()=>{
     baselineFingerprint=E.semanticFingerprint();
+    inheritedDirty=false;
     pending=null;selectedId=null;status='';queueRender();
   },100));
 
