@@ -10,7 +10,7 @@
     satisfyHunger:'填飽肚子',drinkWater:'補充水分',drinkAlcohol:'解渴／喝點酒',recoverFatigue:'緩解活動疲勞',sleep:'補足睡眠',
     socialize:'找人聊聊',interactWithAnimal:'和動物互動',seekSocialContact:'找人親近',awaitResponse:'等待對方回應',
     respondSocialBid:'回應對方的互動',explore:'探索附近',removeHazard:'處理濕滑地面',groom:'整理毛髮與身體',
-    restockResource:'補充室內資源',replenishSupply:'補足家中庫存'
+    restockResource:'補充室內資源',replenishSupply:'補足家中庫存',read:'閱讀'
   };
   const REQUIRED_INTENT_LABELS=[...new Set([...Object.values(E.INTENT_BY_ACTION||{}),'awaitResponse','respondSocialBid'])];
   const MISSING_INTENT_LABELS=REQUIRED_INTENT_LABELS.filter(kind=>!INTENT_LABELS[kind]);
@@ -18,7 +18,7 @@
   const ACTION_LABELS={
     talk:'聊天',talkOffer:'聊天邀請',acceptTalk:'接受聊天',briefTalkReply:'簡短回應聊天',declineTalk:'沒有繼續聊天',
     petAnimal:'撫摸動物',acceptPet:'接受撫摸',toleratePet:'容忍撫摸',avoidPet:'避開撫摸',drinkWater:'喝水',drinkAlcohol:'喝酒',
-    eat:'吃東西',sleep:'睡覺',rest:'休息',wander:'走動',cleanFloor:'清理地面',groom:'舔毛',spill:'打翻液體',
+    eat:'吃東西',sleep:'睡覺',rest:'休息',wander:'走動',cleanFloor:'清理地面',groom:'舔毛',spill:'打翻液體',read:'閱讀',
     restockContainer:'補充容器',externalSupply:'外出補給'
   };
   const host=document.getElementById('inspector');if(!host)return;
