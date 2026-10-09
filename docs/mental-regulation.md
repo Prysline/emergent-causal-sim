@@ -10,6 +10,7 @@ Current subsystem marker: `mental-regulation-v1`.
 - `relaxation > 0`：角色主觀上需要降低心理負荷或持續投入。
 - `0`：該 channel 目前沒有特別調節壓力。
 - 兩者第一版皆 clamp 在 `0..100`；不使用負值表示過度滿足。
+- 在尚未核准 Need generation policy 前，兩者初始化皆為 `0`；這代表「目前沒有已建立的 Mental Regulation 壓力」，不是用預設常數猜測角色一開始應該多無聊或多緊張。
 
 ## Activity profile 與 realized effect
 
@@ -32,6 +33,8 @@ profile 不是 Need truth，也不直接寫 Need。runtime 在 core execution �
 
 Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension seam，把同一個 `wander` concrete Action 提供為一個有 Mental Regulation provenance 的候選。Engagement / Relaxation 各自轉成 bounded `0..1` evidence，並以兩個獨立 `need` contributors 進入既有 initial Deliberation / Decision Evidence；Need 本身不 hard-trigger Action。
 
+當 Engagement 與 Relaxation 都為 `0` 時，Mental Regulation provider 不新增 `wander` candidate，避免 dormant foundation 改寫 current default deliberation。只有 canonical Mental Regulation pressure 實際存在時，才形成該 subsystem 的候選 evidence。
+
 這不建立第二套 decision system，也不改寫 `rest`：既有 `rest` 仍只由 fatigue semantics 擁有。
 
 ## Need generation boundary
@@ -49,6 +52,10 @@ Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension s
 `World sensory fact -> Perception -> current Activity context interpretation -> regulation-effectiveness modifier -> realized Activity regulation effect`
 
 並持續禁止 `noise === interference`、persistent Overload bar、universal `activityEffectiveness` 與因 interference 直接 random failure。
+
+## Version boundary
+
+本 slice 新增獨立 `mental-regulation-v1` subsystem marker。因未核准 Need generation policy，neutral default (`0 / 0`) 不新增 Mental Regulation decision candidate，因此 current default simulation 行為與既有 Presentation 不因本 slice 自動改變；overall release、Action、Deliberation、Perception、Presentation 等未改 contract 的 marker 不形式性換代。
 
 ## Deferred
 
