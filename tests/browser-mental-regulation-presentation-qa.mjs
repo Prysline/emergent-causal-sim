@@ -43,10 +43,14 @@ const marker=page.locator('[data-entity="object:bookA"]');
 await marker.waitFor({state:'visible'});
 assert.equal(await marker.getAttribute('title'),canonical.book.name,'ordinary object marker must project canonical object metadata');
 await marker.click();
-const objectInspector=await page.locator('#inspector').innerText();
-assert.ok(objectInspector.includes(canonical.book.name),'selecting ordinary object must expose its canonical Inspector projection');
-assert.match(objectInspector,/Object・bookA/);
-assert.match(objectInspector,/閱讀/);
+await page.waitForSelector('[data-v1141-entity-root]');
+const readableObjectText=await page.locator('[data-v1141-entity-readable]').innerText();
+assert.ok(readableObjectText.includes(canonical.book.name),'selecting ordinary object must expose its player-readable canonical projection');
+assert.match(readableObjectText,/閱讀/,'ordinary object readable projection must expose the canonical read affordance');
+await page.click('[data-v1141-entity-mode="debug"]');
+const debugObjectText=await page.locator('[data-v1141-entity-debug]').innerText();
+assert.match(debugObjectText,/Object・bookA/,'Debug Inspector must expose the canonical ordinary-object type and id');
+assert.match(debugObjectText,/閱讀/,'Debug Inspector must expose the canonical ordinary-object affordance');
 
 const validation=await page.evaluate(()=>window.SimValidator.validateState(window.SimEngine.getState()));
 assert.equal(validation.issueCount,0,validation.issues.map(x=>`${x.code}: ${x.message}`).join(' | '));
