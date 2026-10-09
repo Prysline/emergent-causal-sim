@@ -13,9 +13,11 @@
       {id:'intent.replan-preemption',order:800},
       {id:'socialBid.prepare',order:900},
       {id:'intent.reconcile-before',order:1000},
-      {id:'spatial.capture',order:1100}
+      {id:'spatial.capture',order:1100},
+      {id:'mentalRegulation.capture-execution',order:1200}
     ],
     afterTick:[
+      {id:'mentalRegulation.apply-realized-feedback',order:50},
       {id:'spatial.effects',order:100},
       {id:'sleepConflict.complete-yield',order:150},
       {id:'intent.reconcile-after',order:200},
