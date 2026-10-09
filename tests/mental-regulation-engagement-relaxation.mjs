@@ -6,9 +6,9 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,M=globalThis.SimMentalRegulation,V=globalThis.SimValidator;
 assert.ok(E&&M&&V,'production prefix must load Engine, Mental Regulation, and Validator');
-assert.equal(M.VERSION,'mental-regulation-v1');
-assert.equal(E.MENTAL_REGULATION_VERSION,'mental-regulation-v1');
-assert.equal(globalThis.SimWorld.MENTAL_REGULATION_SCHEMA_VERSION,'mental-regulation-v1');
+assert.equal(M.VERSION,'mental-regulation-v2');
+assert.equal(E.MENTAL_REGULATION_VERSION,'mental-regulation-v2');
+assert.equal(globalThis.SimWorld.MENTAL_REGULATION_SCHEMA_VERSION,'mental-regulation-v2');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='mentalRegulation.wander'),'Mental Regulation must extend existing deliberation through the provider seam');
 
 E.reset(15200);
@@ -21,6 +21,7 @@ assert.equal(M.decisionOptionFor(a,'wander'),null,'zero Mental Regulation pressu
 assert.equal(V.validateState(st).issueCount,0,'adding Mental Regulation state must preserve existing canonical validation invariants');
 
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+delete st.objects.bookA;
 Object.assign(a.needs,{hunger:0,thirst:0,fatigue:0,sleepNeed:0,social:0,engagement:80,relaxation:60});
 a.traits.alcoholLike=0;a.traits.social=0;a.traits.animalAffinity=0;
 const option=M.decisionOptionFor(a,'wander');

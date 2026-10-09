@@ -135,6 +135,9 @@
     for(const [id,container] of Object.entries(authoring.entities?.containers||{})){
       if(container.supportId===furnitureId)blockers.push({ownerType:'container',ownerId:id,ownerName:container.name||id,referenceKind:'supportId',referenceValue:furnitureId});
     }
+    for(const [id,object] of Object.entries(authoring.entities?.objects||{})){
+      if(object.supportId===furnitureId)blockers.push({ownerType:'object',ownerId:id,ownerName:object.name||id,referenceKind:'supportId',referenceValue:furnitureId});
+    }
     for(const relation of authoring.usageAssignments||[]){
       const target=relation?.target;
       if((target?.kind==='furniture'&&target.id===furnitureId)||(target?.kind==='slot'&&slotIds.has(target.id)))blockers.push({ownerType:'usageAssignment',ownerId:relation.id,ownerName:relation.id,referenceKind:'target',referenceValue:target.id});
@@ -237,6 +240,12 @@
         followers.push(containerId);
         if(container.position)followerPositions.push({id:containerId,position:clone(container.position)});
       }
+      for(const [objectId,object] of Object.entries(candidate.entities?.objects||{})){
+        if(object.supportId!==furnitureId)continue;
+        if(object.position)object.position=translatePosition(object.position,dx,dy,dz);
+        followers.push(objectId);
+        if(object.position)followerPositions.push({id:objectId,position:clone(object.position)});
+      }
       const preview=A.resolveFurnitureInstance(furniture);
       return {meta:{
         operation:'moveFurniture',
@@ -275,6 +284,14 @@
           }))
         });
       }
+      const objectFollowerFrames=[];
+      for(const [objectId,object] of Object.entries(candidate.entities?.objects||{})){
+        if(object.supportId!==furnitureId)continue;
+        objectFollowerFrames.push({
+          id:objectId,
+          position:object.position?D.worldToLocal(definition,previousInstance,object.position):null
+        });
+      }
       furniture.orientation=orientation;
       const followerPositions=[];
       for(const frame of followerFrames){
@@ -288,13 +305,18 @@
         }
         if(container.position)followerPositions.push({id:frame.id,position:clone(container.position)});
       }
+      for(const frame of objectFollowerFrames){
+        const object=candidate.entities.objects[frame.id];
+        if(frame.position)object.position=D.localToWorld(definition,furniture,frame.position);
+        if(object.position)followerPositions.push({id:frame.id,position:clone(object.position)});
+      }
       const preview=A.resolveFurnitureInstance(furniture);
       return {meta:{
         operation:'rotateFurniture',
         furnitureId,
         previousOrientation,
         orientation,
-        followers:followerFrames.map(frame=>frame.id),
+        followers:[...followerFrames.map(frame=>frame.id),...objectFollowerFrames.map(frame=>frame.id)],
         preview:{
           footprint:clone(preview.footprint||[]),
           displayAt:clone(preview.displayAt||null),

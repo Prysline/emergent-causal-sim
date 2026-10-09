@@ -34,5 +34,5 @@
   function clearTransientExecution(agent,{sourceId=null}={}){const current=agent&&transientExecutions.get(agent);if(!current)return false;if(sourceId!=null&&current.sourceId!==sourceId)return false;transientExecutions.delete(agent);return true;}
   function primaryActivityProgressScale(st,agent){const execution=transientExecutionFor(st,agent);if(!execution)return 1;const compatibility=activityCompatibilityFor(agent,execution.kind);return compatibility.allowed?compatibility.primaryProgressScale:1;}
 
-  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,actionKind,registerActivityCompatibility,listActivityCompatibility,activityCompatibilityFor,scheduleTransientExecution,transientExecutionFor,clearTransientExecution,primaryActivityProgressScale});
+  Object.assign(E,{ACTION_SCHEMA_VERSION:VERSION,READ_ACTIVITY_VERSION:'read-activity-v1',actionKind,registerActivityCompatibility,listActivityCompatibility,activityCompatibilityFor,scheduleTransientExecution,transientExecutionFor,clearTransientExecution,primaryActivityProgressScale});
 })();

@@ -8,7 +8,7 @@ const A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalTh
 const clone=value=>JSON.parse(JSON.stringify(value));
 const directions=['north','northEast','east','southEast','south','southWest','west','northWest'];
 
-assert.equal(A.VERSION,'world-authoring-v12');
+assert.equal(A.VERSION,'world-authoring-v13');
 assert.deepEqual(A.AGENT_FACING_DIRECTIONS,directions,'World Authoring must own the exact canonical 8-direction representation');
 for(const [id,resident] of Object.entries(A.DEFAULT_WORLD_AUTHORING.residents)){
   assert.ok(directions.includes(resident.initial.facing),id+' must explicitly author a legal initial facing');

@@ -16,7 +16,7 @@ const objectiveFacts=route=>({traversalCost:route.traversalCost,travelTime:route
 const highExposure={tilt:.8,impact:.7,oscillation:.6};
 
 assert.equal(E.VERSION,APP_VERSION);
-assert.equal(A.VERSION,'world-authoring-v12');
+assert.equal(A.VERSION,'world-authoring-v13');
 assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
 assert.equal(L.VERSION,LOCOMOTION_VERSION);
@@ -28,8 +28,8 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
   assert.equal(cup.handling.containment,'open');
   assert.deepEqual(Object.keys(cup.handling.contentRetention).sort(),['impact','oscillation','tilt']);
   assert.deepEqual(Object.keys(cup.handling.contentRetention.tilt).sort(),['highRiskExposure','lowRiskExposure']);
-  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'safe'),false,'legacy safe threshold must not survive world-authoring-v12');
-  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'failure'),false,'legacy failure threshold must not survive world-authoring-v12');
+  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'safe'),false,'legacy safe threshold must not survive world-authoring-v13');
+  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'failure'),false,'legacy failure threshold must not survive world-authoring-v13');
   assert.equal(bottle.handling.containment,'sealed');
   assert.equal(Object.hasOwn(cup,'fillRatio'),false,'fillRatio must remain derived instead of authored');
   const invalid=A.cloneAuthoring(authored);
@@ -40,7 +40,7 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
   const legacy=A.cloneAuthoring(authored);
   legacy.entities.containers.cupA.handling.contentRetention.tilt={safe:.06,failure:.34};
   const legacyReport=A.validateAuthoring(legacy);
-  assert.equal(legacyReport.ok,false,'world-authoring-v12 must reject legacy safe/failure retention fields');
+  assert.equal(legacyReport.ok,false,'world-authoring-v13 must reject legacy safe/failure retention fields');
   assert.ok(legacyReport.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
 }
 

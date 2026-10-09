@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v12';
+  const VERSION='world-authoring-v13';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -62,6 +62,9 @@
       frontExit:{id:'frontExit',name:'大門外',kind:'offMap',boundary:boundaryRef(0,'v:1,6'),access:pos(1,6)}
     },
     entities:{
+      objects:{
+        bookA:{id:'bookA',name:'一本書',icon:'📖',affordances:['read'],position:pos(5,2),supportId:'diningTable',interactions:{read:{mode:'supportReach'}}}
+      },
       containers:{
         mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:pos(5,2),supportId:'diningTable',restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}},
         plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.10,highRiskExposure:.48},impact:{lowRiskExposure:.16,highRiskExposure:.70},oscillation:{lowRiskExposure:.24,highRiskExposure:.95}}},servingDish:true,canEatFrom:true,position:pos(5,2),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
@@ -367,6 +370,26 @@
         {x,y,z:layer.z,regionCount:analysis.regionCount}
       ));
     }
+
+    const ordinaryObjects=authoring.entities?.objects||{},containerEntries=authoring.entities?.containers||{},sourceEntries=authoring.entities?.sources||{};
+    for(const [key,object] of Object.entries(ordinaryObjects)){
+      const basePath=`entities.objects.${key}`;
+      if(!isRecord(object)){errors.push(authoringIssue('authoring_object_invalid',basePath,'Ordinary object entry must be an object.'));continue;}
+      if(object.id!==key)errors.push(authoringIssue('authoring_object_id_mismatch',`${basePath}.id`,`Object key ${key} does not match id ${String(object.id)}.`));
+      const affordances=object.affordances;
+      if(!Array.isArray(affordances)||!affordances.length||affordances.some(value=>typeof value!=='string'||!value.trim()))errors.push(authoringIssue('authoring_object_affordances_invalid',`${basePath}.affordances`,'Ordinary object affordances must be a non-empty array of strings.'));
+      else if(new Set(affordances).size!==affordances.length)errors.push(authoringIssue('authoring_object_affordances_duplicate',`${basePath}.affordances`,'Ordinary object affordances must not contain duplicates.'));
+      if(!object.position)errors.push(authoringIssue('authoring_object_position_missing',`${basePath}.position`,'Ordinary object must define a canonical position.'));
+      else validatePosition(object.position,`${basePath}.position`);
+      if(object.interactions!==undefined&&!isRecord(object.interactions))errors.push(authoringIssue('authoring_object_interactions_invalid',`${basePath}.interactions`,'Ordinary object interactions must be an object when provided.'));
+      else for(const [affordance,rule] of Object.entries(object.interactions||{}))if(!isRecord(rule)||!['supportReach','reach','occupy'].includes(rule.mode))errors.push(authoringIssue('authoring_object_interaction_invalid',`${basePath}.interactions.${affordance}`,'Ordinary object interaction mode must be supportReach, reach, or occupy.'));
+      if(object.supportId){
+        const support=resolvedFurniture[object.supportId];
+        if(!support)errors.push(authoringIssue('authoring_object_support_missing',`${basePath}.supportId`,`Ordinary object supportId ${object.supportId} does not exist.`,{supportId:object.supportId}));
+        else if(object.position&&!((support.footprint||[]).some(p=>samePosition(p,object.position))))errors.push(authoringIssue('authoring_object_support_position_mismatch',`${basePath}.position`,`Ordinary object ${key} is positioned outside support ${object.supportId} footprint.`,{objectId:key,supportId:object.supportId}));
+      }
+    }
+    for(const key of Object.keys(ordinaryObjects))if(containerEntries[key]||sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Ordinary object id ${key} collides with another authored entity id.`,{id:key}));
 
     for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
       const basePath=`entities.containers.${key}`;
