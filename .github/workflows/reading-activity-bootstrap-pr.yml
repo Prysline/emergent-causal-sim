@@ -71,7 +71,18 @@ jobs:
         run: |
           git add -A
           git diff --cached origin/main -- . ':(exclude).github/workflows/*' | Out-File -Encoding utf8 final.patch
+          $paths = @(git diff --cached --name-only origin/main -- . ':(exclude).github/workflows/*')
+          New-Item -ItemType Directory -Force -Path clean-files | Out-Null
+          foreach ($path in $paths) {
+            $dest = Join-Path 'clean-files' $path
+            $parent = Split-Path -Parent $dest
+            if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
+            Copy-Item -LiteralPath $path -Destination $dest
+          }
+          $paths | Out-File -Encoding utf8 clean-files/manifest.txt
       - uses: actions/upload-artifact@v4
         with:
           name: reading-implementation-final
-          path: final.patch
+          path: |
+            final.patch
+            clean-files
