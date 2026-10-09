@@ -61,6 +61,10 @@ jobs:
             test: tests/browser-resident-view-qa.mjs
             extra_test: tests/browser-runtime-hook-pipeline-qa.mjs
             artifact: artifacts/browser-resident-view-qa
+          - suite: mental-regulation-presentation
+            test: tests/browser-mental-regulation-presentation-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-mental-regulation-presentation-qa
           - suite: world-authoring-editor
             test: tests/browser-world-authoring-editor-qa.mjs
             extra_test: ''
