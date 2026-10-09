@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>世界建構編輯器｜Emergent Causal Sim</title>
   <link rel="stylesheet" href="styles/editor.css">
+  <link rel="stylesheet" href="styles/editor-sidebar-ia.css">
   <style>.editor-ordinary-object-projection{pointer-events:none}</style>
 </head>
 <body>
@@ -58,16 +59,34 @@
         <p class="hint">Cell 只描述地格本身。牆與結構開口請先選取格子，再在右側編輯北／東／南／西四條格線邊界；Door 與世界出口是獨立實體，不再借用家具或 <code>canExit</code>。</p>
       </section>
 
-      <section>
-        <h2>家具目錄</h2>
-        <p class="hint scene-hint">從家具定義建立新的場景家具；選擇後點擊地圖位置，會產生新的家具實例。</p>
-        <div id="furnitureCatalog" class="scene-list" aria-label="家具定義目錄"></div>
-      </section>
+      <section id="sidebarEntityBrowser" class="sidebar-entity-browser" aria-label="場景與新增">
+        <nav class="sidebar-browser-nav" aria-label="場景與新增導覽">
+          <a href="#sidebarSceneSection" data-sidebar-jump="scene">場景</a>
+          <a href="#sidebarAddSection" data-sidebar-jump="add">新增</a>
+        </nav>
 
-      <section>
-        <h2>場景</h2>
-        <p class="hint scene-hint">選取實體會定位到其正式位置。選取家具時也會更新家具放置目標，但不會自動切換目前工具。</p>
-        <div id="sceneList" class="scene-list" aria-label="場景實體列表"></div>
+        <div id="sidebarSceneSection" class="sidebar-browser-pane" data-sidebar-section="scene">
+          <div class="sidebar-browser-heading">
+            <h2>場景</h2>
+            <span>已存在的實例</span>
+          </div>
+          <p class="hint scene-hint">這裡只列目前 canonical world 已存在的實體。選取實體會定位到其正式位置；move / remove 等操作都作用在這些 instances。</p>
+          <div id="sceneList" class="scene-list" aria-label="場景實體列表"></div>
+        </div>
+
+        <div id="sidebarAddSection" class="sidebar-browser-pane" data-sidebar-section="add">
+          <div class="sidebar-browser-heading">
+            <h2>新增</h2>
+            <span>可加入的定義／範本</span>
+          </div>
+          <p class="hint scene-hint">這裡只列目前 Editor 已支援建立的 canonical definitions / templates；建立成功後，新的 instance 才會出現在上方「場景」。</p>
+          <div class="sidebar-add-category" data-add-category="furniture">
+            <h3>家具</h3>
+            <p class="hint scene-hint">從 canonical Furniture Definition 建立新的場景家具；選擇後點擊地圖位置，會產生新的 Furniture instance。</p>
+            <div id="furnitureCatalog" class="scene-list" aria-label="家具定義目錄"></div>
+          </div>
+          <div id="ordinaryObjectCatalogHost" data-add-category-host="ordinary-object"></div>
+        </div>
       </section>
     </aside>
 
@@ -124,5 +143,6 @@
 <script src="src/editor-authoring-mutations.js" defer></script>
 <script src="src/editor-ui.js" defer></script>
 <script src="src/editor-ordinary-object-authoring.js" defer></script>
+<script src="src/editor-sidebar-ia.js" defer></script>
 </body>
 </html>
