@@ -23,6 +23,7 @@ jobs:
       - name: Apply checked implementation patch
         shell: pwsh
         run: |
+          $env:PYTHONUTF8 = "1"
           $extract = @'
           from pathlib import Path
           import textwrap
