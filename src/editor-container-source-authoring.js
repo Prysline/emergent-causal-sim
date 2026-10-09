@@ -212,7 +212,7 @@
   if(!E?.getDocument||!E?.getSession||!E?.loadDocument||!E?.semanticFingerprint||!E?.selectEntity)return;
 
   const $=id=>document.getElementById(id);
-  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[char]));
+  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const addPane=document.querySelector('[data-sidebar-section="add"]');
   if(!addPane)throw new Error('Container / Source preset authoring requires the World Editor Add pane.');
 
@@ -371,9 +371,15 @@
     if(result)commit(result,result.ok?`已移除 ${selection.id}。`:'');
   },true);
 
-  $('exportWorld')?.addEventListener('click',()=>setTimeout(markCleanBaseline,0));
-  $('resetWorld')?.addEventListener('click',()=>setTimeout(markCleanBaseline,0));
-  $('importWorld')?.addEventListener('change',()=>setTimeout(markCleanBaseline,100));
+  $('exportWorld')?.addEventListener('click',()=>setTimeout(()=>{
+    if(nativeGetSession().dirty===false)markCleanBaseline();
+  },0));
+  $('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{
+    if(nativeGetSession().dirty===false)markCleanBaseline();
+  },0));
+  $('importWorld')?.addEventListener('change',()=>setTimeout(()=>{
+    if(nativeGetSession().dirty===false)markCleanBaseline();
+  },120));
 
   const observer=new MutationObserver(()=>decorateSelectionActions());
   observer.observe($('selectionActions'),{childList:true,subtree:true});
