@@ -4,7 +4,7 @@
 
   const VERSION='mental-regulation-v1';
   const NEED_KEYS=Object.freeze(['engagement','relaxation']);
-  const DEFAULT_NEEDS=Object.freeze({engagement:28,relaxation:18});
+  const DEFAULT_NEEDS=Object.freeze({engagement:0,relaxation:0});
   const ACTIVITY_PROFILES=Object.freeze({
     wander:Object.freeze({engagementProvision:1.4,mentalLoad:.12,relaxationProvision:.5})
   });
@@ -29,6 +29,7 @@
     if(agent?.kind!=='human')return null;
     const profile=ACTIVITY_PROFILES[activityKind];if(!profile)return null;
     const evidence=boundedEvidence(agent),engagement=agent.needs.engagement,relaxation=agent.needs.relaxation;
+    if(engagement<=0&&relaxation<=0)return null;
     const score=6+48*evidence.engagement+24*evidence.relaxation;
     return {
       id:activityKind,
