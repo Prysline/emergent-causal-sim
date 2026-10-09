@@ -9,7 +9,7 @@ for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-au
 
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
 assert.equal(D.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v12');
+assert.equal(A.VERSION,'world-authoring-v13');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,D.VERSION);

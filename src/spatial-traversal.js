@@ -173,9 +173,9 @@
   }
   function objectNode(st,id){
     const holder=SP.holderOf(st,id);if(holder)return nodeForAgent(st,holder);
-    const c=st.containers?.[id],s=st.sources?.[id],obj=c||s;if(!obj?.position)return null;
+    const c=st.containers?.[id],object=st.objects?.[id],s=st.sources?.[id],obj=c||object||s;if(!obj?.position)return null;
     let surfaceId=obj.position.surfaceId||FLOOR;
-    if(c?.supportId){const entry=supportSurfaceForFurniture(st,c.supportId);if(entry)surfaceId=entry.surface.id;}
+    if(obj?.supportId){const entry=supportSurfaceForFurniture(st,obj.supportId);if(entry)surfaceId=entry.surface.id;}
     return normalizeNode(st,obj.position,surfaceId);
   }
   function nodeOccupantsAt(st,p,except=null){const n=normalizeNode(st,p);return Object.values(st.agents||{}).filter(a=>!a.offMap&&!a.posture?.slotId&&a.id!==except&&nodeSame(st,a.position,n));}
@@ -682,19 +682,19 @@
       return {mode:'socialReach',positions:agentContactNodes(st,other,agent),target,affordance};
     }
     if(target.kind==='object'){
-      const c=st.containers?.[target.id];if(!c)return {mode:'none',positions:[],target,affordance};
-      const holder=SP.holderOf(st,target.id),node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
+      const c=st.containers?.[target.id],object=st.objects?.[target.id],entity=object||c;if(!entity)return {mode:'none',positions:[],target,affordance};
+      const holder=c?SP.holderOf(st,target.id):null,node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
-      const rule=c.interactions?.[affordance]||c.interactions?.default||null;
-      if(rule?.mode==='supportReach'&&c.supportId)return {mode:'supportReach',positions:supportContactNodes(st,c.supportId,agent),target,affordance,supportId:c.supportId};
+      const rule=entity.interactions?.[affordance]||entity.interactions?.default||null;
+      if(rule?.mode==='supportReach'&&entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};
       if(rule?.mode==='occupy')return {mode:'occupy',positions:nodeWalkable(st,node,agent)?[node]:[],target,affordance};
       if(node.surfaceId!==FLOOR){
         const local=surfaceLocalReachNodes(st,node,agent),cross=crossSurfaceContactNodes(st,node,agent,affordance);
         if(rule?.mode==='reach'||affordance==='eatFrom'||affordance==='drinkFrom'||affordance==='pickup')return {mode:'reach',positions:dedupeNodes(st,[...local,...cross]),target,affordance,surfaceId:node.surfaceId};
-        if(c.supportId)return {mode:'supportReach',positions:supportContactNodes(st,c.supportId,agent),target,affordance,supportId:c.supportId};
+        if(entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};
         return {mode:'reach',positions:dedupeNodes(st,[...local,...cross]),target,affordance,surfaceId:node.surfaceId};
       }
-      if(rule?.mode==='reach'||(!rule&&!c.supportId))return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};
+      if(rule?.mode==='reach'||(!rule&&!entity.supportId))return {mode:'reach',positions:floorReachNodes(st,node,agent),target,affordance};
       const legacy=baseInteractionGeometry(st,target,agent,affordance);return {...legacy,positions:(legacy.positions||[]).map(p=>normalizeNode(st,p,FLOOR))};
     }
     if(target.kind==='source'){
@@ -755,5 +755,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v1',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();

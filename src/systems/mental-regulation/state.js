@@ -2,11 +2,12 @@
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('systems/mental-regulation/state.js requires world.js initial-state pipeline.');
 
-  const VERSION='mental-regulation-v1';
+  const VERSION='mental-regulation-v2';
   const NEED_KEYS=Object.freeze(['engagement','relaxation']);
   const DEFAULT_NEEDS=Object.freeze({engagement:0,relaxation:0});
   const ACTIVITY_PROFILES=Object.freeze({
-    wander:Object.freeze({engagementProvision:1.4,mentalLoad:.12,relaxationProvision:.5})
+    wander:Object.freeze({engagementProvision:1.4,mentalLoad:.12,relaxationProvision:.5}),
+    read:Object.freeze({engagementProvision:1.8,mentalLoad:.35,relaxationProvision:.65})
   });
   const clampNeed=value=>Math.max(0,Math.min(100,Number(value)||0));
 

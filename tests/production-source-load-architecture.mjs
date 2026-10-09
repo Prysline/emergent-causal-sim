@@ -205,7 +205,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v12');
+assert.equal(A.VERSION,'world-authoring-v13');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v5');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);

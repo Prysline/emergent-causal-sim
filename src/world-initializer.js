@@ -95,6 +95,12 @@
     return furniture;
   }
 
+  function buildObjects(authoring){
+    const objects=clone(authoring.entities?.objects||{});
+    for(const object of Object.values(objects))if(object.position)object.position=runtimePosition(object.position);
+    return objects;
+  }
+
   function buildContainers(authoring){
     const containers=clone(authoring.entities?.containers||{});
     for(const c of Object.values(containers))if(c.position)c.position=runtimePosition(c.position);
@@ -579,6 +585,7 @@
       structures:buildStructures(authoring),furniture,doors:buildDoors(authoring),exits:buildExits(authoring),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       usageAssignments:clone(authoring.usageAssignments||[]),claimEligibility:clone(authoring.claimEligibility||[]),usageClaims:[],
       supply:{trigger:supplyTrigger,trips:0,totalProduced:0},
+      objects:buildObjects(authoring),
       containers:buildContainers(authoring),
       sources:buildSources(authoring),
       agents:buildResidents(authoring,placementReport.resolvedPlacements),

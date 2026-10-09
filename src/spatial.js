@@ -82,7 +82,7 @@
   function furnitureAt(st,p){const t=tileByPos(st,p);return (t?.furnitureIds||[]).map(id=>furniture(st,id)).filter(Boolean);}
 
   function holderOf(st,containerId){return Object.values(st.agents||{}).find(a=>a.held===containerId)||null;}
-  function objectPosition(st,id){const c=st.containers?.[id];if(c){const holder=holderOf(st,id);return holder?clonePos(holder.position):clonePos(c.position);}return clonePos(st.sources?.[id]?.position);}
+  function objectPosition(st,id){const c=st.containers?.[id];if(c){const holder=holderOf(st,id);return holder?clonePos(holder.position):clonePos(c.position);}const object=st.objects?.[id];if(object)return clonePos(object.position);return clonePos(st.sources?.[id]?.position);}
   function occupantsAt(st,p,except=null){return Object.values(st.agents||{}).filter(a=>!a.offMap&&a.id!==except&&same(a.position,p));}
 
   function blockerAt(st,p){
@@ -154,14 +154,14 @@
     if(target.kind==='agent'){const other=st.agents?.[target.id];if(!other||other.offMap)return {mode:'socialReach',positions:[],target,affordance};return {mode:'socialReach',positions:reachPositions(st,other.position),target,affordance};}
     if(target.kind==='furniture'){const f=furniture(st,target.id);if(!f)return {mode:'furnitureReach',positions:[],target,affordance};const out=[];for(const slot of slotsForFurniture(st,f.id))if(slot.position)out.push(slot.position);for(const p of f.footprint||[])out.push(...adjacentWalkable(st,p));return {mode:'furnitureReach',positions:dedupeWalkable(st,out),target,affordance,furnitureId:f.id};}
     if(target.kind==='object'){
-      const c=st.containers?.[target.id];if(!c)return {mode:'none',positions:[],target,affordance};const holder=holderOf(st,target.id),p=objectPosition(st,target.id);if(!p)return {mode:'none',positions:[],target,affordance};
+      const c=st.containers?.[target.id],object=st.objects?.[target.id],entity=object||c;if(!entity)return {mode:'none',positions:[],target,affordance};const holder=c?holderOf(st,target.id):null,p=objectPosition(st,target.id);if(!p)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[clonePos(agent.position)]:reachPositions(st,p);return {mode:'heldReach',positions,target,affordance,holderId:holder.id};}
-      const rule=interactionRule(c,affordance);
-      if(rule?.mode==='port'){const positions=interactionPortPositions(st,c,affordance);return {mode:'port',positions,target,affordance,ports:c.interactionPorts||[]};}
-      if(rule?.mode==='supportReach'&&c.supportId)return {mode:'supportReach',positions:supportReachPositions(st,c.supportId),target,affordance,supportId:c.supportId};
+      const rule=interactionRule(entity,affordance);
+      if(rule?.mode==='port'){const positions=interactionPortPositions(st,entity,affordance);return {mode:'port',positions,target,affordance,ports:entity.interactionPorts||[]};}
+      if(rule?.mode==='supportReach'&&entity.supportId)return {mode:'supportReach',positions:supportReachPositions(st,entity.supportId),target,affordance,supportId:entity.supportId};
       if(rule?.mode==='occupy'&&walkable(st,p))return {mode:'occupy',positions:[clonePos(p)],target,affordance};
       if(rule?.mode==='reach')return {mode:'reach',positions:reachPositions(st,p),target,affordance};
-      if(c.supportId)return {mode:'supportReach',positions:supportReachPositions(st,c.supportId),target,affordance,supportId:c.supportId};
+      if(entity.supportId)return {mode:'supportReach',positions:supportReachPositions(st,entity.supportId),target,affordance,supportId:entity.supportId};
       return {mode:'reach',positions:reachPositions(st,p),target,affordance};
     }
     if(target.kind==='source'){
