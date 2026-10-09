@@ -26,11 +26,11 @@ jobs:
           $env:PYTHONUTF8 = "1"
           $extract = @'
           from pathlib import Path
-          import textwrap
           source=Path('.github/workflows/reading-activity-bootstrap.yml').read_text()
           start=source.index("          python - <<'PY'\n")+len("          python - <<'PY'\n")
           end=source.index("\n          PY\n",start)
-          code=textwrap.dedent(source[start:end])
+          lines=source[start:end].splitlines()
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in lines)
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
           '@
           $extract | python -
