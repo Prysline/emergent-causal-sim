@@ -5,7 +5,6 @@
   const VERSION='mental-regulation-v1';
   const NEED_KEYS=Object.freeze(['engagement','relaxation']);
   const DEFAULT_NEEDS=Object.freeze({engagement:28,relaxation:18});
-  const BASELINE_DRIFT=Object.freeze({engagement:.12,relaxation:.08});
   const ACTIVITY_PROFILES=Object.freeze({
     wander:Object.freeze({engagementProvision:1.4,mentalLoad:.12,relaxationProvision:.5})
   });
@@ -43,14 +42,6 @@
     };
   }
 
-  function applyBaselineDrift(agent,{awake=true}={}){
-    const needs=ensureCanonicalNeeds(agent);if(!awake)return {engagementDelta:0,relaxationDelta:0};
-    const beforeEngagement=needs.engagement,beforeRelaxation=needs.relaxation;
-    needs.engagement=clampNeed(needs.engagement+BASELINE_DRIFT.engagement);
-    needs.relaxation=clampNeed(needs.relaxation+BASELINE_DRIFT.relaxation);
-    return {engagementDelta:needs.engagement-beforeEngagement,relaxationDelta:needs.relaxation-beforeRelaxation};
-  }
-
   function applyRealizedActivityFeedback(agent,activityKind,{feedbackUnits=0}={}){
     const needs=ensureCanonicalNeeds(agent),profile=ACTIVITY_PROFILES[activityKind];
     const units=Math.max(0,Number(feedbackUnits)||0);
@@ -73,5 +64,5 @@
     return st;
   },1400);
   W.MENTAL_REGULATION_SCHEMA_VERSION=VERSION;
-  window.SimMentalRegulation=Object.freeze({VERSION,NEED_KEYS,DEFAULT_NEEDS,BASELINE_DRIFT,ACTIVITY_PROFILES,ensureCanonicalNeeds,boundedEvidence,decisionOptionFor,applyBaselineDrift,applyRealizedActivityFeedback});
+  window.SimMentalRegulation=Object.freeze({VERSION,NEED_KEYS,DEFAULT_NEEDS,ACTIVITY_PROFILES,ensureCanonicalNeeds,boundedEvidence,decisionOptionFor,applyRealizedActivityFeedback});
 })();
