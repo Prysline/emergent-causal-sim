@@ -6,7 +6,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   implement:
@@ -44,7 +44,7 @@ jobs:
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
           '@
           $extract | python -
-      - name: Restore canonical workflow and verify focused semantics
+      - name: Verify generated implementation
         shell: pwsh
         run: |
           git restore --source=origin/main -- .github/workflows/node-regression.yml
@@ -60,29 +60,32 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/mental-regulation-reading-activity.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Remove temporary workflows and run preflight
+      - name: Build and verify exact clean tree
         shell: pwsh
         run: |
           Remove-Item .github/workflows/reading-activity-bootstrap.yml, .github/workflows/reading-activity-bootstrap-pr.yml
+          git add -A
+          git diff --cached origin/main -- . ':(exclude).github/workflows/*' | Out-File -Encoding utf8 $env:RUNNER_TEMP/final.patch
+          git reset --hard origin/main
+          git switch -c reading-activity-readable-object-v1-final
+          git apply --index $env:RUNNER_TEMP/final.patch
+          $workflowChanges = @(git diff --cached --name-only | Where-Object { $_ -like '.github/workflows/*' })
+          if ($workflowChanges.Count -ne 0) {
+            Write-Error "Clean implementation unexpectedly changes workflows: $($workflowChanges -join ', ')"
+            exit 1
+          }
+          node tests/check-source-syntax.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/mental-regulation-reading-activity.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/pr-preflight.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Package complete clean implementation
+      - name: Commit and publish clean branch
         shell: pwsh
         run: |
-          git add -A
-          git diff --cached origin/main -- . ':(exclude).github/workflows/*' | Out-File -Encoding utf8 final.patch
-          $paths = @(git diff --cached --name-only origin/main -- . ':(exclude).github/workflows/*')
-          New-Item -ItemType Directory -Force -Path clean-files | Out-Null
-          foreach ($path in $paths) {
-            $dest = Join-Path 'clean-files' $path
-            $parent = Split-Path -Parent $dest
-            if ($parent) { New-Item -ItemType Directory -Force -Path $parent | Out-Null }
-            Copy-Item -LiteralPath $path -Destination $dest
-          }
-          $paths | Out-File -Encoding utf8 clean-files/manifest.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: reading-implementation-final
-          path: |
-            final.patch
-            clean-files
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Add minimal reading activity and readable objects"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git push origin HEAD:reading-activity-readable-object-v1-final
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
