@@ -44,7 +44,7 @@ jobs:
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
           '@
           $extract | python -
-      - name: Focused verification
+      - name: Focused semantic verification
         shell: pwsh
         run: |
           node tests/check-source-syntax.mjs
@@ -53,11 +53,14 @@ jobs:
           node tests/active-intent-foundation.mjs
           node tests/mental-regulation-engagement-relaxation.mjs
           node tests/mental-regulation-reading-activity.mjs
+      - name: Remove bootstrap workflows and run preflight
+        shell: pwsh
+        run: |
+          Remove-Item .github/workflows/reading-activity-bootstrap.yml, .github/workflows/reading-activity-bootstrap-pr.yml
           node tests/pr-preflight.mjs
       - name: Commit implementation
         shell: pwsh
         run: |
-          Remove-Item .github/workflows/reading-activity-bootstrap.yml, .github/workflows/reading-activity-bootstrap-pr.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
