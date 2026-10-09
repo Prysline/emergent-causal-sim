@@ -6,15 +6,17 @@
 
 > Previous `11.50.1-prone-transition-burden`: prone transition calibration changes only synchronous Locomotion objective burden consumed by Route queries. It adds no runtime hook, phase, same-tick visibility change or RNG ordering change.
 
-> Current `11.51.0-activity-concurrency`: the first Activity Concurrency slice adds no runtime hook or phase. Existing beforeTick 300 `humanSocial.prepare` may schedule one execution-local Social transient for the upcoming core tick; core eating consumes the resulting primary-progress scale during `eatingPlate / eatingDirect`; afterTick 700 `humanSocial.resolve` settles canonical Social response / talk events and clears the transient. This ordering is explicit through the existing named hook manifest and core checkpoint, not script load order.
+> Previous `11.51.0-activity-concurrency`: the first Activity Concurrency slice adds no runtime hook or phase. Existing beforeTick 300 `humanSocial.prepare` may schedule one execution-local Social transient for the upcoming core tick; core eating consumes the resulting primary-progress scale during `eatingPlate / eatingDirect`; afterTick 700 `humanSocial.resolve` settles canonical Social response / talk events and clears the transient. This ordering is explicit through the existing named hook manifest and core checkpoint, not script load order.
+
+> Current `11.52.0-daily-life-routine`: Routine Slice A adds no runtime hook, phase, or hook-order change. Its Agent-private DAY 0 state is installed by the explicit initial-state initializer registry; `dailyLifeRoutine.read` participates only when the existing core chooser gathers Decision Option Providers. It therefore changes candidate evidence, not same-tick execution ordering.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.51.0-activity-concurrency`。
+目前 runtime marker：`11.52.0-daily-life-routine`。
 
-Activity Concurrency v1 不建立新 scheduler hook。`humanSocial.prepare` 仍在 core 前完成 talkOffer / responder preparation，並只在 compatibility contract允許時排入單一 execution-local `socialListening` / `socialSpeaking` transient；core tick推進 `state.tick` 後，Eating 只讀該 tick 的 derived progress scale（listening=1、speaking=0），不交出 eating Action / Intent ownership。`humanSocial.resolve` 仍在 afterTick 700 建立 responder-owned response與既有 canonical `talk` outcome，並在該 execution tick 結束清除 transient。Sleeping + speaking沒有 compatibility rule，仍必須先經正式 wake / transition；Social Bid provenance、requester wait與 responder agency ordering不變。
+Routine Slice A 不建立新 scheduler hook；其 initializer 與 provider registration 都走既有 explicit registry / load contract。Activity Concurrency v1 的 beforeTick 300 `humanSocial.prepare`、core progress-scale consumption、afterTick 700 `humanSocial.resolve` ordering完全不變。Routine 只在既有 core candidate collection時提供 bounded evidence，不建立 same-tick visibility shortcut。
 
 > `11.46.0-sleep-carry-integration` 整合 sleeping occupant Agent carry、canonical candidate-node selection 與 post-pickup recovery，但**沒有新增、刪除或重新排序 runtime hook**。既有 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield` 的 ordering 維持 `11.44.0-sleep-slot-conflict` 已建立的 contract；candidate selection 與 carry recovery 都在既有同步 query／core `carryAgent` lifecycle 邊界內完成。
 >

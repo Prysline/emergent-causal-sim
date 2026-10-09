@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,M=globalThis.SimMentalRegulation,SP=globalThis.SimSpatial,A=globalThis.SimWorldAuthoring,V=globalThis.SimValidator;
 assert.equal(A.VERSION,'world-authoring-v13');
-assert.equal(M.VERSION,'mental-regulation-v2');
+assert.equal(M.VERSION,'mental-regulation-v3');
 assert.equal(E.READ_ACTIVITY_VERSION,'read-activity-v1');
 assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v1');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='mentalRegulation.read'));
@@ -29,7 +29,7 @@ const access=SP.bestInteractionPositionResult(st,a,{kind:'object',id:book.id},'r
 assert.ok(access&&Number.isFinite(access.traversalCost),'read target must use canonical Interaction Geometry + traversal cost');
 
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
-Object.assign(a.needs,{hunger:0,thirst:0,fatigue:0,sleepNeed:0,social:0,engagement:80,relaxation:60});
+Object.assign(a.needs,{hunger:0,thirst:0,fatigue:0,sleepNeed:0,social:0,stimulation:80,relaxation:60});
 a.traits.alcoholLike=0;a.traits.social=0;a.traits.animalAffinity=0;
 E.tick();st=E.getState();a=st.agents.zhen;
 const readOption=st.thoughts.zhen.options.find(option=>option.id==='read');
@@ -40,20 +40,20 @@ assert.ok(readOption?.decisionContributors.some(x=>x.kind==='spatial'&&x.key==='
 // Arm the canonical read Action at a valid interaction position so the next core tick is genuine reading execution.
 a.action=null;a.activeIntent=null;a.position={...SP.bestInteractionPositionResult(st,a,{kind:'object',id:'bookA'},'read').position};
 const armed=E.buildAction(a,{id:'read',targetObject:'bookA'});assert.equal(armed?.kind,'read');assert.equal(armed.phase,'reading');a.action=armed;E.ensureIntentForAction(st,a);assert.equal(a.activeIntent?.kind,'read');
-const before={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
+const before={stimulation:a.needs.stimulation,relaxation:a.needs.relaxation};
 E.tick();st=E.getState();a=st.agents.zhen;
 assert.equal(a.action?.kind,'read');assert.equal(a.action.feedbackUnits,1,'one valid reading execution tick must realize exactly one feedback unit');
-assert.ok(a.needs.engagement<before.engagement,'realized reading feedback must reduce Engagement pressure through Mental Regulation');
+assert.ok(a.needs.stimulation<before.stimulation,'realized reading feedback must reduce Stimulation pressure through Mental Regulation');
 assert.ok(a.needs.relaxation<before.relaxation,'realized reading feedback must apply net Relaxation effect through Mental Regulation');
 
-const realized={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
+const realized={stimulation:a.needs.stimulation,relaxation:a.needs.relaxation};
 a.action=null;a.activeIntent=null;
-assert.deepEqual({engagement:a.needs.engagement,relaxation:a.needs.relaxation},realized,'interrupting reading must not roll back realized effects');
+assert.deepEqual({stimulation:a.needs.stimulation,relaxation:a.needs.relaxation},realized,'interrupting reading must not roll back realized effects');
 
 a.action={kind:'read',phase:'move',started:st.tick,wait:0,targetObject:'bookA',feedbackUnits:0,feedbackGoal:6};E.ensureIntentForAction(st,a);
-const beforeMove={engagement:a.needs.engagement,relaxation:a.needs.relaxation};
+const beforeMove={stimulation:a.needs.stimulation,relaxation:a.needs.relaxation};
 E.tick();st=E.getState();a=st.agents.zhen;
-assert.equal(a.needs.engagement,beforeMove.engagement,'moving toward a reading target must not grant Engagement relief before realized reading feedback');
+assert.equal(a.needs.stimulation,beforeMove.stimulation,'moving toward a reading target must not grant Stimulation relief before realized reading feedback');
 assert.equal(a.needs.relaxation,beforeMove.relaxation,'moving toward a reading target must not grant Relaxation relief before realized reading feedback');
 assert.equal(V.validateState(st).issueCount,0);
 assert.equal(Object.prototype.hasOwnProperty.call(a.needs,'overload'),false);

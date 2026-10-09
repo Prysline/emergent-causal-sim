@@ -37,6 +37,7 @@ const EXPECTED_SCHEMA=[
   {id:'memoryDeliberation.schema',order:1200},
   {id:'socialOutcomeMemory.schema',order:1300},
   {id:'mentalRegulation.schema',order:1400},
+  {id:'dailyLifeRoutine.schema',order:1450},
   {id:'relationship.schema',order:1500},
   {id:'agentCarry.schema',order:1550},
   {id:'physical.schema',order:1600},
@@ -59,7 +60,7 @@ assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED_SCHEMA,finaliz
 assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
-assert.equal(st.version,'11.51.0-activity-concurrency','full production schema set must preserve current release marker');
+assert.equal(st.version,'11.52.0-daily-life-routine','full production schema set must preserve current release marker');
 assert.equal(st.agentCarryVersion,'11.46.0-sleep-carry-integration');
 assert.deepEqual(st.agentCarries,{},'Agent carry canonical relation owner must initialize empty');
 for(const agent of Object.values(st.agents||{})){
@@ -69,7 +70,11 @@ for(const agent of Object.values(st.agents||{})){
   assert.deepEqual(agent.locomotion,{mode:null,phase:'idle'},`${agent.id}: locomotion initialization parity`);
   assert.ok(agent.affect&&agent.affect.valence===0&&agent.affect.activation===0&&agent.affect.frustration===0,`${agent.id}: neutral affect initialization parity`);
   assert.ok(agent.physical,`${agent.id}: physical profile initialization parity`);
+  assert.ok(agent.routine&&Array.isArray(agent.routine.anchors),`${agent.id}: Agent-private Routine state must initialize explicitly`);
 }
+const humanRoutines=Object.values(st.agents||{}).filter(agent=>agent.kind==='human').map(agent=>agent.routine.anchors);
+assert.ok(humanRoutines.every(anchors=>anchors.length===1&&anchors[0].activityKind==='read'),'DAY 0 Human Routine must seed one minimal private read anchor');
+assert.equal(Object.prototype.hasOwnProperty.call(st,'routines'),false,'Routine must not create World-level personal schedule truth');
 const pipelineDiningSurface=st.furniture?.diningTable?.spatial?.surfaces?.find(surface=>surface.id==='diningTable:surface');
 assert.ok(pipelineDiningSurface,'Furniture Definition resolution must provide canonical runtime Surface traversal geometry');
 assert.equal(st.agents?.zhen?.position?.surfaceId,'floor','Spatial finalizer must normalize persistent agent surface identity');
@@ -85,7 +90,7 @@ const custom=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 custom.furniture.chairNW.origin={x:3,y:4,z:0};
 const customState=W.createInitialStateFromAuthoring(custom,20260911);
 assert.deepEqual(customState.furniture.chairNW.footprint,[{x:3,y:4}],'explicit authoring factory must compile the supplied canonical document');
-assert.equal(customState.version,'11.51.0-activity-concurrency');
+assert.equal(customState.version,'11.52.0-daily-life-routine');
 assert.deepEqual(W.createInitialState(20260911).furniture.chairNW.footprint,st.furniture.chairNW.footprint,'explicit preview initialization must not mutate the default world factory');
 assert.deepEqual(W.createInitialStateFromAuthoring(custom,20260911),customState,'preview reset source must remain deterministic for the same snapshot and seed');
 

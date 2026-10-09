@@ -1,12 +1,12 @@
-# Mental Regulation v1
+# Mental Regulation v3
 
-Current subsystem marker: `mental-regulation-v1`.
+Current subsystem marker: `mental-regulation-v3`.
 
 ## Canonical ownership
 
-`Agent.needs.engagement` 與 `Agent.needs.relaxation` 是兩份獨立的 Agent-private canonical Need truth，沿用既有 `Agent.needs` owner；本 subsystem 不建立第二份 Mental Regulation state，也不建立 persistent `overload` bar。
+`Agent.needs.stimulation` 與 `Agent.needs.relaxation` 是兩份獨立的 Agent-private canonical Need truth，沿用既有 `Agent.needs` owner；本 subsystem 不建立第二份 Mental Regulation state，也不建立 persistent `overload` bar。
 
-- `engagement > 0`：角色主觀上缺乏有意義投入與實際 feedback。
+- `stimulation > 0`：角色主觀上缺乏有意義投入與實際 feedback。
 - `relaxation > 0`：角色主觀上需要降低心理負荷或持續投入。
 - `0`：該 channel 目前沒有特別調節壓力。
 - 兩者第一版皆 clamp 在 `0..100`；不使用負值表示過度滿足。
@@ -18,7 +18,7 @@ Current subsystem marker: `mental-regulation-v1`.
 
 `SimMentalRegulation.ACTIVITY_PROFILES.wander` 只描述 regulation opportunity：
 
-- `engagementProvision`
+- `stimulationProvision`
 - `mentalLoad`
 - `relaxationProvision`
 
@@ -31,17 +31,17 @@ profile 不是 Need truth，也不直接寫 Need。runtime 在 core execution �
 
 ## Deliberation evidence
 
-Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension seam，把同一個 `wander` concrete Action 提供為一個有 Mental Regulation provenance 的候選。Engagement / Relaxation 各自轉成 bounded `0..1` evidence，並以兩個獨立 `need` contributors 進入既有 initial Deliberation / Decision Evidence；Need 本身不 hard-trigger Action。
+Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension seam，把同一個 `wander` concrete Action 提供為一個有 Mental Regulation provenance 的候選。Stimulation / Relaxation 各自轉成 bounded `0..1` evidence，並以兩個獨立 `need` contributors 進入既有 initial Deliberation / Decision Evidence；Need 本身不 hard-trigger Action。
 
-當 Engagement 與 Relaxation 都為 `0` 時，Mental Regulation provider 不新增 `wander` candidate，避免 dormant foundation 改寫 current default deliberation。只有 canonical Mental Regulation pressure 實際存在時，才形成該 subsystem 的候選 evidence。
+當 Stimulation 與 Relaxation 都為 `0` 時，Mental Regulation provider 不新增 `wander` candidate，避免 dormant foundation 改寫 current default deliberation。只有 canonical Mental Regulation pressure 實際存在時，才形成該 subsystem 的候選 evidence。
 
 這不建立第二套 decision system，也不改寫 `rest`：既有 `rest` 仍只由 fatigue semantics 擁有。
 
 ## Need generation boundary
 
-本 slice **不新增通用、隨時間自動上升的 Engagement / Relaxation drift**。目前已核准 baseline 定義 Need 的主觀意義與 realized Activity effect，但沒有核准「清醒時間本身必然增加多少 Mental Regulation pressure」這類生成政策；因此第一版只建立 canonical state、bounded decision evidence 與 execution-driven regulation effect，不把時間經過偷渡成新的因果來源。
+本 slice **不新增通用、隨時間自動上升的 Stimulation / Relaxation drift**。目前已核准 baseline 定義 Need 的主觀意義與 realized Activity effect，但沒有核准「清醒時間本身必然增加多少 Mental Regulation pressure」這類生成政策；因此第一版只建立 canonical state、bounded decision evidence 與 execution-driven regulation effect，不把時間經過偷渡成新的因果來源。
 
-未來若實際玩法需要 Engagement / Relaxation 自主生成或累積，應另外依明確 consumer / evidence 決定 owner、rate 與 provenance，而不是由本 slice 預設。
+未來若實際玩法需要 Stimulation / Relaxation 自主生成或累積，應另外依明確 consumer / evidence 決定 owner、rate 與 provenance，而不是由本 slice 預設。
 
 ## Environment interference
 
@@ -55,7 +55,7 @@ Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension s
 
 ## Version boundary
 
-本 slice 新增獨立 `mental-regulation-v1` subsystem marker。因未核准 Need generation policy，neutral default (`0 / 0`) 不新增 Mental Regulation decision candidate，因此 current default simulation 行為與既有 Presentation 不因本 slice 自動改變；overall release、Action、Deliberation、Perception、Presentation 等未改 contract 的 marker 不形式性換代。
+Current canonical naming correction advances this subsystem to `mental-regulation-v3`; the earlier foundation marker was `mental-regulation-v1`, and Reading Activity previously advanced the implementation before this rename. `mental-regulation-v3` retires `engagement` in favor of canonical `stimulation` without adding a compatibility alias. 未核准 Need generation policy 的 neutral default (`0 / 0`) 仍不自行產生 Mental Regulation candidate；本次 identifier 與 Presentation integration 隨 Daily Life Routine release 一起進入 overall / Presentation `11.52.0-daily-life-routine`，而 Action、Deliberation、Perception 等未改 contract 的 own marker 不形式性換代。
 
 ## Deferred
 

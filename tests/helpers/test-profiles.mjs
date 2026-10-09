@@ -137,7 +137,16 @@ function ensureRuntimeDependencies(paths){
     paths.splice(Math.max(resolvedTraversalIndex,carryIndex)+1,0,'spatial-agent-carry.js');
   }
   const validationManifestIndex=paths.indexOf('validation/manifest.js');
-  if(validationManifestIndex>=0&&!paths.includes('validation/rules/agent-carry.js'))paths.splice(validationManifestIndex,0,'validation/rules/agent-carry.js');
+  if(validationManifestIndex>=0){
+    if(!paths.includes('systems/daily-life/routine-state.js')){
+      const routineOwnerIndex=paths.indexOf('engine.js');
+      paths.splice(routineOwnerIndex>=0?routineOwnerIndex:validationManifestIndex,0,'systems/daily-life/routine-state.js');
+    }
+    const resolvedManifestIndex=paths.indexOf('validation/manifest.js');
+    if(!paths.includes('validation/rules/agent-carry.js'))paths.splice(resolvedManifestIndex,0,'validation/rules/agent-carry.js');
+    const finalManifestIndex=paths.indexOf('validation/manifest.js');
+    if(!paths.includes('validation/rules/daily-life-routine.js'))paths.splice(finalManifestIndex,0,'validation/rules/daily-life-routine.js');
+  }
   return paths;
 }
 

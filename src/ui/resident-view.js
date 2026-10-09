@@ -5,7 +5,7 @@
 
   const VERSION=UI.PRESENTATION_VERSION;
   if(!VERSION)throw new Error('Resident View requires presentation version');
-  const NEEDS=[['hunger','飢餓'],['thirst','口渴'],['fatigue','疲勞'],['sleepNeed','睡意'],['social','社交']];
+  const NEEDS=['hunger','thirst','fatigue','sleepNeed','social','stimulation','relaxation'];
   const INTENT_LABELS={
     satisfyHunger:'填飽肚子',drinkWater:'補充水分',drinkAlcohol:'解渴／喝點酒',recoverFatigue:'緩解活動疲勞',sleep:'補足睡眠',
     socialize:'找人聊聊',interactWithAnimal:'和動物互動',seekSocialContact:'找人親近',awaitResponse:'等待對方回應',
@@ -124,8 +124,8 @@
     return st.containers?.[a.held]?.name||E.endpointName?.(a.held)||a.held;
   }
   function needCards(a){
-    return NEEDS.map(([key,label])=>{
-      const value=clamp(Number(a?.needs?.[key])||0,0,100);
+    return NEEDS.map(key=>{
+      const label=UI.needLabel?.(key)||E.ZH?.[key]||key,value=clamp(Number(a?.needs?.[key])||0,0,100);
       return `<div class="resident-need" data-need="${key}"><div class="resident-need-head"><b>${label}</b><span>${needText(value)}</span></div><div class="resident-meter" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(value)}"><span style="--resident-meter:${value}%"></span></div></div>`;
     }).join('');
   }
