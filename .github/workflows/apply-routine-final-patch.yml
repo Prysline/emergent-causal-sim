@@ -1,0 +1,46 @@
+name: Apply Routine final patch
+
+on:
+  push:
+    branches: [daily-life-routine-slice-a-final]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reassemble and verify patch
+        run: |
+          cat .tmp/routine-final-patch.part0* > /tmp/final.patch.gz.b64
+          echo 'ac9dfb3e4f198372a85b18a7f6732de398c69cffaf41cab917cda837e7f7ed1a  /tmp/final.patch.gz.b64' | sha256sum -c -
+          base64 -d /tmp/final.patch.gz.b64 | gzip -d > /tmp/final.patch
+          echo '73f291da56d0167095631737ea6808084aea0ae9f14e74576ad176797a34411d  /tmp/final.patch' | sha256sum -c -
+      - name: Apply verified patch
+        run: |
+          git apply --check /tmp/final.patch
+          git apply /tmp/final.patch
+          git diff --check
+      - name: Focused validation
+        run: |
+          node tests/check-source-syntax.mjs
+          node tests/mental-regulation-stimulation-relaxation.mjs
+          node tests/mental-regulation-reading-activity.mjs
+          node tests/daily-life-routine.mjs
+          node tests/initial-state-pipeline.mjs
+          node tests/decision-evidence.mjs
+          node tests/soft-reconsideration-hysteresis.mjs
+          node tests/validator-rule-registry.mjs
+          node tests/production-source-load-architecture.mjs
+      - name: Commit verified implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Complete Routine Slice A and stimulation presentation integration'
+          git push origin HEAD:daily-life-routine-slice-a-final
