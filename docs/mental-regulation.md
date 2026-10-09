@@ -21,7 +21,7 @@ Current subsystem marker: `mental-regulation-v1`.
 - `mentalLoad`
 - `relaxationProvision`
 
-profile 不是 Need truth，也不直接寫 Need。runtime 在 core execution 前保存當下 Action 與位置，在 core execution 後只於該 Agent 原本正在 `wander` 且 canonical position 實際改變時，才把一個 movement feedback unit 結算成 realized regulation effect。因此：
+profile 不是 Need truth，也不直接寫 Need。runtime 在 core execution 前只保存當下確實正在 `wander` 的 Agent 與 canonical position，在 core execution 後只於該位置實際改變時，才把一個 movement feedback unit 結算成 realized regulation effect。因此：
 
 - Intent / plan 建立不會降低 Need；
 - nominal Action tick 沒有實際 movement 時不會得到 regulation relief；
@@ -34,9 +34,11 @@ Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension s
 
 這不建立第二套 decision system，也不改寫 `rest`：既有 `rest` 仍只由 fatigue semantics 擁有。
 
-## Baseline drift
+## Need generation boundary
 
-清醒且在 map 上的 Agent 每 tick 依 Mental Regulation policy 增加少量 Engagement / Relaxation pressure。睡眠中或 off-map 的 Agent 第一版不做此 baseline drift；這不代表 Sleep 或 off-map Activity 具有 Mental Regulation recovery effect。
+本 slice **不新增通用、隨時間自動上升的 Engagement / Relaxation drift**。目前已核准 baseline 定義 Need 的主觀意義與 realized Activity effect，但沒有核准「清醒時間本身必然增加多少 Mental Regulation pressure」這類生成政策；因此第一版只建立 canonical state、bounded decision evidence 與 execution-driven regulation effect，不把時間經過偷渡成新的因果來源。
+
+未來若實際玩法需要 Engagement / Relaxation 自主生成或累積，應另外依明確 consumer / evidence 決定 owner、rate 與 provenance，而不是由本 slice 預設。
 
 ## Environment interference
 
@@ -50,4 +52,4 @@ Mental Regulation 使用既有 `registerDecisionOptionProvider(...)` extension s
 
 ## Deferred
 
-本 slice 明確不包含 `read` content model、novelty / familiarity / habituation、preferred stimulation range、generic interference framework、noise propagation、progress effectiveness、continuation / reconsideration pressure、resume lifecycle、Routine / Learned Habit / Standing Responsibility 或完整 Traits schema。
+本 slice 明確不包含 generic Mental Regulation need-generation drift、`read` content model、novelty / familiarity / habituation、preferred stimulation range、generic interference framework、noise propagation、progress effectiveness、continuation / reconsideration pressure、resume lifecycle、Routine / Learned Habit / Standing Responsibility 或完整 Traits schema。
