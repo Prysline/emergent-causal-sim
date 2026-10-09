@@ -1,5 +1,5 @@
 (() => {
-  const V=window.SimValidator,E=window.SimEngine,R=window.SimDailyLifeRoutine;if(!V||!E?.DAILY_LIFE_ROUTINE_VERSION||!R)return;
+  const V=window.SimValidator,W=window.SimWorld,R=window.SimDailyLifeRoutine;if(!V||!W?.DAILY_LIFE_ROUTINE_SCHEMA_VERSION||!R)return;
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data});
     if(Object.prototype.hasOwnProperty.call(st||{},'routines'))add('routine_world_truth_forbidden','Routine must remain Agent-private; state.routines is not a canonical World truth.');
