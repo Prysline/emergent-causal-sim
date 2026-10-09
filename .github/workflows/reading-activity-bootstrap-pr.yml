@@ -44,29 +44,36 @@ jobs:
           exec(compile(code,'reading-activity-bootstrap','exec'),{})
           '@
           $extract | python -
-      - name: Keep canonical workflow unchanged and register through existing regression
+      - name: Restore canonical workflow and verify focused semantics
         shell: pwsh
         run: |
           git restore --source=origin/main -- .github/workflows/node-regression.yml
-          Add-Content tests/mental-regulation-engagement-relaxation.mjs "`nawait import('./mental-regulation-reading-activity.mjs');"
-      - name: Verify implementation
+          node tests/check-source-syntax.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/world-authoring-foundation.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/interaction-geometry.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/active-intent-foundation.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/mental-regulation-engagement-relaxation.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/mental-regulation-reading-activity.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Remove temporary workflows and run preflight
         shell: pwsh
         run: |
-          node tests/check-source-syntax.mjs
-          node tests/world-authoring-foundation.mjs
-          node tests/interaction-geometry.mjs
-          node tests/active-intent-foundation.mjs
-          node tests/mental-regulation-engagement-relaxation.mjs
           Remove-Item .github/workflows/reading-activity-bootstrap.yml, .github/workflows/reading-activity-bootstrap-pr.yml
           node tests/pr-preflight.mjs
-      - name: Emit final diff as base64
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package clean implementation
         shell: pwsh
         run: |
-          $env:PYTHONUTF8 = "1"
-          @'
-          import base64, subprocess
-          diff=subprocess.check_output(['git','diff','origin/main','--','.',':(exclude).github/workflows/*'])
-          print('FINAL_DIFF_BASE64_BEGIN')
-          print(base64.b64encode(diff).decode())
-          print('FINAL_DIFF_BASE64_END')
-          '@ | python -
+          git diff origin/main -- . ':(exclude).github/workflows/*' | Out-File -Encoding utf8 final.patch
+          Copy-Item tests/mental-regulation-reading-activity.mjs reading-regression.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reading-implementation-final
+          path: |
+            final.patch
+            reading-regression.mjs
