@@ -101,7 +101,8 @@ for(const relativePath of stateTests){
     const token=match[2].trim();
     const literal=token.match(/^['"]([^'"]+)['"]$/);
     const expectedVersion=literal?literal[1]:constants.get(token);
-    if(expectedVersion&&expectedVersion!==currentOverallVersion){
+    const looksLikeOverallRelease=expectedVersion&&/^\d+\.\d+\.\d+(?:[-+].*)?$/.test(expectedVersion);
+    if(looksLikeOverallRelease&&expectedVersion!==currentOverallVersion){
       staleOverallAssertions.push(relativePath+': '+match[1]+' expects '+expectedVersion+' via '+token+' but release.js is '+currentOverallVersion);
     }
   }
