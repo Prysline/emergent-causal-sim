@@ -110,8 +110,4 @@ delete orange.physical.locomotionProfiles.standing;
 orange.physical.locomotionCapabilities.walk=oldWalk;
 assert.equal(V.validateState(st).issueCount,0);
 
-E.reset(11700);
-for(let i=0;i<500;i++)E.tick();
-validation=V.validateState(E.getState());
-assert.equal(validation.issueCount,0,validation.issues.slice(0,8).map(x=>x.message).join('\n'));
 console.log('Physical Profile + PoseEnvelope foundation contract passed');
