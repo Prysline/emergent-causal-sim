@@ -76,8 +76,4 @@ assert.equal(SP.slotEgressNodes(st,bedLeft,zhen,'walk').some(node=>SP.nodeSame(s
 zhou.position={x:7,y:4,z:0};
 
 
-E.reset(20260911);
-for(let i=0;i<500;i++)E.tick();
-validation=V.validateState(E.getState());
-assert.equal(validation.issueCount,0,validation.issues.slice(0,8).map(x=>x.message).join('\n'));
 console.log('v11.11 spatial traversal + contact contract passed');

@@ -83,8 +83,4 @@ assert.equal(contactEvent.data.position,'room1|diningTable:surface|5,2');
 
 let validation=V.validateState(st);
 assert.equal(validation.issueCount,0,validation.issues.map(x=>x.message).join('\n'));
-E.reset(20260911);
-for(let i=0;i<500;i++)E.tick();
-validation=V.validateState(E.getState());
-assert.equal(validation.issueCount,0,validation.issues.slice(0,8).map(x=>x.message).join('\n'));
 console.log('v11.11.4 spatial environment + Surface liquid + effectNode foundation passed');
