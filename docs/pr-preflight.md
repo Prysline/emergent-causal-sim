@@ -116,6 +116,8 @@ node tests/pr-preflight.mjs
 
 Browser regression **不是每個 PR 都必跑的驗證**。是否需要，把判斷建立在本次變更是否影響 browser-observable contract，而不是因為 workflow 存在就一律視為必要。
 
+目前 canonical Browser workflow 採用保守型 path-aware trigger：預設未知／新增路徑仍會觸發完整 Browser matrix，只排除已確認不影響 browser-observable contract 的文件、一般 Node regression 與 Node-only workflow 路徑；`tests/browser-*.mjs` 與 `tests/helpers/**` 會在一般 `tests/**` 排除後明確重新納入。這是降低不必要 runner cost 的 trigger gate，不是 selective Browser coverage；只要觸發 Browser workflow，仍執行完整 current matrix。
+
 通常需要 Browser regression：
 
 - UI / Presentation 的實際呈現、DOM 結構或互動行為改變；
@@ -129,7 +131,7 @@ Browser regression **不是每個 PR 都必跑的驗證**。是否需要，把�
 - 不影響 browser runtime 的 internal refactor；
 - 已由 Node contract guards 完整鎖定、沒有玩家可見 browser 行為改變的版本／architecture 維護。
 
-如果 Browser workflow 因 PR trigger 自動排起來，但本次變更不需要 browser validation，可以取消該 run；取消本身不代表驗證失敗，但完成報告要明確記錄「Browser regression 未執行／取消，原因是本次變更不涉及 browser-observable contract」。若 branch protection 或 required checks 未來要求 Browser regression，則以當時 repository policy 為準，不得用本節繞過 required check。
+若 path-aware trigger 仍因保守規則啟動 Browser workflow，但本次變更經人工確認不需要 browser validation，可以取消該 run；取消本身不代表驗證失敗，但完成報告要明確記錄「Browser regression 未執行／取消，原因是本次變更不涉及 browser-observable contract」。若 branch protection 或 required checks 未來要求 Browser regression，則以當時 repository policy 為準，不得用本節繞過 required check。
 
 ## Preflight 通過後仍要做什麼
 

@@ -19,6 +19,25 @@ assert.doesNotMatch(nodeGithub,/\bpush:|pull_request:/,'GitHub-hosted Node fallb
 assert.match(nodeGithub,/uses:\s*\.\/\.github\/workflows\/node-regression\.yml/,'Manual GitHub fallback must reuse the canonical Node regression workflow');
 assert.match(nodeGithub,/runner:\s*ubuntu-latest/,'Manual GitHub fallback must explicitly select ubuntu-latest');
 
+const browserPullRequest=browser.match(/pull_request:\s*([\s\S]*?)workflow_dispatch:/)?.[1]||'';
+assert.match(browserPullRequest,/paths:\s*/,'Browser pull requests must use the conservative path-aware trigger');
+const browserPathRules=[
+  "      - '**'",
+  "      - '!docs/**'",
+  "      - '!README.md'",
+  "      - '!LICENSE'",
+  "      - '!tests/**'",
+  "      - 'tests/browser-*.mjs'",
+  "      - 'tests/helpers/**'",
+  "      - '!.github/workflows/node-regression.yml'",
+  "      - '!.github/workflows/node-regression-github.yml'"
+];
+for(const rule of browserPathRules)assert.ok(browserPullRequest.includes(rule),'Browser path policy must retain '+rule);
+assert.ok(browserPullRequest.indexOf("      - '**'")<browserPullRequest.indexOf("      - '!tests/**'"),'Browser path policy must start broad before excluding Node-only tests');
+assert.ok(browserPullRequest.indexOf("      - '!tests/**'")<browserPullRequest.indexOf("      - 'tests/browser-*.mjs'"),'Browser tests must be re-included after the broad tests exclusion');
+assert.ok(browserPullRequest.indexOf("      - '!tests/**'")<browserPullRequest.indexOf("      - 'tests/helpers/**'"),'Shared test helpers must be re-included after the broad tests exclusion');
+assert.doesNotMatch(browserPullRequest,/!\.github\/workflows\/browser-regression\.yml/,'Browser workflow changes must continue to trigger Browser regression');
+
 const semanticNodeTests=[
   'tests/state-regression.mjs',
   'tests/horizontal-geometry-foundation.mjs',
