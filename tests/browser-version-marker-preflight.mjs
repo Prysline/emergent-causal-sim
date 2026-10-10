@@ -8,6 +8,7 @@ const browserTests=[...new Set(
 )];
 assert.ok(browserTests.length>0,'Browser regression workflow must enumerate current Browser regression tests');
 
+// src/release.js is the sole production owner of the overall release literal; Browser QA may only consume its runtime projection.
 const releaseSource=read('src/release.js');
 const currentOverallMatch=releaseSource.match(/const VERSION='([^']+)'/);
 assert.ok(currentOverallMatch,'release.js must expose the canonical overall VERSION marker');
