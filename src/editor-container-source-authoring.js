@@ -32,11 +32,11 @@
     }),
     basket:Object.freeze({
       id:'basket',label:'搬運籃',icon:'🧺',instanceIdBase:'basket',
-      authored:Object.freeze({name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:openRetention(.24,.78,.24,.82,.36,1.25)},transportResources:['food'],interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}})
+      authored:Object.freeze({name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:openRetention(.24,.78,.24,.82,.36,1.25)},transportResources:['food'],interactions:{receive:{mode:'reach'},deposit:{mode:'reach'}}})
     }),
     'water-bucket':Object.freeze({
       id:'water-bucket',label:'水桶',icon:'💧',instanceIdBase:'waterBucket',
-      authored:Object.freeze({name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}})
+      authored:Object.freeze({name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{drinkFrom:{mode:'reach'}}})
     }),
     'white-cup':Object.freeze({
       id:'white-cup',label:'白色杯子',icon:'🥛',instanceIdBase:'cupWhite',
@@ -181,207 +181,46 @@
     return mutationResult(authoring,candidate=>{
       const source=candidate.entities?.sources?.[sourceId];
       if(!source)return reject('source_missing','找不到 Source '+String(sourceId)+'.',{entityType:'source',entityId:sourceId});
-      const interactionPortIds=(source.interactionPorts||[]).map(port=>port.id).filter(Boolean);
       delete candidate.entities.sources[sourceId];
-      return {meta:{operation:'deleteSource',sourceId,interactionPortIds}};
+      return {meta:{operation:'deleteSource',sourceId}};
     });
   }
 
-  M.listContainerPresets=listContainerPresets;
-  M.listSourcePresets=listSourcePresets;
-  M.createContainerFromPreset=createContainerFromPreset;
-  M.createSourceFromPreset=createSourceFromPreset;
-  M.deleteContainer=deleteContainer;
-  M.deleteSource=deleteSource;
+  function moveContainer(authoring,{containerId,target,supportChoice=null}={}){
+    const presetFloorOnly=authoring?.entities?.containers?.[containerId]?.portable===false;
+    if(!validTarget(target))return {ok:false,candidate:null,issues:[issue('container_move_target_invalid','Container 移動需要有效的 x / y / z。',{containerId,target:clone(target||null)})],meta:{}};
+    return mutationResult(authoring,candidate=>{
+      const container=candidate.entities?.containers?.[containerId];
+      if(!container)return reject('container_missing','找不到 Container '+String(containerId)+'.',{entityType:'container',entityId:containerId});
+      const support=resolveSupportChoice(candidate,target,supportChoice,{floorOnly:presetFloorOnly});
+      if(support.reject)return support;
+      container.position=clone({...target,z:target.z??0});
+      if(support.supportId)container.supportId=support.supportId;else delete container.supportId;
+      return {meta:{operation:'moveContainer',containerId,supportId:support.supportId||null,target:clone(container.position)}};
+    });
+  }
 
-  window.SimEditorContainerSourceAuthoring={
+  function listCatalogEntries(){
+    return [
+      ...Object.values(CONTAINER_PRESETS).map(preset=>({kind:'container',id:preset.id,label:preset.label,icon:preset.icon})),
+      ...Object.values(SOURCE_PRESETS).map(preset=>({kind:'source',id:preset.id,label:preset.label,icon:preset.icon}))
+    ];
+  }
+
+  window.SimEditorContainerSourceAuthoring=Object.freeze({
     VERSION,
+    CONTAINER_PRESETS,
+    SOURCE_PRESETS,
     listContainerPresets,
     listSourcePresets,
+    listCatalogEntries,
     getContainerPreset,
     getSourcePreset,
     listSupportCandidates,
     createContainerFromPreset,
     createSourceFromPreset,
     deleteContainer,
-    deleteSource
-  };
-
-  if(typeof document==='undefined')return;
-  const E=window.SimWorldEditor;
-  if(!E?.getDocument||!E?.getSession||!E?.loadDocument||!E?.semanticFingerprint||!E?.selectEntity)return;
-
-  const $=id=>document.getElementById(id);
-  const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const addPane=document.querySelector('[data-sidebar-section="add"]');
-  if(!addPane)throw new Error('Container / Source preset authoring requires the World Editor Add pane.');
-
-  const host=document.createElement('div');
-  host.dataset.containerSourceAuthoring='';
-  host.innerHTML='<div class="sidebar-add-category" data-add-category="container"><h3>容器</h3><p class="hint scene-hint">以已核准 preset 建立完整 canonical Container；內部設定目前唯讀。</p><div id="containerPresetCatalog" class="scene-list" aria-label="Container preset 目錄"></div></div><div class="sidebar-add-category" data-add-category="source"><h3>資源源頭</h3><p class="hint scene-hint">以已核准 preset 建立完整 canonical Source；內部設定目前唯讀。</p><div id="sourcePresetCatalog" class="scene-list" aria-label="Source preset 目錄"></div></div><div id="containerSourceOperation" class="validation-list" aria-live="polite"></div>';
-  addPane.append(host);
-
-  const nativeLoadDocument=E.loadDocument.bind(E);
-  const nativeGetSession=E.getSession.bind(E);
-  let baselineFingerprint=E.semanticFingerprint();
-  let inheritedDirty=nativeGetSession().dirty===true;
-  let pending=null;
-  let status='';
-
-  function dirty(){return inheritedDirty||E.semanticFingerprint()!==baselineFingerprint;}
-  E.getSession=()=>({...nativeGetSession(),dirty:dirty()});
-  E.loadDocument=next=>{
-    const result=nativeLoadDocument(next);
-    baselineFingerprint=E.semanticFingerprint();
-    inheritedDirty=false;
-    pending=null;
-    status='';
-    renderUi();
-    return result;
-  };
-
-  function markCleanBaseline(){
-    baselineFingerprint=E.semanticFingerprint();
-    inheritedDirty=false;
-    pending=null;
-    status='';
-    renderUi();
-  }
-
-  function syncDirtyUi(){
-    const pill=$('dirtyStatus');
-    if(!pill)return;
-    const value=dirty();
-    pill.textContent=value?'有未匯出修改':'未修改';
-    pill.classList.toggle('clean',!value);
-    pill.classList.toggle('dirty',value);
-  }
-
-  function renderCatalogs(){
-    $('containerPresetCatalog').innerHTML=listContainerPresets().map(preset=>`<button type="button" class="scene-item" data-container-preset-id="${esc(preset.id)}"><span>${esc(preset.icon||'◈')}</span><span><b>${esc(preset.label)}</b><small>${esc(preset.id)}</small></span></button>`).join('');
-    $('sourcePresetCatalog').innerHTML=listSourcePresets().map(preset=>`<button type="button" class="scene-item" data-source-preset-id="${esc(preset.id)}"><span>${esc(preset.icon||'◆')}</span><span><b>${esc(preset.label)}</b><small>${esc(preset.id)}</small></span></button>`).join('');
-  }
-
-  function renderOperation(){
-    const operation=$('containerSourceOperation');
-    if(!operation)return;
-    if(pending?.kind==='support'){
-      operation.innerHTML=`<div>此位置可選擇地面或家具承載面。</div><div class="selection-actions"><button type="button" data-container-source-support="floor">放在地面</button>${(pending.candidates||[]).map(item=>`<button type="button" data-container-source-support="furniture" data-support-id="${esc(item.id)}">放在 ${esc(item.name||item.id)}</button>`).join('')}<button type="button" data-container-source-cancel>取消</button></div>`;
-      return;
-    }
-    if(pending?.kind==='place'){
-      const preset=pending.entityType==='container'?getContainerPreset(pending.presetId):getSourcePreset(pending.presetId);
-      operation.innerHTML=`<div>下一次點擊地圖：建立 ${esc(preset?.label||pending.presetId)}。</div><button type="button" data-container-source-cancel>取消</button>`;
-      return;
-    }
-    operation.textContent=status||'';
-  }
-
-  function decorateSelectionActions(){
-    const actions=$('selectionActions');
-    if(!actions)return;
-    const existing=actions.querySelector('[data-container-source-action="remove"]');
-    const selection=E.getSession().selection;
-    const eligible=selection?.kind==='entity'&&['container','source'].includes(selection.type);
-    if(!eligible){existing?.remove();return;}
-    if(existing)return;
-    const button=document.createElement('button');
-    button.type='button';
-    button.className='danger-action';
-    button.dataset.containerSourceAction='remove';
-    button.textContent=selection.type==='container'?'移除容器':'移除資源源頭';
-    actions.querySelector('.action-row')?.append(button);
-  }
-
-  function renderUi(){
-    renderCatalogs();
-    renderOperation();
-    decorateSelectionActions();
-    syncDirtyUi();
-  }
-
-  function commit(result,successMessage,{selectType=null,selectId=null}={}){
-    if(!result?.ok){
-      status=(result?.issues||[]).map(item=>item.message||item.code).join('；')||'操作被拒絕。';
-      renderUi();
-      return false;
-    }
-    nativeLoadDocument(result.candidate);
-    pending=null;
-    status=successMessage;
-    if(selectType&&selectId)E.selectEntity(selectType,selectId);
-    renderUi();
-    return true;
-  }
-
-  function executeCreate(target,supportChoice=null){
-    const operation=pending;
-    if(!operation)return;
-    const documentValue=E.getDocument();
-    const result=operation.entityType==='container'
-      ?createContainerFromPreset(documentValue,{presetId:operation.presetId,target,supportChoice})
-      :createSourceFromPreset(documentValue,{presetId:operation.presetId,target});
-    if(!result.ok&&result.issues?.some(item=>item.code==='support_choice_required')){
-      pending={kind:'support',entityType:'container',presetId:operation.presetId,target:clone(target),candidates:clone(result.meta?.candidates||[])};
-      status='';
-      renderUi();
-      return;
-    }
-    const newId=result?.meta?.newId;
-    commit(result,result.ok?`已建立 ${newId}。`:'',{selectType:operation.entityType,selectId:newId});
-  }
-
-  host.addEventListener('click',event=>{
-    const container=event.target.closest('[data-container-preset-id]');
-    if(container){pending={kind:'place',entityType:'container',presetId:container.dataset.containerPresetId};status='';renderUi();return;}
-    const source=event.target.closest('[data-source-preset-id]');
-    if(source){pending={kind:'place',entityType:'source',presetId:source.dataset.sourcePresetId};status='';renderUi();return;}
-    const support=event.target.closest('[data-container-source-support]');
-    if(support&&pending?.kind==='support'){
-      const operation=pending;
-      pending={kind:'place',entityType:'container',presetId:operation.presetId};
-      executeCreate(operation.target,support.dataset.containerSourceSupport==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:support.dataset.supportId});
-      return;
-    }
-    if(event.target.closest('[data-container-source-cancel]')){pending=null;status='';renderUi();}
+    deleteSource,
+    moveContainer
   });
-
-  $('editorMap').addEventListener('click',event=>{
-    if(pending?.kind!=='place')return;
-    const cell=event.target.closest('[data-cell]');
-    if(!cell)return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    const [x,y]=cell.dataset.cell.split(',').map(Number);
-    executeCreate({x,y,z:E.getSession().currentZ});
-  },true);
-
-  $('selectionActions').addEventListener('click',event=>{
-    const button=event.target.closest('[data-container-source-action="remove"]');
-    if(!button)return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    const selection=E.getSession().selection;
-    if(selection?.kind!=='entity')return;
-    const result=selection.type==='container'
-      ?deleteContainer(E.getDocument(),{containerId:selection.id})
-      :selection.type==='source'
-        ?deleteSource(E.getDocument(),{sourceId:selection.id})
-        :null;
-    if(result)commit(result,result.ok?`已移除 ${selection.id}。`:'');
-  },true);
-
-  $('exportWorld')?.addEventListener('click',()=>setTimeout(()=>{
-    if(nativeGetSession().dirty===false)markCleanBaseline();
-  },0));
-  $('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{
-    if(nativeGetSession().dirty===false)markCleanBaseline();
-  },0));
-  $('importWorld')?.addEventListener('change',()=>setTimeout(()=>{
-    if(nativeGetSession().dirty===false)markCleanBaseline();
-  },120));
-
-  const observer=new MutationObserver(()=>decorateSelectionActions());
-  observer.observe($('selectionActions'),{childList:true,subtree:true});
-  renderUi();
 })();
