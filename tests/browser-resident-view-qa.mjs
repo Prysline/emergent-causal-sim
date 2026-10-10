@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const outDir='artifacts/browser-resident-view-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -13,7 +12,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function openStory(){
   await page.goto('http://127.0.0.1:4173/?scenario=talk-no-response',{waitUntil:'networkidle'});
-  await page.waitForFunction(version=>window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version&&window.SimEngine?.UI_RELATIONSHIP_VERSION===version&&window.SimEngine?.UI_PHYSICAL_VERSION===version&&window.SimEngine?.UI_LOCOMOTION_VERSION===version,CURRENT_VERSION);
+  await page.waitForFunction(()=>window.SimRelease?.VERSION&&window.SimEngine?.UI_RESIDENT_VIEW_VERSION===window.SimRelease.VERSION&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===window.SimRelease.VERSION&&window.SimEngine?.UI_RELATIONSHIP_VERSION===window.SimRelease.VERSION&&window.SimEngine?.UI_PHYSICAL_VERSION===window.SimRelease.VERSION&&window.SimEngine?.UI_LOCOMOTION_VERSION===window.SimRelease.VERSION);
   for(let i=0;i<8;i++){
     const ready=await page.evaluate(()=>window.SimEngine.getState().agents.zhou.episodicMemories.some(m=>m.episodeKind==='privateSocialOutcome'));
     if(ready)break;
@@ -30,7 +29,7 @@ async function snapshot(){
     const activeMode=root?.querySelector('[data-v1140-mode].active')?.dataset.v1140Mode??null;
     const activeTab=root?.querySelector('[data-v1140-tab].active')?.dataset.v1140Tab??null;
     return {
-      version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,relationshipUiVersion:E.UI_RELATIONSHIP_VERSION,physicalUiVersion:E.UI_PHYSICAL_VERSION,locomotionUiVersion:E.UI_LOCOMOTION_VERSION,
+      releaseVersion:window.SimRelease.VERSION,version:st.version,uiVersion:E.UI_RESIDENT_VIEW_VERSION,entityUiVersion:E.UI_ENTITY_READABLE_VERSION,relationshipUiVersion:E.UI_RELATIONSHIP_VERSION,physicalUiVersion:E.UI_PHYSICAL_VERSION,locomotionUiVersion:E.UI_LOCOMOTION_VERSION,
       activeMode,activeTab,
       residentVisible:!!resident&&!resident.hidden&&!!resident.getClientRects().length,
       debugVisible:!!debug&&!debug.hidden&&!!debug.getClientRects().length,
@@ -111,13 +110,13 @@ assert.ok(!placeProjection.standing.includes('餐桌下'),'standing Action Card 
 assert.match(placeProjection.sitting,/餐椅 B・座位/,'sitting Action Card must use the precise Slot identity');
 assert.ok(!placeProjection.sitting.includes('所在格的地面')&&!placeProjection.sitting.includes('餐椅 B下'),'sitting Action Card must not mix Slot occupancy with coarse floor/under-furniture wording');
 let desktop=await snapshot();
-assert.equal(desktop.version,CURRENT_VERSION);
-assert.equal(desktop.uiVersion,CURRENT_VERSION);
-assert.equal(desktop.entityUiVersion,CURRENT_VERSION);
-assert.equal(desktop.relationshipUiVersion,CURRENT_VERSION);
-assert.equal(desktop.physicalUiVersion,CURRENT_VERSION);
-assert.equal(desktop.locomotionUiVersion,CURRENT_VERSION);
-assert.equal(desktop.releaseLabel,'v11.53.0','app header must project the short release label from canonical SimRelease.VERSION');
+assert.equal(desktop.version,desktop.releaseVersion);
+assert.equal(desktop.uiVersion,desktop.releaseVersion);
+assert.equal(desktop.entityUiVersion,desktop.releaseVersion);
+assert.equal(desktop.relationshipUiVersion,desktop.releaseVersion);
+assert.equal(desktop.physicalUiVersion,desktop.releaseVersion);
+assert.equal(desktop.locomotionUiVersion,desktop.releaseVersion);
+assert.equal(desktop.releaseLabel,'v'+desktop.releaseVersion.split('-')[0],'app header must project the short release label from canonical SimRelease.VERSION');
 assert.deepEqual(desktop.inspectorDecorators,[
   {id:'spatial.observability',order:100},
   {id:'spatial.environment',order:200},
@@ -278,7 +277,7 @@ const entityFixtures=await page.evaluate(()=>{
 });
 await selectEntity('container',entityFixtures.container.id);
 let entity=await entitySnapshot();
-assert.equal(entity.version,CURRENT_VERSION);assert.equal(entity.uiVersion,CURRENT_VERSION);assert.equal(entity.activeMode,'readable');assert.equal(entity.readableVisible,true);assert.equal(entity.debugVisible,false);
+assert.equal(entity.version,desktop.releaseVersion);assert.equal(entity.uiVersion,desktop.releaseVersion);assert.equal(entity.activeMode,'readable');assert.equal(entity.readableVisible,true);assert.equal(entity.debugVisible,false);
 assert.ok(entity.readableText.includes(entityFixtures.container.name));assert.ok(entity.readableText.includes('內容與容量'));
 if(entityFixtures.container.resource)assert.ok(entity.readableText.includes(await page.evaluate(r=>window.SimWorld.RESOURCE_TYPES?.[r]?.name||window.SimEngine.resourceName?.(r)||r,entityFixtures.container.resource)));
 assert.ok(!entity.readableText.includes(`Container・${entityFixtures.container.id}`));assert.ok(!entity.readableText.includes('空重'));

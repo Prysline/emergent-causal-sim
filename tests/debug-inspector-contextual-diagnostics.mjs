@@ -5,7 +5,6 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const source=read('src/ui/inspectors/intent.js');
 const css=read('styles/observability.css');
 const index=read('index.html');
-const release=read('src/release.js');
 const controls=read('src/ui/observability-controls.js');
 
 assert.match(source,/11\.48\.1-debug-inspector-sleep-perception-approach/,'Debug Inspector diagnostics needs an explicit module marker for the preferred-Slot approach projection');
@@ -37,7 +36,6 @@ assert.doesNotMatch(source,/\.conflictResolutionEvidence\s*=|\.decisionEvidence\
 assert.match(source,/registerInspectorDecorator\('intent\.active',decorateInspector,300\)/,'existing Intent Inspector remains the canonical decision-section owner');
 assert.equal((source.match(/registerInspectorDecorator\(/g)||[]).length,1,'contextual grouping must not create a parallel Inspector section owner');
 assert.doesNotMatch(index,/contextual-diagnostics\.js/,'contextual diagnostics must not add a parallel production UI source');
-assert.match(release,/11\.53\.0-mental-regulation-generation/,'Inspector must follow the canonical overall release');
 assert.match(controls,/11\.48\.0-debug-replay-p1/,'Debug Inspector work must not fake-bump the independent Debug Replay controls generation');
 
 console.log('debug-inspector-contextual-diagnostics: ok');

@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
-const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const DEBUG_VERSION='11.48.1-debug-inspector-sleep-perception-approach';
 const outDir='artifacts/browser-debug-inspector-contextual-diagnostics-qa';
 fs.mkdirSync(outDir,{recursive:true});
@@ -51,7 +50,7 @@ async function snapshot(){
     const firstNonOverviewIndex=sections.find(x=>x.node.dataset.debugDomain!=='overview')?.index??-1;
     const navStyle=nav?getComputedStyle(nav):null,modeStyle=modeBar?getComputedStyle(modeBar):null,contextKv=diag?.querySelector(':scope > .kv'),contextKvStyle=contextKv?getComputedStyle(contextKv):null;
     return {
-      version:window.SimEngine.getState().version,debugVersion:window.SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION,
+      releaseVersion:window.SimRelease.VERSION,version:window.SimEngine.getState().version,debugVersion:window.SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION,
       views:[...(nav?.querySelectorAll('[data-debug-inspector-view]')||[])].map(b=>({id:b.dataset.debugInspectorView,active:b.classList.contains('active')})),
       diagnosticText:diag?.innerText||'',debugText:debug?.innerText||'',
       visibleSections:[...(debug?.querySelectorAll(':scope > .inspect-section')||[])].filter(x=>!x.hidden).map(x=>x.dataset.debugDomain||''),
@@ -70,7 +69,7 @@ async function snapshot(){
 try{
   await installConflictFixture();
   let desktop=await snapshot();
-  assert.equal(desktop.version,CURRENT_VERSION);
+  assert.equal(desktop.version,desktop.releaseVersion);
   assert.equal(desktop.debugVersion,DEBUG_VERSION);
   assert.deepEqual(desktop.views.map(x=>x.id),['overview','decision','execution','world','perception','social','all']);
   assert.equal(desktop.views.find(x=>x.active)?.id,'all');

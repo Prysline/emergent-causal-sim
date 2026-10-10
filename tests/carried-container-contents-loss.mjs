@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
-const APP_VERSION='11.53.0-mental-regulation-generation';
+const APP_VERSION=globalThis.SimRelease.VERSION;
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const near=(actual,expected,eps=1e-9,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);

@@ -9,7 +9,6 @@ import {
 
 globalThis.window=globalThis;
 
-const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const RESOURCES_VERSION='11.39.0-carried-contents-loss';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
@@ -194,6 +193,7 @@ const FD=globalThis.SimFurnitureDefinitions;
 const A=globalThis.SimWorldAuthoring;
 const EC=globalThis.SimEmbodimentCapabilities;
 const R=globalThis.SimRelease;
+const CURRENT_VERSION=R.VERSION;
 const Resources=globalThis.SimResources;
 const AgentCarry=globalThis.SimAgentCarry;
 const W=globalThis.SimWorld;

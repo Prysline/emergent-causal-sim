@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 
-const CURRENT_VERSION='11.53.0-mental-regulation-generation';
 const outDir='artifacts/browser-mental-regulation-presentation-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -12,7 +11,7 @@ page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());}
 page.on('pageerror',err=>pageErrors.push(String(err)));
 
 await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
-await page.waitForFunction(version=>window.SimRelease?.VERSION===version&&window.SimUI?.PRESENTATION_VERSION===version&&window.SimEngine?.UI_RESIDENT_VIEW_VERSION===version&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===version,CURRENT_VERSION);
+await page.waitForFunction(()=>window.SimRelease?.VERSION&&window.SimUI?.PRESENTATION_VERSION===window.SimRelease.VERSION&&window.SimEngine?.UI_RESIDENT_VIEW_VERSION===window.SimRelease.VERSION&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===window.SimRelease.VERSION);
 
 const canonical=await page.evaluate(()=>{
   const st=window.SimEngine.getState(),a=st.agents.zhen;

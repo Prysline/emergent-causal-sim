@@ -11,7 +11,7 @@ page.on('console',msg=>{if(msg.type()==='error')consoleErrors.push(msg.text());}
 page.on('pageerror',err=>pageErrors.push(String(err)));
 
 await page.goto('http://127.0.0.1:4173/?scenario=talk-brief',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>window.SimRelease?.VERSION==='11.53.0-mental-regulation-generation');
+await page.waitForFunction(()=>window.SimRelease?.VERSION&&window.SimEngine?.getState?.().version===window.SimRelease.VERSION);
 await page.click('#step');
 
 let snap=await page.evaluate(()=>{
@@ -23,8 +23,7 @@ let snap=await page.evaluate(()=>{
     timeline:document.getElementById('timeline')?.innerText||''
   };
 });
-assert.equal(snap.release,'11.53.0-mental-regulation-generation');
-assert.equal(snap.label,'v11.53.0');
+assert.equal(snap.label,'v'+snap.release.split('-')[0]);
 assert.ok(snap.offer,'production talkOffer missing');
 assert.equal(snap.offer.text,'老周向阿真發出聊天邀請。');
 assert.deepEqual(snap.offer.data,{action:'talkOffer',bidKind:'talkOffer',interactionKind:'talk',socialBid:true});
