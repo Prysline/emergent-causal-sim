@@ -1,0 +1,16 @@
+name: Temporary PR210 integration snapshot
+on:
+  push:
+    branches:
+      - mental-regulation-need-generation-v1
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr210-integration-snapshot
+          path: .
+          include-hidden-files: true
+          retention-days: 1
