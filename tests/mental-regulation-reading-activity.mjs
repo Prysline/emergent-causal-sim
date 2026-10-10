@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,M=globalThis.SimMentalRegulation,SP=globalThis.SimSpatial,A=globalThis.SimWorldAuthoring,V=globalThis.SimValidator;
 assert.equal(A.VERSION,'world-authoring-v13');
-assert.equal(M.VERSION,'mental-regulation-v3');
+assert.equal(M.VERSION,'mental-regulation-v4');
 assert.equal(E.READ_ACTIVITY_VERSION,'read-activity-v1');
 assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v1');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='mentalRegulation.read'));
@@ -22,7 +22,7 @@ assert.ok(A.validateAuthoring(collision).errors.some(x=>x.code==='authoring_obje
 E.reset(15300);
 let st=E.getState(),a=st.agents.zhen,book=st.objects.bookA;
 assert.ok(book&&book.id==='bookA','authored ordinary object must compile into state.objects exactly once');
-assert.equal(M.decisionOptionFor(a,'read'),null,'neutral Mental Regulation pressure must not fabricate a reading motive');
+assert.equal(M.decisionOptionFor(a,'read'),null,'neutral Mental Regulation pressure must not fabricate a reading motive before baseline settlement');
 const geometry=SP.interactionGeometry(st,{kind:'object',id:book.id},a,'read');
 assert.equal(geometry.mode,'supportReach');
 const access=SP.bestInteractionPositionResult(st,a,{kind:'object',id:book.id},'read');
@@ -43,7 +43,7 @@ const armed=E.buildAction(a,{id:'read',targetObject:'bookA'});assert.equal(armed
 const before={stimulation:a.needs.stimulation,relaxation:a.needs.relaxation};
 E.tick();st=E.getState();a=st.agents.zhen;
 assert.equal(a.action?.kind,'read');assert.equal(a.action.feedbackUnits,1,'one valid reading execution tick must realize exactly one feedback unit');
-assert.ok(a.needs.stimulation<before.stimulation,'realized reading feedback must reduce Stimulation pressure through Mental Regulation');
+assert.ok(a.needs.stimulation<before.stimulation,'realized reading feedback must reduce Stimulation pressure by more than the same-tick awake baseline');
 assert.ok(a.needs.relaxation<before.relaxation,'realized reading feedback must apply net Relaxation effect through Mental Regulation');
 
 const realized={stimulation:a.needs.stimulation,relaxation:a.needs.relaxation};
@@ -53,7 +53,7 @@ assert.deepEqual({stimulation:a.needs.stimulation,relaxation:a.needs.relaxation}
 a.action={kind:'read',phase:'move',started:st.tick,wait:0,targetObject:'bookA',feedbackUnits:0,feedbackGoal:6};E.ensureIntentForAction(st,a);
 const beforeMove={stimulation:a.needs.stimulation,relaxation:a.needs.relaxation};
 E.tick();st=E.getState();a=st.agents.zhen;
-assert.equal(a.needs.stimulation,beforeMove.stimulation,'moving toward a reading target must not grant Stimulation relief before realized reading feedback');
+assert.ok(Math.abs(a.needs.stimulation-(beforeMove.stimulation+M.AWAKE_STIMULATION_BASELINE_GAIN))<1e-9,'moving toward a reading target must not grant Stimulation relief before realized reading feedback; only awake baseline may apply');
 assert.equal(a.needs.relaxation,beforeMove.relaxation,'moving toward a reading target must not grant Relaxation relief before realized reading feedback');
 assert.equal(V.validateState(st).issueCount,0);
 assert.equal(Object.prototype.hasOwnProperty.call(a.needs,'overload'),false);

@@ -1,10 +1,12 @@
-`11.52.0-daily-life-routine`
+`11.53.0-mental-regulation-generation`
 
-Current release: Daily Life Routine Slice A adds Agent-private DAY 0 soft Routine anchors through existing Deliberation. Before merge, Mental Regulation also corrects the canonical Need identifier to `stimulation` + `relaxation`, and Presentation now exposes those Needs plus positioned ordinary `state.objects` without duplicating simulation truth.
+Current release: Mental Regulation v4 adds the first production Need-generation settlement: eligible awake Humans gain Stimulation slowly, actual realized Activity feedback can offset it, and Relaxation settles independent `mentalLoad` / `relaxationProvision` contributors atomically after core execution. Initial `stimulation = 0` / `relaxation = 0` remain unchanged.
 
-Previous release: `11.51.0-activity-concurrency` established the minimal ongoing-primary + execution-local transient compatibility/progress-interference seam.
+Previous release: `11.52.0-daily-life-routine` established Agent-private DAY 0 soft Routine anchors and completed the Stimulation naming / Presentation integration.
 
-Previous release before that: `11.50.1-prone-transition-burden` calibrated objective prone transition burden without changing per-meter crawl burden, timing or feasibility.
+Previous release before that: `11.51.0-activity-concurrency` established the minimal ongoing-primary + execution-local transient compatibility/progress-interference seam.
+
+Earlier release: `11.50.1-prone-transition-burden` calibrated objective prone transition burden without changing per-meter crawl burden, timing or feasibility.
 
 # Versioning Contract
 
@@ -14,11 +16,21 @@ Previous release before that: `11.50.1-prone-transition-burden` calibrated objec
 
 目前 current runtime marker：
 
-`11.52.0-daily-life-routine`
+`11.53.0-mental-regulation-generation`
 
-玩家可見的 app 頁首 current-version display 使用短版 `v11.52.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Daily Life Routine `daily-life-routine-v1`；Mental Regulation `mental-regulation-v3`；Action `11.51.0-activity-concurrency`；Human Social Response `11.51.0-activity-concurrency`；Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.1-prone-transition-burden`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v13`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
+玩家可見的 app 頁首 current-version display 使用短版 `v11.53.0`；`state.version`、`SimRelease.VERSION`、`SimWorld.VERSION` 與 `SimUI.PRESENTATION_VERSION` 使用完整 current marker。Current subsystem markers：Daily Life Routine `daily-life-routine-v1`；Mental Regulation `mental-regulation-v4`；Action `11.51.0-activity-concurrency`；Human Social Response `11.51.0-activity-concurrency`；Resources `11.39.0-carried-contents-loss`；Physical `11.45.0-agent-carry-relocate`；Agent Carry `11.46.0-sleep-carry-integration`；Social Bid `11.47.0-social-bid-carry-cooperation`；Spatial candidate selection `11.46.0-sleep-carry-integration`；Spatial Traversal / Route `11.38.0-carried-handling-risk`；Spatial Passage `11.39.1-surface-boundary-transition`；Deliberation / Decision Evidence / Sleep Slot Conflict `11.48.1-sleep-perception-approach`；Memory `11.42.0-usage-preference-sleep`；Usage Preference `11.42.0-usage-preference-sleep`；Affect `11.35.0-affect-responder-bias`；Horizontal Geometry `11.29.0-horizontal-geometry-foundation`；Spatial Identity `11.22.0-spatial-z-identity`；Contact `11.32.0-contact-slot-corner`；Locomotion `11.50.1-prone-transition-burden`；Dynamic Congestion `11.31.0-crowding-8-direction`。Embodiment Capabilities 為 `embodiment-capabilities-v5`；World Authoring = `world-authoring-v13`，Furniture Catalog = `furniture-definitions-v12`。未改 contract 的 Resources / Physical / Agent Carry / Social Bid / Spatial candidate selection / Spatial Traversal / Spatial Passage / Route / Contact / Dynamic Congestion / Memory / Usage / Affect / Relationship / Surface Environment / World Authoring / Furniture Catalog 不跟著 overall patch 假升。
 
-### Current Daily Life Routine release
+### Current Mental Regulation generation release
+
+`11.53.0-mental-regulation-generation` establishes `mental-regulation-v4`. Canonical persistent truth remains only `Agent.needs.stimulation` and `Agent.needs.relaxation`; both still initialize at neutral `0`. Eligible Humans receive `0.08` Stimulation baseline per captured awake tick. Sleeping Agents and non-Human Agents do not receive this baseline under the current consumer boundary.
+
+The beforeTick 1200 `mentalRegulation.capture-execution` hook captures only execution-local eligibility / awake state and the pre-core `wander` position / `read` feedback counter. Core execution then happens normally. afterTick 50 `mentalRegulation.settle` derives realized `wander` / `read` units and calls the single `settleMentalRegulation(...)` mutation seam. Contributors are accumulated first, then `stimulation` and `relaxation` each clamp once to `0..100`. `mentalLoad` and `relaxationProvision` remain separate provenance-bearing contributors, so a net-relaxing Activity at Relaxation 0 cannot create ordering-dependent temporary pressure.
+
+There is no generic Relaxation time drift, no Environment Interference / noise coupling, no Fatigue coupling, and no persistent workload, Overload or last-feedback timer. One realized `wander` unit provides 1.4 Stimulation relief and one realized `read` unit provides 1.8, both comfortably exceeding the same-tick 0.08 awake baseline. UI / Debug continue to project canonical Needs rather than owning parallel state.
+
+Version impact: overall runtime / Presentation → `11.53.0-mental-regulation-generation`; Mental Regulation → `mental-regulation-v4`. Daily Life Routine remains `daily-life-routine-v1`; Action / Human Social remain `11.51.0-activity-concurrency`; Deliberation / Decision Evidence / Sleep Slot Conflict remains `11.48.1-sleep-perception-approach`; World Authoring remains `world-authoring-v13`; all other untouched subsystem generations remain unchanged. See `docs/mental-regulation.md`.
+
+### Previous Daily Life Routine release
 
 Pre-merge integration note：本 release 同時完成 Mental Regulation naming / Presentation completeness correction。Canonical Need 為 `Agent.needs.stimulation`（有意義刺激不足）與 `Agent.needs.relaxation`；`engagement` 不保留 persistent alias。背景 noise / 視覺雜訊 / 多人存在不直接降低 `stimulation`，只有 realized Activity feedback 才形成 stimulation relief。Mental Regulation own marker 升為 `mental-regulation-v3`。
 
@@ -33,9 +45,9 @@ Version impact: overall runtime / Presentation → `11.52.0-daily-life-routine`;
 
 ### Current Reading Activity capability
 
-`read-activity-v1` adds the first concrete high-information leisure Activity without changing the overall `11.51.0-activity-concurrency` release marker: Mental Regulation still initializes at neutral `0 / 0`, so the new provider remains dormant in the default simulation until canonical pressure exists. World Authoring advances to `world-authoring-v13` for `entities.objects`; Mental Regulation advances to `mental-regulation-v3`; Spatial exposes `ordinary-object-interaction-v1`. Action / Human Social / Route / Furniture generations otherwise remain unchanged.
+`read-activity-v1` remains the current Reading capability; this release does not bump it. World Authoring remains `world-authoring-v13` for `entities.objects`, Spatial remains `ordinary-object-interaction-v1`, and Mental Regulation is now `mental-regulation-v4`. Initial Mental Regulation state is still neutral `0 / 0`, but eligible awake Humans now gradually gain canonical Stimulation pressure, so the existing `mentalRegulation.read` provider may become competitive in the production default once that pressure actually exists.
 
-`read` is a sustained Human Action with a `read` Intent. `bookA` is an ordinary authored object on the existing dining table, not a fake Container/Source. Interaction legality and access use existing Interaction Geometry / traversal cost. One valid reading execution tick is one realized feedback unit; movement, Intent creation, or nominal timers grant no regulation effect. See `docs/reading-activity.md`.
+`read` remains a sustained Human Action with a `read` Intent. `bookA` is an ordinary authored object on the existing dining table, not a fake Container/Source. Interaction legality and access use existing Interaction Geometry / traversal cost. One valid reading execution tick is one realized feedback unit; movement, Intent creation, or nominal timers grant no regulation effect. Realized reading feedback is settled by the shared Mental Regulation v4 atomic settlement; the Reading capability itself does not own Need generation. See `docs/reading-activity.md`.
 
 ### Current activity concurrency release
 

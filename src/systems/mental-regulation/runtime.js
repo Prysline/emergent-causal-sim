@@ -15,29 +15,28 @@
   },455);
 
   E.registerRuntimeHook('beforeTick','mentalRegulation.capture-execution',(ctx)=>{
-    const st=ctx.state||E.getState(),executingWander=Object.create(null);
+    const st=ctx.state||E.getState(),capture=Object.create(null);
     for(const a of Object.values(st?.agents||{})){
-      if(a.action?.kind!=='wander'||!a.position)continue;
-      executingWander[a.id]={x:a.position.x,y:a.position.y,z:a.position.z};
+      if(!M.isEligibleAgent(a))continue;
+      const item=capture[a.id]={awake:!E.isSleeping?.(a),wanderPosition:null,read:null};
+      if(a.action?.kind==='wander'&&a.position)item.wanderPosition={x:a.position.x,y:a.position.y,z:a.position.z};
+      if(a.action?.kind==='read'&&a.action.phase==='reading')item.read={action:a.action,feedbackUnits:Number(a.action.feedbackUnits)||0};
     }
-    ctx.locals.mentalRegulationExecution=executingWander;
-    const executingRead=Object.create(null);
-    for(const a of Object.values(st?.agents||{}))if(a.action?.kind==='read'&&a.action.phase==='reading')executingRead[a.id]={action:a.action,feedbackUnits:Number(a.action.feedbackUnits)||0};
-    ctx.locals.mentalRegulationReadExecution=executingRead;
+    ctx.locals.mentalRegulationExecution=capture;
   },1200);
 
-  E.registerRuntimeHook('afterTick','mentalRegulation.apply-realized-feedback',(ctx)=>{
+  E.registerRuntimeHook('afterTick','mentalRegulation.settle',(ctx)=>{
     const st=ctx.state||E.getState(),before=ctx.locals.mentalRegulationExecution;
     if(!before)return;
-    for(const [agentId,positionBefore] of Object.entries(before)){
-      const a=st?.agents?.[agentId];
-      if(!a?.position||samePosition(positionBefore,a.position))continue;
-      M.applyRealizedActivityFeedback(a,'wander',{feedbackUnits:1});
-    }
-    for(const [agentId,capture] of Object.entries(ctx.locals.mentalRegulationReadExecution||{})){
-      const a=st?.agents?.[agentId],realized=Math.max(0,(Number(capture.action?.feedbackUnits)||0)-capture.feedbackUnits);
-      if(!a||realized<=0)continue;
-      M.applyRealizedActivityFeedback(a,'read',{feedbackUnits:realized});
+    for(const [agentId,capture] of Object.entries(before)){
+      const a=st?.agents?.[agentId];if(!a)continue;
+      const realizedActivities=[];
+      if(capture.wanderPosition&&a.position&&!samePosition(capture.wanderPosition,a.position))realizedActivities.push({activityKind:'wander',feedbackUnits:1});
+      if(capture.read){
+        const realized=Math.max(0,(Number(capture.read.action?.feedbackUnits)||0)-capture.read.feedbackUnits);
+        if(realized>0)realizedActivities.push({activityKind:'read',feedbackUnits:realized});
+      }
+      M.settleMentalRegulation(a,{awake:capture.awake,realizedActivities});
     }
   },50);
 
