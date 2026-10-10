@@ -114,6 +114,7 @@ jobs:
       - run: node tests/usage-preference-sleep.mjs
       - run: node tests/canonical-decision-utility-parity.mjs
       - run: node tests/intent-social-query-reuse.mjs
+      - run: node tests/decision-evidence-social-query-diagnostic.mjs
       - run: node tests/episodic-memory-foundation.mjs
       - run: node tests/event-appraisal.mjs
       - run: node tests/short-lived-affect.mjs
