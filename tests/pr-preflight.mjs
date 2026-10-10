@@ -7,6 +7,7 @@ const checks=[
   ['Source syntax','tests/check-source-syntax.mjs'],
   ['Workflow architecture','tests/workflow-architecture.mjs'],
   ['Production load architecture','tests/production-source-load-architecture.mjs'],
+  ['Current version ownership','tests/current-version-ownership.mjs'],
   ['Browser version markers','tests/browser-version-marker-preflight.mjs'],
   ['Presentation/version consistency','tests/presentation-observability.mjs']
 ];
