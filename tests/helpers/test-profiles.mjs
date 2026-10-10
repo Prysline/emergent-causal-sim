@@ -122,8 +122,16 @@ function ensureAuthoringDependencies(paths){
 function ensureRuntimeDependencies(paths){
   ensureAuthoringDependencies(paths);
   const engineIndex=paths.indexOf('engine.js');
-  if(engineIndex>=0&&!paths.includes('systems/physical.js'))paths.splice(engineIndex,0,'systems/physical.js');
-  const physicalIndex=paths.indexOf('systems/physical.js');
+  const locomotionIndex=paths.indexOf('systems/locomotion.js');
+  let physicalIndex=paths.indexOf('systems/physical.js');
+  if(physicalIndex<0){
+    const insertAt=locomotionIndex>=0?locomotionIndex:engineIndex;
+    if(insertAt>=0)paths.splice(insertAt,0,'systems/physical.js');
+  }else if(locomotionIndex>=0&&physicalIndex>locomotionIndex){
+    paths.splice(physicalIndex,1);
+    paths.splice(locomotionIndex,0,'systems/physical.js');
+  }
+  physicalIndex=paths.indexOf('systems/physical.js');
   if(physicalIndex>=0&&!paths.includes('systems/agent-carry.js'))paths.splice(physicalIndex,0,'systems/agent-carry.js');
   const consumerIndexes=['systems/agent-carry.js','systems/physical.js','engine.js']
     .map(path=>paths.indexOf(path))
