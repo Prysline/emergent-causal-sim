@@ -19,8 +19,8 @@ assert.doesNotMatch(nodeGithub,/\bpush:|pull_request:/,'GitHub-hosted Node fallb
 assert.match(nodeGithub,/uses:\s*\.\/\.github\/workflows\/node-regression\.yml/,'Manual GitHub fallback must reuse the canonical Node regression workflow');
 assert.match(nodeGithub,/runner:\s*ubuntu-latest/,'Manual GitHub fallback must explicitly select ubuntu-latest');
 
-const browserPullRequest=browser.match(/pull_request:\n([\s\S]*?)  workflow_dispatch:/)?.[1]||'';
-assert.match(browserPullRequest,/\n    paths:\n/,'Browser pull requests must use the conservative path-aware trigger');
+const browserPullRequest=browser.match(/pull_request:\s*([\s\S]*?)workflow_dispatch:/)?.[1]||'';
+assert.match(browserPullRequest,/paths:\s*/,'Browser pull requests must use the conservative path-aware trigger');
 const browserPathRules=[
   "      - '**'",
   "      - '!docs/**'",
