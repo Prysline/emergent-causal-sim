@@ -34,6 +34,7 @@ jobs:
       - run: node tests/slot-bound-actor-route-origin.mjs
       - run: node tests/workflow-architecture.mjs
       - run: node tests/production-source-load-architecture.mjs
+      - run: node tests/current-version-ownership.mjs
       - run: node tests/application-bootstrap-lifecycle.mjs
       - run: node tests/test-profile-composition.mjs
       - run: node tests/browser-version-marker-preflight.mjs
