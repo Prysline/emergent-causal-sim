@@ -109,6 +109,7 @@ jobs:
       - run: node tests/social-bid-lifecycle.mjs
       - run: node tests/legacy-pending-interaction-cleanup.mjs
       - run: node tests/intent-replan-preemption.mjs
+      - run: node tests/intent-replan-validation-cadence-diagnostic.mjs
       - run: node tests/soft-reconsideration-hysteresis.mjs
       - run: node tests/decision-evidence.mjs
       - run: node tests/usage-preference-sleep.mjs
