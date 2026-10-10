@@ -1,0 +1,944 @@
+> Previous `11.48.1-sleep-perception-approach`: preferred-Slot occupancy remains canonical World legality, but formal Sleep conflict is Agent-observation-gated. Before the requester observes the occupant, Deliberation may only approach its own preferred Slot through canonical Slot approach geometry; it must not create occupant-specific candidates or frozen conflict evidence. Observation success transitions back through normal `chooseSurface`; occupant departure before observation returns to normal target selection. No new runtime hook, persistent observation cache, Spatial truth, or Agent Carry semantics are introduced.
+
+> Previous `11.49.0-agent-facing-foundation`: World Authoring requires explicit 8-direction `initial.facing`; runtime `Agent.facing` is the sole canonical body orientation. Facing is independent of movement direction.
+
+> Previous `11.50.0-agent-turn-execution`: Locomotion established explicit turn execution and unitless deterministic angular burden; successful completion remains the sole canonical `Agent.facing` commit point.
+
+> Previous `11.50.1-prone-transition-burden`: Locomotion keeps per-meter crawl burden and route feasibility unchanged but raises any transition entering or leaving `proneCrawl` to objective burden 2; `walk <-> kneelCrawl` remains 1. Short prone shortcuts must therefore justify both getting down and getting back up instead of winning over a small walk detour.
+
+> Previous `11.51.0-activity-concurrency`: Action runtime established a minimal generic compatibility seam for one ongoing primary Action plus one execution-local transient behavior. Eating remains the sole owner of food/progress/completion; Human Social uses `socialListening` with progress scale 1 and `socialSpeaking` with scale 0 for that execution tick. Social Bid / response / canonical `talk` provenance is unchanged, no persistent Conversation truth is introduced, and incompatible sleeping + speaking still requires formal wake / transition.
+
+> Previous `11.52.0-daily-life-routine`: Daily Life Routine owns Agent-private DAY 0 soft anchors and contributes only bounded Decision Evidence through the existing provider seam. It does not create a World-level schedule, Action, Active Intent, or second ranking truth; existing Deliberation remains authoritative and existing Activity feasibility must already succeed.
+
+> Current `11.53.0-mental-regulation-generation`: Mental Regulation keeps `Agent.needs.stimulation` / `Agent.needs.relaxation` as the only persistent private truth. Eligible awake Humans receive a slow Stimulation baseline; realized `wander` / `read` execution contributes Stimulation relief plus independent Relaxation load / provision. All same-tick contributors settle once through `settleMentalRegulation(...)` after core execution and clamp once, so there is no ordering-dependent floor artifact or parallel workload / last-feedback truth.
+
+> Previous `11.48.0-carrying-replanning`: Deliberation may plan while a canonical `agentCarries` relation exists, but it never owns or mirrors that relation. Carrying-state replanning is Agent-private cognition over placement/wait candidates; Agent Carry / Spatial / Physical retain World-truth execution, geometry, route and placement legality. Replacement plans use new Decision identities with `priorDecisionId`; `recoveryBlocked` remains the anti-orphan physical fallback.
+
+# Architecture — Current Runtime Contract
+
+本文件描述目前 `main` 的跨 subsystem 工程契約。它不是逐版 changelog；歷史演進請查 Git history / PR。
+
+目前 runtime marker：`11.53.0-mental-regulation-generation`。
+
+Mental Regulation v4 延續 `Agent.needs.stimulation` / `Agent.needs.relaxation` 的單一 Agent-private authority；只有 eligible Human 的 awake baseline 與 actual realized Activity experience 能形成本 slice 的 regulation contributors。`mentalRegulation.capture-execution` 只保存 execution-local snapshot，`mentalRegulation.settle` 在 core execution 後一次原子結算；UI / Inspector 只投影結算後 canonical Need。Daily Life Routine、Activity Concurrency、Fatigue physiology、Environment Interference 與其他未改 subsystem contract 保持既有 authority。
+
+版本升級邊界、patch/minor 使用方式與 current marker 同步清單見 [`versioning.md`](versioning.md)。
+
+目前架構已超過早期 v11.10 單檔 core 模型：`engine.js` 仍持有 canonical core simulation，但 Spatial、Physical、Intent、Social Bid、Memory、Appraisal、Affect、Relationship、Memory→Deliberation、Social Outcome 與 presentation 都以 extension runtime 接入。正常 tick/reset lifecycle 由 `runtime-hook-pipeline.js` 明確排序；initial-state lifecycle 由 `world.js` 的 named initializer pipeline明確排序。兩者都不以 script-wrapper 疊接順序作為正式語義。
+
+> Previous `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
+
+
+## 1. Truth boundaries
+
+### World Truth
+
+World Truth 包含真正發生、可被引用的物理／世界事實，例如：
+
+- canonical World Event：`state.events / state.causes`
+- Agent / Object 的物理位置
+- Agent authoritative Physical Profile：`mass / volume / bodyGeometry / locomotionCapabilities / locomotionProfiles`
+- canonical Agent carry relation：`state.agentCarries`；它與 Container-only `Agent.held` 分離，carried Agent 在 relation 存續期間不保留競爭的 ordinary floor / Slot occupancy，raw `position=null`，可觀察位置只由 carrier 即時投影
+- Agent Carry candidate-time attemptability 與 execution-time feasibility 分層：candidate-time 只能讀 carrier/requester 自身 truth + explicit observation / responder-owned cooperation evidence，不讀 target hidden mass、held、carry relation 或 body geometry；execution-time `canEstablishCarry(...)` 才用完整 World truth。Spatial / Route 持有 generic candidate-node winner selection（objective → pathDistance → stable node key）；domain consumer 只提供 candidate set。
+- authored structure / passage geometry：`map.cellSizeMeters`、layer `boundaries`、root `structures`、Door / Exit reference、Furniture Definition 的 metric local `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot `approachEdges`，以及 low-level `map.passageConstraints`
+- Container / Source / Surface Environment 的實際 resource contents
+- posture、held container、reservations
+- Action 正在如何執行的 state machine
+- Spatial topology、Surface / Contact / interaction geometry
+
+Canonical World Event 只有一份。Memory、UI、Inspector 都只能引用或投影它，不建立第二份 World Event truth。
+
+**Spatial description precision boundary**：current floor Spatial Node 仍是 coarse `spaceId + surfaceId + x/y/z` identity。Furniture-local metric solids 可以證明某 tile 內存在／不存在對目前 MovementEnvelope 可用的 free-space，但 Agent persistent floor position沒有 tile 內 local offset / region identity。因此 Presentation / event wording 不得把「同一 coarse floor tile 有 overhead Furniture」直接翻成「角色在家具正下方」。explicit Surface identity 可使用 Surface label（例如 `diningTable:surface → 餐桌桌面`）；coarse floor + overhead Furniture 只能使用「餐桌所在格的地面」等不超過現有 identity 精度的描述。若 Agent 目前綁定 `posture.slotId`，Slot occupancy 是比 coarse floor 更精確的 canonical identity，因此 place description 應優先使用 Furniture + Slot label（例如 `餐椅 B・座位`），而不是把 Slot coarse anchor 再投影成 floor wording。所有玩家可見 UI、map title 與 Inspector 必須消費同一 `SimSpatial.describePlace()` owner，不得從 `agentObservation.covered / overhead` 重新拼出第二套「家具下」描述。這不改 `nodeWalkable`、Furniture Surface traversal、Slot occupancy 或 MovementEnvelope feasibility。
+
+**Current Contact / Slot corner contract**：原本允許 local-neighbor 的 `reach / socialReach` 已擴充 diagonal candidate，但 Contact 由自己的 shared-corner occlusion 判定擁有語意；diagonal endpoints 間兩條 L 型接觸路徑任一條仍有可確認 opening 就可接觸，因此單側 wall / closed Door 可以阻止 Traversal 卻不必阻止 Contact。兩條路徑都被 Boundary / Door / Furniture 封死時 blocked；局部幾何無法安全證明 opening 時保守拒絕。Slot schema 不新增 diagonal authored truth，仍只保存 rotated cardinal `approachEdges`；只有兩個 incident sides 都 authored/legal，且 outside corner 對兩側 ordinary floor approach node 的 current MovementEnvelope / Passage 都可行時，才派生 direct diagonal settle / egress candidate。approach 與 egress 共用同一候選來源；`posture.slotId` 仍是 Slot occupancy truth。
+
+### World Authoring / Initialization boundary
+
+Current default world 的 authored instance truth 由 `SimWorldAuthoring.DEFAULT_WORLD_AUTHORING` 持有；current contract 是 `authoringSchema:"world-authoring-v11"`，並以 `furnitureCatalogVersion:"furniture-definitions-v12"` pin system-owned Catalog。Furniture Instance placement truth仍為 `id / definitionId / origin / orientation / optional name`。
+
+Authoring package 保存 world instance placement / opening facts；Furniture intrinsic name/icon/kind、coarse footprint/display offset、公尺制 `spatial.solids`、solid top `faces.top.supportsBodyOccupancy` + optional `surfaceKey / surfaceLabel`、Slot offset / `approachEdges`、activity suitability 與 `orientationSemantics` 由 `SimFurnitureDefinitions` 持有。canonical World v9 不保存 resolved solids / Surface Cells / slots，也不保存 derived `walkable / PassageProfile / MovementEnvelope / route / crowding` 等第二份 truth。
+
+`src/horizontal-geometry.js` 現在是 Authoring／後續 Runtime 共同使用的 **pure horizontal geometry kernel**。它只消費 adapter 提供的 Cell、Boundary／Door、fixed blocker、Furniture metric solids 與低階 Passage constraint snapshot，不讀 `SimWorld / SimSpatial / Agent / Crowding / Route` mutable state。kernel 產生 canonical endpoint order 的無向 `HorizontalConnection`：`kind:'cardinal'|'diagonal'`、`distanceMeters`、`status:'candidate'|'blocked'|'unsupported'`、位置化 `options[]`、constraint provenance 與 stable edge／corner resource。第一版 diagonal 使用 B+ conservative local geometry；同 tile 多個 disconnected free-space regions或無法安全證明 corner-continuous corridor 時回 `unsupported`，而不是猜測可通。
+
+Slice 1 的 Authoring adapter 由 `SimWorldAuthoring.deriveHorizontalTopology(...)` 額外回傳 ephemeral `horizontalConnections`；既有 `cells[].adjacent / componentId / components` 明確保留為 **cardinal compatibility coarse topology**，不表示完整 horizontal geometry connectivity，也不表示任一 Agent 的 physical reachability。這個 slice **沒有**把 diagonal 接進 production `SimSpatial.getPassageProfile`、Route candidate generation 或 movement execution；那些仍由後續 slice 接線，因此 current Spatial Traversal／Spatial Passage／Route／Locomotion／Crowding generation 暫不換代。
+
+Room derivation 現只負責拓樸／identity／membership 與結構集合；`room.value`、Furniture legacy `value` 與 Door Room-value parity metadata 均已移除。`comfortAt()` 等環境／行為 metric 仍是獨立模型，不由 Room aggregate 代替。
+
+`src/world-initializer.js` 是 authoring → runtime compatibility adapter；`src/world.js` 則是唯一 `SimWorld.createInitialState(seed)` lifecycle owner。Base authoring package先由 initializer 編譯成 `state.map / structures / furniture / containers / sources / agents` shape，再由 `world.js` 的 named initial-state pipeline依 explicit order執行 subsystem initializer。任何需要參與開場 state 建構的 subsystem extension / schema 都只能呼叫 `registerInitialStateInitializer(id, handler, order)`，不得再用 `const baseCreateInitialState = W.createInitialState` 疊 wrapper。duplicate initializer ID、缺少 canonical pipeline都必須 loud failure；exact registry / order由 `tests/initial-state-pipeline.mjs` 鎖定。
+
+Slice E 起 authoring positions 的 `z` 已正式進入 runtime Spatial identity。Initializer可編譯 multi-layer authoring成單一 flattened `map.tiles` index；z=0保留 legacy-compatible `x,y` key，non-zero z使用 `x,y,z`，不建立 alias雙份 truth。Runtime position / Spatial Node以 `z ?? 0` 比較，same XY different Z不共享 occupancy / crowding / contact / route identity。Horizontal neighbor與surface transition仍只在同 z；本 slice不新增 stair / ramp / vertical edge，因此沒有 concrete vertical structure時跨 Z route必須 unreachable。
+
+v11.26.0 在這個 Z-aware identity 上加入第一個 **Vertical Structure Traversal**。`world-authoring-v5` 新增獨立 root `structures`；第一版只正式支援抽象 `kind: "stair"`，persistent truth 是 stable id、lower / upper endpoints 與可選 `clearanceWidth / clearanceHeight`。`SimWorldAuthoring.deriveStructureConnections(...)` 與 runtime `SimSpatial.structureBetween / structureNeighborNodes` 從這些事實派生 cross-Z connection；`deriveHorizontalTopology(...)` 仍只處理同層 cardinal topology。沒有 Structure 時，同 XY different Z 仍不可達。
+
+Structure edge 不借用 boundary。`SimSpatial.getPassageProfile(...)` 對 stair 產生 Structure Passage option；horizontal edge則由 Boundary / Door、Furniture solids-derived opening intervals與 edge constraint 派生位置化 options。current Spatial Traversal為 `11.28.0-furniture-local-geometry`，Spatial Passage為 `11.28.0-positioned-passage-options`；Route、Locomotion、Physical、Spatial Identity維持既有 generation。
+
+Dynamic Congestion current generation為 `11.31.0-crowding-8-direction`；XYZ / Structure same-opposite 語意保留，水平 moving-vs-moving 已擴充八方向角度。Crowding 讀目前 locomotion mode feasibility 真正選中的 `effectiveClearanceWidth`；普通 1m edge、Furniture partial opening、Boundary opening與 stair Structure共用同一 width-pressure → congestion → `delayTicks` 模型。slot-bound Agent不算 ordinary floor occupant。
+
+Slice C 在同一 `world-authoring-v1` generation 上補齊 authoring-time validation / canonical serialization與獨立 Editor surface，不建立新的 runtime schema generation。Canonical world truth仍是 authoring document本身；Editor session 的 `currentZ`、selected tool / furniture / cell、dirty baseline等只屬 ephemeral UI state，不可輸出到 authoring JSON。Z-level切換只改 presentation，不得改 canonical document fingerprint。
+
+Slice D 將 authoring contract 升為 `world-authoring-v2`，並建立 pure `SimWorldAuthoring.deriveHorizontalTopology(authoring, {z})`。它從 authored terrain/opening、Furniture footprint / under-clearance、fixed Container / Source blocker 派生 structural openness、static blocker、furniture membership、cardinal adjacency、connected components與 under-clearance diagnostics；結果只存在 query/preview/compiler 邊界，不 serialize 成第二份 world truth。`doorway` 是 authored opening：本身提供 floor-level structural openness；blocking door / Furniture / fixed entity 可再依 concrete geometry 關閉通行。Runtime compatibility `tile.walkable / tile.furnitureIds` 仍可存在，但只能由 compiler 產生，Editor 不直接 author。Initializer placement diagnostics與 Editor derived preview共用同一 geometry interpretation。
+
+歷史 Slice D 的 `world-authoring-v1 → v2` migration 曾是 explicit compatibility boundary：legacy default dining-table 原本由 Spatial runtime ID hardcode提供的 `.72m` under-clearance，當時 migration 會一次性寫入 v2 Furniture geometry。Editor-2 的 v3 改由 Furniture Definition 持有該 intrinsic geometry；v4 再把 wall / opening、Door 與 world Exit 從 Cell terrain / Furniture compatibility 分離；v5 新增獨立 vertical Structure root；v6 新增 Furniture Instance required `orientation`；current v7 再把 orientation compatibility semantics 統一為 south-canonical facing/frame contract。因產品尚未正式公開，舊 generation 不提供 production migration machinery，unsupported schema / catalog generation 直接由 current import boundary 拒絕。`map.passageConstraints` 保留給 regression / low-level compatibility override，不是正常 Editor主要操作面。
+
+Slice D.1C 起，`editor.html` 除 authoring helper / mutation / presentation code外，會載入 pure `world-initializer.js` 與 `editor-preview-bridge.js`，只用於 runtime compatibility preflight與同 origin browser-session handoff；它仍不載入 `world.js`、Spatial、Engine或 runtime Validator。Editor 可呼叫 authoring-side `deriveHorizontalTopology(...)` 做 derived preview，也可用 `SimWorldInitializer.analyzeRuntimeCompatibility(...)` 驗證 current runtime 是否可接受同一 canonical document，但不得複製 runtime traversal owner。Current Initializer resident reachability 會以 resident kind 的 body-only default `walk` envelope 消費 shared `HorizontalConnection` 的 `candidate / blocked / unsupported` 與同一 pure clearance-option fit seam；`cells[].adjacent / componentId / components` 只保留 cardinal compatibility coarse topology。Editor 因此可分別投影「基礎水平連通區」、8-direction geometry status 與明確標出 resident/default-walk context 的 reachability，這些都只是 ephemeral diagnostics，不 persistent 成 per-resident component truth。這讓 multi-layer authoring可合法 import / export / round-trip；Slice E 起 runtime compatibility preflight也接受可編譯的 multi-layer document，Simulator則以 z-aware identity與 layer filter呈現。Editor presentation可投影 canonical Structure scene item與 lower / upper endpoint marker，但仍不能直接 author adjacency / Route / PassageProfile truth；第一版也不提供完整 Structure 建立／拖曳工具。
+
+Slice D.1A 將 Editor 的 presentation surface 擴充為 Scene Inspector。Furniture、Container、Source、Resident 清單與地圖 typed marker都由 canonical authoring document即時投影；sidebar 選取、map marker選取與 Inspector focus共用同一個 ephemeral `selection` owner，不建立 serialized scene registry。Furniture placement target仍是 Editor operation state；選取 furniture只更新 target，不會偷改 active authoring tool。Resident marker位置可從 exact placement 或唯一 furnitureSlot anchor解析，但這仍是 authoring-side presentation，不啟動 runtime initializer。主模擬器只新增通往 `editor.html` 的入口；Editor→Simulator world handoff仍留在 D.1C。
+
+Slice D.1B1 新增 pure `src/editor-authoring-mutations.js` 作為 **Editor canonical mutation ownership boundary**。它不保存 world state，也不是 simulation subsystem；Furniture / Container / Source / Resident lifecycle operation只接收 canonical authoring document，clone candidate、套用單一 operation、呼叫 `SimWorldAuthoring.validateAuthoring(...)`，candidate valid才回傳可 commit document。`editor-ui.js` 只保存 `selection / selectedTool / selectedFurnitureId / pendingOperation` 與 structured operation result 等 ephemeral state，不得複製 move / delete / duplicate semantics。Furniture support follower、explicit support choice、deterministic duplicate ID、guarded delete與 Resident explicit placement transition都屬 authoring mutation contract；Editor仍不載入 runtime Initializer / Spatial / Engine / Validator。
+
+Editor-1 在既有 boundary 上加入 pure `src/embodiment-capabilities.js` 作為 **authoring-safe capability contract**。它只持有現行 Human / Cat default Physical template、locomotion mode ↔ posture vocabulary，以及 free / slot posture query；不註冊 initial-state initializer、不讀 `SimEngine / SimSpatial`，也不保存 Agent runtime state。`systems/physical.js` 仍負責把 shared default template clone 成每個 Agent 的 authoritative `physical` state，`systems/locomotion.js` 仍負責 runtime locomotion execution；Editor只用同一 capability contract篩選可 author 的 posture，不再複製另一份 species規則。Resident free placement收斂為單一 atomic `moveResidentToExact(...)`：作者必須明確選擇 capability-supported free posture；若 Resident 原本綁定 furnitureSlot，這次 move會明確解除 slot / furniture reference並一次 commit。`sitting` 仍是 slot-bound posture；`lying` 是 rest/static posture，不因它不是 locomotion mode就從 free posture vocabulary消失。
+
+Editor-2 將 Furniture authoring 正式拆成 **Furniture Catalog → Furniture Definition → Furniture Instance**。System-owned pure `SimFurnitureDefinitions.VERSION = "furniture-definitions-v1"` 同時供 Editor、authoring validation/topology 與 initializer/compiler 使用；v3 document 必須 pin 同一 catalog generation。Definition 擁有 intrinsic facts與 local geometry，Instance 只擁有 stable instance ID、`definitionId`、world `origin` 與可選 scene-specific name。新 instance ID 由 `<definitionId>-N` deterministic 產生；default world 為維持既有 explicit references，保留 `diningTable / chairNW / chairNE / chairSW / chairSE / sofa / bed / frontDoor` 等既有 instance ID。Definition → new Instance 使用 `createFurnitureFromDefinition(...)`；`duplicateFurniture(...)` 則只複製 instance-owned facts + 新 placement，不複製 supported objects、Resident bindings或其他外部 relation。Runtime initializer 仍輸出 resolved furniture shape，並從 activity suitability 狹義投影舊 `restQuality / sleepQuality` activity consumer 所需欄位；這些 projection 不回寫 canonical document。Room value legacy cleanup 已移除 `roomValueContribution → value` projection；Door / Exit 的 `canExit` bridge 也早已由 World v4 移除。Furniture Traversal Geometry 的 intrinsic contract 起源於 `furniture-definitions-v3`；current `furniture-definitions-v6` 已以公尺制 `spatial.solids` 取代 whole-tile `spatial.floor / spatial.under` truth，Surface透過 `onSolid` 派生 top-face cells，Slot以 rotated `approachEdges` 接到 floor traversal。shared resolver同時旋轉 integer footprint/slot與 metric AABB bounds；`src/spatial-traversal.js`只消費 generic resolved geometry。
+
+World v4 / Door-Opening-Exit slice 將 Grid / Wall decision gate 落成正式 contract：`map.cellSizeMeters = 1` 建立 integer grid index 與 SI metric geometry 的換算邊界；普通牆／結構開口改由 layer `boundaries` 持有，牆不再消耗整個 Cell。Door 成為 root `doors` entity，正式 ownership 是 opening boundary reference 與 state；off-map world exit 成為 root `exits` endpoint，另持有 access position。World v4 當時曾讓 default Door 暫存窄 `compatibility.roomValueContribution`，只為維持既有 Room value parity；`11.27.2-room-value-legacy-removal` 已連同整個無 consumer 的 Room value aggregate 一起移除，Door current truth 只保留 opening boundary reference 與 state。`front-door` Furniture Definition 與 `runtimeExitSlotKeys → canExit` compatibility bridge 因此從當時的 `furniture-definitions-v2` 移除，External Supply 改讀正式 Exit identity。`deriveHorizontalTopology(...)`、Spatial room flood-fill、PassageProfile 與 route 都讀同一 boundary interpretation；wall / closed Door 阻斷 edge，opening / open Door 保留 edge。Spatial Traversal 因 floor-edge semantics 正式改為 boundary-aware，換代為 `11.23.0-boundary-traversal`；Passage subsystem 因新增 boundary clearance / edge closure contract，換代為 `11.23.0-boundary-passage-profile`。Physical、Route Semantics、Locomotion、Crowding 等未改 contract 的 generation 不跟著假升。
+
+Slice D.1B2 在此 owner 上增加 **desktop Furniture Pointer drag presentation path**。`dragState`、movement threshold、full-footprint ghost、explicit support follower ghost與 valid-invalid preview 都是 ephemeral Editor state；pointer move 只呼叫 `SimEditorAuthoringMutations.moveFurniture(...)` 取得同一 candidate / validation projection，不寫 canonical document。pointerup/drop 再呼叫同一 `moveFurniture` 取得正式 candidate並 commit；click/tap placement與 drag-drop 必須產生相同 semantic fingerprint。Touch/mobile保留既有 click/tap placement，不新增平行 movement semantics。
+
+Slice D.1C 建立 **Editor → Simulator explicit preview bootstrap boundary**。`SimEditorPreviewBridge` 只在明確 `?preview=editor` 時讀取同 origin `sessionStorage` handoff；沒有 query flag 的一般 simulator load 永遠使用 `DEFAULT_WORLD_AUTHORING`。`world.js` 的 `createInitialStateFromAuthoring(authoring, seed)` 與既有 `createInitialState(seed)` 共用同一 canonical named initializer pipeline；Engine 在頁面啟動時只捕捉一次有效 preview snapshot，因此 Reset deterministic 重建同一 snapshot，不形成可持久污染 default world 的 hidden override。
+
+### Carried Container handling-risk boundary
+
+`Agent.held` 仍是唯一 held relation。Slice A 的 `carryGeometry / handsRequired` 與 effective traversal envelope / hand-demand feasibility 不變；Slice B 在同一 portable Container `handling` contract 新增 `containment: open|covered|sealed` 與 `contentRetention.{tilt,impact,oscillation}.{lowRiskExposure,highRiskExposure}`。這些是 Resources-owned authored object facts；`fillRatio`、HandlingExposure 與 HandlingRisk 都保持 derived，不另存 mirror。
+
+Locomotion 是 objective HandlingExposure owner：只依 movement mode、Surface maneuver family/direction、vertical movement direction 與 metric distance 派生 coarse `tilt / impact / oscillation`。相同 movement facts 對所有 Agent / Container 產生相同 exposure；trait、Need、Memory 不得改寫 exposure。Resources 再以 exposure + containment + contentRetention + derived fillRatio + resource phase / contents facts 產生 objective `HandlingRisk { contentsLoss, containerDrop }`。每個 retention dimension 的 `lowRiskExposure / highRiskExposure` 只校準 raw retention severity；第一版暫定分別對應 1% / 80%，低錨點以下仍可有低風險，高錨點以上則單調漸近 100%，有限 exposure 不因跨過 anchor 直接成為必然 outcome。這仍是 planning metric，本身不代表 consequence 已發生。
+
+Slice C 的 execution boundary 仍由 core `moveToward()` 持有：只有 movement edge 真正完成、position 已 commit 後才 evaluate 一次 contents-loss consequence；posture transition tick、multi-tick edge 中途、完成前 interruption、replan / planning query 都不得 consume consequence RNG。execution 以 Locomotion 同一 `handlingExposureForEdge(...)` 由實際 completed edge facts 派生 exposure，再以 Resources 同一 objective `HandlingRisk.contentsLoss` 做一次 seeded occurrence roll；`careful` 等 subjective weight 不重算 probability。若 occurrence 成功，Resources 的 C2 deterministic amount curve 使用 `amountSeverity = 0.28 × sqrt(raw retention severity)`、`fillModifier = 0.5 + 0.5 × fillRatio`、`lossFraction = clamp01(amountSeverity × fillModifier)`；同一 Container 所有 nonzero contents 共用該 fraction，不再逐 resource 抽 RNG。Engine 將每個實際 amount 從 Container 精確轉移到 `resolveEffectNode(...)` 對應的 Spatial Environment endpoint；liquid 建立 `spill`、solid 建立 `contentsDrop` canonical World Event，Event 只保存 transfer / completed-edge / exposure / risk provenance，不另存 competing resource truth。若同 completed edge 的既有 on-enter hazard 已實際造成 carried-content consequence，normal handling 明確跳過，避免 double consequence。
+
+Slice D 的 execution boundary 仍留在同一個 core `moveToward()` completed-edge transaction，沒有新增 runtime hook。position commit 後先 snapshot 一份 **同一 edge、同一 held Container** 的 objective HandlingExposure / HandlingRisk context，再執行既有 `onEnterTile`、必要的 Slice C contents loss，最後才用該 snapshot 的 `HandlingRisk.containerDrop` 做一次獨立 seeded occurrence roll。這讓 contents loss 與 Container drop 都以 mutation 前的同一組 objective movement facts為基準；兩者是同一 movement exposure 的 sibling consequence，不互相改寫 probability。若兩者都發生，Slice C resource transfer 先完成，再執行 Container drop。
+
+Container drop 成功時，Engine 建立一次 canonical `containerDrop` World Event、將 `Agent.held` 清為 `null`，並把 Container 的 actual `position` 設為 completed edge 的 canonical destination node；若 Agent 位於 Furniture Surface，Container 仍落在該 Surface node，不偷偷投影到 same-XY floor。這個第一版只表達「失手離手 + 落在目前 canonical node」；沒有 Surface→floor 垂直墜落求解。
+
+**Slice D v1 明確不做：** drop 成功後不再額外 roll / deterministic 套用一段 drop-impact `spill` / `contentsDrop`；沒有 drop-impact calibration 就不自行發明第二套 contents-loss physics。也不做 Container breakage、bounce、collision response、damage、continuous fall / rigid-body / fluid simulation。未來若要讓「Container 掉落」再造成內容物流失，必須另設計 drop-impact exposure / amount contract，並以 `containerDrop` Event 作 parent cause link；不能把本版沒有的物理效果從文字或 UI 推論出來。
+
+一般 lifecycle release 與 accidental drop 必須分離：`releaseHeld()`、Action finish / abort、sleep settle 與 Deliberation soft-reconsideration 的 cleanup 只負責把 held Container 留在角色當下 canonical position並清除 held relation；它們不讀 `HandlingRisk.containerDrop`、不消耗 consequence RNG、也不建立 `containerDrop` Event。若 accidental drop 使一個 execution phase 原本依賴的 plate / vessel 不再由 Agent 持有，該 phase 必須以 canonical `Agent.held` 失效為準進入既有 abort lifecycle，不能繼續用 action-local Container ID 遠端吃／喝。Slice D v1 不提供自動撿回、重試、重新規劃到掉落物或專用 drop-recovery intent。
+
+Route 的 canonical `traversalCost` 仍只表示 objective movement burden。新的 query-scoped `objective:'weighted'` 在 graph search 期間把 `traversalCost / travelTime / HandlingRisk` 與 caller weights 合成 search score，使短危險與較長安全 route 都能成為真正候選；Route 不知道 `careful`、urgency、Need 或 Memory 的來源。Deliberation 目前只把 bounded `careful` contributor轉成 contents/drop risk weights，未來其他 contributor可在同一 Deliberation owner 組合，不得變成 trait hard-ban。
+
+Engine 每次開始下一 movement edge 前仍重新 query current Route，沒有 persistent path truth。若 handling risk 確實改變 route winner，Decision Evidence 只 freeze Container identity、subjective weights、selected/baseline objective metrics與 score；不保存 path nodes。initial core choice 在既有 afterTick 850 finalization 前，route contributor可先附著於同 tick provisional pick，再由原本的 Decision Evidence finalizer收斂；不新增 hook或改 hook ordering。
+
+### Furniture Orientation / Shared Local Transform
+
+Current `furniture-definitions-v12` 保留 south-canonical local-frame / orientation contract，並把 body-support Surface eligibility 收斂到 solid top face metadata。`dining-table` tabletop、`chair-basic` seat、`stool-basic` seat、`double-bed` body top 與 `cabinet-tall` body top 會由 resolver 派生 runtime Surface；椅背、細桌腳以及未 author support eligibility 的 sofa / `pet-bed-small` 不會因存在 top face 就自動成為平台。這些 Surface 的 `supportRegion / topElevation / cells` 全由同一 rotated solid bounds 派生，不 persistent 回 Instance，也不以 Furniture ID 或 species whitelist 特判。真正的 Agent / species-specific furniture preference 仍屬 behavior owner，不能把 `activitySuitability` 或 Physical 偷當成 preference truth。
+
+Definition 的 `orientationSemantics` 分為 `facing` 與 `frame`。Directional Furniture 的 `orientation` 表示正面／主要 facing：椅子與沙發是 back → front，床是 head → foot；沒有自然正面的 Furniture 仍保留 quarter-turn frame orientation，但不宣稱有正面。`origin` 不是固定旋轉 pivot：orientation 改變時 origin 不自行平移。Editor 的 `rotateFurniture(...)` 仍走 atomic clone → apply → validate → canonicalize → commit。明確 `supportId === furnitureId` 的 Container follower 透過同一 world→local→world transform 跟隨；slot-bound Resident 保留 stable `<instanceId>:<slotKey>` reference。
+
+Editor 的 `↑ → ↓ ←` 只在 directional Furniture 被選取或新增／放置／拖曳預覽時顯示，代表真正 facing；frame-only Furniture 改以 0° / 90° / 180° / 270° 顯示 local-frame rotation，不畫 facing arrow。Spatial Traversal、Passage、Route、Locomotion 與 Crowding 仍只消費 resolved world geometry，因此本 correctness release 不改它們既有 subsystem generation。
+
+Slice E 建立 **Runtime Spatial Z Identity**：base `SP.key / same / manhattan / clonePos`、`normalizeNode / nodeKey / nodeSame / routeStateKey`、Tile storage、Room derivation、Surface Environment endpoint、Memory spatial refs與 simulator map presentation共用同一 z semantics。Simulator `currentZ` / layer selector是 ephemeral presentation state；切層不得改 pathfinding或simulation truth。`SimSpatial.SPATIAL_IDENTITY_VERSION = 11.22.0-spatial-z-identity`；既有 Passage / Route / Locomotion / Crowding generation只有消費新的 node identity，未各自換代。
+
+`SimWorld.WIDTH / HEIGHT` 暫時保留給現有 Spatial consumer，但值由 canonical default authoring package派生；舊 `FURNITURE_DEFS / OBJECT_START / AGENT_START` 不再是 `SimWorld` public authoring owner。
+
+Resident initial placement 在 current authoring contract內支援兩種 mode：`exact` 與 explicit `{kind:'furnitureSlot', id}` anchor。Anchor resolution 必須 deterministic；anchor 需存在且唯一、允許該 resident kind，並要求明確 `initial.posture.kind`。posture 指向不同 slot / furniture、exclusive slot double assignment、blocked / missing exact node 都是 hard error。
+
+`SimWorldInitializer.analyzeInitialPlacements(authoring)` 是 authoring-time analysis surface，回傳 `hardErrors / diagnostics / resolvedPlacements`，但 diagnostics 不寫入 runtime state。sealed room、no-exit route、食物／飲水／睡眠 target 不可達，以及 current overlap contract仍允許的 same-node overlap都屬 diagnostic-only；Initializer不得為了「合理」自動搬人、開門、補出口或修改 geometry。
+
+Initializer 的 hard validation只判斷自己擁有的 authoring/reference/base-floor occupancy facts。Physical / locomotion / posture 的正式 runtime invariant仍由既有 Spatial / Physical / Validator owners負責，不在 initializer 複製第二套 subsystem rule。
+
+Physical / Passage contract 同樣遵守 single-source rule：Agent 保存 Physical facts；`MovementEnvelope` 由 `SimPhysical.getMovementEnvelope(...)` derived。第一階段 `PoseEnvelope` 也由 Physical 依 current `bodyGeometry` + embodiment posture profile 即時計算 sitting / lying 尺寸，不保存 persistent mirror；Furniture Slot 只持有 `usableSpace`，Static fit 由共用 Physical query 比較，不能讓 Furniture 重新持有 species 尺寸規則。`PassageProfile`由 Spatial geometry即時計算為位置化 `options`，mode feasibility只在同一 option 同時容納 MovementEnvelope時成立。MovementEnvelope、PoseEnvelope 與 PassageProfile 都維持 derived truth。
+
+### PoseEnvelope / Furniture Slot static-fit ownership
+
+第一階段 **PoseEnvelope（靜態姿勢包絡）** 與 MovementEnvelope（移動包絡）是兩個不同 Physical query。MovementEnvelope 回答移動過程的空間需求；`SimPhysical.getPoseEnvelope(agent, posture)` 回答 Agent 以 sitting / lying 靜態姿勢需要的 `height / width / length`。姿勢推導模板位於 authoring-safe `SimEmbodimentCapabilities`，runtime Physical 只讀 Agent current `bodyGeometry` 即時計算，不把結果寫回 Agent state。
+
+Furniture Definition 的 Slot 持有 `usableSpace`，表示該使用位置可容納的靜態身體空間；它不是 Furniture solid、Surface、footprint 或 Contact geometry。Spatial / Engine consumer 透過 Physical-owned fit query 串接「activity affordance + static fit + `allowKinds` + Slot occupancy/reservation + approach/settle/egress」等獨立 gate。缺少必要 usable-space 資料不得默認 fit。第一版軸向直接對齊 Furniture local frame，不自動嘗試 90° 旋轉。
+
+Initializer 與 Validator 也消費同一 contract，避免 authored opening state 與 runtime state 使用兩套姿勢尺寸規則。Slot occupancy truth 仍只有 `agent.posture.slotId`；本 slice 不把 slot-bound Agent 重新算成 ordinary floor occupant，也不建立 multi-slot / usable-surface packing 或 dynamic body obstruction。
+
+### Usage Assignment / Runtime Claim / Usage Habit
+
+World Authoring v11 以獨立 `usageAssignments[]` 保存正式使用指派，以 `claimEligibility[]` 明確 author 哪些 `sleep` Slot 允許在成功使用後形成長期 Runtime Claim；沒有 eligibility relation 時預設不可認領。Runtime `usageClaims[]` 是 World-level stable relation，第一版每 Agent × sleep 最多一個 active primary claim、每 Slot × sleep 最多一個 primary claimant。temporary reservation、occupancy 與 `offMap` 都不是 claim，也不會自動釋放 claim。
+
+`SP.sleepTargets()` 保持 objective legal candidate query，不讀 assignment / claim / habit。Usage preference runtime 只在 legal candidates 上組合 bounded assignment / claim / Memory-owned habit / species-activity contributors；因此「是否要睡」與「要睡哪裡」維持不同層。Association Reason 可獨立查詢已被 occupancy / reservation 排除的 target，不把 legal candidate list 當作歸屬真相。
+
+Target Selection Evidence 是既有 Deliberation Evidence 的 downstream Agent-private record；每次 reselection 建立新 record，保留 `parentDecisionId` 與 `priorTargetDecisionId`，不覆寫舊 evidence。Memory 只在 actor 自己實際形成 structured sleep-start experience 時更新 `usageHabits` persistent summary；habit strength 採 saturation gain + lazy decay。Inspector 只在 Agent Debug context 投影 Habit / Target Selection Evidence，並明確標示「私人」；World / Furniture presentation 不得把它翻成公共「這是某人的床」。
+
+### Agent-context Observation / Attention boundary
+
+`SimEngine.observeAgentContext(st, observer, target)` 是目前 coarse Agent-context observability 的單一 owner：observer / target 必須 on-map、有 position，observer 不得 sleeping；若雙方都有 Room 則必須同 Room，且 Manhattan distance ≤ 4。可觀察時只回傳 decision-time snapshot（target identity、tick、Human / Animal classification、action kind、posture），不可觀察時回傳 explicit unavailable result；下游不得直接傳遞完整 World Agent object 或複製另一套 Room / distance 規則。
+
+通用 attention interaction 以 `interactionPurpose:'gainAttention' + stimulusKind + stimulusIntensity` 表達，不建立大量固定動畫 Action。它可對 sleeping target 觸發既有 wake consequence，但 wake、stimulus perception、attention captured、request understood、request accepted 與後續行為仍是不同層；目前 helper 不會自動建立 Social Bid、`awaitResponse`、接受／拒絕或位移。
+
+### Preferred sleep Slot conflict boundary
+
+fixed-Slot sleep conflict 由 Deliberation-side `SimSleepConflict` 持有 resolution reasoning，而不是由 Spatial 或 Usage Preference 建立第二份 occupancy / ownership truth。Spatial 仍以 `slotOccupant / slotReservedBy / slotAvailable` 持有 canonical Slot availability；`sleepTargetExclusion(...)` 只回傳 exclusion reason，occupied preferred Slot 仍不得進入 `SP.sleepTargets()`。Usage Preference 的 assignment / claim / habit 仍只提供 bounded Association Reason，因此「我偏好這個位置」與「這個位置現在可睡」維持不同事實層。
+
+Conflict consumer 只能透過既有 `observeAgentContext(...)` 取得 decision-time occupant snapshot，再比較 alternate legal sleep position、有限期 occupancy wait、generic attention，以及對可觀察 Human 的 yield request / nonphysical drive-away。Animal 沒有 Human-only request shortcut；不可觀察 occupant 也不洩漏 identity 到 evidence。occupancy wait 是 sleep-conflict 自己的 Action phase，有限期、無 reservation，且可被 soft reconsideration 或 emergency preemption 打斷；它不冒充 Social `awaitResponse`。
+
+`Conflict Resolution Evidence` 是既有 Decision Evidence 的 downstream Agent-private record，保存 preferred Slot、Association Reasons、decision-time Observation snapshot、evaluated candidates、selected resolution、contributors 與 prior conflict link。request / drive-away 另外建立可觀察 Social Bid；requester 的 response wait 沿用 Social Bid lifecycle，但 source 帶 `sleepSlotConflict` context。Human responder 只根據自己可見的 bid 與自己的 need / association / relationship 在 responder-local runtime 做 accept / refuse / delay；accept response 本身不改 posture / position，真正離開 Slot 由 responder 自己建立 `yieldSleepSlot` Intent + Action。wake、request understood、accept/refuse、departure 與 Slot 實際重新 available 仍是不同事件／狀態層。
+
+### Agent-private Truth
+
+不同 Agent 各自擁有：
+
+- `activeIntent`
+- `episodicMemories[]`
+- historical appraisal annotation
+- current Affect
+- directional `relationships[counterpartId]`
+- requester-private waiting / wait-end experience
+- responder-local `observedSocialBids`
+
+一個 Agent 的 private state 不得直接取消、改寫或偽造另一個 Agent 的 private state。跨 Agent 影響必須經 World Event、observable stimulus、perception / observation 等正式邊界。
+
+Relationship 同樣遵守方向性 private truth：`A.relationships[B]` 與 `B.relationships[A]` 是兩份可能不同的 Agent-private state，不建立共享 `pairRelationship` 或全域 relationship registry。
+
+### Observed Information
+
+「World 中存在某事」不代表所有 Agent 都知道。Episodic Memory 只保存該 Agent 實際可觀察到的 minimal projection；Social Bid responder 也只能從自己的 observed bid refs 建立 candidate。
+
+## 2. Canonical Action / Active Intent
+
+### Action
+
+`action.kind` 是 Action type 的唯一正式欄位。
+
+舊 `action.intent` alias、Action migration layer 與 `action.normalize-*` lifecycle 已移除。若 runtime 出現 legacy `{ intent: ... }` Action，Validator 應視為 invalid state，而不是自動修補。
+
+`action.intentId` 只表示 Action → Active Intent linkage，不是 Action type mirror。
+
+### Active Intent
+
+`activeIntent.kind` 表示「角色為什麼正在做這件事」；`action.kind` 表示「角色正在怎麼做」。兩者不可合併成同一欄位。
+
+現行 Intent lifecycle 包含：
+
+- initial deliberation
+- action-bound Active Intent
+- hard replan / emergency preemption
+- soft reconsideration / hysteresis
+- requester-private `awaitResponse`
+- responder-private `respondSocialBid`
+
+動物互動使用 canonical `interactWithAnimal` Intent 與 `petAnimal` Action。是否能撫摸某 target 由 species profile / affordance 與可達性等實際條件判斷，不依 Cat / Dog / Rabbit 等物種名稱建立平行 Action kind。
+
+### Canonical Action construction
+
+Concrete Action construction 由 core `E.buildAction(agent, choice)` 統一持有。Initial deliberation、hard replan、soft reconsideration 與 Memory→Deliberation correction 不得再保存平行的 Action construction switch。
+
+Factory 只建立 Action shape；candidate utility、target policy、Intent lifecycle、plan event、responder scoring 不屬於 factory 責任。
+
+Caller 已明確選定的 `targetAgent / targetObject / targetTile / job / destination / carrier` 必須優先保留；不得因 factory fallback 靜默換掉 explicit social target。
+
+### Canonical spatial target consumption
+
+Action / Deliberation 的 spatial target 必須依 target 類型消費正式 owner，不得把所有帶 `position` 的 entity 當成 ordinary floor destination：
+
+- ordinary floor 工作目標（例如 `cleanFloor`、`wander`、Exit `access`）可以直接 route 到該 floor node；
+- Object / Source / Agent interaction target 的 discovery、ranking、replan 與 execution 必須透過 Interaction Geometry；ranking 優先消費 `bestInteractionPositionResult(...).traversalCost`，execution 再由 `moveToInteraction()` 取得當下合法位置；
+- slot-bound Agent 的 `agent.position` 只是 Slot coarse anchor，不是 social route target；`socialReach` 必須由 `agentContactNodes() → slotApproachNodes()` 派生；
+- Furniture Slot 本身不是 ordinary floor destination。rest / sleep / meal 等 Slot 使用者必須先選合法 `bestSlotApproachNode()`，route 到 approach，再於 settle 前重驗 activity / PoseEnvelope / occupancy / reservation / approach legality；
+- **actor-side route origin 也遵守 Slot contract**：slot-bound actor 的 `agent.position` 同樣只是 Slot anchor。Route / Interaction Geometry ranking / Slot-target ranking 必須以合法 `slotEgressNodes()` 作 multi-source origins；真正 execution 離座時使用對該目標的同一個 best egress。若 current Slot posture 已經直接滿足 interaction，保留 0-cost current-contact，不為了 route query 強制站起；
+- objective access burden 使用 canonical `traversalCost`。Decision / Memory / replanning 不得各自退回 `pathDistance`、target anchor 或 actor Slot anchor 建立第二套可達性尺度；
+- need candidate availability 與 Action factory feasibility 必須對齊。`satisfyHunger` / Human-Cat drink candidate 必須存在依目前 actor geometry 真正可執行的 food / vessel / resource plan；「世界上存在資源」本身不足以建立 Action。動態失去來源時走明確 abort / bounded replan lifecycle，不 silent-finish 後下一 tick 重選同一不可行 Action。
+- Human drink 的 vessel-plan feasibility 也必須與 execution 對齊：actor 自己已持有的 `canDrinkFrom` portable vessel 視為 0-pickup plan；若內容低於直接飲用門檻，source discovery 必須以該 vessel `id` 作 `excludeId`，不能讓 destination vessel 充當自己的 refill source。
+
+這個分工不表示所有 Action 都必須透過 Interaction Geometry；真正的 ordinary floor exact target 仍保留 `moveToExact()` 語意。
+
+### Adopted Decision Evidence
+
+v11.36.0 建立 Deliberation-owned adopted Decision Evidence contract：
+
+- `agent.decisionEvidence` 是 **Agent-private、單筆 current adopted decision snapshot**；不是 World Event、global registry、Presentation mirror，也不是跨 Agent 可讀心理狀態。
+- live Action 只保存 `decisionId` reference。`E.decisionEvidenceMatchesAction(agent)` 必須同時驗證 decision ID、Action kind / started 與 evidence 中已保存的 decision-level target context；因此同 tick / 同 kind但不同 target、同一 Intent 下的 replacement Action 都不能沿用舊 evidence。
+- `state.thoughts[agent]` 繼續是 Recent Decision / candidate snapshot。它可保存 candidate structured contributor，但不是 adopted final truth；Action construction 失敗時不得產生 adopted evidence。
+- initial core choice 在 core tick 後仍可能被 Memory→Deliberation correction 修改，所以 finalization 明確位於 afterTick 850，晚於 correction 800。只有該時點仍存活且與 final `thought.pick` 對齊的 concrete Action 才會被採納成 Decision Evidence。
+- soft reconsideration、emergency preemption 與 hard replan 在各自真正綁定 replacement Action 時立即建立新的 Decision ID。Hard replan 可以保留同一 Intent ID，但必須建立新的 Decision ID；原 motive contributor 可作 frozen provenance 繼承，target-selection evidence 必須對新 Action context重新 freeze。
+- core option / soft candidate 的 structured contributors只描述真正進入既有 utility / trigger 的 authoritative input；capture 本身不得消耗 RNG或改變 winner / target。Memory / Relationship / access 的 social target decomposition只在 final selected target freeze，current Debug recomputation仍標為 derived。
+- responder第一階段保持保守：已有 adopted evidence的 Social Bid response仍不在 Resident View 顯示自主 Explanation；Human / animal responder policy若沒有 adopted decision evidence，更不得由 Current Affect / Relationship score反推 motive。
+- Player-readable Explanation只選少量可自然表達的 frozen contributor；Debug 才顯示完整 structured contributor / source refs。`why[]`、自然語言 event text 與 UI wording都不得被反解析成 decision truth。
+
+### Canonical decision baseline
+
+Core `E.baseUtilityForAction(agent, actionKind)` 持有既有 core candidate 的 deterministic species-aware base utility。Initial chooser 與 soft reconsideration 必須共用這一層 baseline，不得各自保存平行的 Human / Cat needs formula。
+
+Initial chooser 可以在 canonical baseline 上加入 selection noise；這層 noise 不屬於 base utility。Soft reconsideration 刻意不重用 chooser noise，而是在同一 baseline 上套用 minimum hold、switch margin、derived commitment、protected workflow 與 shared derived influence，避免角色只因 evaluator 換了一把評分尺就在 world / needs 幾乎未變時推翻剛建立的 Intent。
+
+Canonical baseline provider 不接管所有 candidate policy。Candidate availability、target selection、Social Bid responder-specific utility、Memory-derived target influence 與 subsystem-specific provenance 仍由各自 owner 負責；只有兩條 deliberation path 共用的 deterministic base motivation 屬於 core baseline ownership。
+
+## 3. Decision option providers
+
+Subsystem 若需要把正式 observation / private state 衍生出的 candidate 接入 core chooser，使用 decision-option provider。
+
+Provider contract：
+
+- 只提出 candidate，不直接建立 Action。
+- 不直接建立 Active Intent / World Event。
+- 不修改 Agent persistent/private state。
+- candidate 與 core needs / logistics options 一起競爭。
+- 可以附最小 provenance，供 candidate 被選中後的 subsystem settlement 使用。
+
+Social Bid responder 是目前正式使用者：Human 對 animal `socialAffection` 的 response candidate 直接由 responder-local `observedSocialBids` 產生，不再使用 `pendingInteraction / cat_request / accepted / catRequestExpired` compatibility bridge。
+
+## 4. Social Bid / response agency
+
+Social Bid 是 observable World Event，不是共享心理 lifecycle entity。
+
+Requester 與 responder 分別持有自己的 private state：
+
+```text
+World Event: Social Bid
+├─ requester: awaitResponse / private wait-end experience
+└─ responder: observedSocialBids / optional respondSocialBid Intent
+```
+
+必須維持：
+
+- requester timeout 不得遠端取消 responder Intent；
+- responder 可以延後回應；
+- late response 可以和先前 requester wait-end experience 共存；
+- same-tick response-before-timeout ordering 由 regression 鎖定；
+- brief reply、explicit decline、no response 是不同事實；
+- no response 不得推論 intentional ignore / dislike / rejection。
+
+Human talk response 與目前 Pet response 都由 responder 自己的 state 決定。v11.15.2 起，兩條 responder policy 可額外讀**responder 自己對 requester 的 directional Relationship**；Relationship runtime 只提供 unitless `relationshipSignal = familiarity × affinity`，Human / animal responder subsystem 各自決定自己的 bounded scaling。目前兩者 cap 都是 `±0.18`，但這不是共享 scoring owner。
+
+Responder bias 的正式邊界：
+
+- Human 只讀 human responder → human requester；animal pet response 只讀 animal responder → human requester。反方向 Relationship 不得滲入。
+- `familiarity > 0` 但 `affinity = 0` 時 Relationship response delta 必為 0；熟悉本身不是正向意願。
+- Human `talkResponseUtility` 是 responder-specific candidate utility，因此可隨 final response score bounded 改變；general `E.baseUtilityForAction(...,'talk')` 不讀 Relationship。
+- animal pet response 只改 accept / tolerate / avoid band，不建立另一套一般 Action motivation。
+- Current Affect 由 Affect subsystem 派生 bounded `affectResponseSignal = clamp(valence - frustration, -1, +1)`；Human / animal responder 各自以 `0.12` cap 形成 response delta。`activation` 第一階段保持 decision-neutral；target-specific Memory 仍不直接進 responder scoring。
+- responder score decomposition 不寫入 World Event、不保存 Agent cache；canonical World Event 只描述實際發生的 response outcome。
+
+## 5. Memory / Appraisal / Affect / Relationship
+
+### Episodic Memory
+
+每個 Agent 保存 bounded `episodicMemories[]`。
+
+Generic observed-event memory 保存最小 provenance / projection，例如：
+
+- `sourceEventId`
+- `observedTick / lastObservedTick`
+- `observed.action`
+- `actorId / targetId`
+- `positionRef`
+
+不複製完整 raw event data，不把 debug、utility、另一個 Agent 的 private state 帶進 memory。
+
+同一 Agent 對同一 `sourceEventId` 只建立一個 episode；再次處理更新 access metadata，不重複建立 historical event memory。
+
+Generic episodic eligibility 是明確的 Memory policy，不得只靠「event 剛好沒有 `data.action`」來決定心理語義。普通成功 pour 的 episodic atom 是來源 `action:'pour'`；其 successful resource-transfer result 是該 action 的 non-episodic consequence，即使未來為 UI / event consistency 補上額外 action metadata，也不得因此自動多形成第二筆 episode。failed pour 若經 Spatial Effects 形成獨立 `action:'spill'` physical effect，則 `spill` 仍是另一個可觀察、可 Appraise 的 episodic event。
+
+### Historical Appraisal
+
+Appraisal 是 Agent-private historical annotation。第一次形成後，不因角色之後的 Need / Affect 改變而靜默重寫過去評估。
+
+`episodicMemoryCreated` 正式 hook ordering：
+
+```text
+100 Base Appraisal
+200 Social Response Appraisal
+300 Human Social Appraisal
+350 Relationship Consolidation
+400 Affect Update
+```
+
+Relationship 必須讀 specialized historical Appraisal 的最終結果，不自行回頭解析 raw event payload 判斷「好／壞」。精確 implementation hook ID 仍由 runtime registry / `docs/tick-pipeline.md` 記錄。
+
+### Current Affect
+
+Affect 是短生命期 Agent-private current state，與 Need / Appraisal / Memory / Relationship 分層。它可以由新 appraisal 更新並隨 tick decay。v11.35.0 起，Affect runtime 另外提供不持久化的 `affectResponseSignal = clamp(valence - frustration, -1, +1)` 給 responder policy；`activation` 第一階段不參與方向性 response score。
+
+### Memory → Deliberation / Relationship Target Preference
+
+Target-related episodic history 以 bounded derived influence 進入 initiator-side social candidate；目前 canonical social intents 為 `socialize / interactWithAnimal / seekSocialContact`。
+
+Relationship 在 v11.15.1 起作 initiator-side target ranking signal，不改 action-level social motivation：
+
+```text
+relationshipTargetDelta = 8 × familiarity × affinity
+
+targetPreference = memoryUtilityDelta
+                 + relationshipTargetDelta
+                 - accessPenalty
+
+finalUtility = baseUtility + memoryUtilityDelta
+```
+
+正式邊界：
+
+- `relationshipTargetDelta` bounded `[-8,+8]`；`familiarity=0` 或 `affinity=0` 時為 0。
+- 負向 Relationship 只降低 target preference，不從 eligibility 移除 target。
+- Relationship 不加入 `finalUtility`，因此不直接提高／降低是否選擇 social Action。
+- target-preference signal 不修改 current-intent utility、soft-switch threshold 或 commitment；也不直接持有 responder score ownership。
+- Memory influence 與 Relationship 都是 derived decision signals，不互相寫回，也不保存 persistent preferred-target mirror。
+
+### Relationship → Responder Bias
+
+v11.15.2 新增另一個**獨立 consumer**，不是把 target-preference delta 重用成 responder utility：
+
+```text
+relationshipSignal = familiarity × affinity
+
+affectResponseSignal = clamp(valence - frustration, -1, +1)
+
+Human finalTalkResponseScore
+  = clamp(baseTalkResponseScore
+        + affectResponseSignal × TALK_AFFECT_RESPONSE_CAP
+        + relationshipSignal × TALK_RELATIONSHIP_RESPONSE_CAP)
+
+Animal finalPetResponseScore
+  = clamp(basePetResponseScore
+        + affectResponseSignal × PET_AFFECT_RESPONSE_CAP
+        + relationshipSignal × PET_RELATIONSHIP_RESPONSE_CAP)
+```
+
+Affect cap 目前 Human / animal 都是 `0.12`，Relationship cap 都是 `0.18`；constant 與 policy ownership 分開。Affect subsystem 只輸出短期 derived signal，Relationship subsystem 只輸出 bounded directional signal；兩者都不決定 Human / animal response threshold，也不建立 response Action / Intent / Event。
+
+這個 consumer 只在 responder 已經面對特定 requester 時成立；它不回灌一般 social Action utility、不改 initiator target ranking 公式、不改 current-intent utility / switch threshold / commitment。World Event 不保存 `baseResponseScore / affectResponseSignal / affectResponseDelta / relationshipResponseDelta / finalScore` 等 private decomposition；Debug 可從 authoritative Current Affect / Relationship + responder policy 即時計算。
+
+Initial core chooser 建立的 `system + phase:'plan'` event 是**同 tick provisional private-cognition plan**，以 `data.planLifecycle='initialProvisional'` 明示其 creation payload 尚可能在 afterTick 800 Memory-to-Deliberation Correction 被 normalization。Correction 只能改寫同一 tick、同 actor、`type:'system'`、同 lifecycle marker 且 action 對應 initial pick 的既有 canonical plan event；不得新增第二筆 correction event，也不得回頭改寫較舊 plan 或其他 plan-shaped event。Event ID / cause identity 保持不變，event-created consumer 若讀取 creation payload 必須把它視為 provisional，而不是 immutable final plan。Plan event 仍屬 private cognition / non-episodic，不進 generic Episodic Memory。
+
+### Private Social Outcome
+
+`socialWaitEnded` 是 requester-private lifecycle event，generic observable Memory 刻意排除它。`src/systems/memory/social-outcome.js` 將合法 no-response experience 建成 `privateSocialOutcome`，再做 requester-private appraisal / relationship consolidation / affect / retention。
+
+這條路徑不是 generic World Event observation，不得和 generic event-created observation 混成同一 truth boundary。合法 private no-response Relationship evidence 只可更新 requester → counterpart；counterpart 不會因 requester 的 private timeout 被遠端改寫。
+
+### Relationship Foundation
+
+Relationship 是比 episodic memory 更慢、更持久的 Agent-private dyadic summary。第一版 persistent entry 僅保存：
+
+```text
+agent.relationships[counterpartId] = {
+  familiarity: 0..1,
+  affinity: -1..1,
+  lastUpdatedTick
+}
+```
+
+語義：
+
+- **Familiarity**＝累積直接相處歷史；只升不降，第一版不做時間衰退。熟悉不等於喜歡。
+- **Affinity**＝該 Agent 長期累積下來，和 counterpart 相處時的主觀 experience 整體偏正向或負向；不是 friendship / trust / love / hate label。
+- `A → B` 與 `B → A` 各自獨立；同一 encounter 可以因 subjective appraisal 不同而往不同方向變化。
+- Relationship 是 historical appraisal consolidation，不是目前 hot memory 的即時計算 mirror；來源 memory 被 pruning 後，已 consolidated state 不倒退。
+- 不保存 contributing memory ID list、relationship history、confidence、friendshipScore、trust 等第二份或過度語義化 state。
+
+第一版 audited relational evidence：
+
+- 完整 Human conversation：requester 只從 `acceptTalk` consolidation；responder 只從完成的 `talk` consolidation，避免 `talkOffer → acceptTalk → talk` 重複計分。
+- `briefTalkReply / declineTalk`：direct target 可依既有 shallow negative appraisal 更新；actor 自己只有 neutral actor-side appraisal 時只增加 Familiarity，不自行產生負面 Affinity。
+- `petAnimal`：actor / target 均可依自己的 historical appraisal consolidation。
+- `avoidPet`：actor / target 均可 consolidation，因此同一 observable event 可以讓動物正向、人類負向。
+- `privateSocialOutcome.socialNoResponse`：只 requester → counterpart，且使用較低 encounter weight。
+- `talkOffer / petOffer / acceptPet / toleratePet` 等 proposal / intermediate response 不直接 consolidation。
+- 非 relational event、bystander observation、單純 `agency === other` 都不足以建立 Relationship evidence。
+
+Foundation consolidation 公式保持 bounded / diminishing return：Familiarity 越高，同等 episode 的增幅越小；Affinity 正向 evidence 朝 +1、負向 evidence 朝 -1 推進，但既有極端值仍可被反方向重要 experience 拉回。v11.15.1 先把這份 directional slow state 接入 initiator-side target preference；v11.15.2 再讓 responder-specific policy讀取同一 directional truth 的 unitless signal。兩者都不讓 Relationship subsystem 取得一般 action-level motivation、interruption 或 response-event ownership。
+
+### Deferred architecture cleanup｜private experience lifecycle
+
+Ordinary observed episodic memory 會經 `episodicMemoryCreated` dispatcher；`privateSocialOutcome` 目前仍由專用 requester-private path 建立並直接 Appraise / Affect / prune。因此 Relationship Foundation 使用**同一 `E.consolidateRelationshipFromMemory(...)` policy、兩個 invocation point**：ordinary path 在 hook order 350，private outcome path 在自己的 appraisal 完成後呼叫同一 policy。
+
+若未來有更多 subsystem 同時需要消費 observed episode 與 private experience，再考慮建立共同的「new episodic experience ready / post-appraisal」lifecycle boundary。這是已知 deferred architecture cleanup，目前不阻塞 Relationship Foundation，也不因存在就自動算 Integration Debt。
+
+## 6. Runtime Hook Pipeline
+
+正常 app runtime 由 `src/runtime-hook-pipeline.js` 持有：
+
+- `E.tick`
+- `E.reset`
+- `E.onEpisodicMemoryCreated`
+
+正式 phases：
+
+```text
+beforeTick
+afterTick
+afterReset
+episodicMemoryCreated
+```
+
+Hook 必須有唯一 ID 與 explicit order；duplicate ID / unknown phase loud failure。
+
+**Pipeline abstraction rule:** Architecture diagrams and ordering summaries use lifecycle responsibility labels。Concrete implementation hook IDs stay in source、`docs/tick-pipeline.md` 的 exact registry tables 與 `tests/runtime-hook-pipeline.mjs`；action-specific names 不得變成 architecture stage name。
+
+### Current simulation ordering
+
+`beforeTick`：
+
+```text
+100  Requester Outcome Capture
+200  Memory-to-Deliberation Baseline Capture
+300  Human Social Prepare
+400  Social Response Prepare
+500  Affect Decay
+700  Soft Reconsideration
+800  Replan / Preemption
+900  Social Bid Prepare
+1000 Intent Reconcile
+1100 Spatial Capture
+```
+
+接著只執行一次 core `tick()`。
+
+`afterTick`：
+
+```text
+100 Spatial Effects
+200 Intent Reconcile
+300 Social Bid Settle
+400 Abort Recovery
+500 Memory Observation Process
+600 Social Response Resolve
+700 Human Social Resolve
+800 Memory-to-Deliberation Correction
+900 Private Social Outcome Process
+```
+
+上述清單是 architecture view；精確 implementation hook ID / owner / order 對照請查 `docs/tick-pipeline.md`。
+
+Simulation `runtime-hook` manifest只涵蓋會改變模擬語意的 hooks，並可在 UI 載入前 finalize。UI / readable Inspector 的 refresh / reset 改走獨立 `runtime observer` lifecycle：observer 一律在該次 simulation `afterTick` / `afterReset` hooks 全部完成後才執行，保留 deterministic ID / order，但不參與 simulation schedule completeness，也不得改 simulation truth 或取代 pipeline dispatcher。
+
+Runtime hook extension 不再保留「沒有 pipeline 時 fallback wrapper」。任何需要 `registerRuntimeHook` 的 extension 若未先載入 `runtime-hook-pipeline.js` 必須 loud failure；focused Node test 也必須在 `engine.js` 後、任何 hook extension 前載入同一 production pipeline。正常 app 與 test 不再存在第二套 wrapper-stacking lifecycle。`registerRuntimeObserver` 則是同一 dispatcher 提供的 read-only/post-simulation observer boundary，可在 simulation hook manifest finalize 後由 Presentation 註冊；它不能重新打開或改寫 finalized simulation hook set。
+
+Physical / Passage Profile Slice 2 沒有新增 runtime hook 或 tick phase；它提供同步 derived geometry / feasibility query，A* 只在既有 traversal expansion 中讀 `walk` feasibility。
+
+## 7. Event creation / observation ownership
+
+### 7.1 Canonical event creation
+
+Core `engine.js` 持有唯一 canonical event creator。正式 invariant：
+
+```text
+E.addEvent === E.CORE_ADD_EVENT
+```
+
+`addEvent` 先建立單一 World Event並寫入：
+
+```text
+state.events
+state.causes
+```
+
+Event envelope 保存 creation `event.tick`。事件 commit 後，core 才發送 event-created notification；extension 可以消費通知，但不得取代 event creator 或建立第二份 persistent event truth。
+
+Core 提供具名 event-created listener registry；這是 runtime integration mechanism，不是 canonical state。
+
+### 7.2 Memory delivery contract
+
+Memory 註冊具名 consumer：
+
+```text
+memory.episodic-observation
+```
+
+Event-created notification **不代表所有 event 都立即造成心理 side effect**。正式分界是事件是否在 sequential core Agent loop 中產生：
+
+```text
+canonical event created
+        │
+        ├─ outside core Agent loop
+        │    → Memory synchronous observation
+        │    → episodicMemoryCreated
+        │    → Appraisal → Relationship → Affect
+        │
+        └─ during core Agent loop
+             → enqueue event reference in Memory-local FIFO
+             → afterTick 500 Memory Observation Process
+             → episodicMemoryCreated
+             → Appraisal → Relationship → Affect
+```
+
+只有通過 audited relational evidence gate 的 episode 才實際更新 Relationship；其他 episode 在 Relationship hook 中直接 no-op。
+
+這保留兩個重要事實：
+
+1. beforeTick / afterTick extension 與 tick 外 direct `E.addEvent` 仍可在原本時點形成 Memory / Appraisal / Relationship / Affect；
+2. core Agent 依序執行時，前一個 Agent 的 event 不會突然在 loop 中更新心理 state，讓後面的 Agent 讀到舊 runtime 原本要等 core 結束後才可見的心理結果。
+
+### 7.3 Core-loop deferred FIFO
+
+Deferred queue 只保存尚待 Memory observation 的 event reference：
+
+- runtime-local；
+- ephemeral；
+- FIFO；
+- reset 時清空；
+- 不寫入 simulation state；
+- 不建立第二份 World Event truth。
+
+`Memory Observation Process`（afterTick 500）只 flush 這個 queue，不再掃描 `state.events` 猜測哪些 event 是新事件。
+
+因此舊的：
+
+- Memory `E.addEvent = ...` wrapper；
+- beforeTick `memory.capture-events` marker；
+- newest-event marker sweep；
+
+都不再是 Current runtime contract。
+
+### 7.4 Timing compatibility
+
+PR #45 / #46 建立的 deterministic timing baseline 是這個 lifecycle 的 compatibility contract：
+
+- tick 外 direct `E.addEvent`：同步 observation；
+- pre-core Human social offer：core 執行前已合法形成 Memory；
+- core-loop event：before afterTick 500 不得形成心理 projection，500 後才可見；
+- Social Response Resolve 600：response event 的合法 Memory / Appraisal / Relationship / Affect 在後續 consumer 前完成；
+- Human Social Resolve 700：response event 的合法 Memory / Appraisal / Relationship / Affect 早於 Memory-to-Deliberation Correction 800；
+- deferred path 使用 canonical `event.tick` 保存 creation-time provenance；
+- same-source event 對同一 Agent 仍 exactly-once 建立 episode / Appraisal / Relationship consolidation / Affect。
+
+### 7.5 Private social outcome boundary
+
+`privateSocialOutcome` 仍是 requester-private experience path，不是 generic World Event observation。Event-created lifecycle cleanup 不改這條 truth boundary；Relationship 只在 requester 自己的 private memory 形成後做 requester-local consolidation。
+
+## 8. Presentation ownership
+
+Presentation 不再參與 initial-state schema，也不再持有 `SimWorld.PRESENTATION_SCHEMA_VERSION`。Current Presentation marker 與 interaction labels 由 `SimUI.PRESENTATION_VERSION / SimUI.interactionLabel(...)` 持有，marker直接跟隨 canonical `SimRelease.VERSION`；這只描述 UI/presentation contract，不寫入 runtime state，也不成為 simulation schema owner。App shell 的玩家可見短版 release label 也必須由同一 canonical owner 即時投影，不得在 HTML 複製 current release literal。Resident / Action / Debug 對 posture snapshot 必須一致，missing / unknown posture 只能使用保守 fallback；Tile 的 base `walkable / blockerAt` projection 不得冒充完整 per-Agent traversal feasibility。Retired Furniture `blocksMovement / value` 與 Room `value` 不再屬 current Presentation truth。
+
+Resident View 的「最近發生的事」仍直接投影 bounded canonical events。對 `visibility: private` 且 `owner === residentId` 的事件，只在玩家可讀列項加上獨立「私人」badge；事件正文不加前綴，公開事件不加 badge。這個 badge 不建立新的 private-state truth，也不改 Memory / Relationship / event visibility 語意。
+
+Presentation refresh/reset 使用上節的 runtime observer boundary。現行 observer relative order保留：afterTick `uiObservability.render-mobile-summary` → `residentView.schedule` → `relationshipView.schedule`；afterReset `uiObservability.reset` → `residentView.reset` → `relationshipView.reset`。這些 observer 永遠在完整 simulation phase之後執行。
+
+Core full render 只建立**一份 render-scoped Validator snapshot**：`src/ui/core.js` 在同一次 `render()` 內呼叫 `SimValidator.validateState(...)` 一次，並把結果傳給 world badges 與 no-selection Inspector overview。這份 snapshot 只活在該次同步 render call，不保存到 UI global、simulation state、下一次 render 或下一 tick；因此它是 Presentation 內部 derived-result reuse，不是 Validator cache，也不改 invariant semantics。
+
+Autoplay scheduling 同樣屬 Presentation / UI ownership。`src/ui/core.js` 使用單一 completion-aware context + generation token；名目 start cadence為700ms，但下一 callback不會以 fixed interval追趕逾期工作。每次完整 `stepOne = E.tick() → render()` 結束後必須先跨過兩個 browser animation-frame opportunities，再依 `max(0, 700ms - 本次callback已耗時)` 安排下一 callback。Pause / Reset會取消 pending timeout / frame並使舊 generation失效；autoplay state不得寫入 simulation state，也不得改 tick / hook ordering。
+
+Manual batch scheduling 也屬 Presentation / UI ownership，而不是 Engine lifecycle。`step(1)` 保持同步 atomic tick；`step(10)` 的 UI batch在第一個 tick前與完整 tick之間讓出 browser event loop，但不切開 `E.tick()`。Intermediate manual-batch tick仍會到達上述 afterTick observer boundary，只是三個 observer handler在 UI batch context標示 intermediate時 defer真正 projection；final tick解除 intermediate flag後依原順序正常 refresh，再由 core做一次完整 render。這個 UI-only context、busy / inert state與 cancellation generation不得寫入 simulation state，也不得改 simulation hook manifest、same-tick visibility或 RNG semantics。Reset先 invalidates舊 batch continuation再走既有 `E.reset()` / afterReset lifecycle；autoplay與manual batch不得同時成為兩個 tick source。
+
+### Canonical event text
+
+Event producer 自己決定 canonical event text。UI 只能 render，不得攔截 event creator 後改字。文字只能投影 canonical structured evidence：沒有事件級 posture / movement / gesture / cause / psychological evidence 時，使用保守 wording，不得把敘事修飾寫成已發生的 simulation fact。若產品確實需要目前不存在的細節，應回真正 semantic owner 新增經設計的 structured evidence，而不是把文字或 presentation-only state 當第二份 truth。
+
+Timeline / summary classifier 只能讀正式 event type、structured `data.action` 或其他 canonical metadata；不得解析 `event.text`、Readable copy、regex / substring 來反推 importance、classification、posture、movement、intent 或任何 simulation semantics。
+
+### Action label
+
+Core 保持 `E.actionLabel` ownership。Presentation 若要補 readable status，使用具名 action-label resolver；resolver 是 derived projection，不得建立 Action / Intent / Event 或修改 simulation state。
+
+### Recent social status
+
+`recentSocialByAgent` cache 已移除。Recent response / recent talk 由 bounded canonical events + `event.tick` 推導。
+
+### Resident current-activity semantic layers
+
+Agent readable view 的「現在」固定分成三層 read-only projection：
+
+- **Action＝角色現在具體在做什麼。** 來源是 live Action；Resident 可以把 raw phase ID、工程座標等轉成玩家可讀文字，但 Debug 仍保留完整 Action phase / spatial goal。
+- **Intent＝這個行動服務的短期目的。** 來源是 canonical `activeIntent.kind`；Resident label 必須覆蓋正式 Intent kind，不得另造 `satisfyThirst / cleanEnvironment / restockFood` 之類 presentation-only 假 kind 來猜測目的。
+- **Explanation＝為什麼此刻選擇這個行動。** 只在 live Action 的 `decisionId` 精確引用 Agent-private adopted `decisionEvidence.id`，且 frozen Action context 仍與 live Action 相符時顯示；應描述該次採納時真正保存的需求壓力、環境觸發或其他 structured contributor，而不是從 Action kind、目前 Inspector recomputation 或 Intent label 反推心理理由。
+- **Explanation wording 優先自然直接。** 若同一份 evidence 可以忠實寫成「因為肚子餓了／因為口渴／因為累了／因為想睡了／因為想找人說說話」，就不要翻成「需求已經變得明顯／比較明顯／累積得比較明顯」等 engine threshold 語言。精確 Need 數值與 qualitative band 屬於 Needs / Debug；Explanation 只做玩家理解用投影。若沒有可靠的具體日常原因，使用保守抽象描述或直接省略，不為了口語化自行補心理敘事。
+
+三層都不能寫回 simulation state，也不能成為 Deliberation / Memory / Affect / Relationship 的輸入。完整 candidate score、utility、switch threshold、commitment cost、Memory delta、raw phase / coordinates 等工程資訊留在 Debug Inspector。
+
+### Relationship readable projection
+
+Resident overview 額外顯示 Relationship 的 read-only 長期摘要。Readable 層只把 authoritative `familiarity / affinity` 轉成保守文字：
+
+- Familiarity 顯示「還不太熟／有些熟悉／熟悉／很熟悉／非常熟悉」等相處歷史程度；
+- 低 Familiarity 時不顯示 Affinity 判斷，避免一兩次 encounter 就產生「很喜歡／很討厭」式過度敘事；
+- 有足夠 Familiarity 時，Affinity 只描述「相處大致中性／愉快／不順」等 experience trend，不使用 friendship / trust / love / hate label；
+- Debug Inspector 顯示精確 `Familiarity / Affinity / lastUpdatedTick`，並可顯示 social target ranking 的 `memoryUtilityDelta / relationshipTargetDelta / accessPenalty / targetPreference` decomposition；
+- v11.15.2 Debug 另可即時計算 Human / animal responder 的 `base response score + Relationship response delta → final score / response band`。這是 derived observability，不保存 `talkResponseScore / petResponseScore / relationshipResponseDelta` mirror，也不把 private score decomposition寫入 World Event。
+
+### Physical Profile Debug projection
+
+v11.17.0 Physical / Passage Slice 2 在 Debug 顯示精確 `mass / volume / bodyGeometry` 與每個 supported locomotion mode 的即時 `MovementEnvelope`。Physical UI 直接讀 authoritative profile 與 `SimPhysical.getMovementEnvelope(...)`；不建立 `movementEnvelope` presentation mirror，也不把 coarse MVP template 描述成 Anatomy 級測量結果。`posture: standing` 與 locomotion `walk` 保持不同語意；Player-readable behavior 文案目前不使用這些數字推論人格、身材評價或「願不願意 crawl」。
+
+### Entity Readable View
+
+Player-readable Inspector 不再只覆蓋 Agent。現行 selectable entity 的 readable surface 包含 `agent / container / source / furniture / tile / room / event`；所有 readable 內容都只從當下 authoritative state / canonical event 即時投影，與 Debug Inspector 共享同一份 truth。
+
+- **Container：** 玩家層可顯示名稱、可理解位置／持有人／承載家具、內容物、容量與已存在 capability；raw entity ID、Tile 座標、empty/current load、restock strategy 等工程欄位留在 Debug。
+- **Source：** 顯示資源來源名稱、位置、提供的資源與可理解供應狀態；roles、interaction Port、raw ID 留在 Debug。
+- **Furniture：** 顯示位置、可理解用途、**實際正在使用的 Agent**、承載物件與聚合後的表面內容；Footprint、Surface cell、slot position / raw ID 與 reservation 留在 Debug。`slotReservedBy` 是行動規劃／reservation truth，不等同「正在使用」，不得在玩家層誤寫成已發生事實。
+- **Tile / Room：** 顯示地形／房間名稱、是否可通行、當前 occupants / furniture、可理解的表面內容或空間摘要；raw coordinate、blocker provenance、noise/comfort diagnostic、derived topology metrics 留在 Debug。
+- **Event：** 玩家層以 canonical event text / time 與可解析的相關實體為主；raw event data、entity refs、cause tree 等 causal/debug provenance 留在 Debug。
+
+Readable View 不保存 `playerContents / readableFurnitureState / entityReadableState` 等 mirror，不得回寫 simulation state，也不能成為 decision / Memory / Affect input。若 authoritative state 沒有足夠資訊，就省略該描述，而不是補造用途、心理狀態或因果敘事。
+
+### Inspector render / decorator lifecycle
+
+Player-readable Entity View 與 Debug Inspector 都是同一 authoritative simulation state 的 projection。View / tab / readable-debug switch 必須 state-inert。
+
+Base `ui.js` 是 `#inspector` 的唯一 render owner。它先提交 base Inspector DOM，再同步執行 `window.SimUI.registerInspectorDecorator(id, handler, order)` 註冊的 presentation decorators；decorator 不得以 `MutationObserver` 或 catch-all document click 猜測 Inspector 何時重畫完成。
+
+現行 presentation-only decorator order：
+
+```text
+100  Spatial Observability
+200  Spatial Environment
+300  Active Intent
+400  Episodic Memory
+500  Historical Appraisal
+600  Current Affect
+700  Memory Retention
+800  Memory → Deliberation
+900  Requester Social Outcome Memory
+1000 Resident View / Debug Layer
+1025 Relationship Readable / Debug Projection
+1026 Physical Profile Debug Projection
+1050 Entity Readable / Debug Layer
+```
+
+這些數字只表示 **Inspector composition order**，不是 simulation Runtime Hook Pipeline 的 phase/order；Architecture 圖仍應以 lifecycle responsibility 描述，不把 UI section 名稱提升為 simulation stage。
+
+Agent selection 由 order 1000 Resident layer 持有 player-readable tabs / Action / Intent / Explanation；order 1025 Relationship layer 與 order 1026 Physical layer 在 Agent shell 已建立後補入各自 read-only / Debug projection；order 1050 Entity Readable layer 對 Agent 不建立第二個 shell，只統一玩家入口標籤。Container / Source / Furniture / Tile / Room / Event 則由 order 1050 將已完成 decorators 的 base Inspector DOM 包入 Readable / Debug shell。所有 layer 都直接使用 base UI 傳入的 `selected` context，不解析 `.inspect-title` 猜 entity，也不以 `MutationObserver` 搬運重建後的 DOM。
+
+Resident afterTick 1100 `residentView.schedule` / Relationship afterTick 1150 `relationshipView.schedule` 只負責 presentation refresh；afterReset 700 / 750 同理。Physical / Passage Slice 2 是靜態 profile + 同步 derived projection / query，沒有取得 simulation runtime hook ownership。這些 presentation hooks 不取得 simulation lifecycle ownership。非 Agent Entity Readable layer 依 base Inspector 的既有 render cadence 即時重投影，不另建 runtime lifecycle。
+
+`ui/spatial/observability.js` 對 map/actions 的 derived DOM sync 可以保留自己的 observer；**Inspector 不在該 observer ownership 內**。任何後續 Inspector extension 應註冊具名 decorator，而不是重新觀察 `#inspector`。
+
+## 9. Spatial / Physical / resources / sleep invariants
+
+### Spatial
+
+- Agent 與可定位 Object 透過 Spatial API 回答 node。
+- floor environment 由 floor surface contents 持有；家具 Surface Environment 由 Surface Cell contents 持有。
+- Interaction Geometry 依 affordance + target data 推導合法操作位置。
+- dynamic blocker / Contact / supported contact 不建立重複 location truth。
+
+詳見 [`interaction-geometry.md`](interaction-geometry.md)。
+
+### Derived Furniture Surface / static fit / transition maneuver
+
+v11.34.0 將 Furniture top traversal 收斂成一條可追溯的跨 subsystem contract：
+
+```text
+Furniture Definition solid top eligibility
+→ resolver derives runtime spatial.surfaces[]
+→ Physical surfaceStaticFit (support footprint + body clearance)
+→ Passage surfaceTransition objective geometry
+→ Physical step / climb / jump candidates
+→ Locomotion selection + timing / burden
+→ Route step.surfaceManeuver
+→ Engine executes the same maneuver identity
+```
+
+正式邊界：
+
+- Definition 只 author `spatial.solids[].faces.top.supportsBodyOccupancy` 與可選 stable `surfaceKey / surfaceLabel`；legacy singular `spatial.surface` 被明確拒絕。resolver 由 canonical solid bounds 派生 `id / sourceSolidKey / supportRegion / topElevation / cells`，因此不存在第二份 top bounds truth。`supportsObjects:true` 的 Furniture 必須能解析到唯一 support Surface。
+- Surface candidate 存在不等於 Agent 能站上去。`SimPhysical.getSupportFootprint(agent, posture)` 與完整 body / pose clearance 分開；standing support footprint 不重用 MovementEnvelope width/depth。
+- floor ↔ Surface transition 的高度差、水平 gap、support-region edge facts與兩個 coarse Cell 之間的 canonical Boundary / Door permeability 由 Passage 擁有；`wall` 或 closed Door 必須在 Surface → floor 與 floor → Surface 兩方向都封閉同一 transition，不能因 Surface identity 繞過 boundary truth。Physical 依個體 body height × maneuver profile 產生 `step / climb / jump` 候選，上／下方向分開，同一 geometry 可以同時有多個候選。
+- Locomotion 是 maneuver choice、timing、burden 與 execution owner。current baseline 把既有 Human / Cat Surface burden 校準搬到 Locomotion，沒有虛構新的 family-specific timing；Route 把選中的 exact `surfaceManeuver` 放進 route step，Engine pending movement 驗證並執行同一 identity。
+- Contact 不因 Traversal Surface 泛化而改寫自己的 occlusion truth；Surface Environment / liquid 與 `supportId` object resolver 都引用 canonical derived Surface。World Authoring Instance shape 維持 v8；本 slice 不加入 continuous local position、multi-agent / multi-Slot Surface occupancy、turn clearance、sideways traversal或 persistent / cross-tick route cache。
+
+### Carried Container physical feasibility
+
+v11.37.0 建立 carried physical feasibility contract：
+
+- `Agent.held` 仍是唯一 canonical held relation；不得建立 `Agent.carrying` mirror。
+- portable Container 的 `handling.carryGeometry / handsRequired` 由 World Authoring / Resources 持有；contents-derived load 由 `SimResources` canonical formula 派生。
+- `SimPhysical.getMovementEnvelope(agent, mode)` 保持 body-only；`getEffectiveTraversalEnvelope(state, agent, mode)` 才合成 current held Container 的 carried envelope，不回寫 `bodyGeometry` 或 persistent cache。
+- hand feasibility 使用總需求 `handCapacity >= handsRequired + supportHandsRequired`。Human current `handCapacity = 2`；crawl / climb 可要求 support hand，但「拿著任何東西」不構成 blanket ban。
+- Passage endpoint fit、clearance 與 Surface maneuver 消費同一份 carried geometry / hand feasibility；Route 因此自然避開 carried-infeasible edge。
+- Crowding 仍只讀 body MovementEnvelope；Locomotion execution / timing 沒有改語意，維持 `11.34.0-surface-traversal-maneuvers`。
+- Slice A 不實作 HandlingRisk、`tilt / impact / oscillation` calibration、spill/drop consequence。
+
+### Physical Profile + Passage Profile / Multi-mode Feasibility
+
+v11.17.0 在 v11.16.0 individual Physical Profile 基礎上加入 multi-mode MovementEnvelope 與 edge-derived PassageProfile：
+
+```text
+agent.physical
+├─ mass
+├─ volume
+├─ bodyGeometry { height, width, length }
+├─ locomotionCapabilities
+└─ locomotionProfiles
+
+SimPhysical.getMovementEnvelope(agent, mode)
+→ { clearanceHeight, clearanceWidth, clearanceLength, speedFactor, sourceMode }
+
+SimSpatial.getPassageProfile(state, fromNode, toNode)
+→ {
+    edgeKind,
+    options: [
+      { interval, clearanceHeight, clearanceWidth, constrainedBy }
+    ],
+    ...
+  }
+
+SimSpatial.traversalFeasibility(state, agent, fromNode, toNode)
+→ {
+    passage,
+    modes: {
+      [mode]: { feasible, failedAxes, effectiveOption, effectiveClearanceWidth }
+    }
+  }
+```
+
+正式邊界：
+
+- mass、volume、body geometry 分開保存，不用單一 `bodySize` 取代；default Human / Cat profile 是 coarse MVP template，clone 成每個 Agent 自己的 state，個體可 override；
+- **canonical unit contract**：`mass` 使用 kg、`volume` 使用 m³；所有 Physical / MovementEnvelope / Passage 的絕對長度（`bodyGeometry.{height,width,length}`、MovementEnvelope `clearanceHeight / clearanceWidth / clearanceLength`、Furniture `spatial.solids.bounds`、Boundary / Structure / Passage option / `map.passageConstraints` 的 clearance）使用 m。locomotion geometry factors、`speedFactor`、Crowding width ratio / direction weights 等為無量綱。這是 schema-level meaning，不在每個 persistent value 上重複保存 `unit` 欄位；若未來外部 protocol 需要自描述 payload，再在 protocol boundary 做明確 unit/version envelope，而不是污染 Agent state；
+- `MovementEnvelope` 與 `PassageProfile` 都是 derived output，不保存 persistent cache；
+- Physical locomotion baseline 由舊 `standing` 正名為 `walk`，與 Agent `posture.kind='standing'` 分離；Validator 會拒絕 legacy standing locomotion alias；
+- Human 第一批 supported modes 為 `walk / kneelCrawl / proneCrawl`；Cat 本 slice 只定義 `walk`，不假定所有 body plan 共享 Human mode 名稱；
+- locomotion profile 可用各軸 factor 或 absolute clearance override；Spatial 不自行推導 torso thickness / Anatomy；
+- Current PassageProfile 使用位置化 `options[]`；每個 option 自己保存 `interval / clearanceHeight / clearanceWidth`，某軸 `null` 仍表示該 option 在該軸沒有已知上限。Physical feasibility 必須由**同一個 option**同時容納 MovementEnvelope width / height，不能把不同位置的最大寬度與高度拼成虛構 passage；`clearanceLength` 目前仍不作直線 passage length requirement；
+- current passage geometry 可來自 layer Boundary / Door 的 metric opening、resolved Furniture `spatial.solids` 派生的 directional free intervals / overhead clearance、root Structure clearance，以及可選 edge-local `map.passageConstraints`；Furniture intrinsic obstruction 由 current `furniture-definitions-v12` Definition 持有，Boundary / Structure 由 world authoring 持有，edge constraint只保留 low-level regression override；Spatial 將這些 world facts收斂成 positioned Passage options；
+- `traversalFeasibility` 只回答 physical feasibility，不回傳 `bestMode / recommendedMode / utility`，不讀 Relationship、Memory、traits、goal pressure，也不修改 posture；
+- **v11.17 當時**的 production A* 仍只以 `walk` mode 擴展路徑，但每條 edge 已消費 `walk` Passage feasibility。因此該 slice 的 crawl-query 可行不代表 routing 會自動 crawl；v11.19+ current production 已由後述 Locomotion Execution contract 接上 mode-aware routing / execution；
+- v11.17 isolated single-passage fixture 鎖住四種情況：normal 可 walk、low 可 kneel/prone 但 walk blocked、lower 僅 prone、height 足夠但 width blocked；在該 focused harness 的 walk-only execution boundary 下，low/lower 情況的另一側水源仍不可達；
+- Static fit 與 Traversable 概念仍分離，但本 slice **不實作 PoseEnvelope / static occupancy API**；不能拿 MovementEnvelope 假裝靜態 body bounds；
+- `clearanceLength / turn clearance / maneuverability`、locomotion execution / posture transition、`pathDistance / traversalCost / travelTime` 分家、crowding、Anatomy / Injury / Collision 都延後；
+- 「能不能過」由 Physical + Spatial 決定；未來「願不願意為某目標趴著過」屬行為／動機選擇層，不能回寫 physical feasibility，也不能把真實 traversal / exertion burden 抹成 0。
+
+### Route Semantics Split
+
+v11.18.0 將原本名為 `SP.pathDistance()`、實際卻直接回傳 weighted route cost 的語意拆開：
+
+```text
+SimSpatial.planRoute(state, agent, goal, {
+  mode: 'walk',
+  objective: 'traversalCost' | 'pathDistance'
+})
+→ {
+  path,
+  mode,
+  objective,
+  pathDistance,
+  traversalCost,
+  travelTime
+}
+```
+
+正式邊界：
+
+- `pathDistance`＝所描述 path 的實際公尺長度；floor cardinal maneuver 為 `1m`、floor diagonal maneuver 為 `sqrt(2)m`。`stepCount` 另保存 graph edge count；standalone `SP.pathDistance(...)` 搜尋 physical-feasible 最短 metric route。
+- `traversalCost`＝`traversalEdgeCost` 累積的客觀 route burden。Current edge composition 為 environmental / Surface base cost + Locomotion-owned mode burden + Locomotion-owned mode-transition burden + Crowding `congestionCost`；standalone `SP.traversalCost(...)` 搜尋最低 traversal-cost route。
+- `travelTime`＝current executable movement time。v11.30.0 起 planning 依 `distanceMeters / speedFactor` 計算 movement requirement，並讓同一 locomotion mode 的連續 edge 共用 Action-scoped fractional movement credit；mode transition清除 credit。歷史 v11.18 的「walk-only、一 edge一 tick」只屬當時 contract，不再代表 current timing。
+- A* compatibility surface 仍以 `traversalCost` 作 route objective，既有 gameplay/resource/interaction/nearest target consumers 也遷移到 `traversalCost`，因此本 slice 不偷偷改 route preference / AI balance。
+- 舊 `SP.pathCost(...)` 暫時只作 traversal-cost compatibility alias；新 consumer 不應再把它當 distance。
+- v11.19.0 起 production `planRoute(...,{mode:'auto'})` 可在 supported + passage-feasible modes 間規劃；v11.24.0 起第一順位 objective 也正式包含 locomotion mode / transition burden。explicit `mode:'walk'` 仍可作 focused / compatibility query；mode choice只依客觀 route facts與 deterministic execution tie-break，不等於 behavioral willingness。
+- `speedFactor` 已接入 metric execution timing：`SimLocomotion.movementTiming(agent, mode, distanceMeters, movementCredit)` 是 Route 與 core movement共用的 timing truth；posture/mode change另加 1 transition tick並重置 movement credit。`speedFactor` 不直接換算 objective burden。
+- **Locomotion objective burden**：`SimLocomotion.modeTraversalBurden(agent, mode)` current baseline 為 walk=0、kneelCrawl=1、proneCrawl=2，作為 movement burden **每公尺**累積；`modeTransitionBurden(agent, fromMode, toMode)` 在 mode 改變時為 1、同 mode 為 0，仍是 per-transition。這是 coarse 客觀移動麻煩程度，不是人格／禮儀偏好，也不是 `travelTime` 的別名。
+- social target ranking 的舊 `distancePenalty` 已正名為 `accessPenalty`，source 改讀 `traversalCost`；公式尺度與 v11.17 保持 parity，Relationship / Memory target ordering 不因 semantic cleanup 偷換心理模型。
+- deterministic regression 必須能同時存在「4-edge 但 wet / cost 14.5」與「6-edge dry / cost 6」兩條 route：standalone `pathDistance=4`、`traversalCost=6`，default plan / A* 選 6-edge route，而 selected plan 回報 `pathDistance=6 / traversalCost=6 / travelTime=6`。
+
+### Locomotion Execution + Posture Transition
+
+v11.19.0 把 v11.17 的 multi-mode physical feasibility 與 v11.18 的 route metrics正式接到 core movement execution，但仍不加入主觀 willingness：
+
+- **authoritative state 分層**：`agent.posture.kind` 仍是角色當下姿勢；`agent.locomotion = { mode, phase }` 只描述 current locomotion execution，`phase ∈ { idle, transition, moving }`。MovementEnvelope 仍是 derived truth，不持久化。
+- **mode → posture**：目前 canonical mapping 為 `walk → standing`、`kneelCrawl → kneeling`、`proneCrawl → prone`。既有 `sitting / lying` 仍由休息／睡眠系統擁有，不改名成 locomotion mode。
+- **explicit transition**：locomotion mode要求的 posture 與目前 posture不同時，先消耗 1 tick transition；該 tick 不同時位移。不能在 route search或 edge traversal 中免費變形。
+- **mode-aware route graph**：production `planRoute(...,{mode:'auto'})` 的 search state 是 `Spatial Node + locomotion mode`；每條 candidate edge以 `traversalFeasibility(...).modes[mode]` 驗證。舊 focused harness若未載入 Locomotion subsystem，仍保留 walk-only compatibility。
+- **objective 與 tie-break**：route primary objective仍是 `traversalCost`；v11.24.0 起 primary cost 已包含 mode traversal burden 與 mode-transition burden。只有 primary cost 同分時，才以 executable `travelTime`、transition數、mode rank作 deterministic tie-break。這些都是客觀 execution facts，不是人格偏好。
+- **timing truth**：v11.30.0 起 movement timing 由實際 `distanceMeters / speedFactor` 推導；同 mode 連續 edge 的 fractional requirement以 Action-scoped `locomotionCredit` 延續，避免 diagonal 每 edge各自向上取整。route `travelTime` 與 core movement共用同一 timing facts，mode transition仍額外支付明確 tick並清除 credit。
+- **execution boundary**：core `moveToward()` 仍是單一 movement owner；所有既有 Action透過 `moveToExact / moveToInteraction` 共用同一 locomotion lifecycle，不建立 crawl-specific Action type。multi-tick edge進度暫存在 current Action 的 `locomotionStep`，不是 persistent route cache。
+- **occupancy vs walk feasibility**：`SP.nodeWalkable(...)` 保留「walk 是否可進入該 node」語意；`SP.nodeLocomotionAccessible(...)` 只判 node 結構上是否可被 locomotion state佔據。`spatial.node` Validator使用後者，避免低姿勢合法停留被 walk-only clearance誤判。這不是 PoseEnvelope/static-fit；`11.33.0-pose-envelope-static-fit` 只對 sitting / lying 的單一 Slot 使用位置提供獨立 static-fit contract，普通 traversal occupancy 仍不宣稱有完整靜態 body obstruction。
+- **arrival semantics**：crawl抵達後 posture不自動改回 standing；完成 Action只清除 active locomotion phase。下一次需要其他 mode時再支付 transition，避免在低矮幾何中出現免費站立。
+- **observability / validation**：Locomotion Debug顯示 posture、active mode、phase、speedFactor、edge ticks與 pending edge；Validator檢查 locomotion phase、posture/mode一致性與 pending step timing，不建立第二份 UI truth。
+- **心理層明確未接線**：v11.19 只會依 objective route facts選擇 physically executable mode。Relationship、Memory、traits、goal pressure、discomfort / embarrassment / dirt aversion尚未參與「願不願意爬」；它們未來只能影響 behavioral choice，不能回寫 Physical feasibility或把客觀 travel time變成零。
+- **Locomotion 本身仍未包含**：length / turn clearance / maneuverability、Anatomy / Injury / Collision，以及新的 exertion-by-mode model。PoseEnvelope/static fit 已於 `11.33.0-pose-envelope-static-fit` 由獨立 Physical + Furniture Slot contract 接線，不併入 locomotion mode feasibility。Dynamic Congestion 已由下一節接線；現有 exertion仍維持 per-edge parity，避免本 slice偷改 energy balance。
+
+### Dynamic Congestion
+
+v11.20.0 將既有粗略的「目的 node occupancy 固定 penalty」收斂為 derived Dynamic Congestion（動態擁擠）contract：
+
+- **ownership**：Crowding 不擁有 physical feasibility。MovementEnvelope vs PassageProfile 仍是個體能否通過某 edge 的唯一物理可行性 truth；其他 Agent 永遠不修改 PassageProfile。
+- **derived / uncached**：`SimCrowding.getCrowdingProfile(state, agent, fromNode, toNode, mode)` 只讀當下 world state，即時計算 next-edge congestion；不寫入 `state.crowding / state.congestion` 等 persistent mirror。Route 在同一次 edge evaluation 已持有的 `traversalFeasibility` 與 `TraversalManeuver` 會直接作為 ephemeral snapshot 傳給 Crowding 重用，避免同一 edge / mode 重建 Passage 幾何；這不是 persistent / cross-tick cache。
+- **soft consequence only**：第一版不產生 hard block。多 Agent 在狹窄處相遇時，側身、錯步、短暫停頓與調整移動方式被抽象為 `congestionCost` 與 movement delay，不建立 collision / reservation / yielding semantics。
+- **width approximation**：Crowding 使用 traversal feasibility 對目前 mode 選出的 `effectiveClearanceWidth`；普通無障礙 1m edge因此有已知 1m width，較窄 opening使用實際 option width。另一人的 effective width只作 crowding-specific approximation，不冒充 PoseEnvelope / Static fit。
+- **unknown width**：passage width 為 `null` 時，只依 occupant count、movement direction 等已知資訊形成 soft penalty，不推導「一格最多幾人」等虛假 physical capacity。
+- **candidate discovery / direction severity**：v11.31 起 Crowding 直接消費 `TraversalManeuver.influenceNodes`；cardinal / Structure 掃兩個 endpoint，diagonal corner 掃四個 local floor nodes，candidate 依 Agent ID 去重，不建立 persistent `resource -> agents` index。標準水平 moving-vs-moving weight 為 0°=`.65`、45°=`.9125`、90°=`1.175`、135°=`1.4375`、180°=`1.7`，由 same/opposite 兩端線性插值；`stationary=1 / unknown=1` 保留獨立語意。Structure / Z-aware movement仍保留 exact same / opposite / unknown。這是客觀交通阻力，不含 Relationship / personality / courtesy。
+- **first-pass pressure formula**：每名附近 Agent 先提供 base occupant pressure `.35`；若 width 已知，再加入 `max(0, widthRatio-.75) × 1.5` 的 narrowness pressure；最後乘 direction weight。這些都是 MVP approximation constants，不是人體工程學常數。
+- **route cost**：`congestionCost = congestionPressure × 2.5`，加入 objective `traversalCost`。舊 floor `occupiedCount × 5/2.5` 在 Crowding runtime 存在時停用。
+- **movement slowdown**：`delayTicks = floor(congestionPressure × 2)`；effective edge ticks = locomotion base metric movement ticks + delay ticks。diagonal base timing因此仍由 `distanceMeters / speedFactor` 決定，Crowding只加局部 delay，不把 `congestionCost / delayTicks` 再乘 `sqrt(2)`。Debug 的 `speedMultiplier` 由 base / effective ticks 派生。離散 tick會量化小幅 slowdown，因此 direction severity即使已反映在 pressure / cost，也不保證每個單一 occupant情況都產生不同整數 tick。
+- **planning vs execution**：route planning 讀當下 congestion snapshot；core `moveToward()` 每 tick 會重新 `planRoute(...)`，新 edge 開始時使用該次 step 的 crowding-adjusted `moveTicks`。因此較早的 estimated `travelTime` 與 actual travel time 可因人群移動不同；multi-tick edge開始後不在中途重算同一 edge。
+- **interaction target**：`bestInteractionPosition()` 在 Crowding runtime 存在時不再額外先按 raw occupancy 排序，而讓 canonical route/crowding cost負責 crowded position preference，避免 double count。
+- **deliberate non-goals**：第一版不禁止 Agent spatial overlap、不做 edge reservation、movement claim、誰先走、yielding、deadlock resolution、collision，也不加入 behavioral willingness / aversion。若後續實測「穿過彼此」本身成為產品問題，再另開 contention slice，不在本版預先引入 arbitration。
+
+### Resources / logistics
+
+- `Agent.held + Container.contents` 是搬運與資源位置的正式 truth。
+- `state.agentCarries` 是搬運另一 Agent 的獨立 canonical relation；它不覆寫 `Agent.held`，也不把 carried Agent 的 projected position保存成第二份 ordinary position。
+- 舊 `Agent.carrying` 不存在。
+- transfer / serving / restock / external supply 都必須遵守 physical resource conservation 與合法 Interaction Geometry。
+
+### Sleep
+
+- `fatigue` 與 `sleepNeed` 分離。
+- circadian pattern / phase offset 是 bias，不是第二份 clock。
+- sleeping target 的 stimulus、wake、response 是不同事實。
+- wake 不自動等於 social response。
+
+## 10. Validator / regression contract
+
+Validator 是 pure invariant checker，不應修補 state 或改 Engine API。
+
+Regression 優先鎖：
+
+- Single Source of Truth；
+- World / Agent-private / Observed Information boundary；
+- Physical Profile individual ownership、positive dimensions / mass / volume、multi-mode MovementEnvelope no-cache boundary、`standing → walk` terminology、default Spatial behavior parity 與 individual geometry override；
+- Passage Profile height / width validity、`null = unconstrained`、explicit edge constraint 與 per-mode `failedAxes`；
+- Vertical Structure explicit-endpoint ownership、無 Structure 時 cross-Z unreachable、Structure Passage identity / clearance、`up > down >= flat` directional burden與實際跨 Z locomotion execution；
+- v11.17 isolated Passage focused harness仍不得因 feasibility query 自動 crawl；production v11.19+ mode-aware execution則由 Locomotion contract另行鎖定；
+- Dynamic Congestion cardinal/diagonal candidate discovery、0°/45°/90°/135°/180° direction severity、Agent-ID de-duplication、known-vs-unknown width、soft-no-block、planning snapshot vs execution refresh、legacy occupancy double-count removal；
+- canonical Action terminology / construction；
+- Intent interruption semantics；
+- Social Bid requester / responder agency；
+- event creation ownership / event-created consumer registry；
+- event / memory provenance；
+- bounded Memory / retention；
+- Appraisal historical stability；
+- Affect provenance；
+- Relationship directional ownership / audited evidence / boundedness；
+- Relationship target-preference boundedness、action-utility isolation 與 generic animal affordance eligibility；
+- Relationship responder-bias directionality、bounded Human / animal score delta、reverse-direction isolation、World Event privacy 與 derived Debug observability；
+- runtime hook ordering；
+- state-inert presentation；
+- deterministic long-run Validator 0。
+
+Current CI ownership：
+- `.github/workflows/node-regression.yml`：architecture + deterministic/state/domain regressions，並由 `tests/workflow-architecture.mjs` 鎖 workflow/test ownership。
+- `.github/workflows/browser-regression.yml`：以 matrix 執行 current browser suites；Resident View case另加跑 browser runtime-hook pipeline QA。
+- current workflow不得再用歷史 feature branch trigger；Appraisal / Affect 的舊 v11.13 browser scripts已退休，其 current coverage由 focused Node regressions與 current Resident View browser projection承接。
+
+對 emergent behavior，不用「最後必須固定做某個 Action」代替 causal invariant。Focused causal story / counterfactual A/B 應只改目標變數，鎖住真正的因果差異。
+
+## 11. Current integration priority
+
+Physical / Locomotion Current invariant：
+
+- `agent.physical` 保存 individual authoritative profile；template 只是初始化來源，不是 runtime species hard-code；
+- `MovementEnvelope` 只由 `SimPhysical.getMovementEnvelope(agent, mode)` derived，不建立 persistent mirror；`PassageProfile` 同樣由 Spatial edge geometry derived，不建立 cache；
+- `SimPhysical.getEffectiveTraversalEnvelope(state, agent, mode)` 可在 body-only MovementEnvelope 上組合 Resources-owned held Container 與 AgentCarry-owned carried Agent burden；它只回 derived effective geometry，不建立第二份 body / carry cache；
+- locomotion baseline 是 `walk`，不得再把 Agent posture `standing` 當成同一個 locomotion mode；
+- Human 目前可查詢 `walk / kneelCrawl / proneCrawl` feasibility，Cat 目前只定義 `walk`；capability 只表示物理支援，不代表行為意願；
+- Spatial production route 已支援 `mode:'auto'` 的 walk / kneelCrawl / proneCrawl execution；explicit walk-only query仍可供 focused compatibility。physical feasibility、mode execution 與 behavioral willingness仍分層；
+- v11.18.0 建立 Route Semantics Split；v11.19.0 接上 multi-mode execution，Slice 3 再把 production floor Route 升為 metric diagonal semantics：`pathDistance`＝physical-feasible route 的實際公尺長度、`stepCount`＝graph edge count、`traversalCost`＝最低客觀通行負擔、`travelTime`＝selected executable route 的真實 transition + distance-based movement ticks。A* primary objective仍為 traversal cost；
+- mass / volume / geometry 的存在不代表 Base Simulation 自動產生 collision damage、structural failure、density/fluid 等高解析度後果；
+- Physical feasibility 與 future behavioral willingness 分離：Relationship / traits 可以未來影響「是否願意承受某 locomotion 的主觀成本」，但不能把物理不可通行改成可通行，也不能抹掉真實 travel/exertion cost。
+
+Surface traversal Current invariant：
+
+- Furniture support eligibility 是客觀 solid-face truth；Surface identity / bounds / elevation 必須由 resolver 派生，不得恢復 singular authored `spatial.surface` 或 Furniture-ID special case；
+- static occupancy fit 與 transition reachability 分開：support footprint + body clearance 只回答「能不能待在 Surface 上」，Passage × Physical maneuver feasibility 才回答「能不能從目前 node 上去／下來」；
+- Route / execution 必須共用同一 selected `surfaceManeuver`；Locomotion 擁有 maneuver timing / burden，不得把 fixed Surface `transitionCost` 當 physical feasibility；
+- Contact、Surface Environment、support-object position 都只能引用 canonical derived Surface；本階段仍沒有自由 local-position / multi-agent Surface packing。
+
+Relationship Current invariant：
+
+- `relationships` 只存在 Agent-local directional map，不建立 global / pair registry；
+- persistent entry 只保存 `familiarity / affinity / lastUpdatedTick`；
+- Relationship 只 consolidate audited direct relational experience 的 historical Appraisal，不自行解析 raw event 或從 agency 推論好惡；
+- proposal / intermediate response 不得造成同一 encounter 重複計分；
+- requester-private no-response 只能更新 requester → counterpart；
+- Memory pruning 不得抹除已 consolidated Relationship；
+- v11.15.1 Relationship 只影響 initiator-side `socialize / interactWithAnimal / seekSocialContact` target ranking，使用 `8 × familiarity × affinity` bounded delta；
+- v11.15.2 responder bias 只讀 responder → requester 的 `familiarity × affinity` unitless signal，由 Human / animal responder owner 各自縮放，目前 cap `±0.18`；反方向 Relationship 不得滲入；
+- Relationship 不得加入一般 action-level social utility、不 hard-ban negative target、不修改 current-intent utility、soft-switch threshold 或 commitment；
+- responder score decomposition 只可 derived render，不寫入 World Event 或 persistent Agent cache；
+- 動物互動 canonicalize 為 `interactWithAnimal / petAnimal`，target eligibility 由 species profile / affordance 判斷，不依物種名稱拆 Action；
+- player-readable Relationship 只是 authoritative state projection；Debug 可顯示精確數值、target-ranking decomposition 與 responder-score decomposition；任何 mode/tab switch 都必須 state-inert。
+
+Memory event-observation 的 `E.addEvent` wrapper / marker-sweep integration debt 已由 core-owned event-created lifecycle 收斂；不得重新引入 extension-owned `E.addEvent` wrapper 或第二份 event lifecycle truth。Private experience lifecycle 的全面統一目前只記為 deferred architecture cleanup，不阻塞本 slice。
+
+## 12. Validator rule ownership
+
+`src/validation/registry.js` 是唯一 `validateState` aggregator owner。Semantic validator rule 不得捕捉或覆寫 `V.validateState`；每一層 invariant 使用 `V.registerValidationLayer(id, handler, order)` 以唯一 ID 與 explicit order 註冊。
+
+正式 app 在所有 `validation/rules/` semantic validator rules 載入後由 `validation/manifest.js` finalize expected layer set。duplicate ID、duplicate order、missing expected layer、unexpected layer、finalize 後 late registration 都必須 loud failure；不得靠 `index.html` script load order 靜默決定 validation semantics。
+
+每個 layer 接收 `(state, previousResult)` 並回傳下一個 validation result；既有 invariant logic 保持在原本 owner 檔案。Registry 只負責 ownership / ordering / completeness，不把 subsystem invariant 集中回單一巨型 validator。
+
+**Sleep conflict response outcome boundary**：preferred-Slot conflict 的 Human request 將 `perceived`、`understood`、`accepted / refused` 與 `completed` 分開保存；busy responder 可以只有 perceived 而沒有立即 understood/response。接受只建立 responder-local departure Intent/Action，不直接改 requester 或 responder 的位置；只有 canonical Slot occupancy 實際清除後才形成 completed event。occupancy wait 使用獨立 `sleepSlotOccupancy` source/phase，patience 是獨立 calibration，不由 assignment / claim / habit 強度硬算。
