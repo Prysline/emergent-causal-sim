@@ -103,6 +103,7 @@ function prepare(careful){
   a.locomotion={mode:null,phase:'idle'};
   a.traits.careful=careful;
   a.held='cupA';
+  delete cup.supportId;
   cup.contents={water:33};
   return {st,a,goal:floor(st,6,4)};
 }
