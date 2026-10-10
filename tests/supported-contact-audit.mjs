@@ -103,9 +103,9 @@ E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray,pantry=st.containers.foodPantry,basket=st.containers.basket;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-  tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};
+  tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};a.held=basket.id;
   const before=pantry.contents.food;
-  a.action={kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
+  a.action={kind:'restockContainer',phase:'toSource',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
   for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`mealTray local deposit ${i}`);}
   assert.equal(a.action,null,'mealTray local deposit / receive contact 下室內補貨仍應完成');
   assert.ok((tray.contents.food||0)>0,'物流籃應把食物卸到 mealTray');
