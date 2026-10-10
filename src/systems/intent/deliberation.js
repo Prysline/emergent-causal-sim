@@ -46,7 +46,7 @@
     if(typeof E.baseUtilityForAction!=='function')throw new Error('Soft reconsideration requires core baseUtilityForAction');
     return E.baseUtilityForAction(a,actionKindValue);
   }
-  function utilityForIntent(st,a,intentKind,{intent=null}={}){
+  function utilityForIntent(st,a,intentKind,{intent=null,socialTarget=null}={}){
     const bidValue=currentBidUtility(st,a,intent||{kind:intentKind});if(bidValue!=null)return bidValue;
     switch(intentKind){
       case'satisfyHunger':return E.canSatisfyHunger?.(a)?canonicalBaseUtility(a,'eat'):0;
@@ -54,9 +54,9 @@
       case'drinkAlcohol':return a.kind==='human'&&E.canDrinkResource?.(a,'alcohol')?canonicalBaseUtility(a,'drinkAlcohol'):0;
       case'recoverFatigue':return canonicalBaseUtility(a,'rest');
       case'sleep':return canonicalBaseUtility(a,'sleep');
-      case'socialize':return a.kind==='human'&&nearestAgent(st,a,'human',{awakeOnly:true})?canonicalBaseUtility(a,'talk'):0;
+      case'socialize':return a.kind==='human'&&(socialTarget||nearestAgent(st,a,'human',{awakeOnly:true}))?canonicalBaseUtility(a,'talk'):0;
       case'interactWithAnimal':return a.kind==='human'&&nearestPettableAnimal(a)?canonicalBaseUtility(a,'petAnimal'):0;
-      case'seekSocialContact':return E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&nearestAgent(st,a,'human')?canonicalBaseUtility(a,'seekHuman'):0;
+      case'seekSocialContact':return E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&(socialTarget||nearestAgent(st,a,'human'))?canonicalBaseUtility(a,'seekHuman'):0;
       case'removeHazard':return wetTotal(st)>.2?canonicalBaseUtility(a,'cleanFloor'):0;
       case'groom':return a.kind==='cat'?canonicalBaseUtility(a,'groom'):0;
       case'explore':return canonicalBaseUtility(a,'wander');
@@ -65,16 +65,16 @@
   }
   function candidateIntents(st,a){
     const out=[];
-    const push=(intentKind,actionKindValue,extra={})=>{const utility=utilityForIntent(st,a,intentKind);if(utility>0)out.push({intentKind,actionKind:actionKindValue,utility,decisionContributors:E.decisionContributorsForAction?.(a,actionKindValue)||[],...extra});};
+    const push=(intentKind,actionKindValue,extra={},utilityOptions={})=>{const utility=utilityForIntent(st,a,intentKind,utilityOptions);if(utility>0)out.push({intentKind,actionKind:actionKindValue,utility,decisionContributors:E.decisionContributorsForAction?.(a,actionKindValue)||[],...extra});};
     if(a.kind==='human'){
       push('satisfyHunger','eat');push('drinkWater','drinkWater');push('drinkAlcohol','drinkAlcohol');push('recoverFatigue','rest');push('sleep','sleep');
-      const h=nearestAgent(st,a,'human',{awakeOnly:true});if(h)push('socialize','talk',{targetAgent:h.id});
+      const h=nearestAgent(st,a,'human',{awakeOnly:true});if(h)push('socialize','talk',{targetAgent:h.id},{socialTarget:h});
       const animal=nearestPettableAnimal(a);if(animal)push('interactWithAnimal','petAnimal',{targetAgent:animal.id});
       push('removeHazard','cleanFloor');
       const bidPick=E.newestObservedAnimalBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap&&E.canPetAnimal?.(a,target))out.push({intentKind:'respondSocialBid',actionKind:'petAnimal',utility:72+(a.traits?.animalAffinity||0)*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,decisionContributors:[{kind:'socialBid',key:'animalAffection',role:'motivation',bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,fromAgent:target.id},{kind:'trait',key:'animalAffinity',role:'modifier',value:a.traits?.animalAffinity||0}]});}
     }else{
       push('satisfyHunger','eat');push('groom','groom');push('recoverFatigue','rest');push('sleep','sleep');
-      const h=nearestAgent(st,a,'human');if(E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&h)push('seekSocialContact','seekHuman',{targetAgent:h.id});
+      const h=E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14?nearestAgent(st,a,'human'):null;if(h)push('seekSocialContact','seekHuman',{targetAgent:h.id},{socialTarget:h});
       push('drinkWater','drinkWater');
     }
     const hook=window.SimMemoryDeliberation?.adjustIntentCandidates;
