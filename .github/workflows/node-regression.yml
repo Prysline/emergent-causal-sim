@@ -41,6 +41,7 @@ jobs:
       - run: node tests/embodiment-capabilities.mjs
       - run: node tests/surface-static-fit-transition.mjs
       - run: node tests/geometry-query-performance.mjs
+      - run: node tests/intent-social-query-reuse-diagnostic.mjs
       - run: node tests/state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/agent-facing-foundation.mjs
