@@ -15,8 +15,9 @@ node tests/pr-preflight.mjs
 1. `tests/check-source-syntax.mjs`
 2. `tests/workflow-architecture.mjs`
 3. `tests/production-source-load-architecture.mjs`
-4. `tests/presentation-observability.mjs`
+4. `tests/current-version-ownership.mjs`
 5. `tests/browser-version-marker-preflight.mjs`
+6. `tests/presentation-observability.mjs`
 
 任一項失敗就先修正，不要先 push 等完整 CI 重跑。
 
@@ -33,6 +34,12 @@ node tests/pr-preflight.mjs
 - [ ] 若 World Authoring / Furniture Catalog / Embodiment Capabilities generation 改變，相關 authored fixtures 與 validator expectations 已同步。
 
 這是語意 audit，不是 repo-wide blind replace。
+
+### Overall current-release ownership guard
+
+`tests/current-version-ownership.mjs` 會直接從 `src/release.js` 讀取 canonical current overall marker，並掃描 repo 中的 code / config text。除 `src/release.js` 之外，任何 `.js` / `.mjs` / `.cjs` / `.jsx` / `.ts` / `.tsx` / `.json` / `.yml` / `.yaml` / `.html` / `.css` / `.txt` / `.sh` / `.ps1` 檔案若再次硬編碼**完整 current overall release literal**，Preflight 與 canonical Node regression 都會直接失敗。
+
+這個 guard 的責任是防止「最新 overall literal 又散回 focused regression、workflow 或其他 code/config consumer」。它刻意**不掃 Markdown current-release prose**，也不處理 historical release evidence、未改 subsystem own generation 或明確非-release fixture version；這些仍由語意 audit、`tests/test-profile-composition.mjs` 與各 subsystem regression 負責。`src/release.js` 本身必須且只能持有一份 exact current overall literal。
 
 ### Browser current-marker audit
 
