@@ -4,6 +4,16 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!README.md'
+      - '!LICENSE'
+      - '!tests/**'
+      - 'tests/browser-*.mjs'
+      - 'tests/helpers/**'
+      - '!.github/workflows/node-regression.yml'
+      - '!.github/workflows/node-regression-github.yml'
   workflow_dispatch:
 
 concurrency:
