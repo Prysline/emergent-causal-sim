@@ -80,6 +80,8 @@ const SPATIAL_CORE_PROFILE=Object.freeze([
 
 const ENGINE_CORE_PROFILE=Object.freeze([
   ...SPATIAL_CORE_PROFILE,
+  'spatial-traversal.js',
+  'spatial-candidate-selection.js',
   'systems/resources.js',
   'systems/agent-carry.js',
   'systems/physical.js',
@@ -121,7 +123,7 @@ function ensureAuthoringDependencies(paths){
 
 function ensureRuntimeDependencies(paths){
   ensureAuthoringDependencies(paths);
-  const engineIndex=paths.indexOf('engine.js');
+  let engineIndex=paths.indexOf('engine.js');
   const locomotionIndex=paths.indexOf('systems/locomotion.js');
   let physicalIndex=paths.indexOf('systems/physical.js');
   if(physicalIndex<0){
@@ -137,6 +139,12 @@ function ensureRuntimeDependencies(paths){
     .map(path=>paths.indexOf(path))
     .filter(index=>index>=0);
   if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
+  engineIndex=paths.indexOf('engine.js');
+  if(engineIndex>=0&&!paths.includes('spatial-traversal.js')){
+    const spatialIndex=paths.indexOf('spatial.js');
+    const insertAt=spatialIndex>=0&&spatialIndex<engineIndex?spatialIndex+1:engineIndex;
+    paths.splice(insertAt,0,'spatial-traversal.js');
+  }
   const traversalIndex=paths.indexOf('spatial-traversal.js');
   if(traversalIndex>=0&&!paths.includes('spatial-candidate-selection.js'))paths.splice(traversalIndex+1,0,'spatial-candidate-selection.js');
   const resolvedTraversalIndex=paths.indexOf('spatial-traversal.js');
