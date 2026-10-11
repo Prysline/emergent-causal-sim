@@ -55,6 +55,7 @@ async function selectEntity(type,id){
     node.click();
     if(temporary)node.remove();
   },{type,id});
+  await page.waitForFunction(({type,id})=>{const selected=window.SimUI?.getInspectorSelection?.();return selected?.type===type&&selected?.id===id;},{type,id});
   await page.waitForSelector('[data-v1141-entity-root]');
 }
 async function entitySnapshot(){
@@ -269,7 +270,7 @@ const entityFixtures=await page.evaluate(()=>{
   const tile=Object.values(st.map.tiles).find(t=>t.terrain==='floor'&&t.roomId)||Object.values(st.map.tiles)[0];
   const room=Object.values(st.map.rooms)[0];
   const actor=Object.values(st.agents)[0];
-  const eventId=E.addEvent('老周查看了附近的環境。','normal',[],{entities:[`agent:${actor.id}`,`container:${container.id}`],actor:actor.id,action:'presentationEntityProbe'});
+  const eventId=E.addEvent('老周查看了附近的環境。','normal',[],{entities:[`agent:${actor.id}`,`object:${container.id}`],actor:actor.id,action:'presentationEntityProbe'});
   return {
     container:{id:container.id,name:container.name,resource:Object.keys(container.contents||{}).find(r=>(container.contents[r]||0)>.05)||null},
     source:{id:source.id,name:source.name,resource:source.resource},furniture:{id:furniture.id,name:furniture.name},tile:{id:tile.id,terrain:tile.terrain},room:{id:room.id,name:room.name},event:{id:eventId,text:st.causes[eventId].text}
@@ -280,11 +281,11 @@ let entity=await entitySnapshot();
 assert.equal(entity.version,desktop.releaseVersion);assert.equal(entity.uiVersion,desktop.releaseVersion);assert.equal(entity.activeMode,'readable');assert.equal(entity.readableVisible,true);assert.equal(entity.debugVisible,false);
 assert.ok(entity.readableText.includes(entityFixtures.container.name));assert.ok(entity.readableText.includes('內容與容量'));
 if(entityFixtures.container.resource)assert.ok(entity.readableText.includes(await page.evaluate(r=>window.SimWorld.RESOURCE_TYPES?.[r]?.name||window.SimEngine.resourceName?.(r)||r,entityFixtures.container.resource)));
-assert.ok(!entity.readableText.includes(`Container・${entityFixtures.container.id}`));assert.ok(!entity.readableText.includes('空重'));
+assert.ok(!entity.readableText.includes(`Object・${entityFixtures.container.id}`));assert.ok(!entity.readableText.includes('空重'));
 const containerState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();
-assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Container・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));
-assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),containerState,'Container readable/debug switch must be state-inert');
+assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Object・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));assert.ok(entity.debugText.includes('補給閉環'));
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),containerState,'Resource-container Object readable/debug switch must be state-inert');
 
 await selectEntity('source',entityFixtures.source.id);entity=await entitySnapshot();
 assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.source.name));assert.ok(entity.readableText.includes('提供的資源'));assert.ok(!entity.readableText.includes(`Resource Source・${entityFixtures.source.id}`));assert.ok(!entity.readableText.includes('操作 Port'));

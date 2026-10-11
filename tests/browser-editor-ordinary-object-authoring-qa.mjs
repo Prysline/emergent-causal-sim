@@ -12,7 +12,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorOrdinaryObjectAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.VERSION),'editor-ordinary-object-authoring-v1');
+assert.equal(await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.VERSION),'editor-ordinary-object-authoring-v2');
 
 const sidebarIa=await page.evaluate(()=>{
   const scene=document.querySelector('[data-sidebar-section="scene"]');
@@ -52,7 +52,7 @@ await page.evaluate(()=>{
   doc.entities.objects={};
   window.SimWorldEditor.loadDocument(doc);
 });
-await page.waitForFunction(()=>document.querySelectorAll('[data-editor-ordinary-object-id]').length===0);
+await page.waitForFunction(()=>document.querySelectorAll('[data-entity-type="object"]')?.length===0&&document.querySelectorAll('[data-scene-type="object"]')?.length===0);
 assert.equal((await page.evaluate(()=>window.SimWorldEditor.getSession())).dirty,false,'test document load must establish a clean editor baseline');
 
 await page.click('#ordinaryObjectCatalog [data-object-template-id="readable-book"]');
@@ -75,9 +75,9 @@ let snapshot=await page.evaluate(()=>{
     runtimeObject:runtime.objects?.['readable-book-1']||null,
     dirty:window.SimWorldEditor.getSession().dirty,
     validation:window.SimWorldEditor.getSession().validation,
-    markerCount:document.querySelectorAll('[data-editor-ordinary-object-id="readable-book-1"]').length,
-    sceneCount:document.querySelectorAll('[data-ordinary-object-scene-id="readable-book-1"]').length,
-    sceneOwnsCreated:document.querySelector('[data-sidebar-section="scene"]')?.contains(document.querySelector('[data-ordinary-object-scene-id="readable-book-1"]'))===true,
+    markerCount:document.querySelectorAll('[data-entity-type="object"][data-entity-id="readable-book-1"]').length,
+    sceneCount:document.querySelectorAll('[data-scene-type="object"][data-scene-id="readable-book-1"]').length,
+    sceneOwnsCreated:document.querySelector('[data-sidebar-section="scene"]')?.contains(document.querySelector('[data-scene-type="object"][data-scene-id="readable-book-1"]'))===true,
     inspector:document.querySelector('#selectionSummary')?.innerText||''
   };
 });
@@ -90,10 +90,10 @@ assert.equal(snapshot.validation.ok,true);
 assert.equal(snapshot.markerCount,1,'created ordinary object must be visible on the Editor map');
 assert.equal(snapshot.sceneCount,1,'created ordinary object must be visible in the Editor scene list');
 assert.equal(snapshot.sceneOwnsCreated,true,'created template instances must appear under Scene rather than remain under Add');
-assert.match(snapshot.inspector,/一般物件/);
+assert.match(snapshot.inspector,/物件/);
 assert.match(snapshot.inspector,/diningTable/);
 
-await page.click('[data-ordinary-object-action="move"]');
+await page.click('[data-editor-action="move-object"]');
 await page.click('[data-cell="2,4"]');
 await page.waitForFunction(()=>window.SimWorldEditor.getDocument().entities.objects['readable-book-1']?.position?.x===2);
 snapshot=await page.evaluate(()=>({
@@ -104,10 +104,10 @@ assert.deepEqual(snapshot.object.position,{x:2,y:4,z:0});
 assert.equal(snapshot.object.supportId,undefined,'floor placement must remove the furniture support relation');
 assert.equal(snapshot.validation.ok,true);
 
-await page.click('[data-ordinary-object-action="move"]');
+await page.click('[data-editor-action="move-object"]');
 await page.click('[data-cell="5,2"]');
-await page.waitForSelector('[data-ordinary-support-kind="furniture"][data-ordinary-support-id="diningTable"]');
-await page.click('[data-ordinary-support-kind="furniture"][data-ordinary-support-id="diningTable"]');
+await page.waitForSelector('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
+await page.click('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
 await page.waitForFunction(()=>window.SimWorldEditor.getDocument().entities.objects['readable-book-1']?.supportId==='diningTable');
 
 const invalid=await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.createOrdinaryObjectFromTemplate(window.SimWorldEditor.getDocument(),{
@@ -116,12 +116,12 @@ const invalid=await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.cr
 assert.equal(invalid.ok,false);
 assert.equal(invalid.issues[0].code,'ordinary_object_template_unknown');
 
-await page.click('[data-ordinary-object-action="remove"]');
+await page.click('[data-editor-action="delete-object"]');
 await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['readable-book-1']);
 snapshot=await page.evaluate(()=>({
   exists:!!window.SimWorldEditor.getDocument().entities.objects['readable-book-1'],
-  markerCount:document.querySelectorAll('[data-editor-ordinary-object-id="readable-book-1"]').length,
-  sceneCount:document.querySelectorAll('[data-ordinary-object-scene-id="readable-book-1"]').length,
+  markerCount:document.querySelectorAll('[data-entity-type="object"][data-entity-id="readable-book-1"]').length,
+  sceneCount:document.querySelectorAll('[data-scene-type="object"][data-scene-id="readable-book-1"]').length,
   validation:window.SimWorldEditor.getSession().validation
 }));
 assert.equal(snapshot.exists,false);

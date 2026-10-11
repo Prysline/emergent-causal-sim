@@ -12,7 +12,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorContainerSourceAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimEditorContainerSourceAuthoring.VERSION),'editor-container-source-authoring-v1');
+assert.equal(await page.evaluate(()=>window.SimEditorContainerSourceAuthoring.VERSION),'editor-container-source-authoring-v2');
 assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="white-cup"]').count(),1);
 assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="ready-food"]').count(),1);
 assert.equal(await page.locator('#sourcePresetCatalog [data-source-preset-id="tap"]').count(),1);
@@ -32,8 +32,8 @@ let snapshot=await page.evaluate(()=>({
 }));
 assert.deepEqual(snapshot.value.contents,{},'new cup preset must start empty');
 assert.equal(snapshot.dirty,true);
-assert.equal(snapshot.selected.type,'container');
-assert.match(snapshot.actionText,/移除容器/);
+assert.equal(snapshot.selected.type,'object');
+assert.match(snapshot.actionText,/移除物件/);
 assert.equal(snapshot.sceneCount,1);
 
 await page.click('#containerPresetCatalog [data-container-preset-id="ready-food"]');
@@ -90,8 +90,8 @@ await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.sou
 assert.equal(await page.locator('[data-interaction-port-source-id="tap-1"]').count(),0);
 
 await page.click('[data-scene-type="object"][data-scene-id="mealTray-1"]');
-await page.waitForSelector('[data-container-source-action="remove"]');
-await page.click('[data-container-source-action="remove"]');
+await page.waitForSelector('[data-editor-action="delete-object"]');
+await page.click('[data-editor-action="delete-object"]');
 await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
 
 await page.screenshot({path:`${outDir}/container-source-authoring.png`,fullPage:true});

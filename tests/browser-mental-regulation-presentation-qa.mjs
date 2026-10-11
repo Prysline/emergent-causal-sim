@@ -49,7 +49,11 @@ assert.ok(!/\bstimulation\s+[\d.]+\b/.test(debugText),'Debug Inspector must not 
 await page.evaluate(()=>window.SimUI.setCurrentZ(0));
 const marker=page.locator('[data-entity="object:bookA"]');
 await marker.waitFor({state:'visible'});
-assert.equal(await marker.getAttribute('title'),canonical.book.name,'ordinary object marker must project canonical object metadata');
+const markerProjection=await page.evaluate(()=>{
+  const st=window.SimEngine.getState(),o=window.SimSpatial.objectObservation(st,'bookA');
+  return {name:st.objects.bookA.name,spatial:`${o.spaceLabel}・${window.SimSpatial.describePlace(st,o.node)}`};
+});
+assert.equal(await marker.getAttribute('title'),`${markerProjection.name}・${markerProjection.spatial}`,'ordinary Object marker must compose canonical Object identity with Spatial observability metadata');
 await marker.click();
 await page.waitForSelector('[data-v1141-entity-root]');
 const readableObjectText=await page.locator('[data-v1141-entity-readable]').innerText();
