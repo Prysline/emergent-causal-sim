@@ -21,8 +21,8 @@ const M=globalThis.SimEditorAuthoringMutations;
 const P=globalThis.SimEditorContainerSourceAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(A.VERSION,'world-authoring-v13');
-assert.equal(P.VERSION,'editor-container-source-authoring-v1');
+assert.equal(A.VERSION,'world-authoring-v14');
+assert.equal(P.VERSION,'editor-container-source-authoring-v2');
 assert.deepEqual(P.listContainerPresets().map(item=>item.id),[
   'ready-food','plate','food-pantry','basket','water-bucket','white-cup','blue-cup','alcohol-bottle'
 ]);
@@ -42,8 +42,9 @@ result=P.createContainerFromPreset(authored,{presetId:'white-cup',target:{x:2,y:
 assert.equal(result.ok,true);
 let cupId=result.meta.newId;
 assert.equal(cupId,'cupWhite-1');
-assert.deepEqual(result.candidate.entities.containers[cupId].contents,{},'cup presets must start empty');
-assert.equal(result.candidate.entities.containers[cupId].supportId,undefined);
+assert.equal(result.candidate.entities.objects[cupId].resourceContainer,true,'Resource Container preset must author an Object capability, not a parallel entity taxonomy');
+assert.deepEqual(result.candidate.entities.objects[cupId].contents,{},'cup presets must start empty');
+assert.equal(result.candidate.entities.objects[cupId].supportId,undefined);
 authored=result.candidate;
 
 result=P.createContainerFromPreset(authored,{presetId:'ready-food',target:{x:5,y:2,z:0}});
@@ -54,8 +55,8 @@ assert.ok(result.meta.candidates.some(item=>item.id==='diningTable'));
 result=P.createContainerFromPreset(authored,{presetId:'ready-food',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
 assert.equal(result.ok,true);
 const readyFoodId=result.meta.newId;
-assert.equal(result.candidate.entities.containers[readyFoodId].supportId,'diningTable');
-assert.deepEqual(result.candidate.entities.containers[readyFoodId].contents,{food:68},'debug ready-food preset keeps its authored initial food');
+assert.equal(result.candidate.entities.objects[readyFoodId].supportId,'diningTable');
+assert.deepEqual(result.candidate.entities.objects[readyFoodId].contents,{food:68},'debug ready-food preset keeps its authored initial food');
 authored=result.candidate;
 
 result=P.createContainerFromPreset(authored,{presetId:'food-pantry',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
@@ -88,18 +89,18 @@ authored=result.candidate;
 
 const serialized=A.serializeAuthoring(authored);
 const roundTrip=A.parseAuthoringJSON(serialized);
-assert.deepEqual(roundTrip.entities.containers[cupId],authored.entities.containers[cupId]);
+assert.deepEqual(roundTrip.entities.objects[cupId],authored.entities.objects[cupId]);
 assert.deepEqual(roundTrip.entities.sources[tapId],authored.entities.sources[tapId]);
 
 const runtime=I.createInitialState(authored,{seed:20261010,version:'test'});
-assert.deepEqual(runtime.containers[cupId].contents,{});
+assert.deepEqual(runtime.objects[cupId].contents,{});
 assert.equal(runtime.sources[tapId].resource,'water');
 assert.equal(runtime.sources[tapId].infinite,true);
 assert.deepEqual(runtime.sources[tapId].interactionPorts[0].position,{x:4,y:5});
 
 result=P.deleteContainer(authored,{containerId:readyFoodId});
 assert.equal(result.ok,true);
-assert.equal(result.candidate.entities.containers[readyFoodId],undefined);
+assert.equal(result.candidate.entities.objects[readyFoodId],undefined);
 assert.deepEqual(result.meta.removedContents,{food:68},'removing a debug fixture removes its authored initial contents with the container');
 authored=result.candidate;
 

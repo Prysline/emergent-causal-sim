@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.55.1-nearby-placement-lifecycle`。
+目前 overall runtime marker：`11.56.0-object-unification`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -24,13 +24,15 @@ Subsystem marker只在**自己的 contract**改變時前進；overall release �
 
 Current relevant markers：
 
-- Nearby Placement：`nearby-placement-v1`
+- Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v1`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Mental Regulation：`mental-regulation-v4`
 - Action / Human Social Response：`11.51.0-activity-concurrency`
-- Physical `11.45.0-agent-carry-relocate`
+- Object Handling：`object-handling-v1`
+- Resources：`11.56.0-resource-container-capability`
+- Physical `11.56.0-physical-object-handling`
 - Agent Carry：`11.46.0-sleep-carry-integration`
 - Social Bid：`11.47.0-social-bid-carry-cooperation`
 - Deliberation / Decision Evidence / Sleep Slot Conflict：`11.48.1-sleep-perception-approach`
@@ -43,18 +45,20 @@ Current relevant markers：
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v13`
+- World Authoring：`world-authoring-v14`
 - Furniture Catalog：`furniture-definitions-v12`
 
 ## Current release impact
 
-`11.55.1-nearby-placement-lifecycle` 是 `11.55.0-nearby-placement` 的 corrective patch：Nearby Placement algorithm / capability marker 仍是 `nearby-placement-v1`，但 Engine 的 normal `releaseHeld()` 現在委派 canonical Spatial nearby-placement helper，使 ordinary Action finish / abort、sleep settle、held-Container handoff 與其他 normal lifecycle callers 不再繞過該 owner。Deliberation soft reconsideration 繼續使用同一 helper。
+`11.56.0-object-unification` 是一次 semantic migration：concrete physical-item canonical identity 從原本 `objects / containers` 雙 collection 收斂為唯一 `entities.objects / state.objects`。World Authoring 因 schema 移除 `entities.containers` 並新增明示 Resource-container capability 而前進至 `world-authoring-v14`。
 
-這個 patch 改變使用者可觀察的 release outcome，因此 overall / Presentation projection 前進；Nearby Placement capability generation、Spatial Traversal / Route、Pickup Interaction Geometry、Contact、Locomotion、Physical、World Authoring、Furniture Catalog、Deliberation schema 等未改 contract 的 markers 保持不變。
+Generic Object carry 的 physical authority 新增 `object-handling-v1`：`portable`、`handling.carryGeometry`、`handling.handsRequired` 與 `Agent.held` 不再由 Resources 決定；Physical 因 traversal envelope / hand-feasibility 現在接受任何合法 held Object 而前進至 `11.56.0-physical-object-handling`。Resources 同樣前進至 `11.56.0-resource-container-capability`，只對 `resourceContainer:true` Object 提供 `contents / capacity / load / retention / spill / transfer` semantics。
 
-v1 仍只允許 lifecycle-driven release 使用 Agent **目前即可接觸**的合法 support Surface；不建立 move-to-place action，也不改 accidental movement `containerDrop` consequence。沒有合法 Surface 時仍 fallback 到 actor current canonical Floor node。
+Nearby Placement algorithm 的 locality / support-contact 原則不變，但 public release contract 從 Container-specific 擴為 generic Object，因此 capability marker 前進至 `nearby-placement-v2-object-release`。`state.agentCarries` relation、Agent Carry generation、Spatial Traversal / Route、Spatial Passage、Contact、Locomotion、Furniture Catalog 等未改自己的 contract，不為 overall release 機械升版。
 
-詳細語意見 [`architecture.md`](architecture.md) 的 Intentional nearby placement v1。
+本 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
+
+詳細語意見 [`architecture.md`](architecture.md) 的 Object identity / Resource-container capability 與 Intentional nearby placement v2。
 
 ## Consistency responsibility
 

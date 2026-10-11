@@ -22,9 +22,9 @@
           if(['sitting','lying'].includes(a.posture?.kind)&&!SP.slotPoseFits?.(slot,a,a.posture.kind))add('slot_pose_fit_invalid',`${a.name} 的 ${a.posture.kind} PoseEnvelope 無法放入 ${slot.id} 的 usable space。`,{agentId:a.id,slotId:slot.id,posture:a.posture.kind});
         }
       }
-      if(a.held){const held=SP.objectNode(st,a.held);if(held&&!SP.nodeSame(st,node,held))add('held_spatial_node_mismatch',`${a.name}持有的 ${a.held} 與角色不在同一 Spatial Node。`,{agentId:a.id,containerId:a.held,agentNode:key,objectNode:SP.nodeKey(st,held)});}
+      if(a.held){const held=SP.objectNode(st,a.held);if(held&&!SP.nodeSame(st,node,held))add('held_spatial_node_mismatch',`${a.name}持有的 ${a.held} 與角色不在同一 Spatial Node。`,{agentId:a.id,objectId:a.held,agentNode:key,objectNode:SP.nodeKey(st,held)});}
     }
-    const supportedCollections=[['container',st?.containers||{}],['object',st?.objects||{}]];
+    const supportedCollections=[['object',st?.objects||{}]];
     for(const [entityType,collection] of supportedCollections)for(const entity of Object.values(collection)){
       const holder=SP.holderOf(st,entity.id);
       if(holder&&entity.supportId){

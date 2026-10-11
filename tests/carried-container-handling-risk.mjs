@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.39.0-carried-contents-loss';
+const RESOURCES_VERSION='11.56.0-resource-container-capability';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const DELIBERATION_VERSION='11.48.1-sleep-perception-approach';
@@ -16,7 +16,7 @@ const objectiveFacts=route=>({traversalCost:route.traversalCost,travelTime:route
 const highExposure={tilt:.8,impact:.7,oscillation:.6};
 
 assert.equal(E.VERSION,APP_VERSION);
-assert.equal(A.VERSION,'world-authoring-v13');
+assert.equal(A.VERSION,'world-authoring-v14');
 assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
 assert.equal(L.VERSION,LOCOMOTION_VERSION);
@@ -24,24 +24,24 @@ assert.equal(E.DELIBERATION_SCHEMA_VERSION,DELIBERATION_VERSION);
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
 
 {
-  const authored=A.DEFAULT_WORLD_AUTHORING,cup=authored.entities.containers.cupA,bottle=authored.entities.containers.alcoholBottle,plate=authored.entities.containers.plateA;
+  const authored=A.DEFAULT_WORLD_AUTHORING,cup=authored.entities.objects.cupA,bottle=authored.entities.objects.alcoholBottle,plate=authored.entities.objects.plateA;
   assert.equal(cup.handling.containment,'open');
   assert.deepEqual(Object.keys(cup.handling.contentRetention).sort(),['impact','oscillation','tilt']);
   assert.deepEqual(Object.keys(cup.handling.contentRetention.tilt).sort(),['highRiskExposure','lowRiskExposure']);
-  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'safe'),false,'legacy safe threshold must not survive world-authoring-v13');
-  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'failure'),false,'legacy failure threshold must not survive world-authoring-v13');
+  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'safe'),false,'legacy safe threshold must not survive world-authoring-v14');
+  assert.equal(Object.hasOwn(cup.handling.contentRetention.tilt,'failure'),false,'legacy failure threshold must not survive world-authoring-v14');
   assert.equal(bottle.handling.containment,'sealed');
   assert.equal(Object.hasOwn(cup,'fillRatio'),false,'fillRatio must remain derived instead of authored');
   const invalid=A.cloneAuthoring(authored);
-  delete invalid.entities.containers.cupA.handling.contentRetention;
+  delete invalid.entities.objects.cupA.handling.contentRetention;
   const report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
-  assert.ok(report.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_resource_container_content_retention_invalid'));
   const legacy=A.cloneAuthoring(authored);
-  legacy.entities.containers.cupA.handling.contentRetention.tilt={safe:.06,failure:.34};
+  legacy.entities.objects.cupA.handling.contentRetention.tilt={safe:.06,failure:.34};
   const legacyReport=A.validateAuthoring(legacy);
-  assert.equal(legacyReport.ok,false,'world-authoring-v13 must reject legacy safe/failure retention fields');
-  assert.ok(legacyReport.errors.some(issue=>issue.code==='authoring_container_content_retention_invalid'));
+  assert.equal(legacyReport.ok,false,'world-authoring-v14 must reject legacy safe/failure retention fields');
+  assert.ok(legacyReport.errors.some(issue=>issue.code==='authoring_resource_container_content_retention_invalid'));
 }
 
 {
@@ -59,7 +59,7 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
 
 E.reset(13800);
 {
-  const st=E.getState(),basket=st.containers.basket,cup=st.containers.cupA,bottle=st.containers.alcoholBottle,plate=st.containers.plateA;
+  const st=E.getState(),basket=st.objects.basket,cup=st.objects.cupA,bottle=st.objects.alcoholBottle,plate=st.objects.plateA;
   basket.contents={};
   assert.equal(R.handlingRiskForContainer(st,basket,highExposure).contentsLoss,0,'empty basket may carry burden but cannot lose nonexistent contents');
 
@@ -96,7 +96,7 @@ E.reset(13800);
 
 function prepare(careful){
   E.reset(13801);
-  const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
+  const st=E.getState(),a=st.agents.zhen,cup=st.objects.cupA;
   for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
   a.position={...floor(st,2,4)};
   a.posture={kind:'standing',slotId:null,furnitureId:null};
@@ -151,9 +151,9 @@ try{
     assert.ok(contributor.selected.handlingRisk.contentsLoss<contributor.baseline.handlingRisk.contentsLoss);
     assert.equal(JSON.stringify(contributor).includes('"path":'),false,'Decision Evidence must not persist path nodes as a second Route truth');
 
-    const before=JSON.stringify({containers:st.containers,map:st.map,events:st.events,rngState:st.rngState});
+    const before=JSON.stringify({containers:st.objects,map:st.map,events:st.events,rngState:st.rngState});
     SP.planRoute(st,a,goal,{mode:'walk',objective:'weighted',weights:preference.weights});
-    const after=JSON.stringify({containers:st.containers,map:st.map,events:st.events,rngState:st.rngState});
+    const after=JSON.stringify({containers:st.objects,map:st.map,events:st.events,rngState:st.rngState});
     assert.equal(after,before,'planning-only handling evaluation must not mutate world state, events, contents, or RNG');
   }
 

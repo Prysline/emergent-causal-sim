@@ -9,24 +9,24 @@
   }
 
   function installSupportedContactDefs(st){
-    const C=st.containers||{};
+    const objects=st.objects||{};
 
     // A supported object's exact tabletop cell, not the whole support furniture,
     // defines reach for the affordances currently exercised by the simulation.
     // Pickup geometry is support-derived by Spatial and is intentionally not
     // authored or injected by object type here.
-    mergeInteractions(C.mealTray,{
+    mergeInteractions(objects.mealTray,{
       serve:{mode:'reach'},
       eatFrom:{mode:'reach'},
       deposit:{mode:'reach'},
       receive:{mode:'reach'}
     });
 
-    for(const id of ['plateA','plateB'])mergeInteractions(C[id],{
+    for(const id of ['plateA','plateB'])mergeInteractions(objects[id],{
       eatFrom:{mode:'reach'}
     });
 
-    for(const id of ['cupA','cupB','alcoholBottle'])mergeInteractions(C[id],{
+    for(const id of ['cupA','cupB','alcoholBottle'])mergeInteractions(objects[id],{
       drinkFrom:{mode:'reach'},
       fill:{mode:'reach'}
     });

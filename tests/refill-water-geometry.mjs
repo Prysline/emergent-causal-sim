@@ -8,7 +8,7 @@ const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
 E.reset(20260911);
-const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;
+const st=E.getState(),a=st.agents.zhen,bucket=st.objects.waterBucket;
 st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
 a.position={x:5,y:5};a.posture={kind:'kneeling',slotId:null,furnitureId:null};
 bucket.contents={water:0};bucket.position={x:5,y:5};delete bucket.supportId;

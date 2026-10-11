@@ -61,7 +61,7 @@ assert.deepEqual(E.buildAction(human,{id:'wander',targetTile:explicitTile})?.tar
 const explicitUpperTile={x:1,y:1,z:1};
 assert.deepEqual(E.buildAction(human,{id:'cleanFloor',targetTile:explicitUpperTile})?.targetTile,explicitUpperTile,'cleanFloor construction must preserve non-zero target z');
 assert.deepEqual(E.buildAction(human,{id:'wander',targetTile:explicitUpperTile})?.targetTile,explicitUpperTile,'wander construction must preserve non-zero target z');
-st.containers.cupB.contents.water=Math.max(8,st.containers.cupB.contents.water||0);
+st.objects.cupB.contents.water=Math.max(8,st.objects.cupB.contents.water||0);
 assert.equal(E.buildAction(cat,{id:'drinkWater',targetObject:'cupB'})?.targetObject,'cupB','explicit drink targetObject must survive construction');
 
 // Logistics fields also use the same factory rather than a separate core-only schema.

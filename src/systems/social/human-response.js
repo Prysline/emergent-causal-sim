@@ -3,6 +3,7 @@
   if(!E||!W?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
   if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/human-response.js requires systems/affect/runtime.js.');
   if(typeof E.registerActivityCompatibility!=='function'||typeof E.scheduleTransientExecution!=='function')throw new Error('systems/social/human-response.js requires systems/action/runtime.js activity concurrency contract.');
+  if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('src/systems/social/human-response.js requires Spatial nearby placement lifecycle.');
   const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.51.0-activity-concurrency';
   const TALK_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,engageMin:.62});
   const TALK_AFFECT_RESPONSE_CAP=.12;
@@ -34,7 +35,7 @@
   function responseIntent(st,a,c,sourceExtra={}){return {id:`intent:${a.id}:${st.tick}:respondSocialBid:${c.bidId}`,kind:'respondSocialBid',createdTick:st.tick,lifecycle:'actionBound',source:{type:'socialBid',bidId:c.bidId,observedTick:c.observedTick,...sourceExtra}};}
   function responseAction(st,c){const action={kind:'talk',phase:'respondBid',targetAgent:c.targetAgent,responseToBid:c.bidId,started:st.tick,wait:0};return action;}
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
-  function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
+  function dropHeld(st,a){if(a.held)SP.releaseHeldObjectNearby(st,a);}
   function bindResponse(st,a,c,{softSnapshot=null}={}){
     const priorIntent=a.activeIntent,priorActionKind=actionKind(a),action=responseAction(st,c);let sourceExtra={};
     if(softSnapshot){clearAgentReservations(st,a);dropHeld(st,a);a.action=null;a.activeIntent=null;sourceExtra={reconsideration:{type:'soft',tick:st.tick,priorIntentId:priorIntent?.id||null}};}

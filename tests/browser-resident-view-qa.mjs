@@ -55,6 +55,7 @@ async function selectEntity(type,id){
     node.click();
     if(temporary)node.remove();
   },{type,id});
+  await page.waitForFunction(({type,id})=>{const selected=window.SimUI?.getInspectorSelection?.();return selected?.type===type&&selected?.id===id;},{type,id});
   await page.waitForSelector('[data-v1141-entity-root]');
 }
 async function entitySnapshot(){
@@ -152,7 +153,7 @@ assert.equal(await page.locator('[data-v1140-mode="resident"]').innerText(),'檢
 
 const semanticLayers=await page.evaluate(()=>{
   const E=window.SimEngine,st=E.getState();
-  const dest=Object.values(st.containers).find(c=>Object.prototype.hasOwnProperty.call(c.contents||{},'water'))||Object.values(st.containers)[0];
+  const dest=Object.values(st.objects).find(c=>Object.prototype.hasOwnProperty.call(c.contents||{},'water'))||Object.values(st.objects)[0];
   const destId=dest.id,destName=dest.name;
   const intent=kind=>E.residentIntentLabel({activeIntent:{kind}});
   const explain=(kind,intentKind,{agent={},action={}}={})=>{
@@ -263,28 +264,28 @@ assert.ok(recent.docWidth<=recent.width+1,`desktop overflow: ${recent.docWidth}>
 
 const entityFixtures=await page.evaluate(()=>{
   const E=window.SimEngine,st=E.getState();
-  const container=Object.values(st.containers).find(c=>Object.values(c.contents||{}).some(v=>v>.05))||Object.values(st.containers)[0];
+  const container=Object.values(st.objects).find(c=>Object.values(c.contents||{}).some(v=>v>.05))||Object.values(st.objects)[0];
   const source=Object.values(st.sources)[0];
   const furniture=Object.values(st.furniture).find(f=>(f.slots||[]).length)||Object.values(st.furniture)[0];
   const tile=Object.values(st.map.tiles).find(t=>t.terrain==='floor'&&t.roomId)||Object.values(st.map.tiles)[0];
   const room=Object.values(st.map.rooms)[0];
   const actor=Object.values(st.agents)[0];
-  const eventId=E.addEvent('老周查看了附近的環境。','normal',[],{entities:[`agent:${actor.id}`,`container:${container.id}`],actor:actor.id,action:'presentationEntityProbe'});
+  const eventId=E.addEvent('老周查看了附近的環境。','normal',[],{entities:[`agent:${actor.id}`,`object:${container.id}`],actor:actor.id,action:'presentationEntityProbe'});
   return {
     container:{id:container.id,name:container.name,resource:Object.keys(container.contents||{}).find(r=>(container.contents[r]||0)>.05)||null},
     source:{id:source.id,name:source.name,resource:source.resource},furniture:{id:furniture.id,name:furniture.name},tile:{id:tile.id,terrain:tile.terrain},room:{id:room.id,name:room.name},event:{id:eventId,text:st.causes[eventId].text}
   };
 });
-await selectEntity('container',entityFixtures.container.id);
+await selectEntity('object',entityFixtures.container.id);
 let entity=await entitySnapshot();
 assert.equal(entity.version,desktop.releaseVersion);assert.equal(entity.uiVersion,desktop.releaseVersion);assert.equal(entity.activeMode,'readable');assert.equal(entity.readableVisible,true);assert.equal(entity.debugVisible,false);
 assert.ok(entity.readableText.includes(entityFixtures.container.name));assert.ok(entity.readableText.includes('內容與容量'));
 if(entityFixtures.container.resource)assert.ok(entity.readableText.includes(await page.evaluate(r=>window.SimWorld.RESOURCE_TYPES?.[r]?.name||window.SimEngine.resourceName?.(r)||r,entityFixtures.container.resource)));
-assert.ok(!entity.readableText.includes(`Container・${entityFixtures.container.id}`));assert.ok(!entity.readableText.includes('空重'));
+assert.ok(!entity.readableText.includes(`Object・${entityFixtures.container.id}`));assert.ok(!entity.readableText.includes('空重'));
 const containerState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();
-assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Container・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));
-assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),containerState,'Container readable/debug switch must be state-inert');
+assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Object・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));assert.ok(entity.debugText.includes('補給閉環'));
+assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),containerState,'Resource-container Object readable/debug switch must be state-inert');
 
 await selectEntity('source',entityFixtures.source.id);entity=await entitySnapshot();
 assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.includes(entityFixtures.source.name));assert.ok(entity.readableText.includes('提供的資源'));assert.ok(!entity.readableText.includes(`Resource Source・${entityFixtures.source.id}`));assert.ok(!entity.readableText.includes('操作 Port'));
@@ -308,7 +309,7 @@ assert.equal(entity.activeMode,'readable');assert.ok(entity.readableText.include
 await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();assert.ok(entity.debugText.includes(entityFixtures.event.text));assert.ok(entity.debugText.includes('詳細資料'));assert.ok(entity.debugText.includes('因果鏈'));
 
 await page.evaluate(()=>document.querySelector('[data-entity="agent:zhou"]')?.click());await page.waitForSelector('[data-v1140-resident-root]');
-await selectEntity('container',entityFixtures.container.id);entity=await entitySnapshot();assert.equal(entity.activeMode,'readable','returning to an entity after Agent view should default to readable');
+await selectEntity('object',entityFixtures.container.id);entity=await entitySnapshot();assert.equal(entity.activeMode,'readable','returning to an entity after Agent view should default to readable');
 await page.screenshot({path:`${outDir}/desktop-entity-readable-container.png`,fullPage:true});
 
 await page.setViewportSize({width:390,height:844});
@@ -382,8 +383,8 @@ const mobileStateAfterMemory=await page.evaluate(()=>JSON.stringify(window.SimEn
 assert.equal(mobileStateAfterMemory,mobileStateBefore,'mobile Resident tab switch must not mutate simulation state');assert.ok(mobile.residentText.includes('當時沒有得到回應'));assert.ok(!mobile.residentText.includes('故意忽略'));assert.equal(mobile.validator.issueCount,0,`mobile validator: ${mobile.validator.issues.map(x=>x.code).join(', ')}`);assert.ok(mobile.docWidth<=mobile.width+1,`mobile overflow: ${mobile.docWidth}>${mobile.width}`);assert.ok(mobile.bodyWidth<=mobile.width+1,`mobile body overflow: ${mobile.bodyWidth}>${mobile.width}`);
 await page.screenshot({path:`${outDir}/mobile-resident-memory.png`,fullPage:true});
 
-const mobileContainer=await page.evaluate(()=>{const c=Object.values(window.SimEngine.getState().containers)[0];return {id:c.id,name:c.name};});
-await selectEntity('container',mobileContainer.id);let mobileEntity=await entitySnapshot();
+const mobileContainer=await page.evaluate(()=>{const c=Object.values(window.SimEngine.getState().objects)[0];return {id:c.id,name:c.name};});
+await selectEntity('object',mobileContainer.id);let mobileEntity=await entitySnapshot();
 assert.equal(mobileEntity.activeMode,'readable');assert.equal(mobileEntity.readableVisible,true);assert.equal(mobileEntity.inspectorActive,true);assert.equal(mobileEntity.navActive,true);assert.ok(mobileEntity.readableText.includes(mobileContainer.name));assert.ok(mobileEntity.docWidth<=mobileEntity.width+1,`mobile entity overflow: ${mobileEntity.docWidth}>${mobileEntity.width}`);assert.ok(mobileEntity.bodyWidth<=mobileEntity.width+1,`mobile entity body overflow: ${mobileEntity.bodyWidth}>${mobileEntity.width}`);
 const mobileEntityState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1141-entity-mode="debug"]');mobileEntity=await entitySnapshot();assert.equal(mobileEntity.activeMode,'debug');assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileEntityState,'mobile Entity Readable → Debug must not mutate simulation state');

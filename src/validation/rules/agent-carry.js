@@ -1,6 +1,6 @@
 (() => {
-  const V=window.SimValidator,A=window.SimAgentCarry,C=window.SimEmbodimentCapabilities,P=window.SimPhysical,R=window.SimResources,SP=window.SimSpatial;
-  if(!V||!A||!C||!P||!R||!SP)return;
+  const V=window.SimValidator,A=window.SimAgentCarry,C=window.SimEmbodimentCapabilities,P=window.SimPhysical,O=window.SimObjectHandling,SP=window.SimSpatial;
+  if(!V||!A||!C||!P||!O||!SP)return;
   const positive=v=>Number.isFinite(Number(v))&&Number(v)>0;
 
   function validateLayer(st,base){
@@ -25,12 +25,12 @@
       }
       if(carried.position!==null)add('agent_carry_competing_position_truth',`${carried.name} 被抱持時仍保存 ordinary position truth。`,{carriedAgentId:carried.id,position:carried.position});
       if(carried.posture?.kind!=='carried'||carried.posture?.slotId||carried.posture?.furnitureId)add('agent_carry_competing_occupancy_truth',`${carried.name} 被抱持時仍保留 ordinary posture / Slot occupancy。`,{carriedAgentId:carried.id,posture:carried.posture});
-      if(carried.held)add('agent_carry_nested_held_container',`${carried.name} 被抱持時仍持有 Container；v1 不支援 nested carry。`,{carriedAgentId:carried.id,containerId:carried.held});
+      if(carried.held)add('agent_carry_nested_held_object',`${carried.name} 被抱持時仍持有 Object；v1 不支援 nested carry。`,{carriedAgentId:carried.id,objectId:carried.held});
       const projected=A.projectedPosition(st,carried),carrierNode=SP.nodeForAgent?.(st,carrier),projectedNode=projected&&SP.normalizeNode?.(st,projected);
       if(!projectedNode||!carrierNode||!SP.nodeSame?.(st,projectedNode,carrierNode))add('agent_carry_projection_mismatch',`${carried.name} 的 observable position 沒有由 carrier 投影。`,{carrierId:carrier.id,carriedAgentId:carried.id});
       const profile=A.carryingHandlingProfile(st,carrier);
       if(!profile||!positive(profile.carryGeometry?.height)||!positive(profile.carryGeometry?.width)||!positive(profile.carryGeometry?.length))add('agent_carry_geometry_invalid',`${carrier.name} 無法從 carried Agent bodyGeometry 推導 carry geometry。`,{carrierId:carrier.id,carriedAgentId:carried.id});
-      const handCapacity=R.handCapacity(carrier),hands=P.carriedHandsRequired?.(st,carrier);
+      const handCapacity=O.handCapacity(carrier),hands=P.carriedHandsRequired?.(st,carrier);
       if(!Number.isFinite(hands)||handCapacity<hands)add('agent_carry_hand_capacity_exceeded',`${carrier.name} 的 handCapacity 不足以維持目前 Agent carry relation。`,{carrierId:carrier.id,handCapacity,handsRequired:hands});
     }
     for(const id of carrierIds)if(carriedIds.has(id))add('agent_carry_chain_unsupported',`${st.agents[id]?.name||id} 同時是 carrier 與 carried Agent；v1 不支援 carry chain。`,{agentId:id});

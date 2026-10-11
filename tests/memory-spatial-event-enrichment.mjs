@@ -61,7 +61,7 @@ let found=null;
 for(let seed=1;seed<=200&&!found;seed++){
   resetProbes();
   E.reset(seed);
-  const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
+  const st=E.getState(),a=st.agents.zhen,cup=st.objects.cupA;
   st.agents.zhou.offMap=true;
   st.agents.orange.offMap=true;
   a.position={...floor(st,5,4)};

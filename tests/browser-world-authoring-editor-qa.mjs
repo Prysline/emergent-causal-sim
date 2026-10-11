@@ -41,7 +41,7 @@ assert.equal(snapshot.session.validation.ok,true);
 assert.equal(snapshot.mapCells,96);
 assert.equal(snapshot.sceneItems,
   Object.keys(snapshot.document.furniture||{}).length+
-  Object.keys(snapshot.document.entities?.containers||{}).length+
+  Object.keys(snapshot.document.entities?.objects||{}).length+
   Object.keys(snapshot.document.entities?.sources||{}).length+
   Object.keys(snapshot.document.residents||{}).length+
   Object.keys(snapshot.document.structures||{}).length+
@@ -330,7 +330,7 @@ assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furnit
 assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'slots'),false,'canonical World v6 instance must not persist derived slots');
 assert.deepEqual(clickPlacement.resolvedChair.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(clickPlacement.resolvedChair.slots[0].position,{x:3,y:4,z:0});
-assert.deepEqual(clickPlacement.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
+assert.deepEqual(clickPlacement.document.entities.objects.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
 
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 await page.click('[data-tool="floor"]');
@@ -367,7 +367,7 @@ assert.equal(snapshot.fingerprint,clickPlacement.fingerprint,'click placement an
 assert.deepEqual(snapshot.document.furniture.chairNW.origin,{x:3,y:4,z:0});
 assert.deepEqual(snapshot.resolvedChair.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(snapshot.resolvedChair.slots[0].position,{x:3,y:4,z:0});
-assert.deepEqual(snapshot.document.entities.containers.mealTray.position,{x:5,y:2,z:0},'dragging unrelated chair must not affect diningTable followers');
+assert.deepEqual(snapshot.document.entities.objects.mealTray.position,{x:5,y:2,z:0},'dragging unrelated chair must not affect diningTable followers');
 
 const beforeTablePreview=await page.evaluate(()=>window.SimWorldEditor.semanticFingerprint());
 const tableSource=page.locator('[data-entity-type="furniture"][data-entity-id="diningTable"]').first();
@@ -429,26 +429,26 @@ assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1
 assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
 
-await page.click('[data-scene-type="container"][data-scene-id="basket"]');
+await page.click('[data-scene-type="object"][data-scene-id="basket"]');
 await page.click('[data-editor-action="move-object"]');
 await page.click('[data-cell="5,2"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),actions:document.querySelector('#selectionActions')?.textContent||''}));
 assert.equal(snapshot.session.pendingOperation.kind,'resolve-object-support');
-assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:3,y:2,z:0},'ambiguous support target must reject atomically before explicit choice');
+assert.deepEqual(snapshot.document.entities.objects.basket.position,{x:3,y:2,z:0},'ambiguous support target must reject atomically before explicit choice');
 assert.match(snapshot.actions,/地面/);
 assert.match(snapshot.actions,/餐桌/);
 await page.click('[data-editor-action="resolve-support"][data-support-kind="floor"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:5,y:2,z:0});
-assert.equal(snapshot.document.entities.containers.basket.supportId,undefined);
+assert.deepEqual(snapshot.document.entities.objects.basket.position,{x:5,y:2,z:0});
+assert.equal(snapshot.document.entities.objects.basket.supportId,undefined);
 
-await page.click('[data-scene-type="container"][data-scene-id="basket"]');
+await page.click('[data-scene-type="object"][data-scene-id="basket"]');
 await page.click('[data-editor-action="move-object"]');
 await page.click('[data-cell="6,2"]');
 await page.click('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.deepEqual(snapshot.document.entities.containers.basket.position,{x:6,y:2,z:0});
-assert.equal(snapshot.document.entities.containers.basket.supportId,'diningTable');
+assert.deepEqual(snapshot.document.entities.objects.basket.position,{x:6,y:2,z:0});
+assert.equal(snapshot.document.entities.objects.basket.supportId,'diningTable');
 
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 let residentReachability=await page.evaluate(()=>document.querySelector('#selectionSummary')?.textContent||'');
@@ -628,7 +628,7 @@ let runtimePreview=await page.evaluate(()=>{
     bannerText:document.querySelector('#editorPreviewBanner')?.textContent||'',
     chair:state.furniture.chairNW.footprint,
     sofa:{orientation:active.authoring.furniture.sofa.orientation,footprint:state.furniture.sofa.footprint},
-    basket:{position:{x:state.containers.basket.position.x,y:state.containers.basket.position.y},supportId:state.containers.basket.supportId||null,spaceId:state.containers.basket.position.spaceId||null,surfaceId:state.containers.basket.position.surfaceId||null},
+    basket:{position:{x:state.objects.basket.position.x,y:state.objects.basket.position.y},supportId:state.objects.basket.supportId||null,spaceId:state.objects.basket.position.spaceId||null,surfaceId:state.objects.basket.position.surfaceId||null},
     zhen:{x:state.agents.zhen.position.x,y:state.agents.zhen.position.y,z:window.SimSpatial.zOf(state.agents.zhen.position)},
     orange:{x:state.agents.orange.position.x,y:state.agents.orange.position.y,z:window.SimSpatial.zOf(state.agents.orange.position)},
     zLevels:[...(state.map.zLevels||[])],
@@ -689,7 +689,7 @@ await page.click('#reset');
 await page.waitForTimeout(30);
 runtimePreview=await page.evaluate(()=>({
   chair:window.SimEngine.getState().furniture.chairNW.footprint,
-  basket:{x:window.SimEngine.getState().containers.basket.position.x,y:window.SimEngine.getState().containers.basket.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().containers.basket.position)},
+  basket:{x:window.SimEngine.getState().objects.basket.position.x,y:window.SimEngine.getState().objects.basket.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().objects.basket.position)},
   zhen:{x:window.SimEngine.getState().agents.zhen.position.x,y:window.SimEngine.getState().agents.zhen.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().agents.zhen.position)},
   orange:{x:window.SimEngine.getState().agents.orange.position.x,y:window.SimEngine.getState().agents.orange.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().agents.orange.position)},
   zLevels:[...(window.SimEngine.getState().map.zLevels||[])],

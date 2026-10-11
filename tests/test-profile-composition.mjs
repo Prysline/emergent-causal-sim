@@ -23,6 +23,7 @@ assert.deepEqual(spatialCoreProfilePaths(),[
   'src/world-initializer.js',
   'src/world.js',
   'src/release.js',
+  'src/systems/object-handling.js',
   'src/spatial.js'
 ]);
 
@@ -32,13 +33,15 @@ const engineCore=runtimeProfilePaths([
 ]);
 assert.ok(engineCore.includes('src/spatial-traversal.js'),'Engine runtime profiles must include canonical Spatial Traversal for lifecycle release');
 assert.ok(engineCore.includes('src/spatial-candidate-selection.js'),'Engine runtime profiles must include the canonical nearby-placement owner');
+assert.ok(engineCore.includes('src/systems/object-handling.js'),'Engine runtime profiles must include the canonical Object Handling owner');
 assert.ok(engineCore.includes('src/systems/resources.js'),'Engine runtime profiles must include the canonical Resources owner');
 assert.ok(engineCore.includes('src/systems/agent-carry.js'),'Engine runtime profiles must include the canonical Agent Carry owner');
 assert.ok(engineCore.includes('src/systems/physical.js'),'Engine runtime profiles must include the canonical Physical owner for carried hand feasibility');
 assert.ok(engineCore.indexOf('src/spatial.js')<engineCore.indexOf('src/spatial-traversal.js'),'Spatial core must load before Spatial Traversal');
 assert.ok(engineCore.indexOf('src/spatial-traversal.js')<engineCore.indexOf('src/spatial-candidate-selection.js'),'Spatial Traversal must load before candidate selection');
 assert.ok(engineCore.indexOf('src/spatial-candidate-selection.js')<engineCore.indexOf('src/engine.js'),'Nearby-placement owner must load before Engine');
-assert.ok(engineCore.indexOf('src/systems/resources.js')<engineCore.indexOf('src/systems/agent-carry.js'),'Resources must load before Agent Carry in Engine runtime profiles');
+assert.ok(engineCore.indexOf('src/systems/object-handling.js')<engineCore.indexOf('src/systems/agent-carry.js'),'Object Handling must load before Agent Carry in Engine runtime profiles');
+assert.ok(engineCore.indexOf('src/systems/object-handling.js')<engineCore.indexOf('src/systems/resources.js'),'Object Handling must load before Resources consumes Resource-container capability Objects');
 assert.ok(engineCore.indexOf('src/systems/agent-carry.js')<engineCore.indexOf('src/systems/physical.js'),'Agent Carry must load before Physical consumes its handling profile');
 assert.ok(engineCore.indexOf('src/systems/physical.js')<engineCore.indexOf('src/spatial/finalize.js'),'Physical initial-state registration must happen before the Spatial finalizer');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/engine.js'),'runtime profile must finalize initial state before Engine captures factories');
@@ -52,7 +55,8 @@ assert.equal(traversalOnlyInitialState.at(-1),'src/spatial/finalize.js','initial
 const agentCarryOnlyInitialState=initialStateProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','systems/agent-carry.js'
 ]);
-assert.ok(agentCarryOnlyInitialState.includes('src/systems/resources.js'),'Agent Carry-only profiles must include the canonical Resources owner');
+assert.ok(agentCarryOnlyInitialState.includes('src/systems/object-handling.js'),'Agent Carry-only profiles must include the canonical Object Handling owner');
+assert.equal(agentCarryOnlyInitialState.includes('src/systems/resources.js'),false,'Agent Carry-only profiles must not depend on Resources for generic held-Object hand demand');
 assert.ok(agentCarryOnlyInitialState.includes('src/systems/agent-carry.js'),'Agent Carry-only profiles must retain the Agent Carry owner');
 assert.equal(agentCarryOnlyInitialState.includes('src/spatial-agent-carry.js'),false,'Agent Carry-only profiles must not install traversal projection without Spatial Traversal');
 assert.ok(agentCarryOnlyInitialState.indexOf('src/systems/agent-carry.js')<agentCarryOnlyInitialState.indexOf('src/spatial/finalize.js'),'Agent Carry-only initializer must register before the Spatial finalizer');
@@ -60,7 +64,8 @@ assert.ok(agentCarryOnlyInitialState.indexOf('src/systems/agent-carry.js')<agent
 const agentCarryTraversalInitialState=initialStateProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','systems/agent-carry.js','spatial-traversal.js'
 ]);
-assert.ok(agentCarryTraversalInitialState.includes('src/systems/resources.js'),'Agent Carry profiles must include the canonical Resources owner');
+assert.ok(agentCarryTraversalInitialState.includes('src/systems/object-handling.js'),'Agent Carry profiles must include the canonical Object Handling owner');
+assert.equal(agentCarryTraversalInitialState.includes('src/systems/resources.js'),false,'Agent Carry traversal profiles must not depend on Resources for generic held-Object hand demand');
 assert.ok(agentCarryTraversalInitialState.includes('src/spatial-agent-carry.js'),'Agent Carry traversal profiles must install Agent carry position projection');
 assert.ok(agentCarryTraversalInitialState.indexOf('src/systems/agent-carry.js')<agentCarryTraversalInitialState.indexOf('src/spatial-agent-carry.js'),'Agent Carry owner must load before its Spatial projection');
 assert.throws(
@@ -69,7 +74,7 @@ assert.throws(
   'runtime profiles must reject retired source names rather than silently alias them'
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
-  'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
+  'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','systems/object-handling.js','spatial.js',
   'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 

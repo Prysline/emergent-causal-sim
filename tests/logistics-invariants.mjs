@@ -38,9 +38,9 @@ function placeAtCarrier(a,basket){
 }
 
 function startIndoorFoodRestock(st,a){
-  const tray=st.containers.mealTray;
-  const pantry=st.containers.foodPantry;
-  const basket=st.containers.basket;
+  const tray=st.objects.mealTray;
+  const pantry=st.objects.foodPantry;
+  const basket=st.objects.basket;
   tray.contents.food=0;
   basket.contents={};
   basket.position={x:3,y:2};
@@ -80,9 +80,9 @@ E.reset(20260911);
   const actor=st.agents.zhou;
   st.agents.orange.offMap=true;
   owner.offMap=true;
-  const tray=st.containers.mealTray;
-  const pantry=st.containers.foodPantry;
-  const basket=st.containers.basket;
+  const tray=st.objects.mealTray;
+  const pantry=st.objects.foodPantry;
+  const basket=st.objects.basket;
   tray.contents.food=0;
   basket.contents={};
   st.reservations[`object:${basket.id}`]=owner.id;
@@ -112,7 +112,7 @@ E.reset(20260911);
   assert.equal(a.held,basket.id,'中斷測試前，角色必須正在持有物流容器');
 
   const conservedBeforeAbort=foodOf(pantry)+foodOf(basket)+foodOf(tray);
-  delete st.containers[tray.id];
+  delete st.objects[tray.id];
   E.tick();
 
   assert.equal(a.action,null,'目標消失後物流行動應中止');
@@ -129,8 +129,8 @@ E.reset(20260911);
   const st=E.getState();
   const a=isolateHuman(st);
   const exit=SP.allExits(st).find(x=>SP.exitStructurallyAvailable(st,x));
-  const dest=Object.values(st.containers).find(c=>SP.hasRole(c,'externalSupplyDestination'));
-  const basket=st.containers.basket;
+  const dest=Object.values(st.objects).find(c=>SP.hasRole(c,'externalSupplyDestination'));
+  const basket=st.objects.basket;
   basket.contents={};
   basket.position={x:3,y:2};
   delete basket.supportId;

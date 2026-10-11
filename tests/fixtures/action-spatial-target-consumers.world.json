@@ -1,5 +1,5 @@
 {
-  "authoringSchema": "world-authoring-v13",
+  "authoringSchema": "world-authoring-v14",
   "doors": {
     "frontDoor": {
       "boundary": {
@@ -12,7 +12,7 @@
     }
   },
   "entities": {
-    "containers": {
+    "objects": {
       "alcoholBottle": {
         "canDrinkFrom": true,
         "capacity": 160,
@@ -57,7 +57,8 @@
               "highRiskExposure": 0.66
             }
           }
-        }
+        },
+        "resourceContainer": true
       },
       "basket": {
         "capacity": 55,
@@ -111,7 +112,8 @@
               "highRiskExposure": 1.25
             }
           }
-        }
+        },
+        "resourceContainer": true
       },
       "cupA": {
         "canDrinkFrom": true,
@@ -156,7 +158,8 @@
               "highRiskExposure": 0.66
             }
           }
-        }
+        },
+        "resourceContainer": true
       },
       "cupB": {
         "canDrinkFrom": true,
@@ -199,7 +202,8 @@
               "highRiskExposure": 0.66
             }
           }
-        }
+        },
+        "resourceContainer": true
       },
       "foodPantry": {
         "access": 1,
@@ -221,7 +225,8 @@
         "roles": [
           "foodReserve",
           "externalSupplyDestination"
-        ]
+        ],
+        "resourceContainer": true
       },
       "mealTray": {
         "access": 1,
@@ -258,7 +263,8 @@
         "roles": [
           "readyFood"
         ],
-        "supportId": "diningTable"
+        "supportId": "diningTable",
+        "resourceContainer": true
       },
       "plateA": {
         "canEatFrom": true,
@@ -306,7 +312,8 @@
               "highRiskExposure": 0.95
             }
           }
-        }
+        },
+        "resourceContainer": true
       },
       "plateB": {
         "canEatFrom": true,
@@ -354,7 +361,8 @@
               "highRiskExposure": 0.95
             }
           }
-        }
+        },
+        "resourceContainer": true
       },
       "waterBucket": {
         "access": 1,
@@ -416,7 +424,8 @@
               "highRiskExposure": 0.82
             }
           }
-        }
+        },
+        "resourceContainer": true
       }
     },
     "sources": {

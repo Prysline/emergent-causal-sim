@@ -9,7 +9,7 @@ loadRuntimeProfile([
 ]);
 
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
+const PHYSICAL_VERSION='11.56.0-physical-object-handling';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial,P=globalThis.SimPhysical,V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -25,8 +25,8 @@ function resetFixture({height=2,edgeWidth=null}={}){
   }
   human.position=floor(st,1,1);human.action=null;human.posture={kind:'standing',slotId:null,furnitureId:null};
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-  const water=st.containers.waterBucket;
-  st.containers={waterBucket:water};
+  const water=st.objects.waterBucket;
+  st.objects={waterBucket:water};
   st.objects={};
   water.supportId=null;water.position=floor(st,3,1);
   st.furniture={

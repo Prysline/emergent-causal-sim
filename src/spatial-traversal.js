@@ -79,7 +79,7 @@
   function fixedFloorBlocker(st,p){
     const t=SP.tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
     if(floorGeometry(st,p).blocked)return `furniture:${t.furnitureIds?.[0]||'geometry'}`;
-    const fixedContainer=Object.values(st.containers||{}).find(c=>c.portable===false&&!c.supportId&&localSame(baseObjectPosition(st,c.id),p));if(fixedContainer)return `container:${fixedContainer.id}`;
+    const fixedObject=Object.values(st.objects||{}).find(object=>object.portable===false&&!object.supportId&&localSame(baseObjectPosition(st,object.id),p));if(fixedObject)return `object:${fixedObject.id}`;
     const source=Object.values(st.sources||{}).find(s=>s.blocksMovement!==false&&localSame(s.position,p));if(source)return `source:${source.id}`;
     return null;
   }
@@ -174,7 +174,7 @@
   }
   function objectNode(st,id){
     const holder=SP.holderOf(st,id);if(holder)return nodeForAgent(st,holder);
-    const c=st.containers?.[id],object=st.objects?.[id],s=st.sources?.[id],obj=c||object||s;if(!obj?.position)return null;
+    const obj=st.objects?.[id]||st.sources?.[id];if(!obj?.position)return null;
     let surfaceId=obj.position.surfaceId||FLOOR;
     if(obj?.supportId){const entry=supportSurfaceForFurniture(st,obj.supportId);if(entry)surfaceId=entry.surface.id;}
     return normalizeNode(st,obj.position,surfaceId);
@@ -701,8 +701,8 @@
       return {mode:'socialReach',positions:agentContactNodes(st,other,agent),target,affordance};
     }
     if(target.kind==='object'){
-      const c=st.containers?.[target.id],object=st.objects?.[target.id],entity=object||c;if(!entity)return {mode:'none',positions:[],target,affordance};
-      const holder=c?SP.holderOf(st,target.id):null,node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
+      const entity=st.objects?.[target.id];if(!entity)return {mode:'none',positions:[],target,affordance};
+      const holder=SP.holderOf(st,target.id),node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
       if(affordance==='pickup'){
         if(node.surfaceId===FLOOR){

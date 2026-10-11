@@ -32,7 +32,7 @@ function openFixture(){
   st.map.boundaries={};
   st.doors={};
   st.map.passageConstraints={};
-  for(const c of Object.values(st.containers||{}))if(c.position)c.position={x:10,y:6};
+  for(const c of Object.values(st.objects||{}))if(c.position)c.position={x:10,y:6};
   for(const source of Object.values(st.sources||{}))if(source.position)source.position={x:10,y:6};
 
   const human=st.agents.zhen,target=st.agents.zhou;
@@ -99,7 +99,7 @@ function openFixture(){
 {
   const {st,human,targetNode,cornerNode}=openFixture();
   st.agents.zhou.offMap=true;
-  st.containers.defaultReach={id:'defaultReach',name:'default reach',portable:true,capacity:1,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{...targetNode}};
+  st.objects.defaultReach={id:'defaultReach',name:'default reach',portable:true,capacity:1,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{...targetNode}};
   let geometry=SP.interactionGeometry(st,{kind:'object',id:'defaultReach'},human,'default');
   assert.equal(geometry.mode,'reach');
   assert.ok(hasNode(st,geometry.positions,cornerNode),'generic object default reach must use the same diagonal Contact helper');
@@ -111,7 +111,7 @@ function openFixture(){
   geometry=SP.interactionGeometry(st,{kind:'source',id:'cornerPort'},human,'default');
   assert.equal(geometry.mode,'port');
   assert.equal(hasNode(st,geometry.positions,cornerNode),false,'port must remain authored-port-only instead of inheriting diagonal reach');
-  st.containers.cornerOccupy={id:'cornerOccupy',name:'corner occupy',portable:true,capacity:1,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{...targetNode},interactions:{default:{mode:'occupy'}}};
+  st.objects.cornerOccupy={id:'cornerOccupy',name:'corner occupy',portable:true,capacity:1,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{...targetNode},interactions:{default:{mode:'occupy'}}};
   geometry=SP.interactionGeometry(st,{kind:'object',id:'cornerOccupy'},human,'default');
   assert.equal(geometry.mode,'occupy');
   assert.equal(hasNode(st,geometry.positions,cornerNode),false,'occupy must remain exact-position geometry');

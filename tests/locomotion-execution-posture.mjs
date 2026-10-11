@@ -38,7 +38,7 @@ function resetFixture({height=2,width=.8,edgeWidth=null,kneelSpeed=null}={}){
   human.locomotion={mode:null,phase:'idle'};
   if(kneelSpeed!==null)human.physical.locomotionProfiles.kneelCrawl.speedFactor=kneelSpeed;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-  const water=st.containers.waterBucket;
+  const water=st.objects.waterBucket;
   water.supportId=null;water.position=floor(st,3,1);
   st.furniture={
     testPassageCover:{

@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v13';
+  const VERSION='world-authoring-v14';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -63,18 +63,16 @@
     },
     entities:{
       objects:{
-        bookA:{id:'bookA',name:'一本書',icon:'📖',affordances:['read'],position:pos(5,2),supportId:'diningTable',interactions:{read:{mode:'supportReach'}}}
-      },
-      containers:{
-        mealTray:{id:'mealTray',name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:pos(5,2),supportId:'diningTable',restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}},
-        plateA:{id:'plateA',name:'餐盤 A',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.10,highRiskExposure:.48},impact:{lowRiskExposure:.16,highRiskExposure:.70},oscillation:{lowRiskExposure:.24,highRiskExposure:.95}}},servingDish:true,canEatFrom:true,position:pos(5,2),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
-        plateB:{id:'plateB',name:'餐盤 B',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.10,highRiskExposure:.48},impact:{lowRiskExposure:.16,highRiskExposure:.70},oscillation:{lowRiskExposure:.24,highRiskExposure:.95}}},servingDish:true,canEatFrom:true,position:pos(6,3),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
-        foodPantry:{id:'foodPantry',name:'食物櫃',icon:'🗄️',roles:['foodReserve','externalSupplyDestination'],capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1,position:pos(2,2)},
-        basket:{id:'basket',name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:{tilt:{lowRiskExposure:.24,highRiskExposure:.78},impact:{lowRiskExposure:.24,highRiskExposure:.82},oscillation:{lowRiskExposure:.36,highRiskExposure:1.25}}},transportResources:['food'],position:pos(3,2),interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}},
-        waterBucket:{id:'waterBucket',name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.08,highRiskExposure:.44},impact:{lowRiskExposure:.14,highRiskExposure:.64},oscillation:{lowRiskExposure:.20,highRiskExposure:.82}}},canDrinkFrom:true,drinkPreference:.12,access:1,position:pos(5,5),restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}},
-        cupA:{id:'cupA',name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{alcohol:20},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.06,highRiskExposure:.34},impact:{lowRiskExposure:.10,highRiskExposure:.52},oscillation:{lowRiskExposure:.14,highRiskExposure:.66}}},canDrinkFrom:true,drinkPreference:.95,position:pos(6,2),supportId:'diningTable'},
-        cupB:{id:'cupB',name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.06,highRiskExposure:.34},impact:{lowRiskExposure:.10,highRiskExposure:.52},oscillation:{lowRiskExposure:.14,highRiskExposure:.66}}},canDrinkFrom:true,drinkPreference:.95,position:pos(6,3),supportId:'diningTable'},
-        alcoholBottle:{id:'alcoholBottle',name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1,containment:'sealed',contentRetention:{tilt:{lowRiskExposure:.06,highRiskExposure:.34},impact:{lowRiskExposure:.10,highRiskExposure:.52},oscillation:{lowRiskExposure:.14,highRiskExposure:.66}}},canDrinkFrom:true,drinkPreference:.28,position:pos(5,3),supportId:'diningTable'}
+        bookA:{id:'bookA',name:'一本書',icon:'📖',affordances:['read'],portable:true,handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1},position:pos(5,2),supportId:'diningTable',interactions:{read:{mode:'supportReach'}}},
+        mealTray:{id:'mealTray',resourceContainer:true,name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,position:pos(5,2),supportId:'diningTable',restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}},
+        plateA:{id:'plateA',resourceContainer:true,name:'餐盤 A',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.10,highRiskExposure:.48},impact:{lowRiskExposure:.16,highRiskExposure:.70},oscillation:{lowRiskExposure:.24,highRiskExposure:.95}}},servingDish:true,canEatFrom:true,position:pos(5,2),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
+        plateB:{id:'plateB',resourceContainer:true,name:'餐盤 B',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.10,highRiskExposure:.48},impact:{lowRiskExposure:.16,highRiskExposure:.70},oscillation:{lowRiskExposure:.24,highRiskExposure:.95}}},servingDish:true,canEatFrom:true,position:pos(6,3),supportId:'diningTable',interactions:{eatFrom:{mode:'reach'}}},
+        foodPantry:{id:'foodPantry',resourceContainer:true,name:'食物櫃',icon:'🗄️',roles:['foodReserve','externalSupplyDestination'],capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1,position:pos(2,2)},
+        basket:{id:'basket',resourceContainer:true,name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:{tilt:{lowRiskExposure:.24,highRiskExposure:.78},impact:{lowRiskExposure:.24,highRiskExposure:.82},oscillation:{lowRiskExposure:.36,highRiskExposure:1.25}}},transportResources:['food'],position:pos(3,2),interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}},
+        waterBucket:{id:'waterBucket',resourceContainer:true,name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.08,highRiskExposure:.44},impact:{lowRiskExposure:.14,highRiskExposure:.64},oscillation:{lowRiskExposure:.20,highRiskExposure:.82}}},canDrinkFrom:true,drinkPreference:.12,access:1,position:pos(5,5),restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}},
+        cupA:{id:'cupA',resourceContainer:true,name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{alcohol:20},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.06,highRiskExposure:.34},impact:{lowRiskExposure:.10,highRiskExposure:.52},oscillation:{lowRiskExposure:.14,highRiskExposure:.66}}},canDrinkFrom:true,drinkPreference:.95,position:pos(6,2),supportId:'diningTable'},
+        cupB:{id:'cupB',resourceContainer:true,name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:{tilt:{lowRiskExposure:.06,highRiskExposure:.34},impact:{lowRiskExposure:.10,highRiskExposure:.52},oscillation:{lowRiskExposure:.14,highRiskExposure:.66}}},canDrinkFrom:true,drinkPreference:.95,position:pos(6,3),supportId:'diningTable'},
+        alcoholBottle:{id:'alcoholBottle',resourceContainer:true,name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1,containment:'sealed',contentRetention:{tilt:{lowRiskExposure:.06,highRiskExposure:.34},impact:{lowRiskExposure:.10,highRiskExposure:.52},oscillation:{lowRiskExposure:.14,highRiskExposure:.66}}},canDrinkFrom:true,drinkPreference:.28,position:pos(5,3),supportId:'diningTable'}
       },
       sources:{
         tap:{id:'tap',name:'水龍頭',icon:'🚰',roles:['resourceSource'],resource:'water',infinite:true,position:pos(6,5),interactions:{fill:{mode:'port'}},interactionPorts:[{id:'tap:west',label:'水龍頭左側',position:pos(5,5),edge:'east',affordances:['fill']}]}
@@ -371,62 +369,61 @@
       ));
     }
 
-    const ordinaryObjects=authoring.entities?.objects||{},containerEntries=authoring.entities?.containers||{},sourceEntries=authoring.entities?.sources||{};
-    for(const [key,object] of Object.entries(ordinaryObjects)){
+    const objects=authoring.entities?.objects||{},sourceEntries=authoring.entities?.sources||{};
+    for(const [key,object] of Object.entries(objects)){
       const basePath=`entities.objects.${key}`;
-      if(!isRecord(object)){errors.push(authoringIssue('authoring_object_invalid',basePath,'Ordinary object entry must be an object.'));continue;}
+      if(!isRecord(object)){errors.push(authoringIssue('authoring_object_invalid',basePath,'Object entry must be an object.'));continue;}
       if(object.id!==key)errors.push(authoringIssue('authoring_object_id_mismatch',`${basePath}.id`,`Object key ${key} does not match id ${String(object.id)}.`));
       const affordances=object.affordances;
-      if(!Array.isArray(affordances)||!affordances.length||affordances.some(value=>typeof value!=='string'||!value.trim()))errors.push(authoringIssue('authoring_object_affordances_invalid',`${basePath}.affordances`,'Ordinary object affordances must be a non-empty array of strings.'));
-      else if(new Set(affordances).size!==affordances.length)errors.push(authoringIssue('authoring_object_affordances_duplicate',`${basePath}.affordances`,'Ordinary object affordances must not contain duplicates.'));
-      if(!object.position)errors.push(authoringIssue('authoring_object_position_missing',`${basePath}.position`,'Ordinary object must define a canonical position.'));
-      else validatePosition(object.position,`${basePath}.position`);
-      if(object.interactions!==undefined&&!isRecord(object.interactions))errors.push(authoringIssue('authoring_object_interactions_invalid',`${basePath}.interactions`,'Ordinary object interactions must be an object when provided.'));
-      else for(const [affordance,rule] of Object.entries(object.interactions||{}))if(!isRecord(rule)||!['supportReach','reach','occupy'].includes(rule.mode))errors.push(authoringIssue('authoring_object_interaction_invalid',`${basePath}.interactions.${affordance}`,'Ordinary object interaction mode must be supportReach, reach, or occupy.'));
-      if(object.supportId){
-        const support=resolvedFurniture[object.supportId];
-        if(!support)errors.push(authoringIssue('authoring_object_support_missing',`${basePath}.supportId`,`Ordinary object supportId ${object.supportId} does not exist.`,{supportId:object.supportId}));
-        else if(object.position&&!((support.footprint||[]).some(p=>samePosition(p,object.position))))errors.push(authoringIssue('authoring_object_support_position_mismatch',`${basePath}.position`,`Ordinary object ${key} is positioned outside support ${object.supportId} footprint.`,{objectId:key,supportId:object.supportId}));
+      if(affordances!==undefined){
+        if(!Array.isArray(affordances)||affordances.some(value=>typeof value!=='string'||!value.trim()))errors.push(authoringIssue('authoring_object_affordances_invalid',`${basePath}.affordances`,'Object affordances must be an array of non-empty strings when provided.'));
+        else if(new Set(affordances).size!==affordances.length)errors.push(authoringIssue('authoring_object_affordances_duplicate',`${basePath}.affordances`,'Object affordances must not contain duplicates.'));
       }
-    }
-    for(const key of Object.keys(ordinaryObjects))if(containerEntries[key]||sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Ordinary object id ${key} collides with another authored entity id.`,{id:key}));
-
-    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
-      const basePath=`entities.containers.${key}`;
-      if(!isRecord(container)){errors.push(authoringIssue('authoring_container_invalid',basePath,'Container entry must be an object.'));continue;}
-      if(container.id!==undefined&&container.id!==key)errors.push(authoringIssue('authoring_container_id_mismatch',`${basePath}.id`,`Container key ${key} does not match id ${String(container.id)}.`));
-      if(container.portable===true){
-        const handling=container.handling,geometry=handling?.carryGeometry;
-        if(!isRecord(handling))errors.push(authoringIssue('authoring_container_handling_missing',`${basePath}.handling`,'Portable Container must define handling.'));
+      if(!object.position)errors.push(authoringIssue('authoring_object_position_missing',`${basePath}.position`,'Object must define a canonical position.'));
+      else validatePosition(object.position,`${basePath}.position`);
+      if(object.interactions!==undefined&&!isRecord(object.interactions))errors.push(authoringIssue('authoring_object_interactions_invalid',`${basePath}.interactions`,'Object interactions must be an object when provided.'));
+      else for(const [affordance,rule] of Object.entries(object.interactions||{}))if(!isRecord(rule)||!['supportReach','reach','occupy'].includes(rule.mode))errors.push(authoringIssue('authoring_object_interaction_invalid',`${basePath}.interactions.${affordance}`,'Object interaction mode must be supportReach, reach, or occupy.'));
+      if(object.portable===true){
+        const handling=object.handling,geometry=handling?.carryGeometry;
+        if(!isRecord(handling))errors.push(authoringIssue('authoring_object_handling_missing',`${basePath}.handling`,'Portable Object must define handling.'));
         else{
-          if(!isRecord(geometry))errors.push(authoringIssue('authoring_container_carry_geometry_invalid',`${basePath}.handling.carryGeometry`,'Portable Container handling must define carryGeometry.'));
+          if(!isRecord(geometry))errors.push(authoringIssue('authoring_object_carry_geometry_invalid',`${basePath}.handling.carryGeometry`,'Portable Object handling must define carryGeometry.'));
           else for(const axis of ['width','height','length']){
             const value=geometry[axis];
-            if(!Number.isFinite(Number(value))||Number(value)<=0)errors.push(authoringIssue('authoring_container_carry_geometry_invalid',`${basePath}.handling.carryGeometry.${axis}`,`Container carryGeometry.${axis} must be a positive number.`));
+            if(!Number.isFinite(Number(value))||Number(value)<=0)errors.push(authoringIssue('authoring_object_carry_geometry_invalid',`${basePath}.handling.carryGeometry.${axis}`,`Object carryGeometry.${axis} must be a positive number.`));
           }
-          if(!Number.isInteger(handling.handsRequired)||handling.handsRequired<0)errors.push(authoringIssue('authoring_container_hands_required_invalid',`${basePath}.handling.handsRequired`,'Portable Container handsRequired must be a non-negative integer.'));
-          if(!CONTAINMENT_KINDS.has(handling.containment))errors.push(authoringIssue('authoring_container_containment_invalid',`${basePath}.handling.containment`,'Portable Container containment must be open, covered, or sealed.'));
-          const retention=handling.contentRetention;
-          if(!isRecord(retention))errors.push(authoringIssue('authoring_container_content_retention_invalid',`${basePath}.handling.contentRetention`,'Portable Container handling must define contentRetention.'));
+          if(!Number.isInteger(handling.handsRequired)||handling.handsRequired<0)errors.push(authoringIssue('authoring_object_hands_required_invalid',`${basePath}.handling.handsRequired`,'Portable Object handsRequired must be a non-negative integer.'));
+        }
+      }
+      if(object.resourceContainer===true){
+        if(!isRecord(object.contents))errors.push(authoringIssue('authoring_resource_container_contents_invalid',`${basePath}.contents`,'Resource-container Object must define contents as an object.'));
+        if(!Number.isFinite(Number(object.capacity))||Number(object.capacity)<0)errors.push(authoringIssue('authoring_resource_container_capacity_invalid',`${basePath}.capacity`,'Resource-container Object capacity must be a non-negative finite number.'));
+        if(!Number.isFinite(Number(object.emptyLoad))||Number(object.emptyLoad)<0)errors.push(authoringIssue('authoring_resource_container_empty_load_invalid',`${basePath}.emptyLoad`,'Resource-container Object emptyLoad must be a non-negative finite number.'));
+        if(object.portable===true){
+          const handling=object.handling;
+          if(!CONTAINMENT_KINDS.has(handling?.containment))errors.push(authoringIssue('authoring_resource_container_containment_invalid',`${basePath}.handling.containment`,'Portable resource-container Object containment must be open, covered, or sealed.'));
+          const retention=handling?.contentRetention;
+          if(!isRecord(retention))errors.push(authoringIssue('authoring_resource_container_content_retention_invalid',`${basePath}.handling.contentRetention`,'Portable resource-container Object handling must define contentRetention.'));
           else for(const dimension of RETENTION_DIMENSIONS){
             const band=retention[dimension],path=`${basePath}.handling.contentRetention.${dimension}`;
-            if(!isRecord(band)){errors.push(authoringIssue('authoring_container_content_retention_invalid',path,`Container contentRetention.${dimension} must define lowRiskExposure and highRiskExposure calibration anchors.`));continue;}
+            if(!isRecord(band)){errors.push(authoringIssue('authoring_resource_container_content_retention_invalid',path,`Resource-container Object contentRetention.${dimension} must define lowRiskExposure and highRiskExposure calibration anchors.`));continue;}
             const low=Number(band.lowRiskExposure),high=Number(band.highRiskExposure);
-            if(!Number.isFinite(low)||low<=0)errors.push(authoringIssue('authoring_container_content_retention_invalid',`${path}.lowRiskExposure`,`Container contentRetention.${dimension}.lowRiskExposure must be a positive finite number.`));
-            if(!Number.isFinite(high)||high<=low)errors.push(authoringIssue('authoring_container_content_retention_invalid',`${path}.highRiskExposure`,`Container contentRetention.${dimension}.highRiskExposure must be finite and greater than lowRiskExposure.`));
+            if(!Number.isFinite(low)||low<=0)errors.push(authoringIssue('authoring_resource_container_content_retention_invalid',`${path}.lowRiskExposure`,`Resource-container Object contentRetention.${dimension}.lowRiskExposure must be a positive finite number.`));
+            if(!Number.isFinite(high)||high<=low)errors.push(authoringIssue('authoring_resource_container_content_retention_invalid',`${path}.highRiskExposure`,`Resource-container Object contentRetention.${dimension}.highRiskExposure must be finite and greater than lowRiskExposure.`));
           }
         }
+      }else{
+        for(const field of ['contents','capacity','emptyLoad'])if(object[field]!==undefined)errors.push(authoringIssue('authoring_resource_container_capability_missing',`${basePath}.${field}`,`Object ${key} defines resource-container field ${field} without resourceContainer:true.`,{objectId:key,field}));
       }
-      if(container.position)validatePosition(container.position,`${basePath}.position`);
-      for(let i=0;i<(container.interactionPorts||[]).length;i++)if(container.interactionPorts[i]?.position)validatePosition(container.interactionPorts[i].position,`${basePath}.interactionPorts[${i}].position`);
-      if(container.supportId){
-        const support=resolvedFurniture[container.supportId];
-        if(!support)errors.push(authoringIssue('authoring_support_missing',`${basePath}.supportId`,`Container supportId ${container.supportId} does not exist.`,{supportId:container.supportId}));
-        else if(container.position&&!((support.footprint||[]).some(p=>samePosition(p,container.position)))){
-          errors.push(authoringIssue('authoring_support_position_mismatch',`${basePath}.position`,`Container ${key} is positioned outside support ${container.supportId} footprint.`,{containerId:key,supportId:container.supportId}));
-        }
+      for(let i=0;i<(object.interactionPorts||[]).length;i++)if(object.interactionPorts[i]?.position)validatePosition(object.interactionPorts[i].position,`${basePath}.interactionPorts[${i}].position`);
+      if(object.supportId){
+        const support=resolvedFurniture[object.supportId];
+        if(!support)errors.push(authoringIssue('authoring_object_support_missing',`${basePath}.supportId`,`Object supportId ${object.supportId} does not exist.`,{supportId:object.supportId}));
+        else if(object.position&&!((support.footprint||[]).some(p=>samePosition(p,object.position))))errors.push(authoringIssue('authoring_object_support_position_mismatch',`${basePath}.position`,`Object ${key} is positioned outside support ${object.supportId} footprint.`,{objectId:key,supportId:object.supportId}));
       }
     }
+    for(const key of Object.keys(objects))if(sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Object id ${key} collides with another authored entity id.`,{id:key}));
+
     for(const [key,source] of Object.entries(authoring.entities?.sources||{})){
       const basePath=`entities.sources.${key}`;
       if(!isRecord(source)){errors.push(authoringIssue('authoring_source_invalid',basePath,'Source entry must be an object.'));continue;}
@@ -537,10 +534,10 @@
         const cell=at(p);if(cell&&!cell.furnitureIds.includes(id))cell.furnitureIds.push(id);
       }
     }
-    for(const [key,container] of Object.entries(authoring.entities?.containers||{})){
-      if(container.portable!==false||container.supportId)continue;
-      const cell=at(container.position);if(!cell)continue;
-      cell.staticBlocked=true;cell.blockedBy.push('container:'+(container.id||key));
+    for(const [key,object] of Object.entries(authoring.entities?.objects||{})){
+      if(object.portable!==false||object.supportId)continue;
+      const cell=at(object.position);if(!cell)continue;
+      cell.staticBlocked=true;cell.blockedBy.push('object:'+(object.id||key));
     }
     for(const [key,source] of Object.entries(authoring.entities?.sources||{})){
       if(source.blocksMovement===false)continue;

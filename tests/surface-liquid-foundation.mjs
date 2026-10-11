@@ -49,7 +49,7 @@ assert.equal(Object.prototype.hasOwnProperty.call(zhen.action||{},'effectNode'),
 let spillEvent=null,spillState=null;
 for(let seed=1;seed<=200&&!spillEvent;seed++){
   E.reset(seed);st=E.getState();
-  const a=st.agents.zhen,cup=st.containers.cupA;
+  const a=st.agents.zhen,cup=st.objects.cupA;
   a.position={...floor(st,5,4)};a.status.intoxication=100;a.needs.fatigue=100;a.traits.careful=0;
   a.held='cupA';delete cup.supportId;cup.position={...a.position};cup.contents={};
   a.action={kind:'drinkAlcohol',phase:'fill',started:st.tick,wait:0,container:'cupA',sourceObject:'alcoholBottle',sourceKind:'object',resource:'alcohol'};

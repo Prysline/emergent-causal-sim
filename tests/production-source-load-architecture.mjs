@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const RESOURCES_VERSION='11.39.0-carried-contents-loss';
+const RESOURCES_VERSION='11.56.0-resource-container-capability';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{
@@ -30,6 +30,7 @@ const capabilityIndex=indexOf('src/embodiment-capabilities.js');
 const initializerIndex=indexOf('src/world-initializer.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
+const objectHandlingIndex=indexOf('src/systems/object-handling.js');
 const resourcesIndex=indexOf('src/systems/resources.js');
 const agentCarryIndex=indexOf('src/systems/agent-carry.js');
 const engineIndex=indexOf('src/engine.js');
@@ -60,11 +61,12 @@ assert.ok(authoringIndex<worldIndex,'current authoring owner must load before wo
 assert.equal(scripts.includes('src/world-authoring-v1.js'),false,'production must not load the retired legacy-named authoring asset');
 assert.ok(worldIndex<engineIndex,'world ownership must initialize before engine');
 assert.equal(releaseIndex,worldIndex+1,'release owner must load immediately after world.js');
-assert.equal(resourcesIndex,releaseIndex+1,'Resources owner must load immediately after release.js');
-assert.equal(agentCarryIndex,resourcesIndex+1,'Agent Carry owner must load immediately after Resources');
+assert.equal(objectHandlingIndex,releaseIndex+1,'Object Handling owner must load immediately after release.js');
+assert.equal(resourcesIndex,objectHandlingIndex+1,'Resources owner must load immediately after Object Handling');
+assert.equal(agentCarryIndex,resourcesIndex+1,'Agent Carry owner must remain adjacent after Resources in production composition');
 assert.ok(spatialTraversalIndex<spatialAgentCarryIndex&&agentCarryIndex<spatialAgentCarryIndex,'Agent carry position projection must load after both Agent Carry truth owner and Spatial Traversal');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
-assert.ok(resourcesIndex<agentCarryIndex&&agentCarryIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must remain Resources -> Agent Carry -> Physical -> Passage -> Locomotion -> Crowding');
+assert.ok(objectHandlingIndex<resourcesIndex&&objectHandlingIndex<agentCarryIndex&&agentCarryIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must keep Object Handling before Resources / Agent Carry, then Agent Carry -> Physical -> Passage -> Locomotion -> Crowding');
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
 assert.ok(hookManifestIndex>pipelineIndex,'runtime hook manifest must finalize after every simulation hook registrant');
@@ -205,7 +207,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v12');
-assert.equal(A.VERSION,'world-authoring-v13');
+assert.equal(A.VERSION,'world-authoring-v14');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v5');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
@@ -222,8 +224,8 @@ assert.equal(SP.SPATIAL_IDENTITY_VERSION,SPATIAL_IDENTITY_VERSION,'Spatial Ident
 assert.equal(W.AGENT_CARRY_SCHEMA_VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(AgentCarry.VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(SP.AGENT_CARRY_POSITION_PROJECTION_VERSION,'11.46.0-sleep-carry-integration');
-assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.45.0-agent-carry-relocate','Physical own generation must not fake-bump for sleeping carry integration');
-assert.equal(P.VERSION,'11.45.0-agent-carry-relocate','Physical own generation must not fake-bump for sleeping carry integration');
+assert.equal(W.PHYSICAL_SCHEMA_VERSION,'11.56.0-physical-object-handling','Physical own generation must not fake-bump for sleeping carry integration');
+assert.equal(P.VERSION,'11.56.0-physical-object-handling','Physical own generation must not fake-bump for sleeping carry integration');
 assert.equal(SP.PASSAGE_PROFILE_VERSION,'11.39.1-surface-boundary-transition');
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk','Route search generation must not fake-bump for a separate candidate selector');
 assert.equal(SP.CANDIDATE_NODE_SELECTION_VERSION,'11.46.0-sleep-carry-integration');

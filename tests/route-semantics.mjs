@@ -13,7 +13,7 @@ actor.position={...SP.normalizeNode(st,{x:1,y:3},'floor')};
 st.agents.zhou.offMap=true;
 st.agents.orange.offMap=true;
 st.furniture={};
-st.containers={};
+st.objects={};
 st.sources={};
 
 const allowed=new Set([

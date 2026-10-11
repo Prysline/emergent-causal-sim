@@ -16,7 +16,7 @@ function openSquare(){
   for(const tile of Object.values(st.map.tiles||{})){tile.terrain='wall';tile.walkable=false;tile.furnitureIds=[];}
   for(const [x,y] of [[1,1],[2,1],[1,2],[2,2]]){const tile=st.map.tiles[x+','+y];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];}
   st.furniture={};st.map.boundaries={};st.doors={};st.map.passageConstraints={};
-  for(const c of Object.values(st.containers||{}))if(c.position)c.position={x:7,y:4};
+  for(const c of Object.values(st.objects||{}))if(c.position)c.position={x:7,y:4};
   for(const source of Object.values(st.sources||{}))if(source.position)source.position={x:7,y:4};
   const human=st.agents.zhen;human.position=floor(st,1,1);human.posture={kind:'standing',slotId:null,furnitureId:null};
   return {st,human,a:floor(st,1,1),b:floor(st,2,2),east:floor(st,2,1)};

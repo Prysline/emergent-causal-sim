@@ -317,7 +317,7 @@
     }
     for(const [id,door] of Object.entries(authored.doors||{}))push('door',id,door,doorScenePosition(door),'🚪','結構 · 門');
     for(const [id,exit] of Object.entries(authored.exits||{}))push('exit',id,exit,exit.access,'↗','世界出口');
-    for(const [id,container] of Object.entries(authored.entities?.containers||{}))push('container',id,container,container.position,container.icon||'◈','物件 · 容器');
+    for(const [id,object] of Object.entries(authored.entities?.objects||{}))push('object',id,object,object.position,object.icon||'◈',object.resourceContainer===true?'物件 · Resource Container':'物件');
     for(const [id,source] of Object.entries(authored.entities?.sources||{}))push('source',id,source,source.position,source.icon||'◆','物件 · 資源源頭');
     for(const [id,resident] of Object.entries(authored.residents||{}))push('resident',id,resident,residentPosition(resident),resident.icon||(resident.kind==='cat'?'🐈':'👤'),'居民');
     return out;
@@ -353,9 +353,9 @@
       if(furniture?.displayAt)push(furniture.displayAt,`furniture-display:${id}`);
       for(const slot of furniture?.slots||[])push(slot.position,`slot:${slot.id}`);
     }
-    for(const [id,container] of Object.entries(authored.entities?.containers||{})){
-      push(container.position,`container:${id}`);
-      for(const port of container.interactionPorts||[])push(port.position,`container-port:${id}`);
+    for(const [id,object] of Object.entries(authored.entities?.objects||{})){
+      push(object.position,`object:${id}`);
+      for(const port of object.interactionPorts||[])push(port.position,`object-port:${id}`);
     }
     for(const [id,source] of Object.entries(authored.entities?.sources||{})){
       push(source.position,`source:${id}`);
@@ -744,7 +744,7 @@
     const groups=[
       ['家具',entries.filter(entry=>entry.type==='furniture')],
       ['結構／出口',entries.filter(entry=>entry.type==='structure'||entry.type==='door'||entry.type==='exit')],
-      ['物件',entries.filter(entry=>entry.type==='container'||entry.type==='source')],
+      ['物件',entries.filter(entry=>entry.type==='object'||entry.type==='source')],
       ['居民',entries.filter(entry=>entry.type==='resident')]
     ];
     host.innerHTML=groups.map(([label,items])=>`<div class="scene-group"><div class="scene-group-head"><span>${esc(label)}</span><span>${items.length}</span></div><div class="scene-items">${items.length?items.map(entry=>{
@@ -782,7 +782,7 @@
         if(entry.type==='door')details+=`<br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code><br>狀態：<code>${esc(entry.entity.state)}</code>`;
         if(entry.type==='structure')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>下端：<code>(${esc(entry.entity.lower?.x)}, ${esc(entry.entity.lower?.y)}, ${esc(entry.entity.lower?.z)})</code><br>上端：<code>(${esc(entry.entity.upper?.x)}, ${esc(entry.entity.upper?.y)}, ${esc(entry.entity.upper?.z)})</code>${entry.entity.clearanceWidth!==undefined?`<br>淨寬：${esc(entry.entity.clearanceWidth)}m`:''}${entry.entity.clearanceHeight!==undefined?`<br>淨高：${esc(entry.entity.clearanceHeight)}m`:''}`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
-        if((entry.type==='container'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
+        if((entry.type==='object'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
         if(entry.type==='source'){
           const ports=(entry.entity.interactionPorts||[]).filter(port=>port?.position&&Array.isArray(port.affordances)&&port.affordances.includes('fill'));
           if(ports.length){
@@ -942,7 +942,9 @@
       }).join('');
       const orientationSummary=hasFacing?`方向：<b>${esc(orientationGlyph(orientation))}</b> <code>${esc(orientation)}</code>`:`局部框架旋轉：<b>${esc(FRAME_ROTATION_LABELS[orientation]||orientation)}</b> <code>${esc(orientation)}</code>`;
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="arm-furniture-placement">${placementActive?'停止家具放置':'啟用家具放置'}</button><button type="button" data-editor-action="duplicate-furniture">複製家具</button><button type="button" class="danger-action" data-editor-action="delete-furniture">刪除家具</button></div><div class="orientation-control"><span>${orientationSummary}</span><div class="action-row">${orientationButtons}</div></div><small class="operation-note">類型：${esc(furnitureKindLabel(entry.entity))} · 實例 ID：<code>${esc(entry.id)}</code></small>`;
-    }else if(entry?.type==='container'||entry?.type==='source'){
+    }else if(entry?.type==='object'){
+      entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button><button type="button" class="danger-action" data-editor-action="delete-object">移除物件</button></div>`;
+    }else if(entry?.type==='source'){
       entityMarkup=`<div class="action-row"><button type="button" data-editor-action="move-object">移動物件</button></div>`;
     }else if(entry?.type==='resident'){
       const binding=M.residentBinding(authored,entry.id);
@@ -1080,7 +1082,8 @@
     if(action==='arm-furniture-placement'&&entry.type==='furniture'){const active=selectedTool==='furniture'&&selectedFurnitureId===entry.id;selectedFurnitureId=entry.id;selectedTool=active?'select':'furniture';clearOperationState();setMessage(active?'家具放置已停止。':'家具放置已啟用；點擊地圖決定新位置。');render();return;}
     if(action==='duplicate-furniture'&&entry.type==='furniture'){beginOperation({kind:'duplicate-furniture',furnitureId:entry.id},'複製家具：下一次點擊決定新副本位置。');return;}
     if(action==='delete-furniture'&&entry.type==='furniture'){deleteSelectedFurniture(entry.id);return;}
-    if(action==='move-object'&&(entry.type==='container'||entry.type==='source')){beginOperation({kind:'move-object',entityType:entry.type,entityId:entry.id},'移動物件：下一次點擊決定新位置。');return;}
+    if(action==='move-object'&&(entry.type==='object'||entry.type==='source')){beginOperation({kind:'move-object',entityType:entry.type,entityId:entry.id},'移動物件：下一次點擊決定新位置。');return;}
+    if(action==='delete-object'&&entry.type==='object'&&typeof M.deleteOrdinaryObject==='function'){const result=M.deleteOrdinaryObject(authored,{objectId:entry.id});commitMutation(result,{message:result.ok?`已移除物件 ${entry.id}。`:''});return;}
     if(action==='move-resident'&&entry.type==='resident'){
       const options=M.listResidentFreePostures(authored,entry.id);
       const current=entry.entity.initial?.posture?.kind;

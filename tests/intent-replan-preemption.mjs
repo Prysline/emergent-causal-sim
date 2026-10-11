@@ -6,7 +6,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js','systems/action/state.js','systems/intent/state.js','systems/social/state.js','systems/physical.js','spatial-passage.js','systems/locomotion.js','engine.js','runtime-hook-pipeline.js','spatial-runtime-effects.js','systems/action/runtime.js','systems/intent/runtime.js','systems/social/bid.js','systems/intent/replanning.js','validation/registry.js','validation/rules/spatial-node.js','validation/rules/spatial-environment.js','validation/rules/action-canonical-type.js','validation/rules/intent-active.js','validation/rules/social-bid.js','validation/rules/interruption.js']);
 
-const E=globalThis.SimEngine,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const eventsByAction=action=>E.getState().events.filter(e=>e.data?.action===action);
 function bind(a,kind,intentKind,extra={}){
@@ -27,8 +27,8 @@ noIssues('reset');
 E.reset(20260911);st=E.getState();
 let cat=st.agents.orange;
 cat.needs.thirst=72;cat.needs.hunger=10;cat.needs.sleepNeed=20;cat.needs.social=10;
-st.containers.waterBucket.contents.water=0;
-st.containers.cupB.contents.water=18;
+st.objects.waterBucket.contents.water=0;
+st.objects.cupB.contents.water=18;
 const drinkIntentId=bind(cat,'drinkWater','drinkWater',{phase:'move',targetObject:'waterBucket',resource:'water'});
 E.tick();st=E.getState();cat=st.agents.orange;
 assert.equal(cat.action,null,'failed concrete water plan should abort its Action first');
@@ -56,7 +56,10 @@ let human=st.agents.zhen;
 human.needs.thirst=99;human.needs.hunger=20;human.needs.sleepNeed=20;
 bind(human,'wander','explore',{phase:'move',targetTile:{x:2,y:6},oneShot:true});
 st.reservations['test:owned']=human.id;
-human.held='cupB';delete st.containers.cupB.supportId;
+human.held='cupB';delete st.objects.cupB.supportId;
+const expectedSupportPlacement=SP.bestNearbySupportPlacement(st,human);
+const interruptionNode=SP.nodeForAgent(st,human);
+const expectedFloorPlacement=SP.normalizeNode(st,{x:interruptionNode.x,y:interruptionNode.y,...(Number.isFinite(interruptionNode.z)&&interruptionNode.z!==0?{z:interruptionNode.z}:{})},'floor');
 E.tick();st=E.getState();human=st.agents.zhen;
 const preempt=eventsByAction('intentPreempt')[0];
 assert.ok(preempt,'extreme thirst should preempt wander');
@@ -66,8 +69,10 @@ assert.equal(human.activeIntent?.kind,'drinkWater');
 assert.equal(human.activeIntent?.source?.type,'emergency');
 assert.equal(human.action?.kind,'drinkWater');
 assert.equal(st.reservations['test:owned'],undefined,'preemption must release prior Action reservations');
-assert.equal(human.held,null,'preemption cleanup must release an unexpectedly held container like core abort cleanup');
-assert.deepEqual(st.containers.cupB.position,human.position,'released held container should remain at the physical interruption position');
+assert.equal(human.held,null,'preemption cleanup must release an unexpectedly held Object like core abort cleanup');
+const releasedCup=st.objects.cupB,expectedReleaseNode=expectedSupportPlacement?.node||expectedFloorPlacement;
+assert.equal(releasedCup.supportId||null,expectedSupportPlacement?.supportId||null,'preemption cleanup must use canonical nearby-placement support selection');
+assert.ok(SP.nodeSame(st,SP.objectNode(st,'cupB'),expectedReleaseNode),'released held Object must land at the canonical interruption-time nearby placement');
 noIssues('emergency preemption cleanup');
 
 // A requester-private open wait can be preempted by its own emergency without informing/cancelling anyone else.

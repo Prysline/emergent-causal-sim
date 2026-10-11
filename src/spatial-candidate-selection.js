@@ -3,7 +3,7 @@
   if(!SP?.planRoute||!SP?.normalizeNode||!SP?.nodeKey||!SP?.nodeForAgent||!SP?.supportSurfaceForFurniture||!SP?.supportContactNodes)throw new Error('spatial-candidate-selection.js requires Spatial Traversal route and support-contact authority.');
 
   const VERSION='11.46.0-sleep-carry-integration';
-  const NEARBY_PLACEMENT_VERSION='nearby-placement-v1';
+  const NEARBY_PLACEMENT_VERSION='nearby-placement-v2-object-release';
   const SUPPORTED_OBJECTIVES=new Set(['traversalCost','pathDistance']);
 
   function agentFor(st,aOrId){return typeof aOrId==='string'?st.agents?.[aOrId]||null:aOrId||null;}
@@ -60,18 +60,18 @@
 
   function bestNearbySupportPlacement(st,aOrId){return nearbySupportPlacementResults(st,aOrId)[0]||null;}
 
-  function releaseHeldContainerNearby(st,aOrId){
-    const a=agentFor(st,aOrId),containerId=a?.held,container=containerId&&st.containers?.[containerId];
-    if(!a||!containerId||!container)return null;
+  function releaseHeldObjectNearby(st,aOrId){
+    const a=agentFor(st,aOrId),objectId=a?.held,object=objectId&&st.objects?.[objectId];
+    if(!a||!objectId||!object)return null;
     const placement=bestNearbySupportPlacement(st,a);
     if(placement){
-      container.position={...placement.node};container.supportId=placement.supportId;a.held=null;
-      return Object.freeze({kind:'surface',containerId,supportId:placement.supportId,surfaceId:placement.surfaceId,node:Object.freeze({...placement.node})});
+      object.position={...placement.node};object.supportId=placement.supportId;a.held=null;
+      return Object.freeze({kind:'surface',objectId,supportId:placement.supportId,surfaceId:placement.surfaceId,node:Object.freeze({...placement.node})});
     }
     const actorNode=SP.nodeForAgent(st,a),floorNode=actorNode&&SP.normalizeNode(st,{x:actorNode.x,y:actorNode.y,...(Number.isFinite(actorNode.z)&&actorNode.z!==0?{z:actorNode.z}:{})},'floor');
     if(!floorNode)return null;
-    container.position={...floorNode};delete container.supportId;a.held=null;
-    return Object.freeze({kind:'floor',containerId,supportId:null,surfaceId:'floor',node:Object.freeze({...floorNode})});
+    object.position={...floorNode};delete object.supportId;a.held=null;
+    return Object.freeze({kind:'floor',objectId,supportId:null,surfaceId:'floor',node:Object.freeze({...floorNode})});
   }
 
   Object.assign(SP,{
@@ -82,6 +82,6 @@
     bestCandidateNode,
     nearbySupportPlacementResults,
     bestNearbySupportPlacement,
-    releaseHeldContainerNearby
+    releaseHeldObjectNearby
   });
 })();

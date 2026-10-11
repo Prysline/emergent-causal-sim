@@ -24,7 +24,7 @@ const human=st.agents.zhen;
 const cat=st.agents.orange;
 
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
-assert.equal(P.VERSION,'11.45.0-agent-carry-relocate');
+assert.equal(P.VERSION,'11.56.0-physical-object-handling');
 assert.equal(st.version,globalThis.SimRelease.VERSION);
 
 const humanStanding=P.getPoseEnvelope(human,'standing');

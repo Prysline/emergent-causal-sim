@@ -2,7 +2,7 @@
   const SP=window.SimSpatial;if(!SP)return;
 
   function validateBaseState(st){
-    const issues=[],add=(code,message,data={})=>issues.push({code,message,...data}),byTile=new Map(),bySlot=new Map(),heldByContainer=new Map();
+    const issues=[],add=(code,message,data={})=>issues.push({code,message,...data}),byTile=new Map(),bySlot=new Map(),heldByObject=new Map();
     if(!st)return {tick:null,issueCount:1,issues:[{code:'state_missing',message:'沒有可驗證的 simulation state。'}],crowdingTiles:[],ok:false};
     if(st.zones)add('legacy_zones_present','v11 state 不應再含有舊 zones。');
     if(st.surfaces)add('legacy_surfaces_present','v11 state 不應再含有舊 zone surfaces。');
@@ -16,7 +16,7 @@
       if(Object.prototype.hasOwnProperty.call(t,'staticBlockedBy'))add('cached_blocker_present',`${id} 仍保存 staticBlockedBy；阻擋應由目前實體推導。`,{position:id});
     }
 
-    for(const c of Object.values(st.containers||{})){
+    for(const c of Object.values(st.objects||{})){
       if(SP.hasRole(c,'logisticsContainer')){
         if(!c.portable)add('logistics_container_not_portable',`${c.name}是 logisticsContainer 卻不可攜帶。`,{containerId:c.id});
         if(!Number.isFinite(c.capacity)||c.capacity<=0)add('logistics_container_capacity_invalid',`${c.name}沒有合法容量。`,{containerId:c.id});
@@ -55,13 +55,13 @@
         if(a.posture?.kind!=='lying'||!slot?.canSleep)add('sleep_posture_invalid',`${a.name}正在 sleeping，但沒有躺在可睡眠 slot。`,{agentId:a.id,slotId:a.posture?.slotId||null});
       }
       if(a.held){
-        if(!st.containers[a.held])add('held_missing_container',`${a.name}持有不存在的容器 ${a.held}。`,{agentId:a.id,containerId:a.held});
-        const owners=heldByContainer.get(a.held)||[];owners.push(a.id);heldByContainer.set(a.held,owners);
-        const effective=SP.objectPosition(st,a.held);if(effective&&!a.offMap&&!SP.same(effective,a.position))add('held_position_mismatch',`${a.name}持有的 ${a.held} 有效位置與角色不一致。`,{agentId:a.id,containerId:a.held});
+        if(!st.objects[a.held])add('held_missing_object',`${a.name}持有不存在的物件 ${a.held}。`,{agentId:a.id,objectId:a.held});
+        const owners=heldByObject.get(a.held)||[];owners.push(a.id);heldByObject.set(a.held,owners);
+        const effective=SP.objectPosition(st,a.held);if(effective&&!a.offMap&&!SP.same(effective,a.position))add('held_position_mismatch',`${a.name}持有的 ${a.held} 有效位置與角色不一致。`,{agentId:a.id,objectId:a.held});
       }
       if(a.action&&(!a.action.kind||!a.action.phase))add('invalid_action',`${a.name}的 action 缺少 kind / phase。`,{agentId:a.id});
       if(a.action?.kind==='externalSupply'||(a.action?.kind==='restockContainer'&&a.action.strategy==='logisticsContainer')){
-        const carrier=a.action.carrierId&&st.containers[a.action.carrierId];
+        const carrier=a.action.carrierId&&st.objects[a.action.carrierId];
         if(!carrier||!SP.hasRole(carrier,'logisticsContainer'))add('logistics_action_carrier_invalid',`${a.name}的物流行動沒有合法 logisticsContainer。`,{agentId:a.id,carrierId:a.action.carrierId||null});
         const mustHold=['toExit','exit','work','toSource','loadCarrier','toDestination','deposit'].includes(a.action.phase);
         if(mustHold&&carrier&&a.held!==carrier.id)add('logistics_action_not_holding_carrier',`${a.name}進入 ${a.action.phase} 階段卻沒有持有物流容器。`,{agentId:a.id,carrierId:carrier.id,phase:a.action.phase});
@@ -69,11 +69,11 @@
     }
 
     for(const [slot,ids] of bySlot)if(ids.length>1)add('slot_double_occupied',`${slot} 同時被 ${ids.join('、')} 使用。`,{slotId:slot,agentIds:ids});
-    for(const [cid,ids] of heldByContainer)if(ids.length>1)add('container_double_held',`${cid} 同時被 ${ids.join('、')} 持有。`,{containerId:cid,agentIds:ids});
+    for(const [objectId,ids] of heldByObject)if(ids.length>1)add('object_double_held',`${objectId} 同時被 ${ids.join('、')} 持有。`,{objectId,agentIds:ids});
     for(const [rkey,aid] of Object.entries(st.reservations||{})){
       const a=st.agents[aid];if(!a)add('reservation_owner_missing',`${rkey} 的 reservation 指向不存在的 Agent ${aid}。`,{reservation:rkey});
       if(rkey.startsWith('slot:')){const sid=rkey.slice(5);if(!SP.getSlot(st,sid))add('reservation_slot_missing',`${rkey} 指向不存在的 slot。`,{slotId:sid});}
-      if(rkey.startsWith('object:')){const oid=rkey.slice(7);if(!st.containers[oid]&&!st.sources[oid])add('reservation_object_missing',`${rkey} 指向不存在的物件。`,{objectId:oid});}
+      if(rkey.startsWith('object:')){const oid=rkey.slice(7);if(!st.objects[oid]&&!st.sources[oid])add('reservation_object_missing',`${rkey} 指向不存在的物件。`,{objectId:oid});}
     }
 
     const supplyActors=Object.values(st.agents||{}).filter(a=>a.action?.kind==='externalSupply');

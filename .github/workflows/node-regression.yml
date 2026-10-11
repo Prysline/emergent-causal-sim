@@ -43,6 +43,7 @@ jobs:
       - run: node tests/geometry-query-performance.mjs
       - run: node tests/state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
+      - run: node tests/object-unification.mjs
       - run: node tests/agent-facing-foundation.mjs
       - run: node tests/agent-turn-execution.mjs
       - run: node tests/perception-visual-orientation.mjs

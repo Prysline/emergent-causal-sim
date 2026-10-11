@@ -10,7 +10,7 @@ const eventBy=predicate=>E.getState().events.find(predicate);
 
 function armEating({seed=15100,withRequester=false,responderSocial=90}={}){
   E.reset(seed);
-  const st=E.getState(),requester=st.agents.zhou,responder=st.agents.zhen,cat=st.agents.orange,plate=st.containers.plateA;
+  const st=E.getState(),requester=st.agents.zhou,responder=st.agents.zhen,cat=st.agents.orange,plate=st.objects.plateA;
   cat.offMap=true;
   requester.offMap=false;responder.offMap=false;
   requester.position={x:5,y:5};responder.position={x:5,y:6};

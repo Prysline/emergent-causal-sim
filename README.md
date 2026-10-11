@@ -2,9 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.55.1-nearby-placement-lifecycle`。
+目前 runtime marker：`11.56.0-object-unification`。
 
-Current release 修正 intentional held-container nearby placement 的 production lifecycle integration：一般 `releaseHeld()`（包含 ordinary Action finish / abort、sleep settle 與切換手持 Container 前的 release）與 soft reconsideration 都使用同一 canonical Spatial nearby-placement helper。只有 Agent **目前即可依 canonical support-contact geometry 接觸到**的 `supportsObjects:true` Furniture Surface 能成為候選；同一合法 Surface 內 deterministic 選最近 cell，沒有合法 Surface 才 fallback 到 Agent current canonical Floor node。Accidental movement `containerDrop` consequence 仍維持 completed-edge 落點、Event 與 consequence RNG 語意，不經 nearby placement。
+Current release 完成 Direct Object Unification：所有具體 physical item 只存在於 canonical `entities.objects / state.objects`；原本 cup / plate / basket / bucket / bottle / meal tray / pantry 等 Resource Container instance 都改為具有 `resourceContainer:true` capability 的 Object。`Agent.held` 仍是唯一 held physical Object relation，ordinary Object 與 Resource-container Object 共用同一 generic Object handling / Physical traversal / intentional nearby-placement lifecycle；Resources 只處理 capability-specific `contents / capacity / load / retention / spill`。既有 bulk food 仍暫時存在 Resource-container Object 的 `contents.food`，本 release 不進行 Food Object migration。Accidental movement `containerDrop` 仍是 Resource-container handling consequence，不套用到 ordinary Object。
 
 ## Current authority navigation
 
@@ -22,6 +22,7 @@ Current release 修正 intentional held-container nearby placement 的 productio
 
 ## Current subsystem boundary index
 
+- **Object Domain**：具體 physical item 的 canonical identity 只在 `state.objects`；`resourceContainer:true` 是可組合 capability，不是平行 entity taxonomy。Generic physical handling 由 `SimObjectHandling` 持有，Resources 只消費 Resource-container capability。
 - **Relationship Foundation**：Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分開保存。**Relationship → Responder Bias** 只讓 responder decision 消費自己的 canonical relationship，不建立 shared pair score。
 - **Physical Profile Foundation**：Agent physical profile 是 body / locomotion capability authority；`MovementEnvelope` / `PoseEnvelope` 由 canonical profile 即時計算，不保存第二份 geometry cache。
 - **Passage Profile**：edge / opening geometry 由 Spatial / Passage authority 即時派生；不把 traversal feasibility 寫回 Furniture 或 Tile。

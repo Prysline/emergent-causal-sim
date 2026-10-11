@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.39.0-carried-contents-loss';
+const RESOURCES_VERSION='11.56.0-resource-container-capability';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const dropEventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&e.data?.action==='containerDrop');
 const contentEventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&(e.data?.action==='spill'||e.data?.action==='contentsDrop'));
@@ -17,7 +17,7 @@ assert.equal(R.VERSION,RESOURCES_VERSION);
 
 function resetLowPassage(){
   E.reset(14100);
-  const st=E.getState(),a=st.agents.zhen,bottle=st.containers.alcoholBottle;
+  const st=E.getState(),a=st.agents.zhen,bottle=st.objects.alcoholBottle;
   for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
   for(const tile of Object.values(st.map.tiles||{})){tile.terrain='wall';tile.walkable=false;tile.furnitureIds=[];tile.surface={contents:{}};}
   for(const [x,y] of [[1,1],[2,1],[3,1]]){const tile=st.map.tiles[`${x},${y}`];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];}
@@ -65,7 +65,7 @@ try{
 
   {
     E.reset(14101);
-    const st=E.getState(),a=st.agents.zhen,bottle=st.containers.alcoholBottle;
+    const st=E.getState(),a=st.agents.zhen,bottle=st.objects.alcoholBottle;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     const surface=st.furniture.diningTable.spatial.surfaces.find(x=>x.id==='diningTable:surface');
     const top=SP.normalizeNode(st,surface.cells[0],surface.id),start=floor(st,5,1);
@@ -86,7 +86,7 @@ try{
 
   {
     E.reset(14102);
-    const st=E.getState(),a=st.agents.zhen,plate=st.containers.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     for(const furniture of Object.values(st.furniture||{}))furniture.supportsObjects=false;
     const releaseNode=floor(st,2,6);
@@ -103,7 +103,7 @@ try{
 
   {
     E.reset(14106);
-    const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA,table=st.furniture.diningTable;
+    const st=E.getState(),a=st.agents.zhen,cup=st.objects.cupA,table=st.furniture.diningTable;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     for(const furniture of Object.values(st.furniture||{}))if(furniture.id!==table.id)furniture.supportsObjects=false;
     table.supportsObjects=true;
@@ -126,7 +126,7 @@ try{
 
   {
     E.reset(14104);
-    const st=E.getState(),a=st.agents.zhen,plate=st.containers.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     plate.contents={food:6};delete plate.supportId;plate.position={...a.position};a.held=null;
     a.action={kind:'eat',phase:'eatingPlate',container:plate.id,started:st.tick,wait:0};
@@ -139,7 +139,7 @@ try{
 
   {
     E.reset(14105);
-    const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
+    const st=E.getState(),a=st.agents.zhen,cup=st.objects.cupA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     cup.contents={water:8};delete cup.supportId;cup.position={...a.position};a.held=null;
     a.action={kind:'drinkWater',phase:'drink',container:cup.id,resource:'water',started:st.tick,wait:0};
@@ -151,7 +151,7 @@ try{
 
   {
     E.reset(14103);
-    const st=E.getState(),a=st.agents.zhen,bottle=st.containers.alcoholBottle,goal=floor(st,6,4);
+    const st=E.getState(),a=st.agents.zhen,bottle=st.objects.alcoholBottle,goal=floor(st,6,4);
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     a.held=bottle.id;delete bottle.supportId;bottle.position={...a.position};
     const before=JSON.stringify({held:a.held,position:bottle.position,events:st.events,rngState:st.rngState});

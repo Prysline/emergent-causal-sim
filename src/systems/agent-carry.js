@@ -1,7 +1,7 @@
 (() => {
-  const W=window.SimWorld,C=window.SimEmbodimentCapabilities,R=window.SimResources;
+  const W=window.SimWorld,C=window.SimEmbodimentCapabilities,O=window.SimObjectHandling;
   if(!W?.registerInitialStateInitializer)throw new Error('systems/agent-carry.js requires world.js initial-state pipeline.');
-  if(!C||!R)throw new Error('systems/agent-carry.js requires Embodiment Capabilities and Resources.');
+  if(!C||!O)throw new Error('systems/agent-carry.js requires Embodiment Capabilities and Object Handling.');
 
   const VERSION='11.46.0-sleep-carry-integration';
   const METHOD='twoArmCarry';
@@ -42,9 +42,9 @@
     const carrier=st.agents?.[relation.carrierId];return clone(carrier?.position);
   }
 
-  function handDemandWithExistingContainer(st,carrier,capability){
-    const held=R.getCarriedHandlingProfile?.(st,carrier),containerHands=held?.handsRequired||0;
-    return {containerHands,agentHands:capability?.handsRequired||0,totalHands:containerHands+(capability?.handsRequired||0),capacity:Number(carrier?.physical?.manipulation?.handCapacity)||0};
+  function handDemandWithExistingObject(st,carrier,capability){
+    const held=O.getCarriedObjectHandlingProfile?.(st,carrier),objectHands=held?.handsRequired||0;
+    return {objectHands,agentHands:capability?.handsRequired||0,totalHands:objectHands+(capability?.handsRequired||0),capacity:Number(carrier?.physical?.manipulation?.handCapacity)||0};
   }
 
   function candidateAttemptability(st,carrierOrId,observation,{method=METHOD,cooperationEvidence=null}={}){
@@ -53,7 +53,7 @@
     if(carrier.offMap)return fail('carrier-off-map');
     if(relationForCarrier(st,carrier)||relationForCarried(st,carrier))return fail('carrier-already-in-carry-relation');
     const capability=capabilityFor(carrier,method);if(!capability)return fail('carry-method-unsupported');
-    const hands=handDemandWithExistingContainer(st,carrier,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
+    const hands=handDemandWithExistingObject(st,carrier,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
     if(!observation?.observable||!observation.targetId)return fail('target-unobserved');
     if(!['human','animal'].includes(observation.observedAgentKind))return fail('observed-target-kind-unsupported');
     const observedSleeping=observation.observedActionKind==='sleep'&&observation.observedPosture==='lying';
@@ -72,8 +72,8 @@
     const capability=capabilityFor(carrier,method);if(!capability)return fail('carry-method-unsupported');
     const mass=Number(carried.physical?.mass);if(!Number.isFinite(mass)||mass<=0)return fail('carried-mass-missing');
     if(mass>capability.massCapacity)return fail('mass-capacity-exceeded',{mass,massCapacity:capability.massCapacity});
-    if(carried.held)return fail('nested-held-container-unsupported');
-    const hands=handDemandWithExistingContainer(st,carrier,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
+    if(carried.held)return fail('nested-held-object-unsupported');
+    const hands=handDemandWithExistingObject(st,carrier,capability);if(hands.totalHands>hands.capacity)return fail('hand-capacity-exceeded',hands);
     const responderMode=isSleeping(carried)?'sleeping':cooperative===true?'cooperative':null;
     if(!responderMode)return fail('awake-responder-not-cooperative');
     const carryGeometry=carryLocalEnvelope(carried,method);if(!carryGeometry)return fail('carried-geometry-missing');

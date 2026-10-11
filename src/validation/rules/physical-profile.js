@@ -1,5 +1,5 @@
 (() => {
-  const V=window.SimValidator,P=window.SimPhysical,R=window.SimResources;if(!V||!P?.getMovementEnvelope||!R)return;
+  const V=window.SimValidator,P=window.SimPhysical,O=window.SimObjectHandling;if(!V||!P?.getMovementEnvelope||!O?.canHoldObject)return;
   const positive=v=>Number.isFinite(Number(v))&&Number(v)>0;
 
   function validateLayer(st,base){
@@ -10,7 +10,7 @@
       if(!positive(p.mass))add('physical_mass_invalid',`${a.name} 的 mass 必須是正數。`,{agentId:a.id,mass:p.mass});
       if(!positive(p.volume))add('physical_volume_invalid',`${a.name} 的 volume 必須是正數。`,{agentId:a.id,volume:p.volume});
       if(!Number.isInteger(p.manipulation?.handCapacity)||p.manipulation.handCapacity<0)add('physical_hand_capacity_invalid',`${a.name} 的 manipulation.handCapacity 必須是非負整數。`,{agentId:a.id,handCapacity:p.manipulation?.handCapacity});
-      if(a.held&&st.containers?.[a.held]&&!R.canHoldContainer(st,a,a.held))add('physical_held_container_hand_capacity_exceeded',`${a.name} 沒有足夠 handCapacity 持有 ${a.held}。`,{agentId:a.id,containerId:a.held});
+      if(a.held&&st.objects?.[a.held]&&!O.canHoldObject(st,a,a.held))add('physical_held_object_hand_capacity_exceeded',`${a.name} 沒有足夠 handCapacity 持有 ${a.held}。`,{agentId:a.id,objectId:a.held});
       for(const key of ['height','width','length'])if(!positive(p.bodyGeometry?.[key]))add('physical_geometry_invalid',`${a.name} 的 bodyGeometry.${key} 必須是正數。`,{agentId:a.id,dimension:key,value:p.bodyGeometry?.[key]});
       if(Object.prototype.hasOwnProperty.call(p.locomotionCapabilities||{},'standing')||Object.prototype.hasOwnProperty.call(p.locomotionProfiles||{},'standing'))add('physical_legacy_standing_mode',`${a.name} 仍保存舊 standing locomotion mode；v11.17.0 起 locomotion baseline 為 walk，posture standing 與 locomotion mode 分離。`,{agentId:a.id});
       if(p.locomotionCapabilities?.walk!==true)add('physical_walk_capability_missing',`${a.name} 缺少 baseline walk locomotion capability。`,{agentId:a.id});

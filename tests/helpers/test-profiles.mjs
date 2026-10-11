@@ -75,6 +75,7 @@ const SPATIAL_CORE_PROFILE=Object.freeze([
   ...AUTHORING_PROFILE,
   'world.js',
   'release.js',
+  'systems/object-handling.js',
   'spatial.js'
 ]);
 
@@ -135,10 +136,18 @@ function ensureRuntimeDependencies(paths){
   }
   physicalIndex=paths.indexOf('systems/physical.js');
   if(physicalIndex>=0&&!paths.includes('systems/agent-carry.js'))paths.splice(physicalIndex,0,'systems/agent-carry.js');
-  const consumerIndexes=['systems/agent-carry.js','systems/physical.js','engine.js']
+  engineIndex=paths.indexOf('engine.js');
+  if(engineIndex>=0&&!paths.includes('systems/resources.js'))paths.splice(engineIndex,0,'systems/resources.js');
+  const objectHandlingConsumers=['systems/resources.js','systems/agent-carry.js','systems/physical.js','engine.js']
     .map(path=>paths.indexOf(path))
     .filter(index=>index>=0);
-  if(consumerIndexes.length&&!paths.includes('systems/resources.js'))paths.splice(Math.min(...consumerIndexes),0,'systems/resources.js');
+  if(objectHandlingConsumers.length){
+    const existingIndex=paths.indexOf('systems/object-handling.js');
+    if(existingIndex>=0)paths.splice(existingIndex,1);
+    const consumerIndexes=['systems/resources.js','systems/agent-carry.js','systems/physical.js','engine.js']
+      .map(path=>paths.indexOf(path)).filter(index=>index>=0);
+    paths.splice(Math.min(...consumerIndexes),0,'systems/object-handling.js');
+  }
   engineIndex=paths.indexOf('engine.js');
   if(engineIndex>=0&&!paths.includes('spatial-traversal.js')){
     const spatialIndex=paths.indexOf('spatial.js');

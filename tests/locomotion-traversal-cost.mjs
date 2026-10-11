@@ -17,7 +17,7 @@ const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 function resetFixture({detour='short',clearanceHeight=.70,posture='standing',kneelSpeed=null}={}){
   E.reset(12400);
   const st=E.getState(),human=st.agents.zhen;
-  st.furniture={};st.containers={};st.sources={};st.doors={};
+  st.furniture={};st.objects={};st.sources={};st.doors={};
   st.map.boundaries={};st.map.passageConstraints={};
   for(const tile of Object.values(st.map.tiles||{})){
     tile.terrain='wall';tile.walkable=false;tile.furnitureIds=[];tile.surface={contents:{}};
