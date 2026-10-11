@@ -10,6 +10,18 @@
 
 Subsystem marker只在**自己的 contract**改變時前進；overall release 前進不代表所有 subsystem換代。
 
+## 何時必須升版
+
+以下任一項改變時，必須檢查並更新對應 version marker，而不是只改程式或文件：
+
+- 使用者可觀察的 simulation semantics 改變。
+- canonical truth ownership / truth boundary 改變。
+- runtime hook ordering、same-tick visibility、initialization lifecycle 等執行語意改變。
+- 對外可依賴的 subsystem contract / schema / generation 改變。
+- 新增、移除或重新定義會影響 gameplay / observability 的 canonical state、interaction geometry 或 execution rule。
+
+只修測試 fixture、文件排版、CI plumbing、無語意 refactor 或 historical/archive 內容時，不為形式一致而機械升 overall / subsystem version。若只改單一 subsystem contract，只升該 subsystem generation；不得讓 unrelated subsystem 假性換代。
+
 Current relevant markers：
 
 - Pickup Interaction Geometry：`pickup-interaction-v1`
