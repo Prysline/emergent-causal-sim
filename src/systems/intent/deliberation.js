@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
-  if(typeof SP.releaseHeldContainerNearby!=='function')throw new Error('systems/intent/deliberation.js requires Spatial nearby placement lifecycle.');
+  if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('systems/intent/deliberation.js requires Spatial nearby placement lifecycle.');
   const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.48.1-sleep-perception-approach';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
@@ -12,7 +12,7 @@
   const SOFT_RECONSIDERABLE_ACTIONS=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
 
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
-  function foodAmount(st){return Object.values(st.containers||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
+  function foodAmount(st){return Object.values(st.objects||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
   function wetTotal(st){return Object.values(st.map?.tiles||{}).reduce((sum,t)=>sum+(SP.tileLiquidAmount?.(t)||0),0);}
   function interactionTraversalCost(st,a,target,affordance='default'){
     if(typeof SP.bestInteractionPositionResult==='function')return SP.bestInteractionPositionResult(st,a,target,affordance)?.traversalCost??Infinity;
@@ -24,16 +24,16 @@
   function nearestPettableAnimal(a){return E.nearestPettableAnimal?.(a)||null;}
   function resourceExists(st,r){
     if(Object.values(st.sources||{}).some(s=>s.resource===r&&(s.infinite||(s.amount||0)>.05)))return true;
-    return Object.values(st.containers||{}).some(c=>(c.contents?.[r]||0)>.05);
+    return Object.values(st.objects||{}).some(c=>(c.contents?.[r]||0)>.05);
   }
   function drinkableContainer(st,a,r){
-    return Object.values(st.containers||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[r]||0)>.05&&(!E.holderOf?.(c.id)||E.holderOf(c.id)?.id===a.id)).map(c=>{
+    return Object.values(st.objects||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[r]||0)>.05&&(!E.holderOf?.(c.id)||E.holderOf(c.id)?.id===a.id)).map(c=>{
       const d=interactionTraversalCost(st,a,{kind:'object',id:c.id},'drinkFrom');return Number.isFinite(d)?{c,d}:null;
     }).filter(x=>x&&Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.c||null;
   }
   function hasHumanDrinkPlan(st,a,r){
     if(!resourceExists(st,r))return false;
-    return Object.values(st.containers||{}).some(c=>c.portable&&c.canDrinkFrom&&(!E.holderOf?.(c.id)||E.holderOf(c.id)?.id===a.id));
+    return Object.values(st.objects||{}).some(c=>c.portable&&c.canDrinkFrom&&(!E.holderOf?.(c.id)||E.holderOf(c.id)?.id===a.id));
   }
   function currentBidUtility(st,a,intent){
     if(intent?.kind==='respondSocialBid'){
@@ -110,7 +110,7 @@
     return E.buildAction(a,choice);
   }
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
-  function dropHeld(st,a){if(a.held)SP.releaseHeldContainerNearby(st,a);}
+  function dropHeld(st,a){if(a.held)SP.releaseHeldObjectNearby(st,a);}
   function softEligible(st,a){
     const intent=a.activeIntent;if(!intent)return {ok:false,reason:'no-intent'};
     if(intent.source?.type==='emergency')return {ok:false,reason:'emergency-intent'};

@@ -22,13 +22,13 @@ assert.equal(await page.evaluate(()=>document.querySelector('[data-sidebar-secti
 await page.click('#containerPresetCatalog [data-container-preset-id="white-cup"]');
 assert.match(await page.locator('#containerSourceOperation').textContent(),/下一次點擊地圖/);
 await page.click('[data-cell="2,5"]');
-await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.containers?.['cupWhite-1']);
+await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['cupWhite-1']);
 let snapshot=await page.evaluate(()=>({
-  value:window.SimWorldEditor.getDocument().entities.containers['cupWhite-1'],
+  value:window.SimWorldEditor.getDocument().entities.objects['cupWhite-1'],
   dirty:window.SimWorldEditor.getSession().dirty,
   selected:window.SimWorldEditor.getSession().selection,
   actionText:document.querySelector('#selectionActions')?.innerText||'',
-  sceneCount:document.querySelectorAll('[data-scene-type="container"][data-scene-id="cupWhite-1"]').length
+  sceneCount:document.querySelectorAll('[data-scene-type="object"][data-scene-id="cupWhite-1"]').length
 }));
 assert.deepEqual(snapshot.value.contents,{},'new cup preset must start empty');
 assert.equal(snapshot.dirty,true);
@@ -40,8 +40,8 @@ await page.click('#containerPresetCatalog [data-container-preset-id="ready-food"
 await page.click('[data-cell="5,2"]');
 await page.waitForSelector('[data-container-source-support="furniture"][data-support-id="diningTable"]');
 await page.click('[data-container-source-support="furniture"][data-support-id="diningTable"]');
-await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.containers?.['mealTray-1']);
-snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().entities.containers['mealTray-1']);
+await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['mealTray-1']);
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
 assert.deepEqual(snapshot.contents,{food:68});
 assert.equal(snapshot.supportId,'diningTable');
 
@@ -71,9 +71,9 @@ const parity=await page.evaluate(()=>{
   const runtime=window.SimWorldInitializer.createInitialState(doc,{seed:20261010,version:'test'});
   const roundTrip=window.SimWorldAuthoring.parseAuthoringJSON(window.SimWorldAuthoring.serializeAuthoring(doc));
   return {
-    runtimeCup:runtime.containers['cupWhite-1'],
+    runtimeCup:runtime.objects['cupWhite-1'],
     runtimeTap:runtime.sources['tap-1'],
-    roundTripCup:roundTrip.entities.containers['cupWhite-1'],
+    roundTripCup:roundTrip.entities.objects['cupWhite-1'],
     roundTripTap:roundTrip.entities.sources['tap-1'],
     validation:window.SimWorldEditor.getSession().validation
   };
@@ -89,10 +89,10 @@ await page.click('[data-container-source-action="remove"]');
 await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.sources['tap-1']);
 assert.equal(await page.locator('[data-interaction-port-source-id="tap-1"]').count(),0);
 
-await page.click('[data-scene-type="container"][data-scene-id="mealTray-1"]');
+await page.click('[data-scene-type="object"][data-scene-id="mealTray-1"]');
 await page.waitForSelector('[data-container-source-action="remove"]');
 await page.click('[data-container-source-action="remove"]');
-await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.containers['mealTray-1']);
+await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
 
 await page.screenshot({path:`${outDir}/container-source-authoring.png`,fullPage:true});
 assert.deepEqual(consoleErrors,[],'Container / Source authoring flow must not emit console errors');

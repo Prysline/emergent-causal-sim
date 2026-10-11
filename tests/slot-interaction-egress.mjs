@@ -10,7 +10,7 @@ loadRuntimeProfile([
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial;
 
 E.reset(20260912);
-const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB,slot=SP.getSlot(st,'chairNW:seat');
+const st=E.getState(),human=st.agents.zhen,cup=st.objects.cupB,slot=SP.getSlot(st,'chairNW:seat');
 assert.ok(slot,'default-world dining chair slot must exist');
 
 st.agents.zhou.offMap=true;
@@ -62,7 +62,7 @@ assert.equal(human.action?.wait,0,'successful post-egress routing must not accum
 
 E.reset(20260913);
 {
-  const st2=E.getState(),human2=st2.agents.zhen,cup2=st2.containers.cupB,slot2=SP.getSlot(st2,'chairNW:seat');
+  const st2=E.getState(),human2=st2.agents.zhen,cup2=st2.objects.cupB,slot2=SP.getSlot(st2,'chairNW:seat');
   st2.agents.zhou.offMap=true;
   st2.agents.orange.offMap=true;
 
@@ -92,7 +92,7 @@ E.reset(20260913);
 
 E.reset(20260914);
 {
-  const st3=E.getState(),human3=st3.agents.zhen,cup3=st3.containers.cupB;
+  const st3=E.getState(),human3=st3.agents.zhen,cup3=st3.objects.cupB;
   st3.agents.zhou.offMap=true;
   st3.agents.orange.offMap=true;
   delete cup3.supportId;

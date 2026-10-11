@@ -10,7 +10,7 @@ const lifecyclePaths=productionScripts.filter(path=>
 );
 const lifecycleFiles=lifecyclePaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/systems/resources.js','src/spatial.js']);
+loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/systems/object-handling.js','src/systems/resources.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(lifecyclePaths);
@@ -79,7 +79,7 @@ const pipelineDiningSurface=st.furniture?.diningTable?.spatial?.surfaces?.find(s
 assert.ok(pipelineDiningSurface,'Furniture Definition resolution must provide canonical runtime Surface traversal geometry');
 assert.equal(st.agents?.zhen?.position?.surfaceId,'floor','Spatial finalizer must normalize persistent agent surface identity');
 assert.ok(st.agents?.zhen?.position?.spaceId,'Spatial finalizer must normalize persistent agent room-space identity');
-assert.equal(st.containers?.mealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
+assert.equal(st.objects?.mealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
 assert.ok(pipelineDiningSurface.cells.every(cell=>cell.contents&&typeof cell.contents==='object'),'Surface environment initializer must install per-cell contents on canonical derived Surface cells');
 
 const again=W.createInitialState(20260911);

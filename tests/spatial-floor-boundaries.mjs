@@ -52,7 +52,7 @@ assert.ok((orange.contacts.paws.water||0)>0,'actual floor traversal must still p
 assert.ok(under.surface.contents.water<wetBefore,'actual floor contact must reduce floor liquid');
 
 E.reset(20260911);st=E.getState();orange=st.agents.orange;
-st.containers.cupA.contents={water:10};
+st.objects.cupA.contents={water:10};
 orange.position={...table(st,6,2)};
 orange.action={kind:'drinkWater',phase:'move',started:st.tick,wait:0,targetObject:'cupA',resource:'water'};
 for(let i=0;i<4&&orange.action;i++)E.tick();

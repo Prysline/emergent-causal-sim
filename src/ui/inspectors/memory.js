@@ -1,7 +1,7 @@
 (() => {
   const E=window.SimEngine;if(!E?.MEMORY_SCHEMA_VERSION||typeof document==='undefined')return;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const entityName=(st,id)=>id?(st.agents?.[id]?.name||st.containers?.[id]?.name||st.sources?.[id]?.name||st.furniture?.[id]?.name||id):'—';
+  const entityName=(st,id)=>id?(st.agents?.[id]?.name||st.objects?.[id]?.name||st.sources?.[id]?.name||st.furniture?.[id]?.name||id):'—';
   const actionName=a=>E.ZH?.[a]||a||'未知事件';
 
   function memorySummary(st,m){

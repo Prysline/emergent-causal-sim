@@ -20,7 +20,7 @@ function authoredFixture({kind='human',cells=['1,1','2,1'],boundaries={},doors={
   const authored=clone(A.DEFAULT_WORLD_AUTHORING);
   authored.map.layers=[{z:0,cells:Object.fromEntries(cells.map(id=>[id,floorCell()])),boundaries:clone(boundaries)}];
   authored.furniture=clone(furniture);
-  authored.entities={containers:{},sources:{}};
+  authored.entities={objects:{},sources:{}};
   authored.doors=clone(doors);
   authored.exits={};
   authored.structures={};

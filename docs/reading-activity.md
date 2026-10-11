@@ -1,10 +1,10 @@
 # Reading Activity v1
 
-Current capability marker: `read-activity-v1`. World Authoring: `world-authoring-v13`. Mental Regulation: `mental-regulation-v4`. Ordinary-object interaction: `ordinary-object-interaction-v1`.
+Current capability marker: `read-activity-v1`. World Authoring: `world-authoring-v14`. Mental Regulation: `mental-regulation-v4`. Ordinary-object interaction: `ordinary-object-interaction-v2`.
 
 ## Canonical ownership
 
-- `entities.objects -> state.objects` is the canonical ordinary-object path. A readable book is not disguised as a Container or Source.
+- `entities.objects -> state.objects` is the canonical ordinary-object path. A readable book is an Object without Resource-container capability; it is not disguised as a Resource Container or Source.
 - `read` is a sustained Human Action / `read` Intent targeting an ordinary object with the explicit `read` affordance. Target feasibility and access consume canonical Interaction Geometry and `traversalCost`; entity position is not an interaction shortcut.
 - The Action owns reading execution progress only. Each valid `reading` execution tick realizes one feedback unit; merely choosing the Intent, moving toward the target, or holding a timer does not.
 - Mental Regulation owns `ACTIVITY_PROFILES.read` and converts realized feedback into Stimulation / Relaxation effects. The Activity never writes Needs directly.

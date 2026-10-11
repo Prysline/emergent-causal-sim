@@ -75,24 +75,24 @@ assert.equal(platePickup.mode,'surfaceContact');
 assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'supported pickup must derive contact from the object Surface cell');
 assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'supported pickup must not expand to the whole support Furniture perimeter');
 
-st.containers.testCrate={id:'testCrate',name:'測試箱',portable:true,capacity:10,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:5},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}};
+st.objects.testCrate={id:'testCrate',name:'測試箱',portable:true,capacity:10,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:5},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}};
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'pickup').mode,'groundContact','authored pickup occupy must not create a competing pickup truth');
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'drinkFrom').mode,'reach');
-delete st.containers.testCrate;
+delete st.objects.testCrate;
 
-const conflict=st.containers.basket;
+const conflict=st.objects.basket;
 a.held=conflict.id;conflict.supportId='diningTable';
 let validation=V.validateState(st);
 assert.ok(validation.issues.some(issue=>issue.code==='held_object_support_conflict'),'holder + supportId must be explicitly invalid');
 a.held=null;delete conflict.supportId;
 
-const plateA=st.containers.plateA,plateAOld={...plateA.position};
+const plateA=st.objects.plateA,plateAOld={...plateA.position};
 plateA.position={x:3,y:5,z:0};
 validation=V.validateState(st);
 assert.ok(validation.issues.some(issue=>issue.code==='supported_object_cell_mismatch'&&issue.entityId==='plateA'),'supported Object position must belong to its canonical support Surface cells');
 plateA.position=plateAOld;
 
-const pantry=st.containers.foodPantry,old={...pantry.position},next={x:3,y:5};
+const pantry=st.objects.foodPantry,old={...pantry.position},next={x:3,y:5};
 assert.equal(SP.walkable(st,old),false,'固定物件所在格應由實體動態阻擋');
 pantry.position={...next};
 assert.equal(SP.walkable(st,old),true,'固定物件移走後舊格不應留下 cached blocker');

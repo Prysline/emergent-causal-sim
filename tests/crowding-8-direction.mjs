@@ -21,7 +21,7 @@ function openArea(){
     const tile=st.map.tiles[`${x},${y}`];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];
   }
   st.furniture={};st.map.boundaries={};st.doors={};st.map.passageConstraints={};
-  for(const c of Object.values(st.containers||{}))if(c.position)c.position={x:7,y:4};
+  for(const c of Object.values(st.objects||{}))if(c.position)c.position={x:7,y:4};
   for(const source of Object.values(st.sources||{}))if(source.position)source.position={x:7,y:4};
   for(const a of Object.values(st.agents))if(a.id!==mover.id&&a.id!==other.id)a.offMap=true;
   mover.offMap=false;mover.position=floor(st,1,1);mover.action=null;mover.posture={kind:'standing',slotId:null,furnitureId:null};mover.locomotion={mode:null,phase:'idle'};

@@ -21,7 +21,7 @@ function resetOpenGrid(){
     const tile=st.map.tiles[x+','+y];tile.terrain='floor';tile.walkable=true;tile.furnitureIds=[];tile.surface={contents:{}};
   }
   st.furniture={};st.map.boundaries={};st.doors={};st.map.passageConstraints={};
-  for(const c of Object.values(st.containers||{}))if(c.position)c.position={x:7,y:4};
+  for(const c of Object.values(st.objects||{}))if(c.position)c.position={x:7,y:4};
   for(const source of Object.values(st.sources||{}))if(source.position)source.position={x:7,y:4};
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   human.position=floor(st,1,1);human.action=null;

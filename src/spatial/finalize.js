@@ -10,12 +10,12 @@
       const n=SP.normalizeNode(st,a.position,a.position.surfaceId||FLOOR);
       a.position={...a.position,spaceId:n.spaceId,surfaceId:n.surfaceId};
     }
-    for(const c of Object.values(st.containers||{})){
-      if(!c.position)continue;
-      const supportedSurfaceId=c.supportId&&SP.supportSurfaceForFurniture?.(st,c.supportId)?.surface?.id||null;
-      const surfaceId=supportedSurfaceId||c.position.surfaceId||FLOOR;
-      const n=SP.normalizeNode(st,c.position,surfaceId);
-      c.position={...c.position,spaceId:n.spaceId,surfaceId:n.surfaceId};
+    for(const object of Object.values(st.objects||{})){
+      if(!object.position)continue;
+      const supportedSurfaceId=object.supportId&&SP.supportSurfaceForFurniture?.(st,object.supportId)?.surface?.id||null;
+      const surfaceId=supportedSurfaceId||object.position.surfaceId||FLOOR;
+      const n=SP.normalizeNode(st,object.position,surfaceId);
+      object.position={...object.position,spaceId:n.spaceId,surfaceId:n.surfaceId};
     }
     for(const s of Object.values(st.sources||{})){
       if(!s.position)continue;

@@ -11,7 +11,7 @@ Post-pickup placement invalidation now enters an explicit Deliberation carrying 
 - Agent carry 使用獨立的 World relation：`state.agentCarries`。
 - relation 以 carried Agent id 為 key，保存 `carrierId / carriedAgentId / method / responderMode / establishedTick`；carrier → carried reverse lookup 必須由同一份 relation 推導，不保存 competing mirror。
 - `responderMode` 記錄 carry relation 建立當下的 responder mode，屬於 establishment provenance，不是之後 responder 當前狀態的 mirror。
-- Agent carry 不使用 Container 專用的 `Agent.held`。
+- Agent carry 不使用 `Agent.held`；`Agent.held` 是 held physical Object relation，Agent carry 仍由獨立 `state.agentCarries` 持有。
 - relation 成立期間，carried Agent 的 ordinary `position` 為 `null`，posture 為專用 `carried`；不得同時保存 floor / Slot occupancy truth。
 - carried Agent 的可觀察 Spatial Node / position 由 relation 指向的 carrier 投影；投影不是第二份 persistent position。
 
@@ -28,7 +28,7 @@ Cat 沒有 `twoArmCarry` capability。
 
 mass feasibility 與 hands / geometry / traversal feasibility 分開判斷。v1 不建立 individual strength subsystem。
 
-被抱起的 Agent 必須空手；若 `carried.held != null`，`twoArmCarry` 為 infeasible。v1 不自動放下對方持有的 Container，也不定義 nested carried load。完整 nested load composition 保留為未來能力。
+被抱起的 Agent 必須空手；若 `carried.held != null`，`twoArmCarry` 為 infeasible。v1 不自動放下對方持有的 Object，也不定義 nested carried load。完整 nested load composition 保留為未來能力。
 
 ## Responder boundary
 
@@ -71,7 +71,7 @@ carryLocal.length = max(carried.length, carried.height × 0.40)
 
 `0.60 / 0.40` 屬於 carry method calibration，不屬於 species / body plan。
 
-`SimPhysical.getEffectiveTraversalEnvelope(state, carrier, mode)` 是 traversal consumer 共用入口，逐軸合成 carrier movement envelope、held Container（若有）與 carried Agent envelope。Agent carry v1 的 `twoArmCarry` 已使用兩隻手，因此 current Human 不可能同時維持另一個需要 hands 的 carried Container。
+`SimPhysical.getEffectiveTraversalEnvelope(state, carrier, mode)` 是 traversal consumer 共用入口，逐軸合成 carrier movement envelope、held Object（若有）與 carried Agent envelope。Agent carry v1 的 `twoArmCarry` 已使用兩隻手，因此 current Human 不可能同時維持另一個需要 hands 的 held Object。
 
 Passage / Route / Locomotion 不各自重算 Agent carry geometry；它們繼續消費 Physical 的同一 effective traversal query。
 
@@ -109,7 +109,7 @@ Validator 必須鎖定：
 - carried Agent 沒有 competing ordinary position / Slot occupancy；
 - carried posture 必須有 relation，relation 必須有 carried posture；
 - projected position 與 carrier 同源；
-- carried Agent 不得持有 Container；
+- carried Agent 不得持有 Object；
 - `responderMode` 必須是合法的 establishment provenance，但不得要求它持續等於 responder 當前 canonical state；
 - carry geometry 必須可由 authoritative bodyGeometry 推導。
 

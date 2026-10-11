@@ -35,7 +35,7 @@ const eventBy=(st,pred)=>st.events.find(pred);
 // Reported reproduction: Seed 20260911, orange resting in pet-bed-small-1 while mealTray has food.
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,tray=st.containers.mealTray;
+  const st=E.getState(),cat=st.agents.orange,tray=st.objects.mealTray;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   const slot=bindToSlot(st,cat,'pet-bed-small-1:bed','lying');
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
@@ -70,7 +70,7 @@ E.reset(20260911);
 // Full chooser/Intent parity: the reported state must not cycle eat -> null -> eat while a valid route exists.
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,tray=st.containers.mealTray;
+  const st=E.getState(),cat=st.agents.orange,tray=st.objects.mealTray;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   bindToSlot(st,cat,'pet-bed-small-1:bed','lying');
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
@@ -88,7 +88,7 @@ E.reset(20260911);
   const st=E.getState(),cat=st.agents.orange,slot=bindToSlot(st,st.agents.orange,'pet-bed-small-1:bed','lying');
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
-  st.containers.mealTray.contents.food=68;
+  st.objects.mealTray.contents.food=68;
   const exits=SP.slotEgressNodes(st,slot,cat,'walk');
   assert.ok(exits.length>0,'negative fixture must begin with legal egress nodes');
   exits.forEach((node,i)=>{
@@ -116,16 +116,16 @@ E.reset(20260911);
   bindToSlot(st,cat,'pet-bed-small-1:bed','lying');
   quiet(cat,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
   assert.equal(E.canDrinkResource(cat,'water'),true);
-  st.containers.cupB.contents={};
+  st.objects.cupB.contents={};
   assert.equal(E.buildAction(cat,{id:'drinkWater',targetObject:'cupB'}),null,'explicit Cat drink target must itself be executable, not merely rely on another reachable source');
   const result=SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'waterBucket'},'drinkFrom');
   assert.ok(result&&Number.isFinite(result.traversalCost));
   const action=E.buildAction(cat,{id:'drinkWater'});
   assert.equal(action?.kind,'drinkWater');
-  const before=st.containers.waterBucket.contents.water;
+  const before=st.objects.waterBucket.contents.water;
   cat.action=action;
-  for(let i=0;i<50&&st.containers.waterBucket.contents.water===before;i++)E.tick();
-  assert.ok(st.containers.waterBucket.contents.water<before,'slot-bound Cat must leave its Slot and drink from a reachable source');
+  for(let i=0;i<50&&st.objects.waterBucket.contents.water===before;i++)E.tick();
+  assert.ok(st.objects.waterBucket.contents.water<before,'slot-bound Cat must leave its Slot and drink from a reachable source');
 }
 
 // Both actor and social target may be Slot-bound: actor-origin and target-contact geometry must compose.
@@ -183,7 +183,7 @@ E.reset(20260911);
 {
   const st=E.getState(),human=st.agents.zhen;
   quiet(human,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5});
-  for(const c of Object.values(st.containers))if(c.canDrinkFrom)c.portable=false;
+  for(const c of Object.values(st.objects))if(c.canDrinkFrom)c.portable=false;
   assert.ok(st.sources.tap.infinite,'fixture must retain a global water source');
   assert.equal(E.canDrinkResource(human,'water'),false,'global water without a usable drinking vessel is not an executable Human drink plan');
   assert.equal(E.candidateIntents(st,human).some(c=>c.intentKind==='drinkWater'),false);
@@ -194,10 +194,10 @@ E.reset(20260911);
 // Human drink feasibility must reuse an already-held drinking vessel instead of rejecting an executable plan.
 E.reset(20260911);
 {
-  const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB;
+  const st=E.getState(),human=st.agents.zhen,cup=st.objects.cupB;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   quiet(human,{hunger:5,thirst:90,fatigue:5,sleepNeed:5,social:5});
-  for(const c of Object.values(st.containers))if(c.canDrinkFrom){c.portable=false;c.contents={};}
+  for(const c of Object.values(st.objects))if(c.canDrinkFrom){c.portable=false;c.contents={};}
   cup.portable=true;cup.canDrinkFrom=true;cup.contents={water:8};
   human.held=cup.id;delete cup.supportId;
   assert.equal(E.canDrinkResource(human,'water'),true,'a self-held usable vessel is already an executable Human drink plan');
@@ -217,10 +217,10 @@ E.reset(20260911);
 // A partially filled vessel cannot count itself as the refill source used to justify a drink plan.
 E.reset(20260911);
 {
-  const st=E.getState(),human=st.agents.zhen,cup=st.containers.cupB;
+  const st=E.getState(),human=st.agents.zhen,cup=st.objects.cupB;
   quiet(human,{hunger:5,thirst:95,fatigue:5,sleepNeed:5,social:5});
   for(const source of Object.values(st.sources))if(source.resource==='water'){source.infinite=false;source.amount=0;}
-  for(const c of Object.values(st.containers)){
+  for(const c of Object.values(st.objects)){
     if(c.canDrinkFrom){c.portable=false;c.contents={};}
     else if(c.contents?.water)delete c.contents.water;
   }
@@ -233,7 +233,7 @@ E.reset(20260911);
 // instead of silently finishing and allowing the same unmet need to look like a successful completion.
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,tray=st.containers.mealTray;
+  const st=E.getState(),cat=st.agents.orange,tray=st.objects.mealTray;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
   tray.contents.food=68;

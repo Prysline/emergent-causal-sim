@@ -2,16 +2,16 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.55.1-nearby-placement-lifecycle`。
+目前 runtime marker：`11.56.0-object-unification`。
 
-本 release 完成 intentional held-container nearby placement 的一般 lifecycle integration；Pickup Interaction Geometry、Route、Locomotion、Physical 等未改 contract 的 subsystem generation 保持不變。
+本 release 完成 Direct Object Unification：canonical concrete physical-item truth 收斂到 `state.objects`，generic Object handling 與 Resources capability 分工明確化；Food Object migration、Object containment 與 Agent Carry relation 本身不在本 release 擴張。
 
 ## Truth boundaries
 
 - Canonical World Event 只有 `state.events / state.causes` 一份；Memory / UI / Inspector 只能引用或投影。
 - World fact 不等於 Agent knowledge；跨 Agent 決策只能消費合法 observation / evidence。
 - Agent-private cognition / memory / affect / relationship 不直接改寫另一 Agent 的 private state。
-- `state.agentCarries` 與 Container-only `Agent.held` 分離；action / intent / observation / memory / relationship 不互相充當 mirror state。
+- `state.agentCarries` 與 generic physical-Object `Agent.held` 分離；Agent carry 不塞進 held Object relation，action / intent / observation / memory / relationship 不互相充當 mirror state。
 
 ## Resident Action / Intent / Explanation
 
@@ -31,7 +31,7 @@ Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分�
 
 ## World / Spatial / Physical
 
-Current World Authoring = `world-authoring-v13`；Furniture Catalog = `furniture-definitions-v12`。
+Current World Authoring = `world-authoring-v14`；Furniture Catalog = `furniture-definitions-v12`。
 
 Current Spatial Node identity = `spaceId + surfaceId + x/y/z`。`z` 是 World spatial dimension；Furniture `topElevation` 是 local geometry，兩者不得混為同一真相。
 
@@ -65,6 +65,18 @@ Locomotion 持有 locomotion mode、posture transition burden、movement timing 
 
 Dynamic Congestion 只從 current occupancy / movement context 派生 next-edge delay / burden；不保存 persistent congestion truth，也不改寫 PassageProfile、Route topology 或 Agent-private preference。consumer 仍以當下 canonical route geometry 重算。
 
+## Object identity / Resource-container capability
+
+所有 authored/runtime concrete physical item 只有一個 canonical collection：`entities.objects / state.objects`。不存在 production `entities.containers / state.containers` alias。
+
+- base Object 持有 stable identity、position / `supportId`、affordance 與其他 Object-local facts。
+- portable physical handling 由 Object capability `portable + handling.carryGeometry + handling.handsRequired` 描述，canonical generic owner 是 `SimObjectHandling`。
+- Resource-container capability 以 `resourceContainer:true` 明示；Resources 才消費 `contents / capacity / emptyLoad / restock` 與 carried-content `handling.containment / contentRetention`。
+- `Agent.held` 只保存一個 physical Object id。ordinary book 與 cup / basket 等 capability Object 共用同一 hold / effective-location / release relation。
+- ordinary Object 不因可攜就取得 Resource load / spill / transfer semantics；Resources 對非 Resource-container Object 回傳 no-container / zero Resource-derived consequence。
+- `state.agentCarries` 仍只描述 Agent 搬 Agent。
+- current bulk `contents.food` 是本 release 保留的 Resources compatibility representation；Food Object lifecycle 另行設計。
+
 ## Object support / effective location
 
 ```text
@@ -81,17 +93,17 @@ else
 
 Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support Surface；0 或 >1 明確失敗。Normal held lifecycle 與 `supportId` 互斥；Furniture / Surface 不保存反向 `objects[]` mirror。
 
-### Intentional nearby placement v1
+### Intentional nearby placement v2
 
-當 lifecycle-driven release 需要放下 held Container 時，Spatial candidate-selection 是唯一 nearby placement query owner：
+當 lifecycle-driven release 需要放下 held Object 時，Spatial candidate-selection 是唯一 nearby placement query owner：
 
 - 只考慮 `supportsObjects:true` 且能解析到唯一 canonical support Surface 的 Furniture。
-- v1 不建立新的 move-to-place action；候選必須是 Agent **目前所在 node 已可依既有 `supportContactNodes(...)` 接觸**的 Surface，避免把物件瞬移到幾步外的家具。
+- v2 延續既有 placement algorithm，不建立新的 move-to-place action；候選必須是 Agent **目前所在 node 已可依既有 `supportContactNodes(...)` 接觸**的 Surface，避免把物件瞬移到幾步外的家具。
 - 同一目前可接觸 Surface 內，以 actor 與 Surface cell 的 locality 排序，之後用 stable `supportId / surfaceId / nodeKey` tie-break；不加入 personality、habit、home、housekeeping 或 furniture preference。
-- winner 寫 `container.position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node 並保持無 `supportId`。
+- winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node 並保持無 `supportId`。
 - accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
 
-Engine 的一般 `releaseHeld()` 現在委派同一 Spatial helper，因此 ordinary Action finish / abort、sleep settle、切換手持 Container 前的 release 與其他使用 normal held-release lifecycle 的 caller 都消費相同 canonical placement rule；Deliberation soft reconsideration 也直接使用同一 helper。Accidental movement `containerDrop` 仍是 intentionally-distinct consequence path，不被 normal lifecycle integration 吸收。
+Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享 intentional release placement。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。
 
 ## Interaction Geometry / Pickup v1
 

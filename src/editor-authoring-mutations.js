@@ -132,9 +132,6 @@
     if(!furniture)return [];
     const slotIds=new Set((furniture.slots||[]).map(slot=>slot.id));
     const blockers=[];
-    for(const [id,container] of Object.entries(authoring.entities?.containers||{})){
-      if(container.supportId===furnitureId)blockers.push({ownerType:'container',ownerId:id,ownerName:container.name||id,referenceKind:'supportId',referenceValue:furnitureId});
-    }
     for(const [id,object] of Object.entries(authoring.entities?.objects||{})){
       if(object.supportId===furnitureId)blockers.push({ownerType:'object',ownerId:id,ownerName:object.name||id,referenceKind:'supportId',referenceValue:furnitureId});
     }
@@ -233,16 +230,10 @@
       furniture.origin=clone(target);
       const followers=[];
       const followerPositions=[];
-      for(const [containerId,container] of Object.entries(candidate.entities?.containers||{})){
-        if(container.supportId!==furnitureId)continue;
-        if(container.position)container.position=translatePosition(container.position,dx,dy,dz);
-        for(const port of container.interactionPorts||[])if(port.position)port.position=translatePosition(port.position,dx,dy,dz);
-        followers.push(containerId);
-        if(container.position)followerPositions.push({id:containerId,position:clone(container.position)});
-      }
       for(const [objectId,object] of Object.entries(candidate.entities?.objects||{})){
         if(object.supportId!==furnitureId)continue;
         if(object.position)object.position=translatePosition(object.position,dx,dy,dz);
+        for(const port of object.interactionPorts||[])if(port.position)port.position=translatePosition(port.position,dx,dy,dz);
         followers.push(objectId);
         if(object.position)followerPositions.push({id:objectId,position:clone(object.position)});
       }
@@ -273,41 +264,25 @@
       const previousInstance=clone(furniture);
       const previousOrientation=previousInstance.orientation;
       const followerFrames=[];
-      for(const [containerId,container] of Object.entries(candidate.entities?.containers||{})){
-        if(container.supportId!==furnitureId)continue;
-        followerFrames.push({
-          id:containerId,
-          position:container.position?D.worldToLocal(definition,previousInstance,container.position):null,
-          ports:(container.interactionPorts||[]).map(port=>({
-            position:port.position?D.worldToLocal(definition,previousInstance,port.position):null,
-            edge:D.ORIENTATIONS.includes(port.edge)?port.edge:null
-          }))
-        });
-      }
-      const objectFollowerFrames=[];
       for(const [objectId,object] of Object.entries(candidate.entities?.objects||{})){
         if(object.supportId!==furnitureId)continue;
-        objectFollowerFrames.push({
+        followerFrames.push({
           id:objectId,
-          position:object.position?D.worldToLocal(definition,previousInstance,object.position):null
+          position:object.position?D.worldToLocal(definition,previousInstance,object.position):null,
+          ports:(object.interactionPorts||[]).map(port=>({position:port.position?D.worldToLocal(definition,previousInstance,port.position):null,edge:port.edge||null}))
         });
       }
       furniture.orientation=orientation;
       const followerPositions=[];
       for(const frame of followerFrames){
-        const container=candidate.entities.containers[frame.id];
-        if(frame.position)container.position=D.localToWorld(definition,furniture,frame.position);
+        const object=candidate.entities.objects[frame.id];
+        if(frame.position)object.position=D.localToWorld(definition,furniture,frame.position);
         for(let index=0;index<frame.ports.length;index++){
-          const port=container.interactionPorts?.[index],portFrame=frame.ports[index];
+          const port=object.interactionPorts?.[index],portFrame=frame.ports[index];
           if(!port)continue;
           if(portFrame.position)port.position=D.localToWorld(definition,furniture,portFrame.position);
           if(portFrame.edge)port.edge=D.reorientCardinalDirection(portFrame.edge,previousOrientation,orientation);
         }
-        if(container.position)followerPositions.push({id:frame.id,position:clone(container.position)});
-      }
-      for(const frame of objectFollowerFrames){
-        const object=candidate.entities.objects[frame.id];
-        if(frame.position)object.position=D.localToWorld(definition,furniture,frame.position);
         if(object.position)followerPositions.push({id:frame.id,position:clone(object.position)});
       }
       const preview=A.resolveFurnitureInstance(furniture);
@@ -316,7 +291,7 @@
         furnitureId,
         previousOrientation,
         orientation,
-        followers:[...followerFrames.map(frame=>frame.id),...objectFollowerFrames.map(frame=>frame.id)],
+        followers:followerFrames.map(frame=>frame.id),
         preview:{
           footprint:clone(preview.footprint||[]),
           displayAt:clone(preview.displayAt||null),
@@ -327,11 +302,11 @@
   }
 
   function moveObject(authoring,{entityType,entityId,target,supportChoice=null}={}){
-    if(!['container','source'].includes(entityType)){
-      return {ok:false,candidate:null,issues:[issue('object_type_unsupported','Object move 只支援 container / source。',{entityType,entityId})],meta:{}};
+    if(!['object','source'].includes(entityType)){
+      return {ok:false,candidate:null,issues:[issue('object_type_unsupported','Object move 只支援 object / source。',{entityType,entityId})],meta:{}};
     }
     return mutationResult(authoring,candidate=>{
-      const collection=entityType==='container'?candidate.entities?.containers:candidate.entities?.sources;
+      const collection=entityType==='object'?candidate.entities?.objects:candidate.entities?.sources;
       const entity=collection?.[entityId];
       if(!entity)return reject('object_missing','找不到 '+entityType+' '+String(entityId)+'.',{entityType,entityId});
       if(!entity.position||!target)return reject('object_move_target_invalid','Object move 需要目前 position 與 target。',{entityType,entityId,target:target||null});

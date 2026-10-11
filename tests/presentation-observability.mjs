@@ -7,7 +7,7 @@ globalThis.window=globalThis;
 const CROWDING_VERSION='11.31.0-crowding-8-direction';
 const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
-const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
+const PHYSICAL_VERSION='11.56.0-physical-object-handling';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const files=[
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js','spatial-observability.js','spatial-contact.js','spatial-floor-effects.js','spatial-surface-environment.js',
@@ -161,7 +161,7 @@ assert.match(crowdingSource,/angle135:interpolatedDirectionWeight\(135\)/,'Crowd
 assert.doesNotMatch(crowdingSource,/st\.(?:crowding|congestion)\s*=/,'Crowding runtime must not persist a parallel crowding cache');
 const entityUiSource=fs.readFileSync(new URL('../src/ui/entity-readable.js',import.meta.url),'utf8');
 assert.match(entityUiSource,/const VERSION=UI\.PRESENTATION_VERSION;/,'Entity Readable View must inherit the canonical Presentation marker from SimUI');
-assert.match(entityUiSource,/new Set\(\['container','object','source','furniture','tile','room','event'\]\)/,'Entity Readable View must explicitly cover all current non-agent Inspector entity types');
+assert.match(entityUiSource,/new Set\(\['object','source','furniture','tile','room','event'\]\)/,'Entity Readable View must explicitly cover all current non-agent Inspector entity types');
 assert.match(entityUiSource,/registerInspectorDecorator\('entityReadable\.layer',decorateInspector,1050\)/,'Entity Readable View must use the explicit Inspector decorator lifecycle after the Resident layer');
 assert.match(entityUiSource,/selected\?\.type==='agent'/,'Entity Readable View must leave Agent rendering owned by the existing Resident layer');
 assert.match(entityUiSource,/slotOccupant/,'Furniture readable projection should use actual occupancy');
@@ -185,6 +185,8 @@ assert.match(retentionUiSource,/Memory → Deliberation 由獨立 owner/,'Retent
 
 const environmentUiSource=fs.readFileSync(new URL('../src/ui/spatial/environment.js',import.meta.url),'utf8');
 assert.match(environmentUiSource,/SP\.clonePos\(cell\)/,'Surface Environment UI must preserve non-zero z when projecting surface cells');
+assert.match(environmentUiSource,/type===['"]Object['"]\|\|type===['"]Source['"]/, 'Spatial Environment Inspector must resolve unified Object entities through canonical objectNode');
+assert.doesNotMatch(environmentUiSource,/type===['"]Container['"]/, 'Spatial Environment Inspector must not retain the removed Container entity taxonomy');
 
 const indexSource=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.match(indexSource,/<title>因果湧現模擬器｜Emergent Causal Sim<\/title>/,'browser document title must remain a stable product name without release ownership');
@@ -212,6 +214,7 @@ const coreUiSource=fs.readFileSync(new URL('../src/ui/core.js',import.meta.url),
 assert.match(coreUiSource,/s\.map\.boundaries/,'Simulator map presentation must read canonical runtime boundary truth');
 assert.match(coreUiSource,/Object\.values\(s\.doors\|\|\{\}\)/,'Simulator map Door presentation must read root runtime Door truth');
 assert.match(coreUiSource,/boundary\.kind!==['"]wall['"]/,'ordinary openings must not be rendered as solid wall edges');
+assert.match(coreUiSource,/持有物件<\/div>/,'Agent Inspector must label generic Agent.held as a held Object, not a Container');
 
 const readmeSource=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 assert.ok(readmeSource.includes(CURRENT_VERSION),'README current runtime marker must match the canonical version');
@@ -266,6 +269,9 @@ assert.doesNotMatch(spatialUiSource,/overhead\[0\].*下|name\}下|家具'}下/,'
 assert.match(spatialUiSource,/SP\.describePlace\(s,target\)/,'map titles must consume the canonical place description owner');
 assert.match(spatialUiSource,/POSTURE_MARKS=Object\.freeze\(\{kneeling:'跪',prone:'趴'\}\)/,'map posture marks must project canonical kneeling / prone directly');
 assert.match(spatialUiSource,/btn\.dataset\.posture=posture/,'map Agent DOM must expose the authoritative current posture projection');
+assert.match(spatialUiSource,/type===['"]Object['"]\|\|type===['"]Source['"]/, 'Spatial Inspector must decorate unified Object entities through objectObservation');
+assert.match(spatialUiSource,/type!==['"]Object['"]&&type!==['"]Source['"]/, 'Spatial Inspector base-location synchronization must accept unified Object entities');
+assert.doesNotMatch(spatialUiSource,/type===['"]Container['"]|type!==['"]Container['"]/, 'Spatial Inspector must not retain the removed Container entity taxonomy');
 assert.doesNotMatch(spatialUiSource,/spatial-under-cover/,'coarse covered geometry must not be promoted into an under-furniture map state');
 const spatialUiStyleSource=fs.readFileSync(new URL('../styles/spatial-observability.css',import.meta.url),'utf8');
 assert.doesNotMatch(spatialUiStyleSource,/spatial-under-cover/,'Presentation CSS must not dim Agents as if coarse overhead proved exact under-furniture placement');

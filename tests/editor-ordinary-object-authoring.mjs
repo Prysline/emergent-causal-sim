@@ -12,9 +12,9 @@ const M=globalThis.SimEditorAuthoringMutations;
 const O=globalThis.SimEditorOrdinaryObjectAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(A.VERSION,'world-authoring-v13');
+assert.equal(A.VERSION,'world-authoring-v14');
 assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v12');
-assert.equal(O.VERSION,'editor-ordinary-object-authoring-v1');
+assert.equal(O.VERSION,'editor-ordinary-object-authoring-v2');
 assert.deepEqual(O.listTemplates().map(item=>item.id),['readable-book']);
 assert.equal(O.getTemplate('missing-template'),null);
 
@@ -38,6 +38,8 @@ assert.deepEqual(result.candidate.entities.objects['readable-book-1'],{
   id:'readable-book-1',
   name:'一本書',
   icon:'📖',
+  portable:true,
+  handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1},
   affordances:['read'],
   interactions:{read:{mode:'supportReach'}},
   position:{x:5,y:2,z:0},

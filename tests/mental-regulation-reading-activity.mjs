@@ -5,10 +5,10 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,M=globalThis.SimMentalRegulation,SP=globalThis.SimSpatial,A=globalThis.SimWorldAuthoring,V=globalThis.SimValidator;
-assert.equal(A.VERSION,'world-authoring-v13');
+assert.equal(A.VERSION,'world-authoring-v14');
 assert.equal(M.VERSION,'mental-regulation-v4');
 assert.equal(E.READ_ACTIVITY_VERSION,'read-activity-v1');
-assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v1');
+assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v2');
 assert.ok(E.listDecisionOptionProviders().some(x=>x.id==='mentalRegulation.read'));
 
 const authored=A.DEFAULT_WORLD_AUTHORING,bookAuthored=authored.entities.objects.bookA;
@@ -16,8 +16,8 @@ assert.equal(bookAuthored.supportId,'diningTable');
 assert.deepEqual(bookAuthored.affordances,['read']);
 assert.equal(bookAuthored.interactions.read.mode,'supportReach');
 assert.equal(A.validateAuthoring(authored).ok,true);
-const collision=A.cloneAuthoring(authored);collision.entities.objects.cupA={...collision.entities.objects.bookA,id:'cupA'};
-assert.ok(A.validateAuthoring(collision).errors.some(x=>x.code==='authoring_object_id_collision'),'ordinary object ids must not ambiguously collide with existing object/source identities');
+const collision=A.cloneAuthoring(authored);collision.entities.objects.tap={...collision.entities.objects.bookA,id:'tap'};
+assert.ok(A.validateAuthoring(collision).errors.some(x=>x.code==='authoring_object_id_collision'),'Object ids must not ambiguously collide with Source identities');
 
 E.reset(15300);
 let st=E.getState(),a=st.agents.zhen,book=st.objects.bookA;

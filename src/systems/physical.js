@@ -1,10 +1,10 @@
 (() => {
-  const W=window.SimWorld,C=window.SimEmbodimentCapabilities,R=window.SimResources,A=window.SimAgentCarry;if(!W)return;
-  if(!R?.getCarriedHandlingProfile||!R?.handCapacity)throw new Error('systems/physical.js requires systems/resources.js.');
+  const W=window.SimWorld,C=window.SimEmbodimentCapabilities,O=window.SimObjectHandling,A=window.SimAgentCarry;if(!W)return;
+  if(!O?.getCarriedObjectHandlingProfile||!O?.handCapacity)throw new Error('systems/physical.js requires systems/object-handling.js.');
   if(!A?.carryingHandlingProfile||!A?.surfaceManeuverSupported)throw new Error('systems/physical.js requires systems/agent-carry.js.');
   if(!C?.defaultPhysicalProfile||!C?.DEFAULT_PHYSICAL_PROFILES||!C?.getPoseEnvelopeForKind||!C?.getSupportFootprintForKind||!C?.surfaceManeuverProfileForKind||!C?.poseEnvelopeFitsUsableSpace)throw new Error('systems/physical.js requires embodiment-capabilities.js.');
   if(!W.registerInitialStateInitializer)throw new Error('systems/physical.js requires world.js initial-state pipeline.');
-  const VERSION='11.45.0-agent-carry-relocate';
+  const VERSION='11.56.0-physical-object-handling';
 
   function defaultPhysicalProfile(kind){return C.defaultPhysicalProfile(kind);}
 
@@ -52,8 +52,8 @@
   }
   function getEffectiveTraversalEnvelope(st,agent,mode='walk'){
     const body=getMovementEnvelope(agent,mode);if(!body)return null;
-    const carriedContainer=R.getCarriedHandlingProfile(st,agent),carriedAgent=A.carryingHandlingProfile(st,agent);
-    const geometries=[carriedContainer?.carryGeometry,carriedAgent?.carryGeometry].filter(Boolean);
+    const carriedObject=O.getCarriedObjectHandlingProfile(st,agent),carriedAgent=A.carryingHandlingProfile(st,agent);
+    const geometries=[carriedObject?.carryGeometry,carriedAgent?.carryGeometry].filter(Boolean);
     if(!geometries.length)return {...body};
     const out={...body};
     for(const geometry of geometries){
@@ -61,7 +61,7 @@
       out.clearanceWidth=Math.max(out.clearanceWidth,geometry.width);
       out.clearanceLength=Math.max(out.clearanceLength,geometry.length);
     }
-    if(carriedContainer)out.carriedContainerId=carriedContainer.containerId;
+    if(carriedObject)out.carriedObjectId=carriedObject.objectId;
     if(carriedAgent)out.carriedAgentId=carriedAgent.carriedAgentId;
     return out;
   }
@@ -74,15 +74,15 @@
     return Number.isInteger(value)&&value>=0?value:Infinity;
   }
   function carriedHandsRequired(st,agent){
-    const container=R.getCarriedHandlingProfile(st,agent),carriedAgent=A.carryingHandlingProfile(st,agent);
-    return (container?.handsRequired||0)+(carriedAgent?.handsRequired||0);
+    const object=O.getCarriedObjectHandlingProfile(st,agent),carriedAgent=A.carryingHandlingProfile(st,agent);
+    return (object?.handsRequired||0)+(carriedAgent?.handsRequired||0);
   }
   function locomotionModeHandsFeasible(st,agent,mode='walk'){
-    return R.handCapacity(agent)>=carriedHandsRequired(st,agent)+supportHandsRequiredForMode(agent,mode);
+    return O.handCapacity(agent)>=carriedHandsRequired(st,agent)+supportHandsRequiredForMode(agent,mode);
   }
   function surfaceManeuverHandsFeasible(st,agent,family){
     if(A.surfaceManeuverSupported(st,agent,family)===false)return false;
-    return R.handCapacity(agent)>=carriedHandsRequired(st,agent)+supportHandsRequiredForManeuver(agent,family);
+    return O.handCapacity(agent)>=carriedHandsRequired(st,agent)+supportHandsRequiredForManeuver(agent,family);
   }
   function getPoseEnvelope(agent,posture){
     const physical=getPhysicalProfile(agent);if(!physical)return null;

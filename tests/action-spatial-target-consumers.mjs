@@ -72,7 +72,7 @@ E.reset(20260911);
 // Negative control: if every meal/rest Slot has no legal approach edge, standing to eat remains valid fallback.
 E.reset(20260911);
 {
-  const st=E.getState(),human=st.agents.zhen,plate=st.containers.plateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  const st=E.getState(),human=st.agents.zhen,plate=st.objects.plateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   for(const furniture of Object.values(st.furniture))for(const slot of furniture.slots||[])if(slot.mealSeat||slot.canRest)slot.approachEdges=[];
   delete plate.supportId;plate.position={...human.position};plate.contents={food:6};human.held=plate.id;
   human.action={kind:'eat',phase:'chooseSeat',container:plate.id,started:st.tick,wait:0};
@@ -131,9 +131,9 @@ E.reset(20260911);
 // This focused consumer test overrides only the richer-result cost so the ordering differs deterministically
 // without inventing another world-geometry fixture.
 function prepareDrinkChoice(){
-  E.reset(20260911);const st=E.getState(),cat=st.agents.orange,near=st.containers.cupA,far=st.containers.cupB;
+  E.reset(20260911);const st=E.getState(),cat=st.agents.orange,near=st.objects.cupA,far=st.objects.cupB;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;calm(cat,{social:8,thirst:85});cat.position={x:2,y:5};cat.posture={kind:'standing',slotId:null,furnitureId:null};
-  st.containers.waterBucket.contents.water=0;
+  st.objects.waterBucket.contents.water=0;
   for(const c of [near,far]){delete c.supportId;c.contents={water:18};c.canDrinkFrom=true;}
   near.position={x:4,y:5};far.position={x:10,y:6};
   const original=SP.bestInteractionPositionResult;

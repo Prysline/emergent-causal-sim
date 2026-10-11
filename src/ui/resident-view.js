@@ -30,7 +30,7 @@
   const actionName=action=>ACTION_LABELS[action]||E.ZH?.[action]||action||'一件事';
   const interactionName=kind=>UI.interactionLabel?.(kind)||kind||'互動';
   const resourceName=id=>W.RESOURCE_TYPES?.[id]?.name||id||'資源';
-  const containerName=(st,id,fallback='容器')=>st?.containers?.[id]?.name||E.endpointName?.(id)||fallback;
+  const containerName=(st,id,fallback='容器')=>st?.objects?.[id]?.name||E.endpointName?.(id)||fallback;
 
   function needText(value){
     const v=clamp(Number(value)||0,0,100);
@@ -121,7 +121,7 @@
   }
   function heldText(st,a){
     if(!a?.held)return '';
-    return st.containers?.[a.held]?.name||E.endpointName?.(a.held)||a.held;
+    return st.objects?.[a.held]?.name||E.endpointName?.(a.held)||a.held;
   }
   function needCards(a){
     return NEEDS.map(key=>{

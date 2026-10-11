@@ -8,7 +8,7 @@
   const POSTURE_MARKS=Object.freeze({kneeling:'跪',prone:'趴'});
   let pending=false;
 
-  function normalizedInspectorType(type){return ({agent:'Agent',container:'Container',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
+  function normalizedInspectorType(type){return ({agent:'Agent',object:'Object',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
   function sectionHtml(type,id){
     const s=E.getState();type=normalizedInspectorType(type);
     if(type==='Agent'){
@@ -20,7 +20,7 @@
       const cg=o.nextCongestion,crowding=cg?`pressure ${cg.congestionPressure}・cost +${cg.congestionCost}・delay +${cg.delayTicks} tick・speed ×${cg.speedMultiplier}・occupants ${cg.occupantCount}${cg.widthKnown?`・passage ${cg.passageWidth}m`:'・width unknown'}`:'無';
       return `<h3>Spatial Node</h3><div class="kv spatial-kv"><div class="k">Space</div><div>${esc(o.spaceLabel)} <small>${esc(o.spaceId)}</small></div><div class="k">Surface</div><div>${esc(o.surfaceLabel)} <small>${esc(o.surfaceId)}</small></div><div class="k">Local Position</div><div>${esc(pos(o))}</div><div class="k">Node Key</div><div class="spatial-mono">${esc(o.nodeKey)}</div><div class="k">局部幾何</div><div>${esc(overheadText(o))}</div><div class="k">Current Mode</div><div>${esc(o.movementMode||'walk')}</div><div class="k">所需淨空</div><div>${esc(meters(o.requiredClearance))}</div><div class="k">Walk Node 可通行</div><div>${o.walkable?'是':'否'}</div><div class="k">Spatial Goal</div><div>${esc(goal)}</div><div class="k">Route Metrics</div><div>${esc(route)}</div><div class="k">Dynamic Congestion</div><div>${esc(crowding)}</div><div class="k">最近路徑</div><div class="spatial-path">${esc(path)}</div></div>`;
     }
-    if(type==='Container'||type==='Source'){
+    if(type==='Object'||type==='Source'){
       const o=SP.objectObservation(s,id);if(!o)return'';
       const support=o.supportId?(s.furniture[o.supportId]?.name||o.supportId):'無';
       return `<h3>Spatial Node</h3><div class="kv spatial-kv"><div class="k">Space</div><div>${esc(o.spaceLabel)} <small>${esc(o.spaceId)}</small></div><div class="k">Surface</div><div>${esc(o.surfaceLabel)} <small>${esc(o.surfaceId)}</small></div><div class="k">Local Position</div><div>${esc(pos(o))}</div><div class="k">Node Key</div><div class="spatial-mono">${esc(o.nodeKey)}</div><div class="k">承載家具</div><div>${esc(support)}</div><div class="k">局部幾何</div><div>${esc(overheadText(o))}</div></div>`;
@@ -38,7 +38,7 @@
   }
 
   function syncBaseObjectLocation(host,type,id){
-    type=normalizedInspectorType(type);if(type!=='Container'&&type!=='Source')return;
+    type=normalizedInspectorType(type);if(type!=='Object'&&type!=='Source')return;
     const s=E.getState(),o=SP.objectObservation(s,id);if(!o)return;
     const first=host.querySelector('.inspect-section .kv');if(!first)return;
     const key=[...first.querySelectorAll('.k')].find(x=>x.textContent.trim()==='位置'),value=key?.nextElementSibling;if(!value)return;
@@ -71,7 +71,7 @@
     const s=E.getState(),map=document.getElementById('map');if(!map)return;
     map.querySelectorAll('.map-entity[data-entity]').forEach(btn=>{
       const [type,id]=(btn.dataset.entity||'').split(':',2);let o=null;
-      if(type==='agent')o=SP.agentObservation(s,id);else if(type==='container'||type==='source')o=SP.objectObservation(s,id);
+      if(type==='agent')o=SP.agentObservation(s,id);else if(type==='object'||type==='source')o=SP.objectObservation(s,id);
       const mark=markerFor(type,o),onSurface=!!o&&o.surfaceId!=='floor';
       if(btn.classList.contains('spatial-on-surface')!==onSurface)btn.classList.toggle('spatial-on-surface',onSurface);
       if(type==='agent'){const posture=o?.currentPosture||'unknown';if(btn.dataset.posture!==posture)btn.dataset.posture=posture;}else btn.removeAttribute('data-posture');

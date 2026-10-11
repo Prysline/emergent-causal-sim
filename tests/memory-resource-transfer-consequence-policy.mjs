@@ -42,7 +42,7 @@ let found=null;
 for(let seed=1;seed<=40&&!found;seed++){
   probe=null;
   E.reset(seed);
-  const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA;
+  const st=E.getState(),a=st.agents.zhen,cup=st.objects.cupA;
   st.agents.zhou.offMap=true;
   st.agents.orange.offMap=true;
   a.position={...floor(st,5,4)};

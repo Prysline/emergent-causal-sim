@@ -9,7 +9,7 @@ loadRuntimeProfile([
 ]);
 
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
+const PHYSICAL_VERSION='11.56.0-physical-object-handling';
 const C=globalThis.SimEmbodimentCapabilities;
 const E=globalThis.SimEngine;
 const A=globalThis.SimAgentCarry;
@@ -49,7 +49,7 @@ attempt=A.candidateAttemptability(st,human,sleepingObservation);
 assert.equal(attempt.ok,true,'hidden target held state must not make a requester-time candidate disappear');
 hiddenExecution=A.canEstablishCarry(st,human,cat,{cooperative:true});
 assert.equal(hiddenExecution.ok,false);
-assert.equal(hiddenExecution.reason,'nested-held-container-unsupported');
+assert.equal(hiddenExecution.reason,'nested-held-object-unsupported');
 cat.held=null;
 const hiddenRelation={id:'agent-carry:hidden',carrierId:'zhou',carriedAgentId:cat.id,method:'twoArmCarry',responderMode:'cooperative',establishedTick:st.tick};
 st.agentCarries[cat.id]=hiddenRelation;
@@ -70,7 +70,7 @@ assert.equal(feasibility.mass,4.5);
 cat.held='cupA';
 feasibility=A.canEstablishCarry(st,human,cat,{cooperative:true});
 assert.equal(feasibility.ok,false);
-assert.equal(feasibility.reason,'nested-held-container-unsupported','Agent carry v1 requires the carried Agent to be empty-handed');
+assert.equal(feasibility.reason,'nested-held-object-unsupported','Agent carry v1 requires the carried Agent to be empty-handed');
 cat.held=null;
 
 human.held='cupA';

@@ -9,14 +9,15 @@ loadRuntimeProfile([
 ]);
 
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.39.0-carried-contents-loss';
-const PHYSICAL_VERSION='11.45.0-agent-carry-relocate';
+const RESOURCES_VERSION='11.56.0-resource-container-capability';
+const PHYSICAL_VERSION='11.56.0-physical-object-handling';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const A=globalThis.SimWorldAuthoring;
 const C=globalThis.SimEmbodimentCapabilities;
 const E=globalThis.SimEngine;
 const W=globalThis.SimWorld;
+const O=globalThis.SimObjectHandling;
 const R=globalThis.SimResources;
 const SP=globalThis.SimSpatial;
 const P=globalThis.SimPhysical;
@@ -24,7 +25,7 @@ const V=globalThis.SimValidator;
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const coords=path=>path.map(node=>[node.x,node.y]);
 
-assert.equal(A.VERSION,'world-authoring-v13');
+assert.equal(A.VERSION,'world-authoring-v14');
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 assert.equal(R.VERSION,RESOURCES_VERSION);
 assert.equal(P.VERSION,PHYSICAL_VERSION);
@@ -40,14 +41,14 @@ const expectedHandling={
   cupB:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},
   alcoholBottle:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1}
 };
-for(const [id,handling] of Object.entries(expectedHandling)){const actual=A.DEFAULT_WORLD_AUTHORING.entities.containers[id].handling;assert.deepEqual({carryGeometry:actual.carryGeometry,handsRequired:actual.handsRequired},handling,id+' must preserve the Slice A carried calibration');assert.ok(['open','covered','sealed'].includes(actual.containment),id+' must expose Slice B containment');assert.deepEqual(Object.keys(actual.contentRetention||{}).sort(),['impact','oscillation','tilt'],id+' must expose Slice B contentRetention dimensions');}
+for(const [id,handling] of Object.entries(expectedHandling)){const actual=A.DEFAULT_WORLD_AUTHORING.entities.objects[id].handling;assert.deepEqual({carryGeometry:actual.carryGeometry,handsRequired:actual.handsRequired},handling,id+' must preserve the Slice A carried calibration');assert.ok(['open','covered','sealed'].includes(actual.containment),id+' must expose Slice B containment');assert.deepEqual(Object.keys(actual.contentRetention||{}).sort(),['impact','oscillation','tilt'],id+' must expose Slice B contentRetention dimensions');}
 
 {
   const invalid=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
-  delete invalid.entities.containers.basket.handling;
+  delete invalid.entities.objects.basket.handling;
   const report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
-  assert.ok(report.errors.some(issue=>issue.code==='authoring_container_handling_missing'));
+  assert.ok(report.errors.some(issue=>issue.code==='authoring_object_handling_missing'));
 }
 
 E.reset(11710);
@@ -65,18 +66,26 @@ assert.equal(noHeldWalk.clearanceLength,bodyWalk.clearanceLength);
 human.held='basket';
 const basketWalk=P.getEffectiveTraversalEnvelope(st,human,'walk');
 assert.equal(basketWalk.clearanceWidth,.55);
-assert.equal(basketWalk.carriedContainerId,'basket');
-assert.equal(R.availableSupportHands(st,human),0);
+assert.equal(basketWalk.carriedObjectId,'basket');
+assert.equal(O.availableSupportHands(st,human),0);
 assert.equal(P.locomotionModeHandsFeasible(st,human,'walk'),true);
 assert.equal(P.locomotionModeHandsFeasible(st,human,'kneelCrawl'),false);
 
 human.held='cupA';
-assert.equal(R.availableSupportHands(st,human),1);
+assert.equal(O.availableSupportHands(st,human),1);
 assert.equal(P.locomotionModeHandsFeasible(st,human,'kneelCrawl'),true);
 assert.equal(P.surfaceManeuverHandsFeasible(st,human,'climb'),true);
 
+human.held='bookA';
+const bookWalk=P.getEffectiveTraversalEnvelope(st,human,'walk');
+assert.equal(bookWalk.carriedObjectId,'bookA','ordinary Object must use the same generic held relation and traversal profile');
+assert.equal(O.canHoldObject(st,human,'bookA'),true);
+assert.equal(R.resolveContainer(st,'bookA'),null,'ordinary book must not gain Resource-container semantics');
+assert.equal(R.effectiveCarryLoad(st,human),0,'ordinary Object carry must not fabricate Resource-derived load');
+assert.equal(O.availableSupportHands(st,human),1,'one-hand ordinary Object must leave one support hand');
+
 {
-  const bucket=st.containers.waterBucket,basket=st.containers.basket;
+  const bucket=st.objects.waterBucket,basket=st.objects.basket;
   bucket.contents={water:0};const emptyBucketLoad=R.containerLoad(st,bucket);
   bucket.contents={water:100};const fullBucketLoad=R.containerLoad(st,bucket);
   assert.ok(fullBucketLoad>emptyBucketLoad,'contents must increase carried load');
@@ -146,13 +155,13 @@ assert.ok(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGa
 
 E.reset(11711);
 const validationState=E.getState(),validationHuman=validationState.agents.zhen;
-validationState.containers.threeHand={id:'threeHand',name:'Three-hand probe',portable:true,capacity:1,emptyLoad:0,contents:{},position:{...validationHuman.position},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:3}};
-assert.equal(R.canHoldContainer(validationState,validationHuman,'threeHand'),false);
+validationState.objects.threeHand={id:'threeHand',name:'Three-hand probe',portable:true,position:{...validationHuman.position},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:3}};
+assert.equal(O.canHoldObject(validationState,validationHuman,'threeHand'),false);
 validationHuman.held='threeHand';
 assert.equal(P.locomotionModeHandsFeasible(validationState,validationHuman,'walk'),false,'total hand demand must reject an over-capacity held Container even when walk needs no support hand');
 let validation=V.validateState(validationState);
-assert.ok(validation.issues.some(issue=>issue.code==='physical_held_container_hand_capacity_exceeded'));
-validationHuman.held=null;delete validationState.containers.threeHand;
+assert.ok(validation.issues.some(issue=>issue.code==='physical_held_object_hand_capacity_exceeded'));
+validationHuman.held=null;delete validationState.objects.threeHand;
 validation=V.validateState(validationState);
 assert.equal(validation.issueCount,0,validation.issues.map(issue=>issue.code+': '+issue.message).join(' | '));
 

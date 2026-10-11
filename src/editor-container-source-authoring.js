@@ -5,7 +5,7 @@
   }
   if(!M?.moveObject)throw new Error('SimEditorAuthoringMutations must load before editor-container-source-authoring.js.');
 
-  const VERSION='editor-container-source-authoring-v1';
+  const VERSION='editor-container-source-authoring-v2';
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
   const issue=(code,message,data={})=>({code,message,...data});
@@ -20,35 +20,35 @@
   const CONTAINER_PRESETS=Object.freeze({
     'ready-food':Object.freeze({
       id:'ready-food',label:'現成食物（Debug）',icon:'🍲',instanceIdBase:'mealTray',
-      authored:Object.freeze({name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}})
+      authored:Object.freeze({resourceContainer:true,name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}})
     }),
     plate:Object.freeze({
       id:'plate',label:'餐盤',icon:'🍽️',instanceIdBase:'plate',
-      authored:Object.freeze({name:'餐盤',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:openRetention(.10,.48,.16,.70,.24,.95)},servingDish:true,canEatFrom:true,interactions:{eatFrom:{mode:'reach'}}})
+      authored:Object.freeze({resourceContainer:true,name:'餐盤',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:openRetention(.10,.48,.16,.70,.24,.95)},servingDish:true,canEatFrom:true,interactions:{eatFrom:{mode:'reach'}}})
     }),
     'food-pantry':Object.freeze({
       id:'food-pantry',label:'食物櫃',icon:'🗄️',instanceIdBase:'foodPantry',floorOnly:true,
-      authored:Object.freeze({name:'食物櫃',icon:'🗄️',roles:['foodReserve','externalSupplyDestination'],capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1})
+      authored:Object.freeze({resourceContainer:true,name:'食物櫃',icon:'🗄️',roles:['foodReserve','externalSupplyDestination'],capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1})
     }),
     basket:Object.freeze({
       id:'basket',label:'搬運籃',icon:'🧺',instanceIdBase:'basket',
-      authored:Object.freeze({name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:openRetention(.24,.78,.24,.82,.36,1.25)},transportResources:['food'],interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}})
+      authored:Object.freeze({resourceContainer:true,name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:openRetention(.24,.78,.24,.82,.36,1.25)},transportResources:['food'],interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}})
     }),
     'water-bucket':Object.freeze({
       id:'water-bucket',label:'水桶',icon:'💧',instanceIdBase:'waterBucket',
-      authored:Object.freeze({name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}})
+      authored:Object.freeze({resourceContainer:true,name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}})
     }),
     'white-cup':Object.freeze({
       id:'white-cup',label:'白色杯子',icon:'🥛',instanceIdBase:'cupWhite',
-      authored:Object.freeze({name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
+      authored:Object.freeze({resourceContainer:true,name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
     }),
     'blue-cup':Object.freeze({
       id:'blue-cup',label:'藍色杯子',icon:'🥛',instanceIdBase:'cupBlue',
-      authored:Object.freeze({name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
+      authored:Object.freeze({resourceContainer:true,name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
     }),
     'alcohol-bottle':Object.freeze({
       id:'alcohol-bottle',label:'酒瓶',icon:'🍾',instanceIdBase:'alcoholBottle',
-      authored:Object.freeze({name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1,containment:'sealed',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.28})
+      authored:Object.freeze({resourceContainer:true,name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1,containment:'sealed',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.28})
     })
   });
 
@@ -130,11 +130,11 @@
       const support=resolveSupportChoice(candidate,target,supportChoice,{floorOnly:preset.floorOnly===true});
       if(support.reject)return support;
       candidate.entities??={};
-      candidate.entities.containers??={};
-      const newId=nextInstanceId(candidate,'containers',preset.instanceIdBase);
+      candidate.entities.objects??={};
+      const newId=nextInstanceId(candidate,'objects',preset.instanceIdBase);
       const container={id:newId,...clone(preset.authored),position:clone({...target,z:target.z??0})};
       if(support.supportId)container.supportId=support.supportId;
-      candidate.entities.containers[newId]=container;
+      candidate.entities.objects[newId]=container;
       return {meta:{operation:'createContainerFromPreset',presetId,newId,supportId:support.supportId||null,target:clone(container.position)}};
     });
   }
@@ -169,10 +169,10 @@
 
   function deleteContainer(authoring,{containerId}={}){
     return mutationResult(authoring,candidate=>{
-      const container=candidate.entities?.containers?.[containerId];
-      if(!container)return reject('container_missing','找不到 Container '+String(containerId)+'.',{entityType:'container',entityId:containerId});
+      const container=candidate.entities?.objects?.[containerId];
+      if(!container)return reject('container_missing','找不到 Container '+String(containerId)+'.',{entityType:'object',entityId:containerId});
       const removedContents=clone(container.contents||{});
-      delete candidate.entities.containers[containerId];
+      delete candidate.entities.objects[containerId];
       return {meta:{operation:'deleteContainer',containerId,removedContents}};
     });
   }
@@ -218,7 +218,7 @@
 
   const host=document.createElement('div');
   host.dataset.containerSourceAuthoring='';
-  host.innerHTML='<div class="sidebar-add-category" data-add-category="container"><h3>容器</h3><p class="hint scene-hint">以已核准 preset 建立完整 canonical Container；內部設定目前唯讀。</p><div id="containerPresetCatalog" class="scene-list" aria-label="Container preset 目錄"></div></div><div class="sidebar-add-category" data-add-category="source"><h3>資源源頭</h3><p class="hint scene-hint">以已核准 preset 建立完整 canonical Source；內部設定目前唯讀。</p><div id="sourcePresetCatalog" class="scene-list" aria-label="Source preset 目錄"></div></div><div id="containerSourceOperation" class="validation-list" aria-live="polite"></div>';
+  host.innerHTML='<div class="sidebar-add-category" data-add-category="container"><h3>Resource Container 物件</h3><p class="hint scene-hint">以已核准 preset 建立具有 Resource-container capability 的 canonical Object；內部設定目前唯讀。</p><div id="containerPresetCatalog" class="scene-list" aria-label="Resource Container Object preset 目錄"></div></div><div class="sidebar-add-category" data-add-category="source"><h3>資源源頭</h3><p class="hint scene-hint">以已核准 preset 建立完整 canonical Source；內部設定目前唯讀。</p><div id="sourcePresetCatalog" class="scene-list" aria-label="Source preset 目錄"></div></div><div id="containerSourceOperation" class="validation-list" aria-live="polite"></div>';
   addPane.append(host);
 
   const nativeLoadDocument=E.loadDocument.bind(E);
@@ -270,7 +270,7 @@
       return;
     }
     if(pending?.kind==='place'){
-      const preset=pending.entityType==='container'?getContainerPreset(pending.presetId):getSourcePreset(pending.presetId);
+      const preset=pending.entityType==='object'?getContainerPreset(pending.presetId):getSourcePreset(pending.presetId);
       operation.innerHTML=`<div>下一次點擊地圖：建立 ${esc(preset?.label||pending.presetId)}。</div><button type="button" data-container-source-cancel>取消</button>`;
       return;
     }
@@ -282,14 +282,14 @@
     if(!actions)return;
     const existing=actions.querySelector('[data-container-source-action="remove"]');
     const selection=E.getSession().selection;
-    const eligible=selection?.kind==='entity'&&['container','source'].includes(selection.type);
+    const eligible=selection?.kind==='entity'&&selection.type==='source';
     if(!eligible){existing?.remove();return;}
     if(existing)return;
     const button=document.createElement('button');
     button.type='button';
     button.className='danger-action';
     button.dataset.containerSourceAction='remove';
-    button.textContent=selection.type==='container'?'移除容器':'移除資源源頭';
+    button.textContent='移除資源源頭';
     actions.querySelector('.action-row')?.append(button);
   }
 
@@ -318,11 +318,11 @@
     const operation=pending;
     if(!operation)return;
     const documentValue=E.getDocument();
-    const result=operation.entityType==='container'
+    const result=operation.entityType==='object'
       ?createContainerFromPreset(documentValue,{presetId:operation.presetId,target,supportChoice})
       :createSourceFromPreset(documentValue,{presetId:operation.presetId,target});
     if(!result.ok&&result.issues?.some(item=>item.code==='support_choice_required')){
-      pending={kind:'support',entityType:'container',presetId:operation.presetId,target:clone(target),candidates:clone(result.meta?.candidates||[])};
+      pending={kind:'support',entityType:'object',presetId:operation.presetId,target:clone(target),candidates:clone(result.meta?.candidates||[])};
       status='';
       renderUi();
       return;
@@ -333,13 +333,13 @@
 
   host.addEventListener('click',event=>{
     const container=event.target.closest('[data-container-preset-id]');
-    if(container){pending={kind:'place',entityType:'container',presetId:container.dataset.containerPresetId};status='';renderUi();return;}
+    if(container){pending={kind:'place',entityType:'object',presetId:container.dataset.containerPresetId};status='';renderUi();return;}
     const source=event.target.closest('[data-source-preset-id]');
     if(source){pending={kind:'place',entityType:'source',presetId:source.dataset.sourcePresetId};status='';renderUi();return;}
     const support=event.target.closest('[data-container-source-support]');
     if(support&&pending?.kind==='support'){
       const operation=pending;
-      pending={kind:'place',entityType:'container',presetId:operation.presetId};
+      pending={kind:'place',entityType:'object',presetId:operation.presetId};
       executeCreate(operation.target,support.dataset.containerSourceSupport==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:support.dataset.supportId});
       return;
     }
@@ -363,11 +363,7 @@
     event.stopImmediatePropagation();
     const selection=E.getSession().selection;
     if(selection?.kind!=='entity')return;
-    const result=selection.type==='container'
-      ?deleteContainer(E.getDocument(),{containerId:selection.id})
-      :selection.type==='source'
-        ?deleteSource(E.getDocument(),{sourceId:selection.id})
-        :null;
+    const result=selection.type==='source'?deleteSource(E.getDocument(),{sourceId:selection.id}):null;
     if(result)commit(result,result.ok?`已移除 ${selection.id}。`:'');
   },true);
 

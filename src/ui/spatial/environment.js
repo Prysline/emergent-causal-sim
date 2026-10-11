@@ -1,11 +1,11 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial;if(!E||!SP?.environmentAt)return;
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  function normalizedType(type){return ({agent:'Agent',container:'Container',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
+  function normalizedType(type){return ({agent:'Agent',object:'Object',source:'Source',furniture:'Furniture',tile:'Tile',room:'Room',event:'Event'})[type]||(type==='Resource Source'?'Source':type);}
   function nodeFor(type,id,s){
     type=normalizedType(type);
     if(type==='Agent')return SP.nodeForAgent(s,s.agents?.[id]);
-    if(type==='Container'||type==='Source')return SP.objectNode(s,id);
+    if(type==='Object'||type==='Source')return SP.objectNode(s,id);
     return null;
   }
   function contentsText(contents){const entries=Object.entries(contents||{}).filter(([,v])=>v>.05);return entries.length?entries.map(([r,v])=>`${E.resourceIcon(r)} ${E.resourceName(r)} ${Math.round(v*10)/10}`).join('・'):'空';}

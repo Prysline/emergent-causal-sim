@@ -5,7 +5,7 @@
   }
   if(!M?.moveObject)throw new Error('SimEditorAuthoringMutations must load before editor-ordinary-object-authoring.js.');
 
-  const VERSION='editor-ordinary-object-authoring-v1';
+  const VERSION='editor-ordinary-object-authoring-v2';
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
   const issue=(code,message,data={})=>({code,message,...data});
@@ -20,6 +20,8 @@
       authored:Object.freeze({
         name:'一本書',
         icon:'📖',
+        portable:true,
+        handling:Object.freeze({carryGeometry:Object.freeze({width:.22,height:.04,length:.30}),handsRequired:1}),
         affordances:Object.freeze(['read']),
         interactions:Object.freeze({read:Object.freeze({mode:'supportReach'})})
       })
@@ -83,14 +85,14 @@
       const id=`${base}-${index}`;
       if(!Object.hasOwn(objects,id))return id;
     }
-    throw new Error('Unable to allocate ordinary object instance ID.');
+    throw new Error('Unable to allocate Object instance ID.');
   }
 
   function createOrdinaryObjectFromTemplate(authoring,{templateId,target,supportChoice=null}={}){
     const template=TEMPLATES[templateId];
-    if(!template)return {ok:false,candidate:null,issues:[issue('ordinary_object_template_unknown','找不到指定的一般物件 authoring template。',{templateId})],meta:{}};
+    if(!template)return {ok:false,candidate:null,issues:[issue('ordinary_object_template_unknown','找不到指定的物件 authoring template。',{templateId})],meta:{}};
     if(!target||!Number.isInteger(target.x)||!Number.isInteger(target.y)||!Number.isInteger(target.z??0)){
-      return {ok:false,candidate:null,issues:[issue('ordinary_object_create_target_invalid','一般物件建立需要有效的 x / y / z。',{templateId,target:clone(target||null)})],meta:{}};
+      return {ok:false,candidate:null,issues:[issue('ordinary_object_create_target_invalid','物件建立需要有效的 x / y / z。',{templateId,target:clone(target||null)})],meta:{}};
     }
     return mutationResult(authoring,candidate=>{
       const support=resolveSupportChoice(candidate,target,supportChoice);
@@ -107,11 +109,11 @@
 
   function moveOrdinaryObject(authoring,{objectId,target,supportChoice=null}={}){
     if(!target||!Number.isInteger(target.x)||!Number.isInteger(target.y)||!Number.isInteger(target.z??0)){
-      return {ok:false,candidate:null,issues:[issue('object_move_target_invalid','一般物件移動需要有效的 x / y / z。',{objectId,target:clone(target||null)})],meta:{}};
+      return {ok:false,candidate:null,issues:[issue('object_move_target_invalid','物件移動需要有效的 x / y / z。',{objectId,target:clone(target||null)})],meta:{}};
     }
     return mutationResult(authoring,candidate=>{
       const object=candidate.entities?.objects?.[objectId];
-      if(!object)return reject('object_missing','找不到 ordinary object '+String(objectId)+'.',{entityType:'object',entityId:objectId});
+      if(!object)return reject('object_missing','找不到 Object '+String(objectId)+'.',{entityType:'object',entityId:objectId});
       const support=resolveSupportChoice(candidate,target,supportChoice);
       if(support.reject)return support;
       object.position=clone({...target,z:target.z??0});
@@ -124,7 +126,7 @@
   function deleteOrdinaryObject(authoring,{objectId}={}){
     return mutationResult(authoring,candidate=>{
       const object=candidate.entities?.objects?.[objectId];
-      if(!object)return reject('object_missing','找不到 ordinary object '+String(objectId)+'.',{entityType:'object',entityId:objectId});
+      if(!object)return reject('object_missing','找不到 Object '+String(objectId)+'.',{entityType:'object',entityId:objectId});
       delete candidate.entities.objects[objectId];
       return {meta:{operation:'deleteOrdinaryObject',objectId}};
     });
@@ -151,7 +153,7 @@
 
   if(typeof document==='undefined')return;
   const E=window.SimWorldEditor;
-  if(!E?.getDocument||!E?.getSession||!E?.loadDocument||!E?.semanticFingerprint)return;
+  if(!E?.getDocument||!E?.getSession||!E?.loadDocument||!E?.semanticFingerprint||!E?.selectEntity)return;
 
   const $=id=>document.getElementById(id);
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -160,16 +162,15 @@
   let baselineFingerprint=E.semanticFingerprint();
   let inheritedDirty=nativeGetSession().dirty===true;
   let pending=null;
-  let selectedId=null;
   let status='';
-  let observer=null;
-  let renderQueued=false;
 
-  const sceneSection=$('sceneList')?.closest('section');
-  const paletteSection=document.createElement('section');
-  paletteSection.dataset.ordinaryObjectAuthoring='';
-  paletteSection.innerHTML='<h2>一般物件目錄</h2><p class="hint scene-hint">從最小 authoring template 建立 canonical ordinary object；Furniture 仍使用上方 system-owned Furniture Catalog。</p><div id="ordinaryObjectCatalog" class="scene-list" aria-label="一般物件 authoring template 目錄"></div><div id="ordinaryObjectOperation" class="validation-list" aria-live="polite"></div>';
-  sceneSection?.before(paletteSection);
+  const host=$('ordinaryObjectCatalogHost')||document.querySelector('[data-sidebar-section="add"]');
+  if(!host)throw new Error('Ordinary Object authoring requires the World Editor Add pane.');
+  const palette=document.createElement('div');
+  palette.className='sidebar-add-category';
+  palette.dataset.ordinaryObjectAuthoring='';
+  palette.innerHTML='<h3>物件</h3><p class="hint scene-hint">從最小 authoring template 建立 canonical Object；Scene / Map / Inspector 由 core Editor 投影同一份 Object truth。</p><div id="ordinaryObjectCatalog" class="scene-list" aria-label="物件 authoring template 目錄"></div><div id="ordinaryObjectOperation" class="validation-list" aria-live="polite"></div>';
+  host.append(palette);
 
   function dirty(){return inheritedDirty||E.semanticFingerprint()!==baselineFingerprint;}
   E.getSession=()=>({...nativeGetSession(),dirty:dirty()});
@@ -178,9 +179,8 @@
     baselineFingerprint=E.semanticFingerprint();
     inheritedDirty=false;
     pending=null;
-    selectedId=null;
     status='';
-    queueRender();
+    renderUi();
     return result;
   };
 
@@ -189,225 +189,78 @@
     inheritedDirty=false;
     pending=null;
     status='';
-    queueRender();
+    renderUi();
   }
 
   function syncDirtyUi(){
     const pill=$('dirtyStatus');
     if(!pill)return;
     const value=dirty();
-    pill.textContent=value?'已修改':'未修改';
+    pill.textContent=value?'有未匯出修改':'未修改';
     pill.classList.toggle('clean',!value);
     pill.classList.toggle('dirty',value);
   }
 
   function currentDocument(){return E.getDocument();}
-  function currentObject(){return selectedId?currentDocument().entities?.objects?.[selectedId]||null:null;}
-
   function supportButtons(candidates){
     return `<div class="selection-actions"><button type="button" data-ordinary-support-kind="floor">放在地面</button>${candidates.map(item=>`<button type="button" data-ordinary-support-kind="furniture" data-ordinary-support-id="${esc(item.id)}">放在 ${esc(item.name||item.id)}</button>`).join('')}<button type="button" data-ordinary-object-cancel>取消</button></div>`;
   }
-
   function renderOperation(){
-    const host=$('ordinaryObjectOperation');
-    if(!host)return;
-    if(pending?.kind==='support'){
-      host.innerHTML=`<div>此位置可選擇地面或家具承載面。</div>${supportButtons(pending.candidates||[])}`;
-      return;
-    }
-    host.textContent=status||'';
+    const operation=$('ordinaryObjectOperation');if(!operation)return;
+    if(pending?.kind==='support')operation.innerHTML=`<div>此位置可選擇地面或家具承載面。</div>${supportButtons(pending.candidates||[])}`;
+    else if(pending?.kind==='create')operation.innerHTML=`<div>下一次點擊地圖：建立 ${esc(getTemplate(pending.templateId)?.label||pending.templateId)}。</div><button type="button" data-ordinary-object-cancel>取消</button>`;
+    else operation.textContent=status||'';
   }
-
   function renderCatalog(){
-    const host=$('ordinaryObjectCatalog');
-    if(!host)return;
-    host.innerHTML=listTemplates().map(template=>`<button type="button" class="scene-item" data-object-template-id="${esc(template.id)}"><span>${esc(template.icon||'◈')}</span><span><b>${esc(template.label)}</b><small>${esc(template.id)}</small></span></button>`).join('');
+    const catalog=$('ordinaryObjectCatalog');if(!catalog)return;
+    catalog.innerHTML=listTemplates().map(template=>`<button type="button" class="scene-item" data-object-template-id="${esc(template.id)}"><span>${esc(template.icon||'◈')}</span><span><b>${esc(template.label)}</b><small>${esc(template.id)}</small></span></button>`).join('');
   }
-
-  function renderSceneObjects(){
-    const host=$('sceneList');
-    if(!host)return;
-    host.querySelectorAll('[data-ordinary-object-scene-id]').forEach(node=>node.remove());
-    for(const [id,object] of Object.entries(currentDocument().entities?.objects||{}).sort(([a],[b])=>a.localeCompare(b))){
-      const button=document.createElement('button');
-      button.type='button';
-      button.className='scene-item editor-ordinary-object-scene';
-      button.dataset.ordinaryObjectSceneId=id;
-      button.innerHTML=`<span>${esc(object.icon||'◈')}</span><span><b>${esc(object.name||id)}</b><small>一般物件 · ${esc(id)}</small></span>`;
-      host.append(button);
-    }
-  }
-
-  function renderMapObjects(){
-    const map=$('editorMap');
-    if(!map)return;
-    map.querySelectorAll('.editor-ordinary-object-projection').forEach(node=>node.remove());
-    const z=E.getSession().currentZ;
-    for(const [id,object] of Object.entries(currentDocument().entities?.objects||{})){
-      const position=object.position;
-      if(!position||(position.z??0)!==z)continue;
-      const cell=map.querySelector(`[data-cell="${position.x},${position.y}"]`);
-      if(!cell)continue;
-      const wrapper=document.createElement('span');
-      wrapper.className='entity-markers editor-ordinary-object-projection';
-      wrapper.innerHTML=`<span class="entity-marker marker-object ${selectedId===id?'selected':''}" data-entity-type="object" data-entity-id="${esc(id)}" data-editor-ordinary-object-id="${esc(id)}" title="一般物件：${esc(object.name||id)}">${esc(object.icon||'◈')}</span>`;
-      cell.append(wrapper);
-    }
-  }
-
-  function renderInspector(){
-    const object=currentObject();
-    if(!object)return;
-    const position=object.position||{};
-    const summary=$('selectionSummary'),actions=$('selectionActions');
-    if(summary)summary.innerHTML=`<b>${esc(object.icon||'◈')} ${esc(object.name||selectedId)}</b><div>一般物件 · ID：<code>${esc(selectedId)}</code></div><div>位置：(${esc(position.x)}, ${esc(position.y)}, ${esc(position.z??0)})</div><div>承載：${object.supportId?`家具 <code>${esc(object.supportId)}</code>`:'地面／無家具 support'}</div><div>Affordances：${esc((object.affordances||[]).join(', ')||'—')}</div>`;
-    if(actions)actions.innerHTML=`<button type="button" data-ordinary-object-action="move">移動一般物件</button><button type="button" class="danger-text" data-ordinary-object-action="remove">移除一般物件</button>`;
-  }
-
-  function render(){
-    observer?.disconnect();
-    renderCatalog();
-    renderSceneObjects();
-    renderMapObjects();
-    renderOperation();
-    renderInspector();
-    syncDirtyUi();
-    observer?.observe($('editorMap'),{childList:true,subtree:true});
-  }
-
-  function queueRender(){
-    if(renderQueued)return;
-    renderQueued=true;
-    queueMicrotask(()=>{renderQueued=false;render();});
-  }
+  function renderUi(){renderCatalog();renderOperation();syncDirtyUi();}
 
   function commit(result,successMessage,{selectId=null}={}){
-    if(!result?.ok){
-      status=(result?.issues||[]).map(item=>item.message||item.code).join('；')||'操作被拒絕。';
-      queueRender();
-      return false;
-    }
+    if(!result?.ok){status=(result?.issues||[]).map(item=>item.message||item.code).join('；')||'操作被拒絕。';renderUi();return false;}
     nativeLoadDocument(result.candidate);
-    selectedId=selectId;
     pending=null;
     status=successMessage;
-    queueRender();
+    if(selectId)E.selectEntity('object',selectId);
+    renderUi();
     return true;
   }
-
-  function beginSupportResolution(base,result){
-    pending={kind:'support',base,candidates:clone(result.meta?.candidates||[])};
-    status='';
-    queueRender();
-  }
-
-  function executeAt(target,supportChoice=null){
-    const op=pending;
-    if(!op)return;
-    let result=null,selectId=null,message='';
-    if(op.kind==='create'){
-      result=createOrdinaryObjectFromTemplate(currentDocument(),{templateId:op.templateId,target,supportChoice});
-      selectId=result?.meta?.newId||null;
-      message=selectId?`已建立一般物件 ${selectId}。`:'已建立一般物件。';
-    }else if(op.kind==='move'){
-      result=moveOrdinaryObject(currentDocument(),{objectId:op.objectId,target,supportChoice});
-      selectId=op.objectId;
-      message=`已移動 ${op.objectId}。`;
-    }else return;
+  function executeCreate(target,supportChoice=null){
+    const operation=pending;if(operation?.kind!=='create')return;
+    const result=createOrdinaryObjectFromTemplate(currentDocument(),{templateId:operation.templateId,target,supportChoice});
     if(!result.ok&&result.issues?.some(item=>item.code==='support_choice_required')){
-      beginSupportResolution({kind:op.kind,templateId:op.templateId,objectId:op.objectId,target:clone(target)},result);
-      return;
+      pending={kind:'support',templateId:operation.templateId,target:clone(target),candidates:clone(result.meta?.candidates||[])};
+      status='';renderUi();return;
     }
-    commit(result,message,{selectId});
+    const newId=result?.meta?.newId;
+    commit(result,newId?`已建立物件 ${newId}。`:'已建立物件。',{selectId:newId});
   }
 
-  function resolveSupport(choice){
-    if(pending?.kind!=='support')return;
-    const base=pending.base;
-    pending={...base};
-    executeAt(base.target,choice);
-  }
-
-  document.addEventListener('click',event=>{
+  palette.addEventListener('click',event=>{
     const templateButton=event.target.closest('[data-object-template-id]');
-    if(templateButton){
-      pending={kind:'create',templateId:templateButton.dataset.objectTemplateId};
-      selectedId=null;
-      status='請在地圖上選擇一般物件的位置。';
-      queueRender();
-      return;
-    }
-    const sceneButton=event.target.closest('[data-ordinary-object-scene-id]');
-    const marker=event.target.closest('[data-editor-ordinary-object-id]');
-    if(sceneButton||marker){
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      selectedId=(sceneButton?.dataset.ordinaryObjectSceneId||marker?.dataset.editorOrdinaryObjectId);
-      pending=null;
-      status='';
-      const object=currentObject();
-      const z=object?.position?.z??0;
-      const layer=$('layerSelect');
-      if(layer&&String(E.getSession().currentZ)!==String(z)){
-        layer.value=String(z);
-        layer.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-      queueRender();
-      return;
-    }
-    const action=event.target.closest('[data-ordinary-object-action]');
-    if(action&&selectedId){
-      if(action.dataset.ordinaryObjectAction==='move'){
-        pending={kind:'move',objectId:selectedId};
-        status='請在地圖上選擇新的位置。';
-        queueRender();
-      }else if(action.dataset.ordinaryObjectAction==='remove'){
-        const id=selectedId;
-        const result=deleteOrdinaryObject(currentDocument(),{objectId:id});
-        if(commit(result,`已移除一般物件 ${id}。`))selectedId=null;
-      }
-      return;
-    }
+    if(templateButton){pending={kind:'create',templateId:templateButton.dataset.objectTemplateId};status='';renderUi();return;}
     const support=event.target.closest('[data-ordinary-support-kind]');
-    if(support){
-      resolveSupport(support.dataset.ordinarySupportKind==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:support.dataset.ordinarySupportId});
+    if(support&&pending?.kind==='support'){
+      const operation=pending;
+      pending={kind:'create',templateId:operation.templateId};
+      executeCreate(operation.target,support.dataset.ordinarySupportKind==='floor'?{kind:'floor'}:{kind:'furniture',furnitureId:support.dataset.ordinarySupportId});
       return;
     }
-    if(event.target.closest('[data-ordinary-object-cancel]')){
-      pending=null;
-      status='已取消一般物件操作。';
-      queueRender();
-      return;
-    }
-    if((pending?.kind==='create'||pending?.kind==='move')&&event.target.closest('#editorMap [data-cell]')){
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      const cell=event.target.closest('[data-cell]');
-      const [x,y]=cell.dataset.cell.split(',').map(Number);
-      executeAt({x,y,z:E.getSession().currentZ});
-    }
-  },true);
-
-  window.addEventListener('beforeunload',event=>{
-    if(!dirty())return;
-    event.preventDefault();
-    event.returnValue='';
+    if(event.target.closest('[data-ordinary-object-cancel]')){pending=null;status='';renderUi();}
   });
 
-  $('exportWorld')?.addEventListener('click',()=>setTimeout(markCleanBaseline,0));
-  $('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{
-    baselineFingerprint=E.semanticFingerprint();
-    inheritedDirty=false;
-    pending=null;selectedId=null;status='';queueRender();
-  },0));
-  $('importWorld')?.addEventListener('change',()=>setTimeout(()=>{
-    baselineFingerprint=E.semanticFingerprint();
-    inheritedDirty=false;
-    pending=null;selectedId=null;status='';queueRender();
-  },100));
+  $('editorMap')?.addEventListener('click',event=>{
+    if(pending?.kind!=='create')return;
+    const cell=event.target.closest('[data-cell]');if(!cell)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    const [x,y]=cell.dataset.cell.split(',').map(Number);
+    executeCreate({x,y,z:E.getSession().currentZ});
+  },true);
 
-  observer=new MutationObserver(()=>queueRender());
-  observer.observe($('editorMap'),{childList:true,subtree:true});
-  render();
-  API.renderEditorProjection=render;
+  $('exportWorld')?.addEventListener('click',()=>setTimeout(()=>{if(nativeGetSession().dirty===false)markCleanBaseline();},0));
+  $('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{if(nativeGetSession().dirty===false)markCleanBaseline();},0));
+  $('importWorld')?.addEventListener('change',()=>setTimeout(()=>{if(nativeGetSession().dirty===false)markCleanBaseline();},120));
+  renderUi();
+  API.renderEditorProjection=renderUi;
 })();

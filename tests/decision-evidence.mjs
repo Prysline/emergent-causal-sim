@@ -36,7 +36,7 @@ assert.equal(a.decisionEvidence.priorDecisionId,priorSoft);
 assert.ok(a.decisionEvidence.contributors.some(c=>c.kind==='need'&&c.key==='hunger'),'soft challenger evidence must carry structured motive contributors');
 noIssues('soft adopted evidence');
 
-E.reset(3602);st=E.getState();let cat=st.agents.orange;cat.needs.thirst=72;st.containers.waterBucket.contents.water=0;st.containers.cupB.contents.water=18;
+E.reset(3602);st=E.getState();let cat=st.agents.orange;cat.needs.thirst=72;st.objects.waterBucket.contents.water=0;st.objects.cupB.contents.water=18;
 cat.activeIntent={id:'intent:orange:0:drinkWater',kind:'drinkWater',createdTick:0,lifecycle:'actionBound',source:{type:'test',tick:0}};
 cat.action={kind:'drinkWater',phase:'move',started:0,wait:0,targetObject:'waterBucket',resource:'water',intentId:cat.activeIntent.id};
 const priorHard=E.adoptDecisionEvidence(st,cat,cat.action,{source:{type:'test',tick:0,intentKind:'drinkWater'},contributors:E.decisionContributorsForAction(cat,'drinkWater')}).id;

@@ -6,7 +6,7 @@
   const VERSION=UI.PRESENTATION_VERSION;
   if(!VERSION)throw new Error('Entity Readable View requires presentation version');
   const host=document.getElementById('inspector');if(!host)return;
-  const SUPPORTED=new Set(['container','object','source','furniture','tile','room','event']);
+  const SUPPORTED=new Set(['object','source','furniture','tile','room','event']);
   let currentKey=null,mode='readable';
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -63,25 +63,21 @@
     }
     return [...new Set(labels)];
   }
-  function containerView(st,id){
-    const c=st.containers?.[id];if(!c)return '';
-    const p=SP.objectPosition(st,id),holder=SP.holderOf(st,id),support=c.supportId&&st.furniture?.[c.supportId];
-    const used=sum(c.contents),capacity=Number(c.capacity)||0,where=holder?`${holder.name}正拿著`:support?`放在${support.name}上`:placeText(st,p);
-    const abilities=[];
-    abilities.push(c.portable?'可以拿起來':'固定在原處');
-    if(c.canDrinkFrom)abilities.push('可以直接飲用');
-    if(c.transportResources?.length)abilities.push(`可以搬運${c.transportResources.map(resourceName).join('、')}`);
-    return `${hero(c.icon||'◻',c.name,where)}${factCard('內容與容量',[
-      fact('內容物',contentsText(c.contents)),
-      capacity>0?fact('目前容量',`${amount(used)} / ${amount(capacity)}`):'',
-      holder?fact('持有人',holder.name):'',
-      support?fact('放置於',support.name):''
-    ])}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有額外用途。')}${recentCard(st,'container',id)}`;
-  }
   function objectView(st,id){
     const o=st.objects?.[id];if(!o)return '';
-    const p=SP.objectPosition(st,id),support=o.supportId&&st.furniture?.[o.supportId],abilities=(o.affordances||[]).map(x=>x==='read'?'可以閱讀':x);
-    return `${hero(o.icon||'◻',o.name||id,p?placeText(st,p):'位置不明')}${support?factCard('放置位置',[fact('承載於',support.name)]):''}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
+    const p=SP.objectPosition(st,id),holder=SP.holderOf(st,id),support=o.supportId&&st.furniture?.[o.supportId];
+    const where=holder?`${holder.name}正拿著`:support?`放在${support.name}上`:placeText(st,p);
+    const abilities=(o.affordances||[]).map(x=>x==='read'?'可以閱讀':x);
+    abilities.push(o.portable?'可以拿起來':'固定在原處');
+    if(o.canDrinkFrom)abilities.push('可以直接飲用');
+    if(o.transportResources?.length)abilities.push(`可以搬運${o.transportResources.map(resourceName).join('、')}`);
+    const resource=o.resourceContainer===true?factCard('內容與容量',[
+      fact('內容物',contentsText(o.contents)),
+      Number(o.capacity)>0?fact('目前容量',`${amount(sum(o.contents))} / ${amount(o.capacity)}`):'',
+      holder?fact('持有人',holder.name):'',
+      support?fact('放置於',support.name):''
+    ]):support?factCard('放置位置',[fact('承載於',support.name)]):'';
+    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
   }
   function sourceView(st,id){
     const o=st.sources?.[id];if(!o)return '';
@@ -97,9 +93,9 @@
     const capabilities=capabilityLabels(f);
     const users=[];
     for(const slot of f.slots||[]){const occ=SP.slotOccupant(st,slot.id);if(occ&&!users.some(x=>x.id===occ.id))users.push(occ);}
-    const supported=Object.values(st.containers||{}).filter(c=>c.supportId===id);
+    const supported=Object.values(st.objects||{}).filter(c=>c.supportId===id);
     const surface=surfaceContents(st,f);
-    return `${hero(f.icon||'▰',f.name,p?placeText(st,p):'位置不明')}${chipsCard('用途',capabilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${chipsCard('正在使用',users.map(a=>entityChip('agent',a.id,a.name,a.kind==='cat'?'🐈':'👤')),'目前沒有人正在使用。')}${supported.length?chipsCard('上面放著',supported.map(c=>entityChip('container',c.id,c.name,c.icon||'◻'))):''}${contentsEntries(surface).length?factCard('表面狀況',[fact('表面有',contentsText(surface))]):''}${recentCard(st,'furniture',id)}`;
+    return `${hero(f.icon||'▰',f.name,p?placeText(st,p):'位置不明')}${chipsCard('用途',capabilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${chipsCard('正在使用',users.map(a=>entityChip('agent',a.id,a.name,a.kind==='cat'?'🐈':'👤')),'目前沒有人正在使用。')}${supported.length?chipsCard('上面放著',supported.map(c=>entityChip('object',c.id,c.name,c.icon||'◻'))):''}${contentsEntries(surface).length?factCard('表面狀況',[fact('表面有',contentsText(surface))]):''}${recentCard(st,'furniture',id)}`;
   }
   function tileView(st,id){
     const t=st.map?.tiles?.[id];if(!t)return '';
@@ -124,7 +120,6 @@
     const i=ref.indexOf(':');if(i<1)return null;
     const type=ref.slice(0,i),id=ref.slice(i+1);
     if(type==='agent'&&st.agents?.[id])return {type,id,label:st.agents[id].name,icon:st.agents[id].kind==='cat'?'🐈':'👤'};
-    if(type==='container'&&st.containers?.[id])return {type,id,label:st.containers[id].name,icon:st.containers[id].icon||'◻'};
     if(type==='object'&&st.objects?.[id])return {type,id,label:st.objects[id].name||id,icon:st.objects[id].icon||'◻'};
     if(type==='source'&&st.sources?.[id])return {type,id,label:st.sources[id].name,icon:st.sources[id].icon||'◉'};
     if(type==='furniture'&&st.furniture?.[id])return {type,id,label:st.furniture[id].name,icon:st.furniture[id].icon||'▰'};
@@ -138,7 +133,6 @@
     return `${hero('⚡','發生的事',e.time||'')}<section class="resident-card resident-now"><h3>內容</h3><strong>${esc(e.text||'')}</strong></section>${unique.length?chipsCard('相關對象',unique.map(x=>entityChip(x.type,x.id,x.label,x.icon))):''}`;
   }
   function readableBody(st,selected){
-    if(selected.type==='container')return containerView(st,selected.id);
     if(selected.type==='object')return objectView(st,selected.id);
     if(selected.type==='source')return sourceView(st,selected.id);
     if(selected.type==='furniture')return furnitureView(st,selected.id);

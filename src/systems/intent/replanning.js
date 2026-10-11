@@ -1,5 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
+  if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('src/systems/intent/replanning.js requires Spatial nearby placement lifecycle.');
   const VERSION=W.INTERRUPTION_SCHEMA_VERSION||'11.12.3-replan-preemption';
   const REPLAN_ACTION_BY_INTENT={
     satisfyHunger:'eat',drinkWater:'drinkWater',drinkAlcohol:'drinkAlcohol',recoverFatigue:'rest',sleep:'sleep',
@@ -15,11 +16,11 @@
   function listCarryingDecisionOptionProviders(){return carryingDecisionOptionProviders.map(({id,order})=>({id,order}));}
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
-  function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
+  function dropHeld(st,a){if(a.held)SP.releaseHeldObjectNearby(st,a);}
   function cleanupForInterruption(st,a){clearAgentReservations(st,a);dropHeld(st,a);a.action=null;}
   function interactionTraversalCost(st,a,target,affordance='default'){if(typeof SP.bestInteractionPositionResult==='function')return SP.bestInteractionPositionResult(st,a,target,affordance)?.traversalCost??Infinity;const goal=SP.bestInteractionPosition(st,a,target,affordance);return goal?(SP.traversalCost?.(st,a,goal)??SP.pathDistance(st,a,goal)):Infinity;}
   function nearestAgent(st,a,kind,{awakeOnly=false}={}){return Object.values(st.agents||{}).filter(x=>x.id!==a.id&&!x.offMap&&x.kind===kind&&(!awakeOnly||!E.isSleeping(x))).map(x=>({x,d:interactionTraversalCost(st,a,{kind:'agent',id:x.id},'social')})).filter(x=>Number.isFinite(x.d)).sort((p,q)=>p.d-q.d||String(p.x.id).localeCompare(String(q.x.id)))[0]?.x||null;}
-  function nearestDrinkContainer(st,a,resource){return Object.values(st.containers||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[resource]||0)>.05).map(c=>{const d=interactionTraversalCost(st,a,{kind:'object',id:c.id},'drinkFrom');return Number.isFinite(d)?{c,d}:null;}).filter(Boolean).sort((p,q)=>p.d-q.d||String(p.c.id).localeCompare(String(q.c.id)))[0]?.c||null;}
+  function nearestDrinkContainer(st,a,resource){return Object.values(st.objects||{}).filter(c=>c.canDrinkFrom&&(c.contents?.[resource]||0)>.05).map(c=>{const d=interactionTraversalCost(st,a,{kind:'object',id:c.id},'drinkFrom');return Number.isFinite(d)?{c,d}:null;}).filter(Boolean).sort((p,q)=>p.d-q.d||String(p.c.id).localeCompare(String(q.c.id)))[0]?.c||null;}
   function buildAction(st,a,actionKindValue,{targetAgent=null}={}){
     if(!E.buildAction)return null;
     const choice={id:actionKindValue};

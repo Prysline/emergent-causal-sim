@@ -1,11 +1,11 @@
 (() => {
-  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld;if(!E||!SP?.resolveEffectNode||!SP?.environmentAt)return;
+  const E=window.SimEngine,SP=window.SimSpatial,W=window.SimWorld,R=window.SimResources;if(!E||!SP?.resolveEffectNode||!SP?.environmentAt||!R?.resolveContainer)return;
   const FLOOR='floor';
   E.DATA_ZH.effectNode='效果位置';
   E.DATA_ZH.spillEndpoint='環境端點';
 
   function resourceCause(st,node,resource){const id=SP.environmentEndpointId(st,node);return id?st.endpointCauses?.[`${id}|${resource}`]||null:null;}
-  function targetFromSource(st,id){return st.sources?.[id]?{kind:'source',id}:st.containers?.[id]?{kind:'object',id}:null;}
+  function targetFromSource(st,id){return st.sources?.[id]?{kind:'source',id}:R.resolveContainer(st,id)?{kind:'object',id}:null;}
   function relocateFailedPourSpill(st,event){
     if(event?.data?.reason!=='coordination'||!(event.data.amount>0)||!event.data.resource)return;
     const attempt=(event.causeIds||[]).map(id=>st.causes?.[id]).find(e=>e?.data?.action==='pour');if(!attempt)return;

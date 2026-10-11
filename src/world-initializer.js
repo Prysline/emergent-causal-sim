@@ -101,12 +101,6 @@
     return objects;
   }
 
-  function buildContainers(authoring){
-    const containers=clone(authoring.entities?.containers||{});
-    for(const c of Object.values(containers))if(c.position)c.position=runtimePosition(c.position);
-    return containers;
-  }
-
   function buildSources(authoring){
     const sources=clone(authoring.entities?.sources||{});
     for(const s of Object.values(sources)){
@@ -431,9 +425,9 @@
         if(exit?.kind==='offMap'&&exit.access&&ref&&A.boundaryPassable(authoring,ref.z,ref.id)&&baseWalkable(authoring,exit.access,cache))out.push(exit.access);
       }
     }else if(type==='food'){
-      for(const c of Object.values(authoring.entities?.containers||{}))if(c.canEatFrom&&Number(c.contents?.food)>0)out.push(...objectAccessPositions(authoring,c,'eatFrom',cache));
+      for(const c of Object.values(authoring.entities?.objects||{}))if(c.canEatFrom&&Number(c.contents?.food)>0)out.push(...objectAccessPositions(authoring,c,'eatFrom',cache));
     }else if(type==='water'){
-      for(const c of Object.values(authoring.entities?.containers||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom',cache));
+      for(const c of Object.values(authoring.entities?.objects||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom',cache));
       for(const s of Object.values(authoring.entities?.sources||{}))if(s.resource==='water')out.push(...objectAccessPositions(authoring,s,'fill',cache));
     }else if(type==='sleep'){
       for(const slot of authoringSlots(authoring))if(slot.canSleep&&(!slot.allowKinds?.length||slot.allowKinds.includes(kind))&&authoredSlotPoseFits(kind,slot,'lying'))out.push(...slotApproachPositions(authoring,slot,kind,cache));
@@ -586,7 +580,6 @@
       usageAssignments:clone(authoring.usageAssignments||[]),claimEligibility:clone(authoring.claimEligibility||[]),usageClaims:[],
       supply:{trigger:supplyTrigger,trips:0,totalProduced:0},
       objects:buildObjects(authoring),
-      containers:buildContainers(authoring),
       sources:buildSources(authoring),
       agents:buildResidents(authoring,placementReport.resolvedPlacements),
       events:[],causes:{},thoughts:{}

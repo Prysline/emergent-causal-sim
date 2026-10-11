@@ -24,7 +24,7 @@ cat.needs.social=0;
 cat.needs.groomingNeed=0;
 
 // Guarantee an immediately reachable water container without introducing a second policy path.
-const waterCup=Object.values(st.containers).find(c=>c.canDrinkFrom);
+const waterCup=Object.values(st.objects).find(c=>c.canDrinkFrom);
 assert.ok(waterCup,'focused setup requires one drinkable container');
 for(const a of Object.values(st.agents))if(a.held===waterCup.id)a.held=null;
 delete waterCup.supportId;

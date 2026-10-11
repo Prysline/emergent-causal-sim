@@ -18,7 +18,7 @@ E.reset(20260911);
   assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
   assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v1');
 
-  const tray=st.containers.mealTray,plateA=st.containers.plateA,plateB=st.containers.plateB,cupA=st.containers.cupA,cupB=st.containers.cupB,bottle=st.containers.alcoholBottle;
+  const tray=st.objects.mealTray,plateA=st.objects.plateA,plateB=st.objects.plateB,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
   for(const affordance of ['serve','eatFrom','deposit','receive'])assert.equal(tray.interactions[affordance]?.mode,'reach',`mealTray ${affordance} 必須使用物件局部 reach`);
   for(const plate of [plateA,plateB]){
     assert.equal(plate.interactions.pickup,undefined,`${plate.id} pickup 不得由 Contact object-type injection 持有`);
@@ -73,7 +73,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray;
+  const st=E.getState(),a=st.agents.zhen,tray=st.objects.mealTray;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   a.needs.hunger=60;
   const before=tray.contents.food;
@@ -86,7 +86,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,cupA=st.containers.cupA,cupB=st.containers.cupB,bottle=st.containers.alcoholBottle;
+  const st=E.getState(),a=st.agents.zhen,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   cupA.contents={};cupB.contents={};bottle.contents={alcohol:120};
   a.position={...floor(st,7,4)};
@@ -101,7 +101,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray,pantry=st.containers.foodPantry,basket=st.containers.basket;
+  const st=E.getState(),a=st.agents.zhen,tray=st.objects.mealTray,pantry=st.objects.foodPantry,basket=st.objects.basket;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};a.held=basket.id;
   const before=pantry.contents.food;
