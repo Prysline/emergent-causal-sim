@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.54.0-pickup-interaction-geometry`。
+目前 overall runtime marker：`11.55.0-nearby-placement`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -24,6 +24,7 @@ Subsystem marker只在**自己的 contract**改變時前進；overall release �
 
 Current relevant markers：
 
+- Nearby Placement：`nearby-placement-v1`
 - Pickup Interaction Geometry：`pickup-interaction-v1`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
@@ -47,9 +48,11 @@ Current relevant markers：
 
 ## Current release impact
 
-`11.54.0-pickup-interaction-geometry`：overall / Presentation 前進；Pickup Interaction Geometry → `pickup-interaction-v1`；ordinary-object interaction → `ordinary-object-interaction-v2`。Spatial Traversal / Route、Contact、Locomotion、Physical、World Authoring、Furniture Catalog、Mental Regulation 等未改 contract 的 markers 保持不變。
+`11.55.0-nearby-placement`：overall / Presentation 前進；Nearby Placement 新增 `nearby-placement-v1` capability marker。它重用既有 Furniture `supportsObjects:true`、canonical support Surface、`supportContactNodes(...)` 與 holder/support truth；Spatial Traversal / Route、Pickup Interaction Geometry、Contact、Locomotion、Physical、World Authoring、Furniture Catalog、Deliberation schema 等未改 contract 的 markers 保持不變。
 
-詳細語意見 [`interaction-geometry.md`](interaction-geometry.md)。
+v1 只允許 lifecycle-driven release 使用 Agent **目前即可接觸**的合法 support Surface；不建立 move-to-place action，也不改 accidental movement `containerDrop` consequence。
+
+詳細語意見 [`architecture.md`](architecture.md) 的 Intentional nearby placement v1。
 
 ## Consistency responsibility
 

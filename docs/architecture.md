@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.54.0-pickup-interaction-geometry`。
+目前 runtime marker：`11.55.0-nearby-placement`。
 
-本 release 只改 Pickup Interaction Geometry；未改 subsystem 保持原有 authority / generation。
+本 release 新增 intentional held-container nearby placement；Pickup Interaction Geometry、Route、Locomotion、Physical 等未改 contract 的 subsystem generation 保持不變。
 
 ## Truth boundaries
 
@@ -27,7 +27,7 @@
 
 Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分開保存，不建立 shared pair score。Relationship consolidation 只承接該 Agent 自己合法取得的 appraisal / experience evidence。
 
-**Relationship → Responder Bias**：responder decision 可以消費 responder 自己的 canonical relationship state 作 bounded influence；Relationship 不直接替 responder 建 Action、Intent 或 response outcome，也不把另一 Agent 的 private state變成共享真相。
+**Relationship → Responder Bias**：responder decision 可以消費 responder 自己的 canonical relationship state 作 bounded influence；Relationship 不直接替 responder建 Action、Intent 或 response outcome，也不把另一 Agent 的 private state變成共享真相。
 
 ## World / Spatial / Physical
 
@@ -80,6 +80,18 @@ else
 ```
 
 Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support Surface；0 或 >1 明確失敗。Normal held lifecycle 與 `supportId` 互斥；Furniture / Surface 不保存反向 `objects[]` mirror。
+
+### Intentional nearby placement v1
+
+當 lifecycle-driven release 需要放下 held Container 時，Spatial candidate-selection 是唯一 nearby placement query owner：
+
+- 只考慮 `supportsObjects:true` 且能解析到唯一 canonical support Surface 的 Furniture。
+- v1 不建立新的 move-to-place action；候選必須是 Agent **目前所在 node 已可依既有 `supportContactNodes(...)` 接觸**的 Surface，避免把物件瞬移到幾步外的家具。
+- 同一目前可接觸 Surface 內，以 actor 與 Surface cell 的 locality 排序，之後用 stable `supportId / surfaceId / nodeKey` tie-break；不加入 personality、habit、home、housekeeping 或 furniture preference。
+- winner 寫 `container.position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node 並保持無 `supportId`。
+- accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
+
+這一版只把 soft reconsideration 的既有 synchronous release 接上共用 helper；其他 release lifecycle 若未明確納入，不因共用函式存在而自動改語意。
 
 ## Interaction Geometry / Pickup v1
 

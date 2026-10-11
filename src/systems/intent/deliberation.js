@@ -1,5 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
+  if(typeof SP.releaseHeldContainerNearby!=='function')throw new Error('systems/intent/deliberation.js requires Spatial nearby placement lifecycle.');
   const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.48.1-sleep-perception-approach';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
@@ -109,7 +110,7 @@
     return E.buildAction(a,choice);
   }
   function clearAgentReservations(st,a){for(const [key,owner] of Object.entries({...st.reservations}))if(owner===a.id)delete st.reservations[key];}
-  function dropHeld(st,a){if(!a.held)return;const c=st.containers?.[a.held];if(c)c.position={...a.position};a.held=null;}
+  function dropHeld(st,a){if(a.held)SP.releaseHeldContainerNearby(st,a);}
   function softEligible(st,a){
     const intent=a.activeIntent;if(!intent)return {ok:false,reason:'no-intent'};
     if(intent.source?.type==='emergency')return {ok:false,reason:'emergency-intent'};
