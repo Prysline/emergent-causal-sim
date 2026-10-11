@@ -2,9 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.54.0-pickup-interaction-geometry`。
+目前 runtime marker：`11.55.0-nearby-placement`。
 
-Current release 將 portable-object `pickup` 收回 current canonical support/location：Floor object 需同一 Floor Spatial Node + 合法 Human low posture；Furniture-supported object 使用實際 Surface cell 與 Surface-owned contact geometry；Slot 只提供 Agent current occupancy witness，不建立 Chair → Table reach。
+Current release 新增 intentional held-container nearby placement：當 soft reconsideration 需要放下 held Container 時，只會使用 Agent **目前即可依 canonical support-contact geometry 接觸到**的 `supportsObjects:true` Furniture Surface；同一合法 Surface 內 deterministic 選最近 cell。沒有目前可接觸的合法 Surface 時才 fallback 到 Agent current canonical Floor node，不讓物件瞬移到數格外的家具。Accidental movement `containerDrop` consequence 維持原有 completed-edge 落點語意，不受本 release 改寫。
 
 ## Current authority navigation
 
