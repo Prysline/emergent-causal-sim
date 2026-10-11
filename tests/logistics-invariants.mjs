@@ -34,7 +34,7 @@ function isolateHuman(st,id='zhen'){
 
 function placeAtCarrier(a,basket){
   a.position={...basket.position};
-  a.posture={kind:'standing',slotId:null,furnitureId:null};
+  a.posture={kind:'kneeling',slotId:null,furnitureId:null};
 }
 
 function startIndoorFoodRestock(st,a){
