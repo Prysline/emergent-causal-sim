@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.53.0-mental-regulation-generation';
+  const VERSION='11.54.0-pickup-interaction-geometry';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{

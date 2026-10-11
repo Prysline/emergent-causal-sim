@@ -3,6 +3,7 @@
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
+  const PICKUP_INTERACTION_VERSION='pickup-interaction-v1';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -622,11 +623,21 @@
     }
     return [...out.values()];
   }
+  function currentSlotSurfaceContactNode(st,node,agent){
+    const slotId=agent?.posture?.slotId,slot=slotId&&SP.getSlot?.(st,slotId);if(!slot?.position)return null;
+    const target=normalizeNode(st,node),entry=target&&surfaceEntry(st,target.surfaceId),projected=target&&normalizeNode(st,target,FLOOR),stance=normalizeNode(st,slot.position,FLOOR),here=nodeForAgent(st,agent);
+    if(!entry||!projected||!stance||!here||!nodeSame(st,here,stance)||isFootprintCell(entry,stance)||zOf(projected)!==zOf(stance))return null;
+    const dx=stance.x-projected.x,dy=stance.y-projected.y;if(Math.abs(dx)>1||Math.abs(dy)>1||(dx===0&&dy===0))return null;
+    if(dx!==0&&dy!==0){if(diagonalFloorContactStatus(st,projected,stance)!=='candidate')return null;}
+    else if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,projected,stance))return null;
+    return stance;
+  }
   function crossSurfaceContactNodes(st,node,agent,affordance){
     if(!agent||agent.kind!=='human')return [];
     const target=normalizeNode(st,node),entry=surfaceEntry(st,target.surfaceId);if(!entry)return [];
     const allowed=new Set(['pickup','serve','eatFrom','drinkFrom','fill','takeResource','deposit','receive','default']);if(!allowed.has(affordance))return [];
     const projected=normalizeNode(st,target,FLOOR),out=[];
+    const currentSlotContact=currentSlotSurfaceContactNode(st,target,agent);if(currentSlotContact)out.push(currentSlotContact);
     for(const [dx,dy] of FLOOR_DIRS){
       const p=localPos(target.x+dx,target.y+dy,zOf(target));if(isFootprintCell(entry,p))continue;
       const q=normalizeNode(st,p,FLOOR);if(!nodeWalkable(st,q,agent))continue;
@@ -636,7 +647,7 @@
       }else if(SP.edgeStructurallyOpen&&!SP.edgeStructurallyOpen(st,projected,q))continue;
       out.push(q);
     }
-    return out;
+    return dedupeNodes(st,out);
   }
   function outsideContactFloorNodes(st,entry,agent){
     const out=new Map();
@@ -663,6 +674,14 @@
     return [...out.values()];
   }
   function dedupeNodes(st,list){const out=new Map();for(const p of list||[]){const n=normalizeNode(st,p);if(n)out.set(nodeKey(st,n),n);}return [...out.values()];}
+  function groundPickupWitness(st,node,agent){
+    const position=normalizeNode(st,node,FLOOR);if(!position||!agent||agent.kind!=='human')return null;
+    for(const requiredMode of ['kneelCrawl','proneCrawl']){
+      if(!floorNodeFitsMode(st,position,agent,requiredMode))continue;
+      const requiredPosture=C?.postureForMode?.(requiredMode);if(requiredPosture)return {position,requiredMode,requiredPosture};
+    }
+    return null;
+  }
 
   function agentContactNodes(st,targetAgent,agent){
     const slotId=targetAgent?.posture?.slotId;
@@ -685,12 +704,20 @@
       const c=st.containers?.[target.id],object=st.objects?.[target.id],entity=object||c;if(!entity)return {mode:'none',positions:[],target,affordance};
       const holder=c?SP.holderOf(st,target.id):null,node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
+      if(affordance==='pickup'){
+        if(node.surfaceId===FLOOR){
+          const witness=groundPickupWitness(st,node,agent),witnesses=witness?[witness]:[];
+          return {mode:'groundContact',positions:witnesses.map(item=>item.position),witnesses,target,affordance,surfaceId:FLOOR};
+        }
+        const local=surfaceLocalReachNodes(st,node,agent),cross=crossSurfaceContactNodes(st,node,agent,affordance),positions=dedupeNodes(st,[...local,...cross]);
+        return {mode:'surfaceContact',positions,target,affordance,surfaceId:node.surfaceId};
+      }
       const rule=entity.interactions?.[affordance]||entity.interactions?.default||null;
       if(rule?.mode==='supportReach'&&entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};
       if(rule?.mode==='occupy')return {mode:'occupy',positions:nodeWalkable(st,node,agent)?[node]:[],target,affordance};
       if(node.surfaceId!==FLOOR){
         const local=surfaceLocalReachNodes(st,node,agent),cross=crossSurfaceContactNodes(st,node,agent,affordance);
-        if(rule?.mode==='reach'||affordance==='eatFrom'||affordance==='drinkFrom'||affordance==='pickup')return {mode:'reach',positions:dedupeNodes(st,[...local,...cross]),target,affordance,surfaceId:node.surfaceId};
+        if(rule?.mode==='reach'||affordance==='eatFrom'||affordance==='drinkFrom')return {mode:'reach',positions:dedupeNodes(st,[...local,...cross]),target,affordance,surfaceId:node.surfaceId};
         if(entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};
         return {mode:'reach',positions:dedupeNodes(st,[...local,...cross]),target,affordance,surfaceId:node.surfaceId};
       }
@@ -707,6 +734,10 @@
     }
     const legacy=baseInteractionGeometry(st,target,agent,affordance);return {...legacy,positions:(legacy.positions||[]).map(p=>normalizeNode(st,p,FLOOR))};
   }
+  function interactionWitnesses(st,target,agent,affordance='default'){
+    const geometry=interactionGeometry(st,target,agent,affordance);
+    return Array.isArray(geometry.witnesses)?geometry.witnesses:(geometry.positions||[]).map(position=>({position}));
+  }
   function interactionPositions(st,target,agent,affordance='default'){return interactionGeometry(st,target,agent,affordance).positions;}
   function interactionTraversalCosts(st,aOrId,targets,{mode=null}={}){
     return withGeometrySnapshot(st,()=>{
@@ -716,17 +747,25 @@
       return out;
     });
   }
+  function interactionWitnessTraversalCost(st,a,witness){
+    const position=normalizeNode(st,witness?.position);if(!position)return Infinity;
+    const route=planRoute(st,a,position,{mode:locomotionRuntime()?'auto':'walk',objective:'traversalCost'}),base=route?.traversalCost??Infinity;
+    if(!Number.isFinite(base)||!witness?.requiredMode)return base;
+    const terminalMode=route.steps?.length?route.steps[route.steps.length-1].mode:currentLocomotionMode(a),transition=locomotionRuntime()?.modeTransitionBurden?.(a,terminalMode,witness.requiredMode);
+    return Number.isFinite(transition)?base+transition:Infinity;
+  }
   function bestInteractionPositionResult(st,a,target,affordance='default'){
-    const C=crowdingRuntime(),positions=interactionPositions(st,target,a,affordance),costs=interactionTraversalCosts(st,a,positions,{mode:locomotionRuntime()?'auto':'walk'});
-    let list=positions.map((p,i)=>({p,d:costs[i],occ:nodeOccupantsAt(st,p,a.id).length})).filter(x=>Number.isFinite(x.d));
+    const C=crowdingRuntime(),geometry=interactionGeometry(st,target,a,affordance),witnesses=interactionWitnesses(st,target,a,affordance),hasPostureWitness=witnesses.some(w=>w.requiredMode);
+    const costs=hasPostureWitness?witnesses.map(w=>interactionWitnessTraversalCost(st,a,w)):interactionTraversalCosts(st,a,witnesses.map(w=>w.position),{mode:locomotionRuntime()?'auto':'walk'});
+    let list=witnesses.map((w,i)=>({w,p:w.position,d:costs[i],occ:nodeOccupantsAt(st,w.position,a.id).length})).filter(x=>Number.isFinite(x.d));
     const current=nodeForAgent(st,a),differentNodeSameXY=x=>localSame(current,x.p)&&!nodeSame(st,current,x.p);if(list.some(x=>!differentNodeSameXY(x)))list=list.filter(x=>!differentNodeSameXY(x));
     list.sort((x,y)=>(C?0:x.occ-y.occ)||x.d-y.d||SP.manhattan(a.position,x.p)-SP.manhattan(a.position,y.p));
-    const winner=list[0];return winner?{position:winner.p,traversalCost:winner.d}:null;
+    const winner=list[0];return winner?{position:winner.p,traversalCost:winner.d,interactionMode:geometry.mode,requiredMode:winner.w.requiredMode||null,requiredPosture:winner.w.requiredPosture||null}:null;
   }
   function bestInteractionPosition(st,a,target,affordance='default'){return bestInteractionPositionResult(st,a,target,affordance)?.position||null;}
-  function isAtInteraction(st,a,target,affordance='default'){const here=nodeForAgent(st,a);return interactionPositions(st,target,a,affordance).some(p=>nodeSame(st,here,p));}
+  function interactionWitnessSatisfied(st,a,witness){const here=nodeForAgent(st,a);return !!here&&!!witness?.position&&nodeSame(st,here,witness.position)&&(!witness.requiredPosture||a?.posture?.kind===witness.requiredPosture);}
+  function isAtInteraction(st,a,target,affordance='default'){return interactionWitnesses(st,target,a,affordance).some(witness=>interactionWitnessSatisfied(st,a,witness));}
   function canInteract(st,a,target,affordance='default'){return isAtInteraction(st,a,target,affordance);}
-
 
   function describePlace(st,aOrPos){
     if(aOrPos?.offMap)return '門外';
@@ -750,10 +789,11 @@
   SP.travelTime=travelTime;
   SP.planRoute=planRoute;
   SP.interactionGeometry=interactionGeometry;
+  SP.interactionWitnesses=interactionWitnesses;
   SP.interactionPositions=interactionPositions;
   SP.bestInteractionPosition=bestInteractionPosition;
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v1',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,PICKUP_INTERACTION_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v2',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();

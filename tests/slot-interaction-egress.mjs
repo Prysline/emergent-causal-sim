@@ -33,9 +33,11 @@ human.action={
   container:'cupB'
 };
 
-assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'cupB'},'pickup'),false,'seated Human is not already in pickup reach of the dropped cup');
-const preEgressGoal=SP.bestInteractionPosition(st,human,{kind:'object',id:'cupB'},'pickup');
-assert.ok(preEgressGoal,'slot-aware target ranking must resolve a reachable pickup goal before the actor leaves the Slot');
+assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'cupB'},'pickup'),false,'seated Human is not already in ground contact with the dropped cup');
+const preEgressResult=SP.bestInteractionPositionResult(st,human,{kind:'object',id:'cupB'},'pickup');
+assert.ok(preEgressResult,'slot-aware target ranking must resolve a reachable pickup witness before the actor leaves the Slot');
+assert.equal(preEgressResult.requiredPosture,'kneeling');
+const preEgressGoal=preEgressResult.position;
 const expectedEgress=SP.bestSlotEgressNode(st,slot,human,preEgressGoal,{mode:'auto',objective:'traversalCost'});
 assert.ok(expectedEgress,'target-aware Slot egress winner must exist');
 
@@ -49,11 +51,13 @@ assert.equal(human.action?.wait,0,'standing up for interaction must not be recor
 assert.equal(cup.supportId,undefined,'dropped portable cup must remain detached from its former support');
 assert.ok(SP.nodeSame(st,cup.position,SP.normalizeNode(st,{x:4,y:5,z:0},'floor')));
 
-const postEgressGoal=SP.bestInteractionPosition(st,human,{kind:'object',id:'cupB'},'pickup');
-assert.ok(postEgressGoal,'after slot egress the same production pickup query must remain reachable');
+const postEgressResult=SP.bestInteractionPositionResult(st,human,{kind:'object',id:'cupB'},'pickup');
+assert.ok(postEgressResult,'after slot egress the same production pickup query must remain reachable');
+assert.equal(postEgressResult.requiredPosture,'kneeling');
 
 for(let i=0;i<20&&human.held!=='cupB';i++)E.tick();
 assert.equal(human.held,'cupB','the interaction lifecycle must continue from slot egress to actually picking up the dropped cup');
+assert.equal(human.posture.kind,'kneeling','ground pickup must execute the same terminal low posture required by the interaction witness');
 assert.equal(human.action?.wait,0,'successful post-egress routing must not accumulate unreachable-target waits');
 
 E.reset(20260913);
@@ -86,4 +90,25 @@ E.reset(20260913);
   assert.equal(human2.action?.wait,0);
 }
 
-console.log('slot posture -> general object interaction egress regression: ok');
+E.reset(20260914);
+{
+  const st3=E.getState(),human3=st3.agents.zhen,cup3=st3.containers.cupB;
+  st3.agents.zhou.offMap=true;
+  st3.agents.orange.offMap=true;
+  delete cup3.supportId;
+  cup3.position={...human3.position};
+  cup3.contents={water:5};
+  human3.posture={kind:'standing',slotId:null,furnitureId:null};
+  human3.locomotion={mode:null,phase:'idle'};
+  human3.action={kind:'drinkWater',phase:'toVessel',started:st3.tick,wait:0,resource:'water',container:'cupB'};
+
+  assert.equal(SP.isAtInteraction(st3,human3,{kind:'object',id:'cupB'},'pickup'),false,'standing at the same Floor node is not yet ground-contact ready');
+  E.tick();
+  assert.equal(human3.posture.kind,'kneeling','same-node execution must perform the required terminal posture transition instead of looping at the goal');
+  assert.equal(human3.action?.phase,'toVessel','posture transition consumes the execution tick before the pickup phase advances');
+  assert.equal(human3.held,null);
+  E.tick();
+  assert.equal(human3.action?.phase,'take','after the canonical posture transition the same pickup witness becomes satisfied');
+}
+
+console.log('slot posture -> ground pickup interaction regression: ok');

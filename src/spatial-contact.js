@@ -13,6 +13,8 @@
 
     // A supported object's exact tabletop cell, not the whole support furniture,
     // defines reach for the affordances currently exercised by the simulation.
+    // Pickup geometry is support-derived by Spatial and is intentionally not
+    // authored or injected by object type here.
     mergeInteractions(C.mealTray,{
       serve:{mode:'reach'},
       eatFrom:{mode:'reach'},
@@ -21,12 +23,10 @@
     });
 
     for(const id of ['plateA','plateB'])mergeInteractions(C[id],{
-      pickup:{mode:'reach'},
       eatFrom:{mode:'reach'}
     });
 
     for(const id of ['cupA','cupB','alcoholBottle'])mergeInteractions(C[id],{
-      pickup:{mode:'reach'},
       drinkFrom:{mode:'reach'},
       fill:{mode:'reach'}
     });

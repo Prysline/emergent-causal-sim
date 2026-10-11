@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
@@ -18,19 +16,39 @@ E.reset(20260911);
   assert.equal(st.version,globalThis.SimRelease.VERSION);
   assert.equal(E.VERSION,globalThis.SimRelease.VERSION);
   assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
+  assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v1');
 
   const tray=st.containers.mealTray,plateA=st.containers.plateA,plateB=st.containers.plateB,cupA=st.containers.cupA,cupB=st.containers.cupB,bottle=st.containers.alcoholBottle;
   for(const affordance of ['serve','eatFrom','deposit','receive'])assert.equal(tray.interactions[affordance]?.mode,'reach',`mealTray ${affordance} 必須使用物件局部 reach`);
-  for(const plate of [plateA,plateB])for(const affordance of ['pickup','eatFrom'])assert.equal(plate.interactions[affordance]?.mode,'reach',`${plate.id} ${affordance} 必須使用物件局部 reach`);
-  for(const drink of [cupA,cupB,bottle])for(const affordance of ['pickup','drinkFrom','fill'])assert.equal(drink.interactions[affordance]?.mode,'reach',`${drink.id} ${affordance} 必須使用物件局部 reach`);
+  for(const plate of [plateA,plateB]){
+    assert.equal(plate.interactions.pickup,undefined,`${plate.id} pickup 不得由 Contact object-type injection 持有`);
+    assert.equal(plate.interactions.eatFrom?.mode,'reach',`${plate.id} eatFrom 必須保留物件局部 reach`);
+  }
+  for(const drink of [cupA,cupB,bottle]){
+    assert.equal(drink.interactions.pickup,undefined,`${drink.id} pickup 不得由 Contact object-type injection 持有`);
+    for(const affordance of ['drinkFrom','fill'])assert.equal(drink.interactions[affordance]?.mode,'reach',`${drink.id} ${affordance} 必須保留物件局部 reach`);
+  }
 
   human.position={...floor(st,6,1)};
-  for(const affordance of ['pickup','drinkFrom','fill']){
+  human.posture={kind:'standing',slotId:null,furnitureId:null};
+  const cupPickup=SP.interactionGeometry(st,{kind:'object',id:'cupA'},human,'pickup');
+  assert.equal(cupPickup.mode,'surfaceContact');
+  assert.ok(hasNode(st,cupPickup.positions,floor(st,6,1)),'cupA pickup 應由目前 Surface cell 派生北側 contact');
+  assert.ok(!hasNode(st,cupPickup.positions,floor(st,4,2)),'cupA pickup 不得穿過左側餐椅取得遠端接觸');
+  for(const affordance of ['drinkFrom','fill']){
     const g=SP.interactionGeometry(st,{kind:'object',id:'cupA'},human,affordance);
     assert.equal(g.mode,'reach');
     assert.ok(hasNode(st,g.positions,floor(st,6,1)),`cupA ${affordance} 應允許未被椅子占用的北側 floor 接觸`);
     assert.ok(!hasNode(st,g.positions,floor(st,4,2)),`cupA ${affordance} 不得穿過左側餐椅取得遠端接觸`);
   }
+
+  const chair=SP.getSlot(st,'chairNW:seat');
+  human.position={...chair.position};
+  human.posture={kind:'sitting',slotId:chair.id,furnitureId:chair.furnitureId};
+  assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'plateA'},'pickup'),true,'seated Slot may satisfy an already-valid Surface contact stance without creating chair reach authority');
+  assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'plateB'},'pickup'),false,'the same chair stance must not reach a different Surface cell across the table');
+  human.position={...floor(st,6,1)};
+  human.posture={kind:'standing',slotId:null,furnitureId:null};
 
   cat.position={...floor(st,7,2)};
   assert.equal(SP.isAtInteraction(st,cat,{kind:'object',id:'cupA'},'drinkFrom'),false,'貓站在 floor 不可直接喝高桌面杯子');
@@ -46,6 +64,7 @@ E.reset(20260911);
   }
 
   const platePickup=SP.interactionGeometry(st,{kind:'object',id:'plateB'},human,'pickup');
+  assert.equal(platePickup.mode,'surfaceContact');
   assert.ok(!hasNode(st,platePickup.positions,floor(st,7,3)),'plateB pickup 不得把 chairSE 佔用格當成人類站位');
   assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'plateB pickup 應允許下側相鄰桌邊');
   assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'plateB pickup 不得從餐桌另一側遠取');
@@ -84,9 +103,9 @@ E.reset(20260911);
 {
   const st=E.getState(),a=st.agents.zhen,tray=st.containers.mealTray,pantry=st.containers.foodPantry,basket=st.containers.basket;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-  tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};
+  tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};a.held=basket.id;
   const before=pantry.contents.food;
-  a.action={kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
+  a.action={kind:'restockContainer',phase:'toSource',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
   for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`mealTray local deposit ${i}`);}
   assert.equal(a.action,null,'mealTray local deposit / receive contact 下室內補貨仍應完成');
   assert.ok((tray.contents.food||0)>0,'物流籃應把食物卸到 mealTray');
@@ -94,4 +113,4 @@ E.reset(20260911);
   assert.equal(basket.contents.food||0,0,'卸貨後物流籃應為空');
 }
 
-console.log('v11.11.2 supported object contact audit passed');
+console.log('supported object contact audit passed');

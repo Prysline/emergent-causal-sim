@@ -1,6 +1,8 @@
 (() => {
   const V=window.SimValidator,SP=window.SimSpatial;if(!V||!SP?.nodeWalkable)return;
   const positive=v=>Number.isFinite(Number(v))&&Number(v)>0;
+  const zOf=value=>SP.zOf?SP.zOf(value):(value?.z??0);
+  const sameLocalPosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&zOf(a)===zOf(b);
 
   function validateLayer(st,base){
     const issues=[...base.issues],add=(code,message,data={})=>issues.push({code,message,...data}),byNode=new Map();
@@ -22,10 +24,23 @@
       }
       if(a.held){const held=SP.objectNode(st,a.held);if(held&&!SP.nodeSame(st,node,held))add('held_spatial_node_mismatch',`${a.name}持有的 ${a.held} 與角色不在同一 Spatial Node。`,{agentId:a.id,containerId:a.held,agentNode:key,objectNode:SP.nodeKey(st,held)});}
     }
-    for(const c of Object.values(st?.containers||{})){
-      if(!c.position||SP.holderOf(st,c.id))continue;
-      const node=SP.objectNode(st,c.id);if(!node)continue;
-      if(c.supportId){const expected=SP.supportSurfaceForFurniture?.(st,c.supportId)?.surface?.id||null;if(!expected)add('supported_object_surface_ambiguous',`${c.name}承載於 ${c.supportId}，但找不到唯一 canonical support Surface。`,{containerId:c.id,supportId:c.supportId});else if(node.surfaceId!==expected)add('supported_object_surface_mismatch',`${c.name}承載於 ${c.supportId}，但 Spatial Node 不在其 Surface。`,{containerId:c.id,supportId:c.supportId,surfaceId:node.surfaceId,expectedSurfaceId:expected});}
+    const supportedCollections=[['container',st?.containers||{}],['object',st?.objects||{}]];
+    for(const [entityType,collection] of supportedCollections)for(const entity of Object.values(collection)){
+      const holder=SP.holderOf(st,entity.id);
+      if(holder&&entity.supportId){
+        add('held_object_support_conflict',`${entity.name||entity.id} 同時被 ${holder.id} 持有且仍宣告 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,holderId:holder.id,supportId:entity.supportId});
+        continue;
+      }
+      if(!entity.position||holder)continue;
+      const node=SP.objectNode(st,entity.id);if(!node)continue;
+      if(entity.supportId){
+        const support=SP.supportSurfaceForFurniture?.(st,entity.supportId)||null,expected=support?.surface?.id||null;
+        if(!expected)add('supported_object_surface_ambiguous',`${entity.name||entity.id}承載於 ${entity.supportId}，但找不到唯一 canonical support Surface。`,{entityType,entityId:entity.id,supportId:entity.supportId});
+        else {
+          if(node.surfaceId!==expected)add('supported_object_surface_mismatch',`${entity.name||entity.id}承載於 ${entity.supportId}，但 Spatial Node 不在其 Surface。`,{entityType,entityId:entity.id,supportId:entity.supportId,surfaceId:node.surfaceId,expectedSurfaceId:expected});
+          if(!(support.surface.cells||[]).some(cell=>sameLocalPosition(cell,entity.position)))add('supported_object_cell_mismatch',`${entity.name||entity.id} 的 position 不在 ${entity.supportId} canonical support Surface 的任何 Cell。`,{entityType,entityId:entity.id,supportId:entity.supportId,position:SP.nodeKey(st,SP.normalizeNode(st,entity.position,'floor')),surfaceId:expected});
+        }
+      }
     }
     for(const f of Object.values(st?.furniture||{})){
       const solids=f.spatial?.solids;
