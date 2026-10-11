@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','engine.js','validation/registry.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','engine.js','validation/registry.js']);
 const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
@@ -24,7 +24,7 @@ assert.deepEqual(pickupPos,{x:5,y:5});
 assert.ok(heldPositions.length>0);
 assert.ok(heldPositions.every(p=>same(p,{x:5,y:5})),'拿起容器後不應為相鄰 port 多走一格');
 assert.ok(restockEvent,'資料驅動 restock 流程應完成');
-assert.equal(restockEvent.data.position,'5,5');
+assert.equal(restockEvent.data.position,SP.nodeKey(st,SP.nodeForAgent(st,a)),'restock event position must retain canonical Floor identity');
 assert.equal(a.held,null);
 const expected=SP.bestNearbySupportPlacement(st,a),actual=SP.objectNode(st,bucket.id);
 if(expected){
