@@ -13,6 +13,22 @@
 - Agent-private cognition / memory / affect / relationship 不直接改寫另一 Agent 的 private state。
 - `state.agentCarries` 與 Container-only `Agent.held` 分離；action / intent / observation / memory / relationship 不互相充當 mirror state。
 
+## Resident Action / Intent / Explanation
+
+這三層不能互相取代：
+
+- **Action＝角色現在具體在做什麼**：由 canonical Action runtime 持有目前執行中的具體行為與進度。
+- **Intent＝這個行動服務的短期目的**：`Agent.activeIntent` 是 Agent-private 短期目的；`action.intentId` 只作 Action → Intent linkage。
+- **Explanation＝為什麼此刻選擇這個行動**：Presentation 只從 canonical Decision Evidence / state 投影可讀原因，不保存第二份 decision truth。**Explanation wording 優先自然直接**，不得為了玩家文案重算或改寫 simulation reasoning。
+
+`Entity Readable View`、Resident View 與 Debug Inspector 都是 canonical simulation state 的 projection；不得把 presentation wording、summary 或 inferred relationship state 寫回 World / Agent truth。
+
+## Relationship Foundation
+
+Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分開保存，不建立 shared pair score。Relationship consolidation 只承接該 Agent 自己合法取得的 appraisal / experience evidence。
+
+**Relationship → Responder Bias**：responder decision 可以消費 responder 自己的 canonical relationship state 作 bounded influence；Relationship 不直接替 responder 建 Action、Intent 或 response outcome，也不把另一 Agent 的 private state變成共享真相。
+
 ## World / Spatial / Physical
 
 Current World Authoring = `world-authoring-v13`；Furniture Catalog = `furniture-definitions-v12`。
@@ -22,9 +38,32 @@ Current Spatial Node identity = `spaceId + surfaceId + x/y/z`。`z` 是 World sp
 - Structural Floor 是 World support，不是 Furniture / ordinary Entity，也不建立 `supportId:'floor'`。
 - Furniture metric `spatial.solids` 是 canonical obstruction geometry；eligible top face 派生 runtime Surface。
 - Slot 是 occupancy / posture identity，不是 generic reach authority。
-- Physical Profile 持有 body / locomotion capability；MovementEnvelope / PoseEnvelope 即時計算。
-- Passage / Route / Locomotion 分別持有 edge geometry、route search、mode / transition burden與 execution。
 - Current floor node 沒有 persistent `localX/localY`。
+
+### Physical Profile + Passage Profile / Multi-mode Feasibility
+
+Physical Profile 持有 body / locomotion capability。`MovementEnvelope` / `PoseEnvelope` 都由 canonical profile 即時計算，不保存第二份 geometry cache。
+
+`PassageProfile` 由 current edge / opening / structure geometry 即時計算；它描述 passage candidates 與 clearance context，不把 derived feasibility 寫回 Furniture、Tile 或 Agent state。`traversalFeasibility` 以 Agent 的 Physical capability / MovementEnvelope 消費同一 PassageProfile，回答可用 mode / maneuver；未知或不相容 geometry 必須明確失敗，不以 silent fallback 猜測可走。
+
+### Route Semantics Split
+
+Route consumer 必須區分：
+
+- `pathDistance`：topology / metric path distance，不含個體 mode burden。
+- `traversalCost`：目前 Agent 在 canonical geometry 下的 objective movement / transition burden。
+- `travelTime`：可執行 movement plan 的時間成本。
+- `accessPenalty`：Deliberation / target ranking 對 canonical accessibility burden 的 projection；不得用舊 `distancePenalty` 建第二套 route truth。
+
+Navigation、target accessibility、ranking、replan 與 execution 必須消費同一 canonical movement / Interaction Geometry，不得用 entity coarse position 或 UI projection 取代 route target。
+
+### Locomotion Execution + Posture Transition
+
+Locomotion 持有 locomotion mode、posture transition burden、movement timing 與 execution。Route / Interaction witness 若要求 terminal mode / posture，execution 必須完成並驗證同一 witness；不能 ranking 時假設 kneeling/prone 成本、執行時卻略過 transition。
+
+### Dynamic Congestion
+
+Dynamic Congestion 只從 current occupancy / movement context 派生 next-edge delay / burden；不保存 persistent congestion truth，也不改寫 PassageProfile、Route topology 或 Agent-private preference。consumer 仍以當下 canonical route geometry 重算。
 
 ## Object support / effective location
 
@@ -50,7 +89,7 @@ Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support
 - Floor：同一 Floor Spatial Node + legal low-posture witness；Human 優先 `kneelCrawl → kneeling`，必要時 `proneCrawl → prone`。
 - Supported object：使用 object actual Surface cell 與 Surface-owned contact geometry，不擴張成整個 Furniture perimeter。
 - Slot-bound actor：Slot 只證明 current stance；符合 Surface contact 才能直接 interaction，否則 normal egress / movement。
-- ranking 的 terminal mode/posture burden與 execution使用同一 ephemeral witness；`isAtInteraction(...)` 驗完整 witness。
+- ranking 的 terminal mode/posture burden 與 execution 使用同一 ephemeral witness；`isAtInteraction(...)` 驗完整 witness。
 - support / holder / position 改變後即時重算；不跨 tick 保存無失效規則的 pickup route / witness。
 
 本 slice 不新增 limb reach / IK、crouch、persistent sub-tile coordinate、chair→table mapping、Nav Cell 或 generic high-fidelity reach framework。
