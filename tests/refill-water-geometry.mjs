@@ -4,13 +4,14 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','engine.js','validation/registry.js']);
-const E=globalThis.SimEngine,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const same=(a,b)=>a?.x===b?.x&&a?.y===b?.y;
 
 E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen,bucket=st.containers.waterBucket;
 st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-a.position={x:4,y:5};bucket.contents={water:0};bucket.position={x:5,y:5};
+a.position={x:4,y:5};a.posture={kind:'kneeling',slotId:null,furnitureId:null};
+bucket.contents={water:0};bucket.position={x:5,y:5};delete bucket.supportId;
 a.action={kind:'restockContainer',phase:'toContainer',started:st.tick,wait:0,destinationId:'waterBucket',sourceId:'tap',sourceKind:'source',resource:'water',strategy:'carryContainer'};
 
 let pickupPos=null,restockEvent=null;const heldPositions=[];
@@ -25,6 +26,14 @@ assert.ok(heldPositions.every(p=>same(p,{x:5,y:5})),'拿起容器後不應為相
 assert.ok(restockEvent,'資料驅動 restock 流程應完成');
 assert.equal(restockEvent.data.position,'5,5');
 assert.equal(a.held,null);
-assert.deepEqual(bucket.position,{x:5,y:5});
+const expected=SP.bestNearbySupportPlacement(st,a),actual=SP.objectNode(st,bucket.id);
+if(expected){
+  assert.equal(bucket.supportId,expected.supportId,'restock 完成後應使用 canonical nearby support winner');
+  assert.ok(SP.nodeSame(st,actual,expected.node),'restock 完成後 Container 應位於 canonical nearby support node');
+}else{
+  const actor=SP.nodeForAgent(st,a),floor=actor&&SP.normalizeNode(st,{x:actor.x,y:actor.y,...(Number.isFinite(actor.z)&&actor.z!==0?{z:actor.z}:{})},'floor');
+  assert.equal(bucket.supportId,undefined,'無合法 nearby support 時不得留下 supportId');
+  assert.ok(floor&&SP.nodeSame(st,actual,floor),'無合法 nearby support 時應落在 actor current Floor node');
+}
 assert.ok((bucket.contents.water||0)>0);
 console.log('portable container restock geometry passed');
