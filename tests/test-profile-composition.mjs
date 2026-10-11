@@ -30,10 +30,14 @@ const engineCore=runtimeProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
   'engine.js','validation/registry.js'
 ]);
-assert.equal(engineCore.includes('src/spatial-traversal.js'),false,'engine-core profile must not implicitly load traversal');
+assert.ok(engineCore.includes('src/spatial-traversal.js'),'Engine runtime profiles must include canonical Spatial Traversal for lifecycle release');
+assert.ok(engineCore.includes('src/spatial-candidate-selection.js'),'Engine runtime profiles must include the canonical nearby-placement owner');
 assert.ok(engineCore.includes('src/systems/resources.js'),'Engine runtime profiles must include the canonical Resources owner');
 assert.ok(engineCore.includes('src/systems/agent-carry.js'),'Engine runtime profiles must include the canonical Agent Carry owner');
 assert.ok(engineCore.includes('src/systems/physical.js'),'Engine runtime profiles must include the canonical Physical owner for carried hand feasibility');
+assert.ok(engineCore.indexOf('src/spatial.js')<engineCore.indexOf('src/spatial-traversal.js'),'Spatial core must load before Spatial Traversal');
+assert.ok(engineCore.indexOf('src/spatial-traversal.js')<engineCore.indexOf('src/spatial-candidate-selection.js'),'Spatial Traversal must load before candidate selection');
+assert.ok(engineCore.indexOf('src/spatial-candidate-selection.js')<engineCore.indexOf('src/engine.js'),'Nearby-placement owner must load before Engine');
 assert.ok(engineCore.indexOf('src/systems/resources.js')<engineCore.indexOf('src/systems/agent-carry.js'),'Resources must load before Agent Carry in Engine runtime profiles');
 assert.ok(engineCore.indexOf('src/systems/agent-carry.js')<engineCore.indexOf('src/systems/physical.js'),'Agent Carry must load before Physical consumes its handling profile');
 assert.ok(engineCore.indexOf('src/systems/physical.js')<engineCore.indexOf('src/spatial/finalize.js'),'Physical initial-state registration must happen before the Spatial finalizer');
@@ -66,7 +70,7 @@ assert.throws(
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','spatial.js',
-  'systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
+  'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
 const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');
