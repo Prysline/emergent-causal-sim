@@ -32,6 +32,11 @@ function isolateHuman(st,id='zhen'){
   return st.agents[id];
 }
 
+function placeAtCarrier(a,basket){
+  a.position={...basket.position};
+  a.posture={kind:'standing',slotId:null,furnitureId:null};
+}
+
 function startIndoorFoodRestock(st,a){
   const tray=st.containers.mealTray;
   const pantry=st.containers.foodPantry;
@@ -39,6 +44,8 @@ function startIndoorFoodRestock(st,a){
   tray.contents.food=0;
   basket.contents={};
   basket.position={x:3,y:2};
+  delete basket.supportId;
+  placeAtCarrier(a,basket);
   a.action={
     kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,
     sourceId:pantry.id,sourceKind:'object',resource:'food',
@@ -126,6 +133,8 @@ E.reset(20260911);
   const basket=st.containers.basket;
   basket.contents={};
   basket.position={x:3,y:2};
+  delete basket.supportId;
+  placeAtCarrier(a,basket);
   const destinationBefore=foodOf(dest);
   a.action={
     kind:'externalSupply',phase:'toCarrier',exitId:exit.id,
