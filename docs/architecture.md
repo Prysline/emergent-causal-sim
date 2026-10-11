@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.55.0-nearby-placement`。
+目前 runtime marker：`11.55.1-nearby-placement-lifecycle`。
 
-本 release 新增 intentional held-container nearby placement；Pickup Interaction Geometry、Route、Locomotion、Physical 等未改 contract 的 subsystem generation 保持不變。
+本 release 完成 intentional held-container nearby placement 的一般 lifecycle integration；Pickup Interaction Geometry、Route、Locomotion、Physical 等未改 contract 的 subsystem generation 保持不變。
 
 ## Truth boundaries
 
@@ -91,7 +91,7 @@ Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support
 - winner 寫 `container.position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node 並保持無 `supportId`。
 - accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
 
-這一版只把 soft reconsideration 的既有 synchronous release 接上共用 helper；其他 release lifecycle 若未明確納入，不因共用函式存在而自動改語意。
+Engine 的一般 `releaseHeld()` 現在委派同一 Spatial helper，因此 ordinary Action finish / abort、sleep settle、切換手持 Container 前的 release 與其他使用 normal held-release lifecycle 的 caller 都消費相同 canonical placement rule；Deliberation soft reconsideration 也直接使用同一 helper。Accidental movement `containerDrop` 仍是 intentionally-distinct consequence path，不被 normal lifecycle integration 吸收。
 
 ## Interaction Geometry / Pickup v1
 

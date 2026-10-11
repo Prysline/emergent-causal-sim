@@ -110,7 +110,7 @@
   function releaseAgentReservations(a,prefix=null){for(const [k,id] of Object.entries({...state.reservations}))if(id===a.id&&(!prefix||k.startsWith(prefix)))delete state.reservations[k];}
   function holderOf(id){return SP.holderOf(state,id);}
   function holdContainer(a,id){const c=state.containers[id];if(!R.canHoldContainer(state,a,c))return false;const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;if(a.held&&a.held!==id)releaseHeld(a);a.held=id;delete c.supportId;return true;}
-  function releaseHeld(a){if(!a.held)return;const c=state.containers[a.held];if(c)c.position={...a.position};a.held=null;}
+  function releaseHeld(a){if(!a.held)return null;if(typeof SP.releaseHeldContainerNearby!=='function')throw new Error('engine.js requires Spatial nearby placement lifecycle.');const result=SP.releaseHeldContainerNearby(state,a);if(!result)throw new Error('Held Container release requires a canonical nearby placement result.');return result;}
   function locomotionRuntime(){return window.SimLocomotion||null;}
   function usageRuntime(){return window.SimUsage||null;}
   function setLocomotionState(a,mode=null,phase='idle'){const L=locomotionRuntime();return L?.setState?.(a,mode,phase)||null;}

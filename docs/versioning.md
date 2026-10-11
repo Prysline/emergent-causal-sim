@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.55.0-nearby-placement`。
+目前 overall runtime marker：`11.55.1-nearby-placement-lifecycle`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -48,9 +48,11 @@ Current relevant markers：
 
 ## Current release impact
 
-`11.55.0-nearby-placement`：overall / Presentation 前進；Nearby Placement 新增 `nearby-placement-v1` capability marker。它重用既有 Furniture `supportsObjects:true`、canonical support Surface、`supportContactNodes(...)` 與 holder/support truth；Spatial Traversal / Route、Pickup Interaction Geometry、Contact、Locomotion、Physical、World Authoring、Furniture Catalog、Deliberation schema 等未改 contract 的 markers 保持不變。
+`11.55.1-nearby-placement-lifecycle` 是 `11.55.0-nearby-placement` 的 corrective patch：Nearby Placement algorithm / capability marker 仍是 `nearby-placement-v1`，但 Engine 的 normal `releaseHeld()` 現在委派 canonical Spatial nearby-placement helper，使 ordinary Action finish / abort、sleep settle、held-Container handoff 與其他 normal lifecycle callers 不再繞過該 owner。Deliberation soft reconsideration 繼續使用同一 helper。
 
-v1 只允許 lifecycle-driven release 使用 Agent **目前即可接觸**的合法 support Surface；不建立 move-to-place action，也不改 accidental movement `containerDrop` consequence。
+這個 patch 改變使用者可觀察的 release outcome，因此 overall / Presentation projection 前進；Nearby Placement capability generation、Spatial Traversal / Route、Pickup Interaction Geometry、Contact、Locomotion、Physical、World Authoring、Furniture Catalog、Deliberation schema 等未改 contract 的 markers 保持不變。
+
+v1 仍只允許 lifecycle-driven release 使用 Agent **目前即可接觸**的合法 support Surface；不建立 move-to-place action，也不改 accidental movement `containerDrop` consequence。沒有合法 Surface 時仍 fallback 到 actor current canonical Floor node。
 
 詳細語意見 [`architecture.md`](architecture.md) 的 Intentional nearby placement v1。
 

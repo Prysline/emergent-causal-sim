@@ -88,12 +88,40 @@ try{
     E.reset(14102);
     const st=E.getState(),a=st.agents.zhen,plate=st.containers.plateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
-    a.held=plate.id;delete plate.supportId;plate.position={...a.position};plate.contents={};
+    for(const furniture of Object.values(st.furniture||{}))furniture.supportsObjects=false;
+    const releaseNode=floor(st,2,6);
+    a.position={...releaseNode};a.posture={kind:'standing',slotId:null,furnitureId:null};
+    a.held=plate.id;delete plate.supportId;plate.position={...releaseNode};plate.contents={};
+    assert.equal(SP.bestNearbySupportPlacement(st,a),null,'floor fallback fixture must expose no legal support candidate');
     a.action={kind:'eat',phase:'eatingPlate',container:plate.id,started:st.tick,wait:0};
     E.tick();
-    assert.equal(a.held,null,'normal Action lifecycle completion must still release held Container');
-    assert.ok(SP.nodeSame(st,SP.objectNode(st,plate.id),a.position),'normal release keeps Container at the actor canonical position');
-    assert.equal(dropEventsFor(st,plate.id).length,0,'normal releaseHeld lifecycle must not masquerade as accidental containerDrop');
+    assert.equal(a.held,null,'normal Action lifecycle completion must release held Container');
+    assert.equal(plate.supportId,undefined,'floor fallback must remain structural Floor rather than inventing supportId');
+    assert.ok(SP.nodeSame(st,SP.objectNode(st,plate.id),releaseNode),'normal lifecycle release without a legal support must use actor current canonical Floor node');
+    assert.equal(dropEventsFor(st,plate.id).length,0,'normal lifecycle release must not masquerade as accidental containerDrop');
+  }
+
+  {
+    E.reset(14106);
+    const st=E.getState(),a=st.agents.zhen,cup=st.containers.cupA,table=st.furniture.diningTable;
+    for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+    for(const furniture of Object.values(st.furniture||{}))if(furniture.id!==table.id)furniture.supportsObjects=false;
+    table.supportsObjects=true;
+    const contact=SP.supportContactNodes(st,table.id,a).find(node=>node.surfaceId==='floor')||SP.supportContactNodes(st,table.id,a)[0];
+    assert.ok(contact,'drink lifecycle fixture requires a canonical dining-table contact node');
+    a.position={...contact};a.posture={kind:'standing',slotId:null,furnitureId:null};
+    cup.contents={water:8};delete cup.supportId;cup.position={...contact};a.held=cup.id;
+    const candidate=SP.bestNearbySupportPlacement(st,a);
+    assert.equal(candidate?.supportId,table.id,'drink lifecycle fixture must expose diningTable as the canonical nearby support winner');
+    a.action={kind:'drinkWater',phase:'drink',container:cup.id,resource:'water',started:st.tick,wait:0};
+    E.tick();
+    assert.equal(a.action,null,'Human drink completion must finish the production Action lifecycle');
+    assert.equal(a.held,null,'Human drink completion must clear the canonical held relation');
+    assert.equal(cup.supportId,table.id,'Human drink completion must use canonical nearby placement instead of leaving the cup on Floor');
+    const placedNode=SP.objectNode(st,cup.id),surface=SP.supportSurfaceForFurniture(st,table)?.surface;
+    assert.equal(placedNode?.surfaceId,surface?.id,'Human drink completion must resolve the cup onto the table canonical support Surface');
+    assert.ok((surface?.cells||[]).some(cell=>SP.nodeSame(st,placedNode,SP.normalizeNode(st,cell,surface.id))),'Human drink completion must choose a real cell on the canonical support Surface');
+    assert.equal(dropEventsFor(st,cup.id).length,0,'intentional drink completion must not emit accidental containerDrop');
   }
 
   {
