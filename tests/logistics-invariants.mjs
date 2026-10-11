@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
-loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','engine.js','validation/registry.js']);
+loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js','engine.js','validation/registry.js']);
 
 const E=globalThis.SimEngine;
 const SP=globalThis.SimSpatial;
@@ -15,6 +15,17 @@ const noIssues=label=>{
   const result=V.validateState(E.getState());
   assert.equal(result.issueCount,0,`${label}: ${result.issues.map(x=>x.code+': '+x.message).join(' | ')}`);
 };
+function assertCanonicalReleasedPlacement(st,a,c,label){
+  const expected=SP.bestNearbySupportPlacement(st,a),actual=SP.objectNode(st,c.id);
+  if(expected){
+    assert.equal(c.supportId,expected.supportId,`${label}: legal nearby support winner must own supportId`);
+    assert.ok(SP.nodeSame(st,actual,expected.node),`${label}: released Container must use canonical nearby support winner`);
+    return;
+  }
+  const actor=SP.nodeForAgent(st,a),floor=actor&&SP.normalizeNode(st,{x:actor.x,y:actor.y,...(Number.isFinite(actor.z)&&actor.z!==0?{z:actor.z}:{})},'floor');
+  assert.equal(c.supportId,undefined,`${label}: Floor fallback must not invent supportId`);
+  assert.ok(floor&&SP.nodeSame(st,actual,floor),`${label}: no-winner release must use actor current canonical Floor node`);
+}
 
 function isolateHuman(st,id='zhen'){
   for(const a of Object.values(st.agents))a.offMap=a.id!==id;
@@ -50,7 +61,7 @@ E.reset(20260911);
   approx(foodOf(tray)+foodOf(pantry)+foodOf(basket),totalBefore,'pantry → basket → mealTray 必須守恆');
   assert.equal(foodOf(basket),0,'卸貨後物流容器應為空');
   assert.equal(a.held,null,'完成後 Agent 不應繼續持有物流容器');
-  assert.ok(SP.same(basket.position,a.position),'空籃應留在實際卸貨位置');
+  assertCanonicalReleasedPlacement(st,a,basket,'indoor logistics conservation');
   assert.ok(!Object.values(st.reservations).includes(a.id),'完成後不得殘留 Agent reservation');
   noIssues('indoor logistics conservation');
 }
@@ -93,7 +104,6 @@ E.reset(20260911);
   assert.ok(foodOf(basket)>0,'中斷測試前，資源必須已經實際裝進物流容器');
   assert.equal(a.held,basket.id,'中斷測試前，角色必須正在持有物流容器');
 
-  const positionAtInterrupt={...a.position};
   const conservedBeforeAbort=foodOf(pantry)+foodOf(basket)+foodOf(tray);
   delete st.containers[tray.id];
   E.tick();
@@ -102,7 +112,7 @@ E.reset(20260911);
   assert.equal(a.held,null,'中止後不應殘留 held state');
   assert.ok(foodOf(basket)>0,'中止後已裝載資源應留在物流容器內，不得消失');
   approx(foodOf(pantry)+foodOf(basket),conservedBeforeAbort,'中止後 pantry + basket 的物資總量必須守恆');
-  assert.ok(SP.same(basket.position,positionAtInterrupt),'中止後物流容器應落在角色實際中斷位置');
+  assertCanonicalReleasedPlacement(st,a,basket,'logistics interruption cleanup');
   assert.ok(!Object.values(st.reservations).includes(a.id),'中止後不得殘留 Agent reservation');
   noIssues('logistics interruption cleanup');
 }
@@ -130,7 +140,7 @@ E.reset(20260911);
   approx(delivered,st.supply.totalProduced,'外部新增資源量必須等於實際入庫量');
   assert.equal(foodOf(basket),0,'外出補給卸貨後物流容器應為空');
   assert.equal(a.held,null,'外出補給完成後不應殘留 held state');
-  assert.ok(SP.same(basket.position,a.position),'外出補給卸貨後空籃應留在實際放下位置');
+  assertCanonicalReleasedPlacement(st,a,basket,'external supply accounting');
   assert.ok(!Object.values(st.reservations).includes(a.id),'外出補給完成後不得殘留 Agent reservation');
   noIssues('external supply accounting');
 }
