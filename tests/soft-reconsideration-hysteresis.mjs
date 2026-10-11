@@ -9,6 +9,7 @@ loadRuntimeProfile(['world-authoring.js','world-initializer.js','world.js','rele
 const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const eventsByAction=action=>E.getState().events.filter(e=>e.data?.action===action);
+const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 function bind(a,actionKind,intentKind,{phase='move',createdTick=0,source={type:'test',tick:0},...extra}={}){
   a.action={kind:actionKind,phase,started:createdTick,wait:0,...extra};
   a.activeIntent={id:`intent:${a.id}:${createdTick}:${intentKind}`,kind:intentKind,createdTick,lifecycle:'actionBound',source};
@@ -45,6 +46,7 @@ E.reset(20260911);
 let st=E.getState();
 assert.equal(st.version,globalThis.SimRelease.VERSION);
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach');
+assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v1');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);
 noIssues('reset');
@@ -78,7 +80,8 @@ assert.equal(eventsByAction('intentReconsider').length,0);
 noIssues('margin blocks weak challenger');
 
 // A clearly stronger ordinary need can replace a low-commitment action before emergency thresholds.
-E.reset(2);st=E.getState();st.tick=2;human=st.agents.zhen;quietHuman(human);human.needs.hunger=80;
+// If the actor is already at a legal support-contact stance, the released held Container must use that canonical Surface instead of falling to Floor.
+E.reset(2);st=E.getState();st.tick=2;human=st.agents.zhen;quietHuman(human);human.needs.hunger=80;human.position=floor(st,6,4);
 const oldIntentId=bind(human,'wander','explore',{createdTick:0,targetTile:{x:2,y:6},oneShot:true});
 st.reservations['test:soft-owned']=human.id;human.held='cupB';delete st.containers.cupB.supportId;
 snap=E.reconsiderationSnapshot(st,human);
@@ -91,6 +94,8 @@ assert.equal(human.activeIntent?.source?.priorIntentId,oldIntentId);
 assert.equal(human.action?.kind,'eat');
 assert.equal(human.action?.intentId,human.activeIntent?.id);
 assert.equal(human.held,null,'soft switch must clean unexpected held containers');
+assert.equal(st.containers.cupB.supportId,'diningTable','currently reachable supportsObjects Surface should win intentional release');
+assert.equal(SP.objectNode(st,'cupB')?.surfaceId,SP.supportSurfaceForFurniture(st,'diningTable')?.surface?.id,'released Container must resolve through canonical support Surface identity');
 assert.equal(st.reservations['test:soft-owned'],undefined,'soft switch must release prior reservations');
 const reconsider=eventsByAction('intentReconsider')[0];
 assert.ok(reconsider);
@@ -98,7 +103,16 @@ assert.equal(reconsider.data.priorIntentKind,'explore');
 assert.equal(reconsider.data.intentKind,'satisfyHunger');
 assert.ok(reconsider.data.challengerUtility>reconsider.data.switchThreshold);
 assert.equal(reconsider.data.switchThreshold,reconsider.data.currentUtility+reconsider.data.switchMargin+reconsider.data.commitmentCost);
-noIssues('strong soft challenger switches cleanly');
+noIssues('strong soft challenger switches cleanly with nearby placement');
+
+// No currently reachable legal support means explicit Floor fallback; the helper must not teleport the object to a distant Surface.
+E.reset(22);st=E.getState();human=st.agents.zhen;human.position=floor(st,2,6);human.held='cupB';delete st.containers.cupB.supportId;
+const fallback=SP.releaseHeldContainerNearby(st,human);
+assert.equal(fallback?.kind,'floor');
+assert.equal(human.held,null);
+assert.equal(st.containers.cupB.supportId,undefined);
+assert.ok(SP.nodeSame(st,SP.objectNode(st,'cupB'),floor(st,2,6)),'fallback must stay at actor current canonical Floor node');
+noIssues('nearby placement floor fallback');
 
 // Newly formed Intents get a minimum hold window instead of immediately oscillating.
 E.reset(3);st=E.getState();st.tick=7;human=st.agents.zhen;quietHuman(human);human.needs.hunger=80;
