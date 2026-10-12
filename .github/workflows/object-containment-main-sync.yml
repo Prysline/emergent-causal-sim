@@ -44,7 +44,7 @@ jobs:
           p=Path('README.md')
           s=p.read_text()
           if marker not in s:
-              anchor='Direct Object Unification 的 current contract'
+              anchor='## Current authority navigation'
               note='前一個 `11.57.1-slot-approach-arrival` 已修正 Furniture Slot-use arrival：chooser-time approach winner 只作 ephemeral navigation witness；`sleep`、`rest` 與 Human `meal` execution 以 current `slotApproachNodes()` 判斷是否已抵達任一合法 approach。\n\n'
               if anchor not in s: raise SystemExit('README insertion anchor missing')
               s=s.replace(anchor,note+anchor,1)
