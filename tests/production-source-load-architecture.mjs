@@ -237,7 +237,7 @@ assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias'
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Deliberation own generation must not fake-bump for Agent facing foundation');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence own generation must not fake-bump for Agent facing foundation');
-assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.48.1-sleep-perception-approach','Sleep Slot Conflict must version the observation-gated conflict + preferred approach contract');
+assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.57.0-sleep-animal-resolution','Sleep Slot Conflict must version the Animal self-displacement + outcome-based repeat-wake contract');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');

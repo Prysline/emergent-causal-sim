@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.56.0-object-unification`。
+目前 overall runtime marker：`11.57.0-sleep-animal-conflict`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -35,7 +35,8 @@ Current relevant markers：
 - Physical `11.56.0-physical-object-handling`
 - Agent Carry：`11.46.0-sleep-carry-integration`
 - Social Bid：`11.47.0-social-bid-carry-cooperation`
-- Deliberation / Decision Evidence / Sleep Slot Conflict：`11.48.1-sleep-perception-approach`
+- Deliberation / Decision Evidence：`11.48.1-sleep-perception-approach`
+- Sleep Slot Conflict：`11.57.0-sleep-animal-resolution`
 - Locomotion：`11.50.1-prone-transition-burden`
 - Spatial Traversal / Route：`11.38.0-carried-handling-risk`
 - Spatial Passage：`11.39.1-surface-boundary-transition`
@@ -50,15 +51,19 @@ Current relevant markers：
 
 ## Current release impact
 
-`11.56.0-object-unification` 是一次 semantic migration：concrete physical-item canonical identity 從原本 `objects / containers` 雙 collection 收斂為唯一 `entities.objects / state.objects`。World Authoring 因 schema 移除 `entities.containers` 並新增明示 Resource-container capability 而前進至 `world-authoring-v14`。
+`11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 
-Generic Object carry 的 physical authority 新增 `object-handling-v1`：`portable`、`handling.carryGeometry`、`handling.handsRequired` 與 `Agent.held` 不再由 Resources 決定；Physical 因 traversal envelope / hand-feasibility 現在接受任何合法 held Object 而前進至 `11.56.0-physical-object-handling`。Resources 同樣前進至 `11.56.0-resource-container-capability`，只對 `resourceContainer:true` Object 提供 `contents / capacity / load / retention / spill / transfer` semantics。
+- `wake success` 與 `occupancy conflict resolved` 明確分離。同一 requester Sleep Decision + preferred Slot + observed occupant episode 內，wake 後同一 occupant 仍占用會留下 canonical `sleepSlotConflictOutcome` World Event；若 occupant 再次睡著，下一輪 ranking 會把這個因果結果當成 repeat-wake penalty，而不是把它視為全新的 sleeping conflict。
+- escalation 依 outcome，不保存 `retryCount`。目前直接納入的 outcome 包含 wait expired + same occupant persists、wake succeeded + occupancy persists，以及 Animal move-away interaction 已被感知但尚未開始離開；historical evidence 可以保留，但 active applicability 受 current Sleep Decision / Slot / observed occupant identity 約束。
+- awake Animal 新增 `sleepSlotAnimalMoveAway` directed interaction：requester 只建立可觀察 World Bid；Animal 必須先取得自己的 observed Bid，再由 Animal 自己建立 `yieldSleepSlot` Intent 與 `wander` Movement Action。Sleep conflict 不直接改寫 Animal position；若 Animal 已開始 `wander`，requester 把它視為 departure pending，而不是拒絕或失敗。
+- sleeping relocation destination 只使用 requester-side observation、公開 Embodiment default、canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective sleep quality 與 requester accessibility / relocation cost。它不讀 occupant-private Usage habit / claim / preference，也不讀 target instance hidden mass / held / body geometry 來決定 candidate destination。
+- sleeping 不再直接替 generic attention / wake 增加正 utility；ranking 分別表達 wake disruption、social disruption、physical relocation disruption、placement quality 與 relocation cost。
 
-Nearby Placement algorithm 的 locality / support-contact 原則不變，但 public release contract 從 Container-specific 擴為 generic Object，因此 capability marker 前進至 `nearby-placement-v2-object-release`。`state.agentCarries` relation、Agent Carry generation、Spatial Traversal / Route、Spatial Passage、Contact、Locomotion、Furniture Catalog 等未改自己的 contract，不為 overall release 機械升版。
+Version impact：overall / Presentation → `11.57.0-sleep-animal-conflict`；Sleep Slot Conflict own marker → `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 維持 `11.48.1-sleep-perception-approach`；Social Bid、Agent Carry、Physical、Spatial、Furniture、Usage Preference 與 Embodiment Capabilities 都重用既有 contract，不為本 release 假升版。Sleep own marker 與 overall literal 刻意分離，以維持 `src/release.js` 對 current overall marker 的唯一 ownership。
 
-本 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
+前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。本 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 
-詳細語意見 [`architecture.md`](architecture.md) 的 Object identity / Resource-container capability 與 Intentional nearby placement v2。
+詳細跨 subsystem 語意見 [`architecture.md`](architecture.md)。
 
 ## Consistency responsibility
 

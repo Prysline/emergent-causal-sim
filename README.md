@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.56.0-object-unification`。
+目前 runtime marker：`11.57.0-sleep-animal-conflict`。
 
-Current release 完成 Direct Object Unification：所有具體 physical item 只存在於 canonical `entities.objects / state.objects`；原本 cup / plate / basket / bucket / bottle / meal tray / pantry 等 Resource Container instance 都改為具有 `resourceContainer:true` capability 的 Object。`Agent.held` 仍是唯一 held physical Object relation，ordinary Object 與 Resource-container Object 共用同一 generic Object handling / Physical traversal / intentional nearby-placement lifecycle；Resources 只處理 capability-specific `contents / capacity / load / retention / spill`。既有 bulk food 仍暫時存在 Resource-container Object 的 `contents.food`，本 release 不進行 Food Object migration。Accidental movement `containerDrop` 仍是 Resource-container handling consequence，不套用到 ordinary Object。
+Current release 修正 preferred Sleep Slot 的 Human / Animal resolution policy：wake success 與實際 Slot release 分離，同一 sleep conflict episode 會依「wake 後 occupancy 持續」等因果結果抑制重複喚醒，而不是使用 retry counter；awake Animal 的 move-away interaction 會先經可觀察 World Bid，再由 Animal 自己形成 departure Intent / Movement Action。Sleeping Animal relocation candidate 僅使用 requester 可取得的 observation、公開 embodiment contract、canonical Slot / Physical legality、objective sleep quality 與 relocation cost，不讀 occupant-private Usage preference 或 hidden instance physical state。Generic Deliberation / Decision Evidence、Social Bid、Agent Carry、Physical、Spatial 與 Furniture 各自既有 contract 未因本 release 假升版。
+
+Direct Object Unification 的 current contract 維持不變：所有具體 physical item 只存在於 canonical `entities.objects / state.objects`；Resource Container 以 Object 上的 `resourceContainer:true` capability 表達。`Agent.held` 仍是唯一 held physical Object relation，ordinary Object 與 Resource-container Object 共用 generic Object handling / Physical traversal / intentional nearby-placement lifecycle；既有 bulk food 仍暫時存在 Resource-container Object 的 `contents.food`，Object containment / bookshelf 與 Food Object migration 都不屬本 release。
 
 ## Current authority navigation
 

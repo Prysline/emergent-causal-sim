@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
 
-const DEBUG_VERSION='11.48.1-debug-inspector-sleep-perception-approach';
+const DEBUG_VERSION='11.57.0-debug-inspector-sleep-animal-resolution';
 const outDir='artifacts/browser-debug-inspector-contextual-diagnostics-qa';
 fs.mkdirSync(outDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
@@ -85,6 +85,7 @@ try{
   assert.match(desktop.diagnosticText,/Current-derived probe/);
   assert.match(desktop.diagnosticText,/Adopted resolution\s+wait/);
   assert.match(desktop.diagnosticText,/conflictWaitSource\s+sleepSlotOccupancy/);
+  assert.match(desktop.diagnosticText,/animalMoveAway/,'current probe must expose Animal self-displacement candidate or its rejection row');
   assert.match(desktop.diagnosticText,/carryOccupant/,'current probe must expose carry candidate or its rejection row');
   assert.ok(desktop.structuredDetails>=4,'large structured Debug values must be available through collapsible details');
   assert.equal(desktop.openStructuredDetails,0,'raw structured Debug values should be collapsed by default');

@@ -7,8 +7,10 @@ const css=read('styles/observability.css');
 const index=read('index.html');
 const controls=read('src/ui/observability-controls.js');
 
-assert.match(source,/11\.48\.1-debug-inspector-sleep-perception-approach/,'Debug Inspector diagnostics needs an explicit module marker for the preferred-Slot approach projection');
+assert.match(source,/11\.57\.0-debug-inspector-sleep-animal-resolution/,'Debug Inspector diagnostics marker must track the current Sleep conflict projection contract');
 for(const view of ['overview','decision','execution','world','perception','social','all'])assert.ok(source.includes(`['${view}'`)||source.includes(`,'${view}'`),`missing Debug Inspector view: ${view}`);
+assert.ok(source.includes("'animalMoveAway'"),'Sleep conflict diagnostics must include the Animal self-displacement candidate');
+assert.match(source,/departurePending/,'Animal move-away rejection projection must distinguish departure already in progress');
 assert.match(source,/let activeView='all'/,'complete existing Debug projection must remain the default view');
 assert.match(source,/Historical \/ adopted evidence/,'historical evidence must be explicitly labeled');
 assert.match(source,/Current-derived probe/,'live re-evaluation must be explicitly labeled current-derived');
