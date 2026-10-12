@@ -1,11 +1,11 @@
 (() => {
   const E=window.SimEngine,SP=window.SimSpatial,U=window.SimUsage,SC=window.SimSleepConflict,AC=window.SimAgentCarry,UI=window.SimUI;
   if(!E?.intentLabel||!SP||!U||!SC||!AC||typeof document==='undefined')return;
-  const DEBUG_VERSION='11.48.1-debug-inspector-sleep-perception-approach';
+  const DEBUG_VERSION='11.57.0-debug-inspector-sleep-animal-resolution';
   const VIEW_DEFS=Object.freeze([
     ['overview','Overview'],['decision','Decision / Intent'],['execution','Execution / Physical'],['world','World / Spatial'],['perception','Perception / Memory'],['social','Social / Affect'],['all','All']
   ]);
-  const CANDIDATE_KINDS=Object.freeze(['alternate','wait','attention','requestYield','driveAway','requestCarryCooperation','carryOccupant']);
+  const CANDIDATE_KINDS=Object.freeze(['alternate','wait','attention','requestYield','driveAway','animalMoveAway','requestCarryCooperation','carryOccupant']);
   const CATEGORY_SELECTORS=Object.freeze({
     decision:['[data-v1121-intent]','[data-debug-sleep-conflict]'],
     execution:['[data-v1160-physical-debug]','[data-v1190-locomotion-debug]'],
@@ -50,6 +50,13 @@
     if(kind==='wait')return 'resolver 未形成 wait candidate';
     if(kind==='attention')return observation?.observable?'resolver 未形成 attention candidate':reasonLabel(observation?.reason||'target-unobserved');
     if(kind==='requestYield'||kind==='driveAway')return !observation?.observable?reasonLabel(observation?.reason||'target-unobserved'):observation.observedAgentKind!=='human'?'只對已觀察的 Human occupant 形成':'resolver 未形成此 candidate';
+    if(kind==='animalMoveAway'){
+      if(!observation?.observable)return reasonLabel(observation?.reason||'target-unobserved');
+      if(observation.observedAgentKind!=='animal')return '只對已觀察的 Animal occupant 形成';
+      if(observation.observedActionKind==='sleep'&&observation.observedPosture==='lying')return '睡眠中的 Animal 先比較 wake / sleeping carry，不形成 awake move-away';
+      if(evaluation?.signals?.departurePending)return 'Animal 已開始自行離開，等待實際釋放 Slot';
+      return 'resolver 未形成 Animal move-away candidate';
+    }
     if(kind==='requestCarryCooperation'){
       if(!observation?.observable)return reasonLabel(observation?.reason||'target-unobserved');
       if(!['human','animal'].includes(observation.observedAgentKind))return reasonLabel('observed-target-kind-unsupported');
