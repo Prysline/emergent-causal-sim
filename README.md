@@ -2,11 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.57.0-sleep-animal-conflict`。
+目前 runtime marker：`11.58.0-object-containment`。
 
-Current release 修正 preferred Sleep Slot 的 Human / Animal resolution policy：wake success 與實際 Slot release 分離，同一 sleep conflict episode 會依「wake 後 occupancy 持續」等因果結果抑制重複喚醒，而不是使用 retry counter；awake Animal 的 move-away interaction 會先經可觀察 World Bid，再由 Animal 自己形成 departure Intent / Movement Action。Sleeping Animal relocation candidate 僅使用 requester 可取得的 observation、公開 embodiment contract、canonical Slot / Physical legality、objective sleep quality 與 relocation cost，不讀 occupant-private Usage preference 或 hidden instance physical state。Generic Deliberation / Decision Evidence、Social Bid、Agent Carry、Physical、Spatial 與 Furniture 各自既有 contract 未因本 release 假升版。
+Current release 建立 Object containment v1：Object 以 `containedBy` 保存唯一 canonical containment relation，Furniture Definition 以 `objectContainment:true` 宣告 capability；Contained Object 不保存自己的 `position`，Spatial 由 containing Furniture 推導 effective location。第一個 consumer 是 Bookshelf，提供最基本 `Held ↔ Contained` lifecycle 與必要 Editor / Presentation projection；不加入 autonomous storage policy、nested containment、capacity / packing 或 generic storage framework。
 
-Direct Object Unification 的 current contract 維持不變：所有具體 physical item 只存在於 canonical `entities.objects / state.objects`；Resource Container 以 Object 上的 `resourceContainer:true` capability 表達。`Agent.held` 仍是唯一 held physical Object relation，ordinary Object 與 Resource-container Object 共用 generic Object handling / Physical traversal / intentional nearby-placement lifecycle；既有 bulk food 仍暫時存在 Resource-container Object 的 `contents.food`，Object containment / bookshelf 與 Food Object migration 都不屬本 release。
+Object containment v1 建立 Object-side `containedBy: furnitureId` canonical relation；第一代只允許 `objectContainment:true` Furniture target，Bookshelf 是第一個 consumer。Held / Contained / Supported / Free 為互斥的 derived location classification；Contained Object 不保存自己的 `position`，effective location 由 Spatial 經 Furniture 推導，Furniture 不保存反向 canonical `contents[]`。`Held ↔ Contained` 只提供底層 canonical lifecycle，不加入 housekeeping / habit / autonomous storage policy；既有 bulk food / Resource Container 語意維持不變。
 
 ## Current authority navigation
 
@@ -24,7 +24,7 @@ Direct Object Unification 的 current contract 維持不變：所有具體 physi
 
 ## Current subsystem boundary index
 
-- **Object Domain**：具體 physical item 的 canonical identity 只在 `state.objects`；`resourceContainer:true` 是可組合 capability，不是平行 entity taxonomy。Generic physical handling 由 `SimObjectHandling` 持有，Resources 只消費 Resource-container capability。
+- **Object Domain**：具體 physical item 的 canonical identity 只在 `state.objects`；`resourceContainer:true` 與 Furniture-side `objectContainment:true` 都是可組合 capability，不建立平行 entity taxonomy。Object containment 的 canonical relation 只在 child Object 的 `containedBy`；Furniture 的 reverse contents 只能投影。Generic physical handling 由 `SimObjectHandling` 持有，Resources 只消費 Resource-container capability。
 - **Relationship Foundation**：Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分開保存。**Relationship → Responder Bias** 只讓 responder decision 消費自己的 canonical relationship，不建立 shared pair score。
 - **Physical Profile Foundation**：Agent physical profile 是 body / locomotion capability authority；`MovementEnvelope` / `PoseEnvelope` 由 canonical profile 即時計算，不保存第二份 geometry cache。
 - **Passage Profile**：edge / opening geometry 由 Spatial / Passage authority 即時派生；不把 traversal feasibility 寫回 Furniture 或 Tile。

@@ -16,7 +16,7 @@ E.reset(20260911);
   assert.equal(st.version,globalThis.SimRelease.VERSION);
   assert.equal(E.VERSION,globalThis.SimRelease.VERSION);
   assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
-  assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v1');
+  assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v2-containment');
 
   const tray=st.objects.mealTray,plateA=st.objects.plateA,plateB=st.objects.plateB,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
   for(const affordance of ['serve','eatFrom','deposit','receive'])assert.equal(tray.interactions[affordance]?.mode,'reach',`mealTray ${affordance} 必須使用物件局部 reach`);

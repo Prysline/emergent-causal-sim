@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.57.0-sleep-animal-conflict`。
+目前 overall runtime marker：`11.58.0-object-containment`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -25,7 +25,7 @@ Subsystem marker只在**自己的 contract**改變時前進；overall release �
 Current relevant markers：
 
 - Nearby Placement：`nearby-placement-v2-object-release`
-- Pickup Interaction Geometry：`pickup-interaction-v1`
+- Pickup Interaction Geometry：`pickup-interaction-v2-containment`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Mental Regulation：`mental-regulation-v4`
@@ -46,12 +46,14 @@ Current relevant markers：
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v14`
-- Furniture Catalog：`furniture-definitions-v12`
+- World Authoring：`world-authoring-v15`
+- Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
 
-`11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
+`11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-object-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
+
+前一個 `11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 
 - `wake success` 與 `occupancy conflict resolved` 明確分離。同一 requester Sleep Decision + preferred Slot + observed occupant episode 內，wake 後同一 occupant 仍占用會留下 canonical `sleepSlotConflictOutcome` World Event；若 occupant 再次睡著，下一輪 ranking 會把這個因果結果當成 repeat-wake penalty，而不是把它視為全新的 sleeping conflict。
 - escalation 依 outcome，不保存 `retryCount`。目前直接納入的 outcome 包含 wait expired + same occupant persists、wake succeeded + occupancy persists，以及 Animal move-away interaction 已被感知但尚未開始離開；historical evidence 可以保留，但 active applicability 受 current Sleep Decision / Slot / observed occupant identity 約束。

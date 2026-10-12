@@ -27,8 +27,14 @@
     const supportedCollections=[['object',st?.objects||{}]];
     for(const [entityType,collection] of supportedCollections)for(const entity of Object.values(collection)){
       const holder=SP.holderOf(st,entity.id);
-      if(holder&&entity.supportId){
-        add('held_object_support_conflict',`${entity.name||entity.id} 同時被 ${holder.id} 持有且仍宣告 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,holderId:holder.id,supportId:entity.supportId});
+      if(holder&&entity.supportId)add('held_object_support_conflict',`${entity.name||entity.id} 同時被 ${holder.id} 持有且仍宣告 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,holderId:holder.id,supportId:entity.supportId});
+      if(holder&&entity.containedBy)add('held_object_containment_conflict',`${entity.name||entity.id} 同時被 ${holder.id} 持有且仍宣告 containedBy=${entity.containedBy}。`,{entityType,entityId:entity.id,holderId:holder.id,containedBy:entity.containedBy});
+      if(entity.containedBy&&entity.supportId)add('contained_object_support_conflict',`${entity.name||entity.id} 同時宣告 containedBy=${entity.containedBy} 與 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,containedBy:entity.containedBy,supportId:entity.supportId});
+      if(entity.containedBy&&entity.position)add('contained_object_position_conflict',`${entity.name||entity.id} 已被收納，不能同時保留自己的 canonical position。`,{entityType,entityId:entity.id,containedBy:entity.containedBy});
+      if(entity.containedBy){
+        const container=st.furniture?.[entity.containedBy];
+        if(!container)add('contained_object_furniture_missing',`${entity.name||entity.id} 的 containedBy=${entity.containedBy} 找不到 Furniture。`,{entityType,entityId:entity.id,containedBy:entity.containedBy});
+        else if(container.objectContainment!==true)add('contained_object_capability_missing',`${container.name||entity.containedBy} 不支援 Object containment。`,{entityType,entityId:entity.id,containedBy:entity.containedBy});
         continue;
       }
       if(!entity.position||holder)continue;

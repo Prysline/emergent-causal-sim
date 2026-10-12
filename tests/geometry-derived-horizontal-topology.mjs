@@ -15,10 +15,10 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v14');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v12');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v14');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v12');
+assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v13');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v13');
 const resolvedTable=A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable);
 assert.equal(resolvedTable.spatial.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
 assert.equal(resolvedTable.spatial.surfaces.find(surface=>surface.id==='diningTable:surface')?.cells.length,4,'horizontal topology fixture must consume the canonical derived Surface collection');

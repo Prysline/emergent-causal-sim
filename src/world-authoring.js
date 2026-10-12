@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v14';
+  const VERSION='world-authoring-v15';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -379,7 +379,16 @@
         if(!Array.isArray(affordances)||affordances.some(value=>typeof value!=='string'||!value.trim()))errors.push(authoringIssue('authoring_object_affordances_invalid',`${basePath}.affordances`,'Object affordances must be an array of non-empty strings when provided.'));
         else if(new Set(affordances).size!==affordances.length)errors.push(authoringIssue('authoring_object_affordances_duplicate',`${basePath}.affordances`,'Object affordances must not contain duplicates.'));
       }
-      if(!object.position)errors.push(authoringIssue('authoring_object_position_missing',`${basePath}.position`,'Object must define a canonical position.'));
+      if(object.containedBy!==undefined){
+        if(typeof object.containedBy!=='string'||!object.containedBy.trim())errors.push(authoringIssue('authoring_object_contained_by_invalid',`${basePath}.containedBy`,'Object containedBy must be a non-empty Furniture id.'));
+        else{
+          const container=resolvedFurniture[object.containedBy];
+          if(!container)errors.push(authoringIssue('authoring_object_container_missing',`${basePath}.containedBy`,`Object containedBy ${object.containedBy} does not exist.`,{containedBy:object.containedBy}));
+          else if(container.objectContainment!==true)errors.push(authoringIssue('authoring_object_container_capability_missing',`${basePath}.containedBy`,`Furniture ${object.containedBy} does not support Object containment.`,{containedBy:object.containedBy}));
+        }
+        if(object.position!==undefined)errors.push(authoringIssue('authoring_contained_object_position_conflict',`${basePath}.position`,'Contained Object must not define its own canonical position.'));
+        if(object.supportId!==undefined)errors.push(authoringIssue('authoring_contained_object_support_conflict',`${basePath}.supportId`,'Contained Object must not also define supportId.'));
+      }else if(!object.position)errors.push(authoringIssue('authoring_object_position_missing',`${basePath}.position`,'Free / Supported Object must define a canonical position.'));
       else validatePosition(object.position,`${basePath}.position`);
       if(object.interactions!==undefined&&!isRecord(object.interactions))errors.push(authoringIssue('authoring_object_interactions_invalid',`${basePath}.interactions`,'Object interactions must be an object when provided.'));
       else for(const [affordance,rule] of Object.entries(object.interactions||{}))if(!isRecord(rule)||!['supportReach','reach','occupy'].includes(rule.mode))errors.push(authoringIssue('authoring_object_interaction_invalid',`${basePath}.interactions.${affordance}`,'Object interaction mode must be supportReach, reach, or occupy.'));
@@ -535,7 +544,7 @@
       }
     }
     for(const [key,object] of Object.entries(authoring.entities?.objects||{})){
-      if(object.portable!==false||object.supportId)continue;
+      if(object.portable!==false||object.supportId||object.containedBy)continue;
       const cell=at(object.position);if(!cell)continue;
       cell.staticBlocked=true;cell.blockedBy.push('object:'+(object.id||key));
     }

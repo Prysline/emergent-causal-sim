@@ -12,9 +12,9 @@ const M=globalThis.SimEditorAuthoringMutations;
 const O=globalThis.SimEditorOrdinaryObjectAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(A.VERSION,'world-authoring-v14');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v12');
-assert.equal(O.VERSION,'editor-ordinary-object-authoring-v2');
+assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v13');
+assert.equal(O.VERSION,'editor-ordinary-object-authoring-v3');
 assert.deepEqual(O.listTemplates().map(item=>item.id),['readable-book']);
 assert.equal(O.getTemplate('missing-template'),null);
 

@@ -65,12 +65,12 @@
     if(!a||!objectId||!object)return null;
     const placement=bestNearbySupportPlacement(st,a);
     if(placement){
-      object.position={...placement.node};object.supportId=placement.supportId;a.held=null;
+      object.position={...placement.node};object.supportId=placement.supportId;delete object.containedBy;a.held=null;
       return Object.freeze({kind:'surface',objectId,supportId:placement.supportId,surfaceId:placement.surfaceId,node:Object.freeze({...placement.node})});
     }
     const actorNode=SP.nodeForAgent(st,a),floorNode=actorNode&&SP.normalizeNode(st,{x:actorNode.x,y:actorNode.y,...(Number.isFinite(actorNode.z)&&actorNode.z!==0?{z:actorNode.z}:{})},'floor');
     if(!floorNode)return null;
-    object.position={...floorNode};delete object.supportId;a.held=null;
+    object.position={...floorNode};delete object.supportId;delete object.containedBy;a.held=null;
     return Object.freeze({kind:'floor',objectId,supportId:null,surfaceId:'floor',node:Object.freeze({...floorNode})});
   }
 

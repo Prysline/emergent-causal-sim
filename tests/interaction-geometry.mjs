@@ -13,7 +13,7 @@ E.reset(20260911);
 const st=E.getState(),a=st.agents.zhen;
 assert.equal(st.version,globalThis.SimRelease.VERSION);
 assert.equal(st.interactionModel,undefined);
-assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v1');
+assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v2-containment');
 assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v2');
 
 assert.equal(SP.nodeWalkable(st,floor(st,4,2),a),false,'reduced profile must still apply shared Human walk envelope to chair geometry');

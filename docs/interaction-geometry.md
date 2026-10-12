@@ -101,7 +101,16 @@ ordinary floor exact target（例如清理某格地板）不是 interaction targ
 
 因此 2×2 桌面不同 cell 上的物件可以有不同合法 contact stance；「同一張桌」本身不足以證明全部都可從任一桌邊取得。
 
-### Support transition
+### Contained pickup
+
+當 Object 以 `containedBy` 指向 `objectContainment:true` Furniture 時：
+
+1. Object 自己不保存 canonical `position`；effective world location 由 Spatial 經 containing Furniture 推導。
+2. `pickup` 直接重用 containing Furniture 已有的 canonical Interaction Geometry，不新增 Bookshelf 專用 access geometry，也不以 Furniture entity origin 當 interaction stance。
+3. 非 `pickup` Object affordance 在 Contained 狀態不可直接使用；例如 readable book 必須先 `Contained → Held` 取出，才能再依正常 Object interaction contract 使用 `read`。
+4. `containedBy` 與 `Agent.held / supportId` 互斥；transition 完成後不得留下重疊 relation。
+
+### Support / containment transition
 
 `supportId` 被建立／移除或 object actual position 改變後，下次 geometry query 直接依新的 canonical state重算：
 

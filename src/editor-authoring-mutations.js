@@ -134,6 +134,7 @@
     const blockers=[];
     for(const [id,object] of Object.entries(authoring.entities?.objects||{})){
       if(object.supportId===furnitureId)blockers.push({ownerType:'object',ownerId:id,ownerName:object.name||id,referenceKind:'supportId',referenceValue:furnitureId});
+      if(object.containedBy===furnitureId)blockers.push({ownerType:'object',ownerId:id,ownerName:object.name||id,referenceKind:'containedBy',referenceValue:furnitureId});
     }
     for(const relation of authoring.usageAssignments||[]){
       const target=relation?.target;
