@@ -42,6 +42,7 @@ Current relevant markers：
 - Spatial Passage：`11.39.1-surface-boundary-transition`
 - Contact：`11.32.0-contact-slot-corner`
 - Spatial Identity：`11.22.0-spatial-z-identity`
+- Spatial Observability：`11.58.0-spatial-containment-observability`
 - Dynamic Congestion：`11.31.0-crowding-8-direction`
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
@@ -51,7 +52,7 @@ Current relevant markers：
 
 ## Current release impact
 
-`11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-object-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
+`11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-spatial-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
 
 前一個 `11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 
@@ -63,7 +64,7 @@ Current relevant markers：
 
 Version impact：overall / Presentation → `11.57.0-sleep-animal-conflict`；Sleep Slot Conflict own marker → `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 維持 `11.48.1-sleep-perception-approach`；Social Bid、Agent Carry、Physical、Spatial、Furniture、Usage Preference 與 Embodiment Capabilities 都重用既有 contract，不為本 release 假升版。Sleep own marker 與 overall literal 刻意分離，以維持 `src/release.js` 對 current overall marker 的唯一 ownership。
 
-前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。本 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
+前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。該 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 
 詳細跨 subsystem 語意見 [`architecture.md`](architecture.md)。
 
