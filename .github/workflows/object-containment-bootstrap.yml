@@ -1,0 +1,45 @@
+name: Object containment bootstrap
+
+on:
+  push:
+    branches: [feature/object-containment-v1]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: object-containment-bootstrap
+  cancel-in-progress: true
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply approved containment patch
+        run: python tools/apply_object_containment.py
+      - name: Focused Node verification
+        run: |
+          node tests/check-source-syntax.mjs
+          node tests/object-containment.mjs
+          node tests/interaction-geometry.mjs
+          node tests/editor-authoring-mutations.mjs
+          node tests/world-authoring-foundation.mjs
+          node tests/editor-ordinary-object-authoring.mjs
+          node tests/spatial-observability.mjs
+          node tests/production-source-load-architecture.mjs
+          node tests/current-version-ownership.mjs
+          node tests/application-bootstrap-lifecycle.mjs
+          node tests/presentation-observability.mjs
+      - name: Commit verified feature changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Implement object containment v1"
+          git push origin HEAD:${GITHUB_REF_NAME}
