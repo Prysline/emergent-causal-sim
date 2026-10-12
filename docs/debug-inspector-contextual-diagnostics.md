@@ -4,7 +4,7 @@
 
 Debug Inspector remains a Presentation-only projection: it consumes canonical simulation state / Decision Evidence / current-derived queries and never becomes a truth owner. The current Sleep conflict release extends the existing preferred-Slot diagnostic so Animal self-displacement and its causal ranking evidence remain inspectable without creating parallel UI state.
 
-The overall runtime / `SimUI.PRESENTATION_VERSION` now follows `11.57.0-sleep-animal-conflict`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.57.0-debug-inspector-sleep-animal-resolution`.
+The overall runtime / `SimUI.PRESENTATION_VERSION` now follows `11.57.1-slot-approach-arrival`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker remains `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.57.0-debug-inspector-sleep-animal-resolution`; the Slot approach arrival correction changes shared Engine movement semantics but does not change Inspector-owned projection semantics.
 
 ## Debug views
 

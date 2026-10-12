@@ -56,13 +56,15 @@ Current relevant markers：
 
 前一個 `11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 
-- `wake success` 與 `occupancy conflict resolved` 明確分離。同一 requester Sleep Decision + preferred Slot + observed occupant episode 內，wake 後同一 occupant 仍占用會留下 canonical `sleepSlotConflictOutcome` World Event；若 occupant 再次睡著，下一輪 ranking 會把這個因果結果當成 repeat-wake penalty，而不是把它視為全新的 sleeping conflict。
-- escalation 依 outcome，不保存 `retryCount`。目前直接納入的 outcome 包含 wait expired + same occupant persists、wake succeeded + occupancy persists，以及 Animal move-away interaction 已被感知但尚未開始離開；historical evidence 可以保留，但 active applicability 受 current Sleep Decision / Slot / observed occupant identity 約束。
-- awake Animal 新增 `sleepSlotAnimalMoveAway` directed interaction：requester 只建立可觀察 World Bid；Animal 必須先取得自己的 observed Bid，再由 Animal 自己建立 `yieldSleepSlot` Intent 與 `wander` Movement Action。Sleep conflict 不直接改寫 Animal position；若 Animal 已開始 `wander`，requester 把它視為 departure pending，而不是拒絕或失敗。
-- sleeping relocation destination 只使用 requester-side observation、公開 Embodiment default、canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective sleep quality 與 requester accessibility / relocation cost。它不讀 occupant-private Usage habit / claim / preference，也不讀 target instance hidden mass / held / body geometry 來決定 candidate destination。
-- sleeping 不再直接替 generic attention / wake 增加正 utility；ranking 分別表達 wake disruption、social disruption、physical relocation disruption、placement quality 與 relocation cost。
+- `sleep`、`rest` 與 Human `meal` 仍先以 canonical `bestSlotApproachNode(..., objective:'traversalCost')` 選擇 chooser-time navigation witness；這個 winner 是 ephemeral derived result，不是跨 tick 唯一抵達真相。
+- Action execution 每 tick 以 current `slotApproachNodes()` 重新確認 target Slot 的合法 approach set。若 actor 已在其中任一 node，movement phase 直接轉入 `settle` / `sit`，不再為了較早選到的 stale witness 額外繞行。
+- same-tick semantics 保持原本兩階段：arrival tick 只改 phase；真正坐下／躺下在下一個 core tick進行，並重驗 activity capability、kind、Pose fit、availability / reservation 與 current Slot approach。
+- 沒有合法 approach 時仍不得 settle；Human meal 的 `standForMeal` fallback 不變。
+- 本 release 不改 Furniture Definition / Slot schema、`approachEdges`、Spatial / Route geometry、`bestSlotApproachNode()` ranking 或 Sleep preferred-Slot conflict policy。
 
-Version impact：overall / Presentation → `11.57.0-sleep-animal-conflict`；Sleep Slot Conflict own marker → `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 維持 `11.48.1-sleep-perception-approach`；Social Bid、Agent Carry、Physical、Spatial、Furniture、Usage Preference 與 Embodiment Capabilities 都重用既有 contract，不為本 release 假升版。Sleep own marker 與 overall literal 刻意分離，以維持 `src/release.js` 對 current overall marker 的唯一 ownership。
+Version impact：overall / Presentation → `11.57.1-slot-approach-arrival`。Sleep Slot Conflict own marker維持 `11.57.0-sleep-animal-resolution`；Generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`；Spatial Traversal / Route維持 `11.38.0-carried-handling-risk`。Action、Furniture、Locomotion、Contact、Usage Preference等 subsystem generation 都未改自身 contract，因此不為這個 shared Engine consumer correction 假升版。
+
+前一個 `11.57.0-sleep-animal-conflict` 的 Sleep preferred-Slot conflict contract 全部維持 current：wake success 與 occupancy resolution 仍分離；同一 requester Sleep Decision + preferred Slot + observed occupant episode 內以 `sleepSlotConflictOutcome` causal evidence 抑制 repeat wake，不保存 retry counter；awake Animal 的 move-away仍由 directed World Bid → Animal-owned observation → `yieldSleepSlot` Intent / `wander` Action完成，Sleep requester不直接改寫 Animal position；sleeping relocation ranking仍只讀 requester 可知 observation、公開 Embodiment defaults、canonical Slot legality、objective sleep quality與 requester relocation cost，不偷看 occupant-private Usage preference或 hidden instance physical truth。
 
 前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。該 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 

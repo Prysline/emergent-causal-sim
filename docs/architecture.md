@@ -57,6 +57,19 @@ Route consumer 必須區分：
 
 Navigation、target accessibility、ranking、replan 與 execution 必須消費同一 canonical movement / Interaction Geometry，不得用 entity coarse position 或 UI projection 取代 route target。
 
+### Slot-use arrival contract
+
+Furniture Slot 的 current legal approach truth 仍由 Spatial `slotApproachNodes()` 唯一持有；`bestSlotApproachNode(..., objective:'traversalCost')` 只是在 chooser / replanning 當下從同一候選集合選出的 ephemeral navigation witness，不是 persistent Slot arrival truth。
+
+對 `sleep`、`rest` 與 Human `meal`：
+
+- 尚未站上任何 current legal Slot approach 時，Action 可以繼續往 chooser-time winner 移動；
+- execution 若目前 actor node 已屬 target Slot 的 current `slotApproachNodes()`，movement phase立即停止追逐舊 witness並轉入 `settle` / `sit`；
+- arrival tick只轉 phase，真正坐下／躺下仍在下一個 core tick執行，維持既有 same-tick lifecycle；
+- settle / sit仍重驗 activity capability、`slotAllows`、Pose fit、availability / reservation 與 current approach；沒有合法 approach時不能 settle。
+
+這個 contract不把 Slot anchor當 ordinary floor route destination，也不改 Furniture-authored `approachEdges`、Spatial geometry、Route ranking或 persistent Agent position resolution。
+
 ### Locomotion Execution + Posture Transition
 
 Locomotion 持有 locomotion mode、posture transition burden、movement timing 與 execution。Route / Interaction witness 若要求 terminal mode / posture，execution 必須完成並驗證同一 witness；不能 ranking 時假設 kneeling/prone 成本、執行時卻略過 transition。
@@ -80,7 +93,7 @@ Sleeping 本身不是 wake utility bonus。Sleep conflict 把 `wakeDisruption`�
 
 Sleeping relocation candidate 保持 Agent Carry two-stage boundary：requester-time ranking只消費 requester 可知 observation 與公開 Embodiment defaults；candidate destination 使用 canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective `sleepQuality` 與 requester accessibility / relocation cost。不得讀 occupant-private Usage habit / claim / preference、hidden Need，或 target instance hidden mass / held / body geometry來替 candidate ranking 偷看 execution truth。真正建立 carry relation / placement 時仍由 Agent Carry / Spatial / Physical 以完整 World truth驗證。
 
-Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為這個 release 假升版。
+Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為 overall `11.57.1-slot-approach-arrival` 假升版。
 
 ## Object identity / Resource-container capability
 
