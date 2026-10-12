@@ -36,7 +36,7 @@ Current relevant markers：
 - Agent Carry：`11.46.0-sleep-carry-integration`
 - Social Bid：`11.47.0-social-bid-carry-cooperation`
 - Deliberation / Decision Evidence：`11.48.1-sleep-perception-approach`
-- Sleep Slot Conflict：`11.57.0-sleep-animal-conflict`
+- Sleep Slot Conflict：`11.57.0-sleep-animal-resolution`
 - Locomotion：`11.50.1-prone-transition-burden`
 - Spatial Traversal / Route：`11.38.0-carried-handling-risk`
 - Spatial Passage：`11.39.1-surface-boundary-transition`
@@ -59,7 +59,7 @@ Current relevant markers：
 - sleeping relocation destination 只使用 requester-side observation、公開 Embodiment default、canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective sleep quality 與 requester accessibility / relocation cost。它不讀 occupant-private Usage habit / claim / preference，也不讀 target instance hidden mass / held / body geometry 來決定 candidate destination。
 - sleeping 不再直接替 generic attention / wake 增加正 utility；ranking 分別表達 wake disruption、social disruption、physical relocation disruption、placement quality 與 relocation cost。
 
-Version impact：overall / Presentation → `11.57.0-sleep-animal-conflict`；Sleep Slot Conflict own marker → `11.57.0-sleep-animal-conflict`。Generic Deliberation / Decision Evidence schema 維持 `11.48.1-sleep-perception-approach`；Social Bid、Agent Carry、Physical、Spatial、Furniture、Usage Preference 與 Embodiment Capabilities 都重用既有 contract，不為本 release 假升版。
+Version impact：overall / Presentation → `11.57.0-sleep-animal-conflict`；Sleep Slot Conflict own marker → `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 維持 `11.48.1-sleep-perception-approach`；Social Bid、Agent Carry、Physical、Spatial、Furniture、Usage Preference 與 Embodiment Capabilities 都重用既有 contract，不為本 release 假升版。Sleep own marker 與 overall literal 刻意分離，以維持 `src/release.js` 對 current overall marker 的唯一 ownership。
 
 前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。本 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 
