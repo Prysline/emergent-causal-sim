@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.57.1-slot-approach-arrival`。
+目前 overall runtime marker：`11.58.0-object-containment`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -25,7 +25,7 @@ Subsystem marker只在**自己的 contract**改變時前進；overall release �
 Current relevant markers：
 
 - Nearby Placement：`nearby-placement-v2-object-release`
-- Pickup Interaction Geometry：`pickup-interaction-v1`
+- Pickup Interaction Geometry：`pickup-interaction-v2-containment`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Mental Regulation：`mental-regulation-v4`
@@ -42,16 +42,19 @@ Current relevant markers：
 - Spatial Passage：`11.39.1-surface-boundary-transition`
 - Contact：`11.32.0-contact-slot-corner`
 - Spatial Identity：`11.22.0-spatial-z-identity`
+- Spatial Observability：`11.58.0-spatial-containment-observability`
 - Dynamic Congestion：`11.31.0-crowding-8-direction`
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v14`
-- Furniture Catalog：`furniture-definitions-v12`
+- World Authoring：`world-authoring-v15`
+- Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
 
-`11.57.1-slot-approach-arrival` 修正 Furniture Slot consumer 的 arrival correctness。
+`11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-spatial-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
+
+前一個 `11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 
 - `sleep`、`rest` 與 Human `meal` 仍先以 canonical `bestSlotApproachNode(..., objective:'traversalCost')` 選擇 chooser-time navigation witness；這個 winner 是 ephemeral derived result，不是跨 tick 唯一抵達真相。
 - Action execution 每 tick 以 current `slotApproachNodes()` 重新確認 target Slot 的合法 approach set。若 actor 已在其中任一 node，movement phase 直接轉入 `settle` / `sit`，不再為了較早選到的 stale witness 額外繞行。
@@ -63,7 +66,7 @@ Version impact：overall / Presentation → `11.57.1-slot-approach-arrival`。Sl
 
 前一個 `11.57.0-sleep-animal-conflict` 的 Sleep preferred-Slot conflict contract 全部維持 current：wake success 與 occupancy resolution 仍分離；同一 requester Sleep Decision + preferred Slot + observed occupant episode 內以 `sleepSlotConflictOutcome` causal evidence 抑制 repeat wake，不保存 retry counter；awake Animal 的 move-away仍由 directed World Bid → Animal-owned observation → `yieldSleepSlot` Intent / `wander` Action完成，Sleep requester不直接改寫 Animal position；sleeping relocation ranking仍只讀 requester 可知 observation、公開 Embodiment defaults、canonical Slot legality、objective sleep quality與 requester relocation cost，不偷看 occupant-private Usage preference或 hidden instance physical truth。
 
-前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。本 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
+前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。該 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 
 詳細跨 subsystem 語意見 [`architecture.md`](architecture.md)。
 

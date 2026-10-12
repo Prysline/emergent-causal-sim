@@ -306,7 +306,7 @@
 
   function sceneEntries(){
     const out=[];
-    const push=(type,id,entity,position,icon,label)=>out.push({type,id,entity,position:position||null,icon:icon||'•',label});
+    const push=(type,id,entity,position,icon,label,{mapVisible=true}={})=>out.push({type,id,entity,position:position||null,icon:icon||'•',label,mapVisible});
     for(const id of Object.keys(authored.furniture||{})){
       const furniture=resolvedFurniture(id);
       if(furniture)push('furniture',id,furniture,furniturePosition(furniture),furniture.icon||'▰','家具');
@@ -317,7 +317,10 @@
     }
     for(const [id,door] of Object.entries(authored.doors||{}))push('door',id,door,doorScenePosition(door),'🚪','結構 · 門');
     for(const [id,exit] of Object.entries(authored.exits||{}))push('exit',id,exit,exit.access,'↗','世界出口');
-    for(const [id,object] of Object.entries(authored.entities?.objects||{}))push('object',id,object,object.position,object.icon||'◈',object.resourceContainer===true?'物件 · Resource Container':'物件');
+    for(const [id,object] of Object.entries(authored.entities?.objects||{})){
+      const container=object.containedBy&&resolvedFurniture(object.containedBy),position=object.position||furniturePosition(container);
+      push('object',id,object,position,object.icon||'◈',object.resourceContainer===true?'物件 · Resource Container':'物件',{mapVisible:!object.containedBy});
+    }
     for(const [id,source] of Object.entries(authored.entities?.sources||{}))push('source',id,source,source.position,source.icon||'◆','物件 · 資源源頭');
     for(const [id,resident] of Object.entries(authored.residents||{}))push('resident',id,resident,residentPosition(resident),resident.icon||(resident.kind==='cat'?'🐈':'👤'),'居民');
     return out;
@@ -635,7 +638,7 @@
   }
 
   function nonFurnitureEntitiesAtCell(x,y,z){
-    return sceneEntries().filter(entry=>entry.type!=='furniture'&&entry.type!=='structure'&&entry.position?.x===x&&entry.position?.y===y&&(entry.position?.z??0)===z);
+    return sceneEntries().filter(entry=>entry.mapVisible!==false&&entry.type!=='furniture'&&entry.type!=='structure'&&entry.position?.x===x&&entry.position?.y===y&&(entry.position?.z??0)===z);
   }
 
   function structureEndpointsAtCell(x,y,z){
@@ -783,6 +786,7 @@
         if(entry.type==='structure')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>下端：<code>(${esc(entry.entity.lower?.x)}, ${esc(entry.entity.lower?.y)}, ${esc(entry.entity.lower?.z)})</code><br>上端：<code>(${esc(entry.entity.upper?.x)}, ${esc(entry.entity.upper?.y)}, ${esc(entry.entity.upper?.z)})</code>${entry.entity.clearanceWidth!==undefined?`<br>淨寬：${esc(entry.entity.clearanceWidth)}m`:''}${entry.entity.clearanceHeight!==undefined?`<br>淨高：${esc(entry.entity.clearanceHeight)}m`:''}`;
         if(entry.type==='exit')details+=`<br>類型：<code>${esc(entry.entity.kind)}</code><br>邊界：<code>${esc(entry.entity.boundary?.z)} / ${esc(entry.entity.boundary?.id)}</code>`;
         if((entry.type==='object'||entry.type==='source')&&entry.entity.supportId)details+=`<br>承載家具：<code>${esc(entry.entity.supportId)}</code>`;
+        if(entry.type==='object'&&entry.entity.containedBy)details+=`<br>收納家具：<code>${esc(entry.entity.containedBy)}</code>`;
         if(entry.type==='source'){
           const ports=(entry.entity.interactionPorts||[]).filter(port=>port?.position&&Array.isArray(port.affordances)&&port.affordances.includes('fill'));
           if(ports.length){

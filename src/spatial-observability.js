@@ -1,6 +1,6 @@
 (() => {
   const SP=window.SimSpatial;if(!SP?.normalizeNode)return;
-  const VERSION='11.11.1-spatial-observability';
+  const VERSION='11.58.0-spatial-containment-observability';
   const FLOOR='floor';
 
   function roomLabel(st,spaceId){return st.map?.rooms?.[spaceId]?.name||spaceId||'world';}
@@ -55,7 +55,7 @@
     current.lastPath=(a.action?.lastPath||[]).map(p=>nodeObservation(st,p,a)).filter(Boolean);
     return current;
   }
-  function objectObservation(st,id){const node=SP.objectNode(st,id);if(!node)return null;const out=nodeObservation(st,node,null);if(out){out.objectId=id;out.supportId=st.objects?.[id]?.supportId||null;}return out;}
+  function objectObservation(st,id){const node=SP.objectNode(st,id);if(!node)return null;const out=nodeObservation(st,node,null);if(out){out.objectId=id;out.supportId=st.objects?.[id]?.supportId||null;out.containedBy=st.objects?.[id]?.containedBy||null;}return out;}
   function furnitureObservation(st,id){
     const f=st.furniture?.[id];if(!f)return null;
     const surfaces=(f.spatial?.surfaces||[]).map(surface=>({

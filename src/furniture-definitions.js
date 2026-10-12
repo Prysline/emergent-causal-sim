@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v12';
+  const VERSION='furniture-definitions-v13';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -88,6 +88,22 @@
       spatial:{
         solids:[
           {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.90},faces:{top:{supportsBodyOccupancy:true,surfaceLabel:'高櫃頂面'}}}
+        ]
+      }
+    },
+    'bookshelf-basic':{
+      id:'bookshelf-basic',
+      name:'書櫃',
+      icon:'📚',
+      kind:'bookshelf',
+      orientationSemantics:'frame',
+      objectContainment:true,
+      footprint:[local(0,0)],
+      displayOffset:local(0,0),
+      slots:[],
+      spatial:{
+        solids:[
+          {key:'body',bounds:{x:.05,y:.05,z:0,width:.90,depth:.90,height:1.80}}
         ]
       }
     },
@@ -207,6 +223,7 @@
     if(Object.prototype.hasOwnProperty.call(definition,'blocksMovement'))throw new Error('Furniture Definition '+key+' must use spatial.solids instead of blocksMovement.');
     if(typeof definition.name!=='string'||!definition.name)throw new Error('Furniture Definition '+key+' requires name.');
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
+    for(const capability of ['supportsObjects','objectContainment'])if(definition[capability]!==undefined&&typeof definition[capability]!=='boolean')throw new Error('Furniture Definition '+key+' '+capability+' must be boolean when provided.');
     if(definition.orientationSemantics!==undefined&&!['facing','frame'].includes(definition.orientationSemantics))throw new Error('Furniture Definition '+key+' orientationSemantics must be facing / frame.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
     definition.footprint.forEach((position,index)=>assertLocalPosition(position,key+'.footprint['+index+']'));
@@ -487,6 +504,7 @@
       })
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
+    if(definition.objectContainment===true)resolved.objectContainment=true;
     if(definition.spatial){
       resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,layerZ:instance.origin.z,bounds:metricBoundsToWorld(definition,instance,solid.bounds)})),surfaces:[]};
       for(let index=0;index<definition.spatial.solids.length;index++){

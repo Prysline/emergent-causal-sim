@@ -5,7 +5,7 @@
   }
   if(!M?.moveObject)throw new Error('SimEditorAuthoringMutations must load before editor-ordinary-object-authoring.js.');
 
-  const VERSION='editor-ordinary-object-authoring-v2';
+  const VERSION='editor-ordinary-object-authoring-v3';
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
   const issue=(code,message,data={})=>({code,message,...data});
@@ -117,6 +117,7 @@
       const support=resolveSupportChoice(candidate,target,supportChoice);
       if(support.reject)return support;
       object.position=clone({...target,z:target.z??0});
+      delete object.containedBy;
       if(support.supportId)object.supportId=support.supportId;
       else delete object.supportId;
       return {meta:{operation:'moveOrdinaryObject',objectId,supportId:support.supportId||null,target:clone(object.position)}};

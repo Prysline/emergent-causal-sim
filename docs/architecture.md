@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.57.1-slot-approach-arrival`。
+目前 runtime marker：`11.58.0-object-containment`。
 
-本 release 修正 Furniture Slot-use movement arrival：chooser-time approach winner 只作 ephemeral navigation witness；`sleep`、`rest` 與 Human `meal` 在 execution 時以 current `slotApproachNodes()` 判斷是否已到任一合法 approach，不再把舊 winner 當成唯一抵達真相。Preferred Sleep Slot conflict、Direct Object Unification、Resource-container capability、generic Object handling 與 Object containment deferred boundary 都維持既有 current contract。
+本 release 建立 Object containment v1：Object-side `containedBy`、Furniture `objectContainment` capability、Spatial effective-location resolution、Held ↔ Contained canonical lifecycle，以及 Editor / Presentation projection；不加入 autonomous storage policy、nested containment 或 generic storage framework。Sleep conflict 與 Resource-container capability 維持既有 current contract。
 
 ## Truth boundaries
 
@@ -31,7 +31,7 @@ Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分�
 
 ## World / Spatial / Physical
 
-Current World Authoring = `world-authoring-v14`；Furniture Catalog = `furniture-definitions-v12`。
+Current World Authoring = `world-authoring-v15`；Furniture Catalog = `furniture-definitions-v13`。
 
 Current Spatial Node identity = `spaceId + surfaceId + x/y/z`。`z` 是 World spatial dimension；Furniture `topElevation` 是 local geometry，兩者不得混為同一真相。
 
@@ -113,6 +113,10 @@ Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Del
 holder exists
 → effective location follows holder
 
+else containedBy exists
+→ containedBy → objectContainment-capable Furniture
+→ effective location follows the containing Furniture; Object has no own position
+
 else supportId exists
 → supportId → Furniture → unique canonical support Surface
 → object.position retains x/y/z and selects actual Surface cell
@@ -121,7 +125,7 @@ else
 → object.position → structural Floor Spatial Node
 ```
 
-Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support Surface；0 或 >1 明確失敗。Normal held lifecycle 與 `supportId` 互斥；Furniture / Surface 不保存反向 `objects[]` mirror。
+Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support Surface；0 或 >1 明確失敗。`objectContainment:true` Furniture 可作為 Object `containedBy` target；Held / Contained / Supported / Free location relations 互斥，Furniture / Surface 不保存反向 `objects[]` / `contents[]` mirror。Contained pickup interaction 直接重用 containing Furniture 的 canonical Interaction Geometry；其他 Object affordance 必須先把物件取出。
 
 ### Intentional nearby placement v2
 

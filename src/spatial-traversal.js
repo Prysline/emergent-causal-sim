@@ -3,7 +3,7 @@
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
-  const PICKUP_INTERACTION_VERSION='pickup-interaction-v1';
+  const PICKUP_INTERACTION_VERSION='pickup-interaction-v2-containment';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -79,7 +79,7 @@
   function fixedFloorBlocker(st,p){
     const t=SP.tileByPos(st,p);if(!t||!t.walkable)return t?`terrain:${t.terrain}`:'out-of-bounds';
     if(floorGeometry(st,p).blocked)return `furniture:${t.furnitureIds?.[0]||'geometry'}`;
-    const fixedObject=Object.values(st.objects||{}).find(object=>object.portable===false&&!object.supportId&&localSame(baseObjectPosition(st,object.id),p));if(fixedObject)return `object:${fixedObject.id}`;
+    const fixedObject=Object.values(st.objects||{}).find(object=>object.portable===false&&!object.supportId&&!object.containedBy&&localSame(baseObjectPosition(st,object.id),p));if(fixedObject)return `object:${fixedObject.id}`;
     const source=Object.values(st.sources||{}).find(s=>s.blocksMovement!==false&&localSame(s.position,p));if(source)return `source:${source.id}`;
     return null;
   }
@@ -174,7 +174,9 @@
   }
   function objectNode(st,id){
     const holder=SP.holderOf(st,id);if(holder)return nodeForAgent(st,holder);
-    const obj=st.objects?.[id]||st.sources?.[id];if(!obj?.position)return null;
+    const obj=st.objects?.[id]||st.sources?.[id];if(!obj)return null;
+    if(obj.containedBy){const position=SP.furniturePosition?.(st,obj.containedBy);return position?normalizeNode(st,position,FLOOR):null;}
+    if(!obj.position)return null;
     let surfaceId=obj.position.surfaceId||FLOOR;
     if(obj?.supportId){const entry=supportSurfaceForFurniture(st,obj.supportId);if(entry)surfaceId=entry.surface.id;}
     return normalizeNode(st,obj.position,surfaceId);
@@ -704,6 +706,12 @@
       const entity=st.objects?.[target.id];if(!entity)return {mode:'none',positions:[],target,affordance};
       const holder=SP.holderOf(st,target.id),node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
+      if(entity.containedBy){
+        if(affordance!=='pickup')return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
+        const container=st.furniture?.[entity.containedBy];if(!container||container.objectContainment!==true)return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
+        const access=interactionGeometry(st,{kind:'furniture',id:entity.containedBy},agent,'pickup');
+        return {...access,mode:'furnitureReach',target,affordance,containedBy:entity.containedBy};
+      }
       if(affordance==='pickup'){
         if(node.surfaceId===FLOOR){
           const witness=groundPickupWitness(st,node,agent),witnesses=witness?[witness]:[];

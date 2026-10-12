@@ -17,7 +17,7 @@ const SP=globalThis.SimSpatial;
 const V=globalThis.SimValidator;
 const AC=globalThis.SimAgentCarry;
 
-assert.equal(A.VERSION,'world-authoring-v14');
+assert.equal(A.VERSION,'world-authoring-v15');
 assert.equal(O.VERSION,'object-handling-v1');
 assert.equal(R.VERSION,'11.56.0-resource-container-capability');
 assert.equal(P.VERSION,'11.56.0-physical-object-handling');

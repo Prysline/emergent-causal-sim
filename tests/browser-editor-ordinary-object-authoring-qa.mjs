@@ -12,7 +12,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorOrdinaryObjectAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.VERSION),'editor-ordinary-object-authoring-v2');
+assert.equal(await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.VERSION),'editor-ordinary-object-authoring-v3');
 
 const sidebarIa=await page.evaluate(()=>{
   const scene=document.querySelector('[data-sidebar-section="scene"]');
@@ -128,6 +128,29 @@ assert.equal(snapshot.exists,false);
 assert.equal(snapshot.markerCount,0);
 assert.equal(snapshot.sceneCount,0);
 assert.equal(snapshot.validation.ok,true,'remove must leave the canonical authored document valid');
+
+await page.evaluate(()=>{
+  const doc=window.SimWorldEditor.getDocument();
+  doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
+  doc.entities.objects.containedBook={id:'containedBook',name:'收納測試書',icon:'📘',portable:true,handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1},affordances:['read'],interactions:{read:{mode:'supportReach'}},containedBy:'bookshelfA'};
+  window.SimWorldEditor.loadDocument(doc);
+});
+await page.waitForSelector('[data-scene-type="object"][data-scene-id="containedBook"]');
+await page.click('[data-scene-type="object"][data-scene-id="containedBook"]');
+const containedSnapshot=await page.evaluate(()=>({
+  object:window.SimWorldEditor.getDocument().entities.objects.containedBook,
+  validation:window.SimWorldEditor.getSession().validation,
+  markerCount:document.querySelectorAll('[data-entity-type="object"][data-entity-id="containedBook"]').length,
+  sceneCount:document.querySelectorAll('[data-scene-type="object"][data-scene-id="containedBook"]').length,
+  inspector:document.querySelector('#selectionSummary')?.innerText||''
+}));
+assert.equal(containedSnapshot.object.position,undefined);
+assert.equal(containedSnapshot.object.containedBy,'bookshelfA');
+assert.equal(containedSnapshot.validation.ok,true);
+assert.equal(containedSnapshot.markerCount,0,'contained Object must not have an independent Editor map marker');
+assert.equal(containedSnapshot.sceneCount,1,'contained Object must remain discoverable in the Scene list');
+assert.match(containedSnapshot.inspector,/收納家具/);
+assert.match(containedSnapshot.inspector,/bookshelfA/);
 
 await page.screenshot({path:`${outDir}/ordinary-object-authoring.png`,fullPage:true});
 assert.deepEqual(consoleErrors,[],'Editor ordinary-object flow must not emit console errors');

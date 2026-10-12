@@ -21,7 +21,7 @@ const M=globalThis.SimEditorAuthoringMutations;
 const P=globalThis.SimEditorContainerSourceAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(A.VERSION,'world-authoring-v14');
+assert.equal(A.VERSION,'world-authoring-v15');
 assert.equal(P.VERSION,'editor-container-source-authoring-v2');
 assert.deepEqual(P.listContainerPresets().map(item=>item.id),[
   'ready-food','plate','food-pantry','basket','water-bucket','white-cup','blue-cup','alcohol-bottle'

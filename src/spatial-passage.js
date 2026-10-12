@@ -71,7 +71,7 @@
     const width=Math.max(Number(W.WIDTH)||0,maxX+1),height=Math.max(Number(W.HEIGHT)||0,maxY+1),cells={};
     for(let y=0;y<height;y++)for(let x=0;x<width;x++){
       const tile=SP.tileAt?.(st,x,y,z),id=x+','+y;
-      const fixedObject=Object.values(st.objects||{}).some(object=>object.portable===false&&!object.supportId&&zOf(object.position)===z&&object.position?.x===x&&object.position?.y===y);
+      const fixedObject=Object.values(st.objects||{}).some(object=>object.portable===false&&!object.supportId&&!object.containedBy&&zOf(object.position)===z&&object.position?.x===x&&object.position?.y===y);
       const fixedSource=Object.values(st.sources||{}).some(source=>source.blocksMovement!==false&&zOf(source.position)===z&&source.position?.x===x&&source.position?.y===y);
       cells[id]={id,x,y,z,structuralOpen:tile?.walkable===true,staticBlocked:fixedObject||fixedSource};
     }
