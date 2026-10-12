@@ -89,18 +89,17 @@ assert.ok(evaluation.candidates.some(x=>x.kind==='carryOccupant'),'hidden held s
 assert.equal(E.buildAction(requester,{id:'carryAgent',targetAgent:cat.id,targetPlacement:evaluation.candidates.find(x=>x.kind==='carryOccupant').targetPlacement,cooperative:false}),null,'execution-time canonical feasibility must reject hidden nested held state');
 cat.held=null;
 
-// C2: when no alternate sleep Slot remains, relocation may fall back to bounded floor while generic attention can still win utility.
+// C2: no-alternate relocation may fall back to bounded floor; sleeping affects disruption/eligibility, not a direct positive wake bonus.
 for(const furniture of Object.values(st.furniture||{}))for(const slot of furniture.slots||[])if(slot.id!=='bed:left')slot.canSleep=false;
 conflict=SC.selfSleepAssociations(st,requester).find(x=>x.slot.id==='bed:left');evaluation=SC.conflictCandidates(st,requester,conflict);
 const floorCarry=evaluation.candidates.find(x=>x.kind==='carryOccupant');assert.ok(floorCarry);assert.equal(floorCarry.targetPlacement.kind,'floor','no compatible nearby sleep Slot should fall back to bounded floor');
-armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);
-assert.ok(st.events.some(e=>e.data?.action==='attentionStimulus'),'sleeping Animal no-alternate case should still be able to select generic attention by utility');
-assert.equal(requester.action?.phase,'conflictWait','attention-only resolution must enter explicit reassessment instead of falling through to core sleep target failure');
-assert.equal(requester.action?.conflictWaitSource,'attentionReassessment');
-assert.equal(SP.slotAvailable(st,'bed:left',requester.id),false,'wake consequence must not imply Slot release');
-assert.equal(st.events.some(e=>['acceptSleepSlotYield','refuseSleepSlotYield'].includes(e.data?.action)),false,'Animal attention must not create Human yield response');
-E.tick();
-assert.equal(st.events.some(e=>e.data?.action==='abort'&&e.data?.actionKind==='sleep'),false,'attention reassessment must not collapse into the old no-sleep-position abort on the next core step');
+const sleepingAttention=evaluation.candidates.find(x=>x.kind==='attention');assert.ok(sleepingAttention);
+assert.equal(sleepingAttention.contributors.some(c=>c?.key==='occupantSleeping'&&c?.role==='modifier'&&(Number(c.value)||0)>0),false,'sleeping must not directly create a positive attention/wake utility bonus');
+assert.ok(sleepingAttention.contributors.some(c=>c?.kind==='wakeDisruption'&&Number(c.value)<0),'sleeping attention should expose explicit wake disruption');
+assert.ok(floorCarry.contributors.some(c=>c?.kind==='physicalRelocationDisruption'&&Number(c.value)<0),'sleeping carry should expose explicit physical relocation disruption');
+assert.ok(floorCarry.contributors.some(c=>c?.kind==='placementQuality'),'sleeping carry should expose objective placement quality separately from disruption');
+assert.equal(SP.slotAvailable(st,'bed:left',requester.id),false,'preferred occupied Slot must remain unavailable regardless of conflict ranking');
+assert.equal(st.events.some(e=>['acceptSleepSlotYield','refuseSleepSlotYield'].includes(e.data?.action)),false,'Animal ranking must not create Human yield response');
 
 // D: Human responder observes a World bid locally, decides locally, and owns its departure Intent/Action. Response insistence also consumes Usage-owned delta.
 E.reset(44004);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
@@ -192,7 +191,7 @@ E.tick();assert.equal(requester.action?.phase,'chooseSurface');assert.equal(requ
 E.tick();assert.equal(requester.action?.sleepTarget?.id,'bed:left','normal Usage ranking should select the now-legal preferred Slot after unseen occupancy clears');assert.equal(requester.conflictResolutionEvidence.length,0,'occupant leaving before observation must not create conflict history');
 
 noIssues('sleep preferred Slot conflict');
-assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.48.1-sleep-perception-approach','Sleep Slot Conflict must version the observation-gated conflict + preferred approach contract');
+assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.57.0-sleep-animal-resolution','Sleep Slot Conflict own policy version must advance independently of generic Deliberation');
 assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration');
 assert.equal(SC.OCCUPANCY_REASSESS_TICKS,1,'occupancy wait must re-enter Deliberation instead of encoding a fixed multi-tick patience contract');
 assert.equal(SC.OCCUPANCY_WAIT_TICKS,undefined,'sleep conflict must not expose a fixed occupancy patience contract');
