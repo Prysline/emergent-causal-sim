@@ -53,8 +53,8 @@ jobs:
       - name: Verify both workstreams survived the merge
         run: |
           grep -q '11.58.0-object-containment' src/release.js
-          grep -q 'Slot-use arrival contract' docs/architecture.md
-          grep -q 'current legal Slot approach' docs/interaction-geometry.md
+          grep -q 'slotApproachNodes()' docs/architecture.md
+          grep -q 'slotApproachNodes()' docs/interaction-geometry.md
           grep -q '11.57.1-slot-approach-arrival' docs/versioning.md
           grep -q '11.57.1-slot-approach-arrival' README.md
           node tests/check-source-syntax.mjs
