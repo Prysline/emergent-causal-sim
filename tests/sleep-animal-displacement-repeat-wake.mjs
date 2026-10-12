@@ -20,7 +20,7 @@ const nearSlot=(st,a,slotId)=>{const slot=SP.getSlot(st,slotId),node=SP.slotAppr
 const armSleep=(st,a)=>{a.needs.sleepNeed=90;a.needs.hunger=12;a.needs.thirst=12;a.needs.fatigue=25;a.action=E.buildAction(a,{id:'sleep'});E.ensureIntentForAction(st,a);E.adoptDecisionEvidence(st,a,a.action,{source:{type:'test',tick:st.tick,intentKind:'sleep'},contributors:E.decisionContributorsForAction(a,'sleep'),utility:E.baseUtilityForAction(a,'sleep')});return a.action;};
 const disableAlternateSleepSlots=st=>{for(const furniture of Object.values(st.furniture||{}))for(const slot of furniture.slots||[])if(slot.id!=='bed:left')slot.canSleep=false;};
 
-assert.equal(SC.VERSION,'11.57.0-sleep-animal-conflict');
+assert.equal(SC.VERSION,'11.57.0-sleep-animal-resolution');
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','generic Deliberation generation must not fake-bump for Sleep-only policy');
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence schema is reused unchanged');
 assert.equal(E.socialBidResponseContract('sleepSlotAnimalMoveAway')?.canonicalResponses,false,'Animal move-away is a perceived directed interaction, not a fabricated accept/refuse contract');
