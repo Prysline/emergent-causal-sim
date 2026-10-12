@@ -2,9 +2,9 @@
 
 ## Scope
 
-The original Debug Inspector slice changes Debug / Presentation observability only. The previous `11.48.1-sleep-perception-approach` runtime separately changes Sleep semantics; this document only describes how the existing Inspector projects that new boundary without becoming a truth owner.
+Debug Inspector remains a Presentation-only projection: it consumes canonical simulation state / Decision Evidence / current-derived queries and never becomes a truth owner. The current Sleep conflict release extends the existing preferred-Slot diagnostic so Animal self-displacement and its causal ranking evidence remain inspectable without creating parallel UI state.
 
-The overall runtime / `SimUI.PRESENTATION_VERSION` now follows `11.48.1-sleep-perception-approach`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.48.1-debug-inspector-sleep-perception-approach`.
+The overall runtime / `SimUI.PRESENTATION_VERSION` now follows `11.57.0-sleep-animal-conflict`. `UI_OBSERVABILITY_CONTROLS_VERSION` remains `11.48.0-debug-replay-p1`; Debug Replay is an independent presentation module. The Inspector-only module marker is `SimUI.DEBUG_INSPECTOR_DIAGNOSTICS_VERSION = 11.57.0-debug-inspector-sleep-animal-resolution`.
 
 ## Debug views
 
@@ -44,9 +44,11 @@ When the selected Agent is in a current sleep preferred-Slot approach or formal 
 - whether formal conflict has actually been established or the Action is still `approachPreferred`,
 - current `conflictWaitSource`, `conflictWaitStartedTick`, and `conflictWaitUntilTick`,
 - frozen conflict Decision Evidence when available,
-- current Sleep resolver candidate probe,
+- current Sleep resolver candidate probe, including `animalMoveAway`,
 - carry target / placement / cooperation context when returned by the resolver,
 - current candidate rejection diagnostics where existing query boundaries can answer them.
+
+`animalMoveAway` is rendered from the same `SimSleepConflict.conflictCandidates(...)` result as the other resolution candidates. If the observed occupant is not an awake Animal, or if the Animal has already started its own departure, the Inspector reports that current-derived reason instead of inventing a parallel cooperation / refusal state.
 
 Agent Carry candidate-time explanations consume `SimAgentCarry.candidateAttemptability(...)`. Full execution legality remains owned by Agent Carry and is not reimplemented here.
 
@@ -63,4 +65,4 @@ No new persisted Debug truth is introduced.
 
 ## Regression boundary
 
-Node coverage locks the presentation-only ownership, source ordering, labels, authority reuse, version boundaries, category-nav placement, second-layer sticky contract, collapsed structured values, and mobile single-column diagnostic layout. Browser coverage uses a controlled conflict fixture rather than a fixed emergent story, then checks desktop/mobile category switching, `All` completeness, shared-content-before-navigation ordering, sticky-layer offsets, contextual diagnostic visibility, historical/current labeling, validator cleanliness, internal category scrolling, and document/card overflow.
+Node coverage locks the presentation-only ownership, source ordering, labels, authority reuse, version boundaries, category-nav placement, second-layer sticky contract, collapsed structured values, Animal move-away candidate visibility, and mobile single-column diagnostic layout. Browser coverage uses a controlled conflict fixture rather than a fixed emergent story, then checks desktop/mobile category switching, `All` completeness, shared-content-before-navigation ordering, sticky-layer offsets, contextual diagnostic visibility, historical/current labeling, `animalMoveAway` visibility, validator cleanliness, internal category scrolling, and document/card overflow.
