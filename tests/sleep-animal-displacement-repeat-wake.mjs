@@ -21,8 +21,8 @@ const armSleep=(st,a)=>{a.needs.sleepNeed=90;a.needs.hunger=12;a.needs.thirst=12
 const disableAlternateSleepSlots=st=>{for(const furniture of Object.values(st.furniture||{}))for(const slot of furniture.slots||[])if(slot.id!=='bed:left')slot.canSleep=false;};
 
 assert.equal(SC.VERSION,'11.57.0-sleep-animal-conflict');
-assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.57.0-sleep-animal-conflict');
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.57.0-sleep-animal-conflict');
+assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','generic Deliberation generation must not fake-bump for Sleep-only policy');
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence schema is reused unchanged');
 assert.equal(E.socialBidResponseContract('sleepSlotAnimalMoveAway')?.canonicalResponses,false,'Animal move-away is a perceived directed interaction, not a fabricated accept/refuse contract');
 
 // A: relocation ranking consumes only public embodiment + canonical Slot/Physical/objective quality, not target-private Usage/hidden physical state.
