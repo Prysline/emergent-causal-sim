@@ -55,6 +55,11 @@ jobs:
           $patcher = Join-Path $env:RUNNER_TEMP 'apply_object_containment.py'
           [IO.File]::WriteAllBytes($patcher, $output.ToArray())
           $output.Dispose()
+          $patchText = Get-Content $patcher -Raw
+          $stale = '"    if(out){out.objectId=id;out.supportId=st.objects?.[id]?.supportId||null;}",'
+          $fresh = '"if(out){out.objectId=id;out.supportId=st.objects?.[id]?.supportId||null;}",'
+          if (-not $patchText.Contains($stale)) { throw 'expected stale spatial-observability anchor missing from patch payload' }
+          [IO.File]::WriteAllText($patcher, $patchText.Replace($stale,$fresh), [Text.UTF8Encoding]::new($false))
           if (Get-Command python -ErrorAction SilentlyContinue) {
             & python $patcher
           } elseif (Get-Command py -ErrorAction SilentlyContinue) {
