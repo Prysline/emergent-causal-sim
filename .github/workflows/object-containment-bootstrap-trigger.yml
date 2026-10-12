@@ -1,0 +1,73 @@
+name: Object containment bootstrap trigger
+
+on:
+  push:
+    branches: [feature/object-containment-v1]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: object-containment-bootstrap-trigger
+  cancel-in-progress: true
+
+jobs:
+  apply-and-push:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/object-containment-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Guard fresh base and bootstrap-only diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor a3892799fcf796d7a30f61444bbf9d21e0c55c80 HEAD
+          changed="$(git diff --name-only a3892799fcf796d7a30f61444bbf9d21e0c55c80..HEAD | sort)"
+          expected=$'.github/workflows/object-containment-bootstrap-trigger.yml\n.github/workflows/object-containment-bootstrap.yml'
+          test "$changed" = "$expected"
+      - name: Extract and apply Object containment patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYCODE'
+          import base64, gzip, re
+          from pathlib import Path
+          workflow=Path('.github/workflows/object-containment-bootstrap.yml').read_text()
+          match=re.search(r"payload = '([^']+)'",workflow)
+          if not match:
+            raise SystemExit('embedded patch payload missing')
+          Path('/tmp/apply_object_containment.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
+          PYCODE
+          python3 /tmp/apply_object_containment.py
+      - name: Focused validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tests/check-source-syntax.mjs
+          node tests/object-containment.mjs
+          node tests/interaction-geometry.mjs
+          node tests/world-authoring-foundation.mjs
+          node tests/world-authoring-editor-contract.mjs
+          node tests/editor-authoring-mutations.mjs
+          node tests/editor-ordinary-object-authoring.mjs
+          node tests/production-source-load-architecture.mjs
+          node tests/presentation-observability.mjs
+          if git diff --name-only a3892799fcf796d7a30f61444bbf9d21e0c55c80 -- docs/archive | grep -q .; then
+            echo 'Historical archive must not be rewritten.' >&2
+            exit 1
+          fi
+      - name: Commit clean feature tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/object-containment-bootstrap.yml .github/workflows/object-containment-bootstrap-trigger.yml
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Implement object containment v1"
+          git push origin HEAD:feature/object-containment-v1
