@@ -26,6 +26,14 @@ function addHuman(st,id,name,position){
   const a=structuredClone(st.agents.zhou);a.id=id;a.name=name;a.position={...position};a.posture={kind:'standing',slotId:null,furnitureId:null};a.action=null;a.activeIntent=null;a.offMap=false;a.episodicMemories=[];a.relationships={};a.observedSocialBids=[];st.agents[id]=a;return a;
 }
 function eventByAction(st,action){return st.events.find(e=>e.data?.action===action);}
+function distinctSlotApproaches(st,a,slotId){
+  const slot=SP.getSlot(st,slotId);assert.ok(slot,slotId+' must exist');
+  const approaches=SP.slotApproachNodes(st,slot,a,'walk');
+  assert.ok(approaches.length>=2,slotId+' must expose at least two current legal approaches for the stale-witness regression');
+  const current=approaches[0],stale=approaches.find(node=>!SP.nodeSame(st,node,current));
+  assert.ok(stale,slotId+' must expose two distinct legal approach nodes');
+  return {slot,current,stale};
+}
 
 // The fixture is the user-reported World Authoring scene. Its original v10 catalog pin was advanced to v11 only; furniture/resident geometry is unchanged.
 assert.equal(reportedWorld.furniture.chairNW.origin.x,3);
@@ -43,6 +51,56 @@ E.reset(20260911);
     assert.ok(SP.slotApproachNodes(st,slot,human,'walk').some(node=>SP.nodeSame(st,node,approach)),id+' winner must come from canonical slot approach nodes');
     assert.ok(Number.isFinite(SP.traversalCost(st,human,approach)),id+' approach must be route-reachable');
   }
+}
+
+// A chooser-time Sleep approach is only a navigation witness. If the cat is already on another current legal approach, it must settle there instead of walking around the double bed to the stale witness.
+E.reset(20260911);
+{
+  const st=E.getState(),cat=st.agents.orange;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;calm(cat);cat.needs.sleepNeed=80;
+  const {slot,current,stale}=distinctSlotApproaches(st,cat,'bed:left');
+  cat.position={...current};cat.posture={kind:'standing',slotId:null,furnitureId:null};
+  cat.action={kind:'sleep',phase:'move',started:st.tick,wait:0,sleepTicks:0,sleepTarget:{kind:'slot',id:slot.id,position:{...stale},slotPosition:{...slot.position},quality:1,posture:'lying'}};
+  const before={...cat.position};
+  E.tick();
+  assert.equal(cat.action?.phase,'settle','Sleep must stop chasing a stale witness once already at another current legal Slot approach');
+  assert.ok(SP.nodeSame(st,cat.position,before),'Sleep arrival recognition must not move the actor to the stale witness');
+  E.tick();
+  assert.equal(cat.action?.phase,'sleeping','Sleep must settle normally on the following core tick');
+  assert.equal(cat.posture?.slotId,slot.id);
+}
+
+// Rest uses the same current Slot-approach arrival contract and must not require equality with the chooser-time target.position.
+E.reset(20260911);
+{
+  const st=E.getState(),cat=st.agents.orange;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;calm(cat);cat.needs.fatigue=60;
+  const {slot,current,stale}=distinctSlotApproaches(st,cat,'bed:left');
+  cat.position={...current};cat.posture={kind:'standing',slotId:null,furnitureId:null};
+  cat.action={kind:'rest',phase:'move',started:st.tick,wait:0,restTicks:0,restTarget:{kind:'slot',id:slot.id,position:{...stale},slotPosition:{...slot.position},quality:1,posture:'lying'}};
+  const before={...cat.position};
+  E.tick();
+  assert.equal(cat.action?.phase,'settle','Rest must stop chasing a stale witness once already at another current legal Slot approach');
+  assert.ok(SP.nodeSame(st,cat.position,before),'Rest arrival recognition must not move the actor to the stale witness');
+  E.tick();
+  assert.equal(cat.action?.phase,'resting','Rest must settle normally on the following core tick');
+  assert.equal(cat.posture?.slotId,slot.id);
+}
+
+// Human meal seating likewise treats seatApproach as an ephemeral navigation witness, not the unique arrival truth.
+E.reset(20260911);
+{
+  const st=E.getState(),human=st.agents.zhen,plate=st.objects.plateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;calm(human);
+  const {slot,current,stale}=distinctSlotApproaches(st,human,'chairNW:seat');
+  delete plate.supportId;plate.position={...current};plate.contents={food:6};human.held=plate.id;
+  human.position={...current};human.posture={kind:'standing',slotId:null,furnitureId:null};
+  human.action={kind:'eat',phase:'toSeat',container:plate.id,slotId:slot.id,seatApproach:{...stale},started:st.tick,wait:0};
+  const before={...human.position};
+  E.tick();
+  assert.equal(human.action?.phase,'sit','Meal seating must stop chasing a stale seatApproach once already at another current legal approach');
+  assert.ok(SP.nodeSame(st,human.position,before),'Meal arrival recognition must not move the actor to the stale witness');
+  E.tick();
+  assert.equal(human.action?.phase,'eatingPlate','Meal seating must settle normally on the following core tick');
+  assert.equal(human.posture?.slotId,slot.id);
+  assert.ok(eventByAction(st,'sitForMeal'));
 }
 
 // Human meal seating must route to an outside Slot approach and settle instead of routing into the chair anchor.
