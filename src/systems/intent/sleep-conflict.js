@@ -4,7 +4,7 @@
   if(typeof E.observeAgentContext!=='function'||typeof E.performAttentionInteraction!=='function')throw new Error('sleep-conflict.js requires shared Agent-context observation + attention.');
   if(typeof E.registerSocialBidResponseContract!=='function'||typeof E.emitSocialBidResponse!=='function')throw new Error('sleep-conflict.js requires generic Social Bid responder contract.');
   if(typeof C.defaultPhysicalProfile!=='function')throw new Error('sleep-conflict.js requires public Embodiment Capability defaults.');
-  const VERSION='11.57.0-sleep-animal-conflict';
+  const VERSION='11.57.0-sleep-animal-resolution';
   const OCCUPANCY_REASSESS_TICKS=1,ATTENTION_REASSESS_TICKS=1,ANIMAL_MOVE_REASSESS_TICKS=2,RELOCATION_RADIUS=4;
   const REQUEST_STIMULUS=Object.freeze({kind:'sound',intensity:24}),DRIVE_STIMULUS=Object.freeze({kind:'sound',intensity:32});
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
