@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.57.0-sleep-animal-conflict`。
+目前 runtime marker：`11.57.1-slot-approach-arrival`。
 
-本 release 修正 preferred Sleep Slot conflict 的 Animal resolution / causal escalation；Direct Object Unification、Resource-container capability、generic Object handling 與 Object containment deferred boundary 都維持既有 current contract。
+本 release 修正 Furniture Slot-use movement arrival：chooser-time approach winner 只作 ephemeral navigation witness；`sleep`、`rest` 與 Human `meal` 在 execution 時以 current `slotApproachNodes()` 判斷是否已到任一合法 approach，不再把舊 winner 當成唯一抵達真相。Preferred Sleep Slot conflict、Direct Object Unification、Resource-container capability、generic Object handling 與 Object containment deferred boundary 都維持既有 current contract。
 
 ## Truth boundaries
 
@@ -57,6 +57,19 @@ Route consumer 必須區分：
 
 Navigation、target accessibility、ranking、replan 與 execution 必須消費同一 canonical movement / Interaction Geometry，不得用 entity coarse position 或 UI projection 取代 route target。
 
+### Slot-use arrival contract
+
+Furniture Slot 的 current legal approach truth 仍由 Spatial `slotApproachNodes()` 唯一持有；`bestSlotApproachNode(..., objective:'traversalCost')` 只是在 chooser / replanning 當下從同一候選集合選出的 ephemeral navigation witness，不是 persistent Slot arrival truth。
+
+對 `sleep`、`rest` 與 Human `meal`：
+
+- 尚未站上任何 current legal Slot approach 時，Action 可以繼續往 chooser-time winner 移動；
+- execution 若目前 actor node 已屬 target Slot 的 current `slotApproachNodes()`，movement phase立即停止追逐舊 witness並轉入 `settle` / `sit`；
+- arrival tick只轉 phase，真正坐下／躺下仍在下一個 core tick執行，維持既有 same-tick lifecycle；
+- settle / sit仍重驗 activity capability、`slotAllows`、Pose fit、availability / reservation 與 current approach；沒有合法 approach時不能 settle。
+
+這個 contract不把 Slot anchor當 ordinary floor route destination，也不改 Furniture-authored `approachEdges`、Spatial geometry、Route ranking或 persistent Agent position resolution。
+
 ### Locomotion Execution + Posture Transition
 
 Locomotion 持有 locomotion mode、posture transition burden、movement timing 與 execution。Route / Interaction witness 若要求 terminal mode / posture，execution 必須完成並驗證同一 witness；不能 ranking 時假設 kneeling/prone 成本、執行時卻略過 transition。
@@ -80,7 +93,7 @@ Sleeping 本身不是 wake utility bonus。Sleep conflict 把 `wakeDisruption`�
 
 Sleeping relocation candidate 保持 Agent Carry two-stage boundary：requester-time ranking只消費 requester 可知 observation 與公開 Embodiment defaults；candidate destination 使用 canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective `sleepQuality` 與 requester accessibility / relocation cost。不得讀 occupant-private Usage habit / claim / preference、hidden Need，或 target instance hidden mass / held / body geometry來替 candidate ranking 偷看 execution truth。真正建立 carry relation / placement 時仍由 Agent Carry / Spatial / Physical 以完整 World truth驗證。
 
-Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為這個 release 假升版。
+Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為 overall `11.57.1-slot-approach-arrival` 假升版。
 
 ## Object identity / Resource-container capability
 
@@ -117,7 +130,7 @@ Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support
 - 只考慮 `supportsObjects:true` 且能解析到唯一 canonical support Surface 的 Furniture。
 - v2 延續既有 placement algorithm，不建立新的 move-to-place action；候選必須是 Agent **目前所在 node 已可依既有 `supportContactNodes(...)` 接觸**的 Surface，避免把物件瞬移到幾步外的家具。
 - 同一目前可接觸 Surface 內，以 actor 與 Surface cell 的 locality 排序，之後用 stable `supportId / surfaceId / nodeKey` tie-break；不加入 personality、habit、home、housekeeping 或 furniture preference。
-- winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node 並保持無 `supportId`。
+- winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node並保持無 `supportId`。
 - accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
 
 Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享 intentional release placement。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。
@@ -138,5 +151,3 @@ Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replannin
 ## Lifecycle / detailed owners
 
 Runtime hook ordering：[`tick-pipeline.md`](tick-pipeline.md)。其餘 subsystem detailed authority 由各 current doc 與 regression 持有；本頁不複製其完整版本歷史。
-
-Historical snapshot：`docs/archive/architecture-through-11.53.md`。該頁不是 current authority。
