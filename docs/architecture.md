@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.56.0-object-unification`。
+目前 runtime marker：`11.57.0-sleep-animal-conflict`。
 
-本 release 完成 Direct Object Unification：canonical concrete physical-item truth 收斂到 `state.objects`，generic Object handling 與 Resources capability 分工明確化；Food Object migration、Object containment 與 Agent Carry relation 本身不在本 release 擴張。
+本 release 修正 preferred Sleep Slot conflict 的 Animal resolution / causal escalation；Direct Object Unification、Resource-container capability、generic Object handling 與 Object containment deferred boundary 都維持既有 current contract。
 
 ## Truth boundaries
 
@@ -65,6 +65,23 @@ Locomotion 持有 locomotion mode、posture transition burden、movement timing 
 
 Dynamic Congestion 只從 current occupancy / movement context 派生 next-edge delay / burden；不保存 persistent congestion truth，也不改寫 PassageProfile、Route topology 或 Agent-private preference。consumer 仍以當下 canonical route geometry 重算。
 
+## Preferred Sleep Slot conflict / Animal resolution
+
+Sleep conflict 不建立第二份 Spatial occupancy truth：preferred Slot 是否被占用仍由 canonical Slot occupancy / `sleepTargetExclusion(...)` 判定；occupied preferred Slot 不會被塞回 legal `sleepTargets()`。Occupant-specific resolution 仍必須先有 requester 的合法 Agent-context observation。
+
+Current resolution policy 分流：
+
+- Human 可以比較 alternate、bounded wait、attention / wake、`requestYield`、較強 nonphysical `driveAway`、sleeping carry，以及具有明確 cooperation evidence 的 awake carry。Human refusal 不解鎖 forced / resisted carry。
+- Animal sleeping 時可比較 wait / attention 與合法 sleeping carry；Animal awake 時額外有 `sleepSlotAnimalMoveAway` self-displacement path。requester 只建立 directed attention + observable World Bid，Animal 先由 Social Bid observation 取得自己的 evidence，再由 Animal 自己形成 `yieldSleepSlot` Intent 與 `wander` Movement Action。Sleep conflict 不直接改寫 Animal position。
+
+Wake 與 occupancy release 是兩件事。`attentionStimulus` / `sleepWake` 保持既有 World Event consequence；Sleep conflict 另外保存 scoped `sleepSlotConflictOutcome` event，記錄例如 `wakeSucceededOccupancyPersisted`、`waitExpiredOccupancyPersisted` 或 `animalMoveAwayPerceivedOccupancyPersisted`。這些 outcome 只在同一 requester Sleep Decision + preferred Slot + observed occupant identity 的 active episode 內影響 ranking；沒有 `retryCount`。新的 Sleep Decision、occupant identity 改變、preferred association 消失或 Slot 真正釋放後，舊 historical evidence 不再作為 active escalation truth。
+
+Sleeping 本身不是 wake utility bonus。Sleep conflict 把 `wakeDisruption`、`socialDisruption`、`physicalRelocationDisruption`、`placementQuality` 與 relocation cost 分開記為 contributors；wake succeeded but occupancy persisted 會降低同 episode 的 repeat-wake utility。若 Animal 已開始自己的 departure `wander`，requester 只看到 observable departure pending，等待實際 Slot release，不把「尚未走完」視為 refusal / shoo failure，也不立即切 carry。
+
+Sleeping relocation candidate 保持 Agent Carry two-stage boundary：requester-time ranking只消費 requester 可知 observation 與公開 Embodiment defaults；candidate destination 使用 canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective `sleepQuality` 與 requester accessibility / relocation cost。不得讀 occupant-private Usage habit / claim / preference、hidden Need，或 target instance hidden mass / held / body geometry來替 candidate ranking 偷看 execution truth。真正建立 carry relation / placement 時仍由 Agent Carry / Spatial / Physical 以完整 World truth驗證。
+
+Sleep Slot Conflict own marker = `11.57.0-sleep-animal-conflict`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為這個 release 假升版。
+
 ## Object identity / Resource-container capability
 
 所有 authored/runtime concrete physical item 只有一個 canonical collection：`entities.objects / state.objects`。不存在 production `entities.containers / state.containers` alias。
@@ -75,7 +92,7 @@ Dynamic Congestion 只從 current occupancy / movement context 派生 next-edge 
 - `Agent.held` 只保存一個 physical Object id。ordinary book 與 cup / basket 等 capability Object 共用同一 hold / effective-location / release relation。
 - ordinary Object 不因可攜就取得 Resource load / spill / transfer semantics；Resources 對非 Resource-container Object 回傳 no-container / zero Resource-derived consequence。
 - `state.agentCarries` 仍只描述 Agent 搬 Agent。
-- current bulk `contents.food` 是本 release 保留的 Resources compatibility representation；Food Object lifecycle 另行設計。
+- current bulk `contents.food` 是 Resources compatibility representation；Food Object lifecycle 另行設計。
 
 ## Object support / effective location
 
