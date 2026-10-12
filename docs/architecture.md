@@ -80,7 +80,7 @@ Sleeping 本身不是 wake utility bonus。Sleep conflict 把 `wakeDisruption`�
 
 Sleeping relocation candidate 保持 Agent Carry two-stage boundary：requester-time ranking只消費 requester 可知 observation 與公開 Embodiment defaults；candidate destination 使用 canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective `sleepQuality` 與 requester accessibility / relocation cost。不得讀 occupant-private Usage habit / claim / preference、hidden Need，或 target instance hidden mass / held / body geometry來替 candidate ranking 偷看 execution truth。真正建立 carry relation / placement 時仍由 Agent Carry / Spatial / Physical 以完整 World truth驗證。
 
-Sleep Slot Conflict own marker = `11.57.0-sleep-animal-conflict`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為這個 release 假升版。
+Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為這個 release 假升版。
 
 ## Object identity / Resource-container capability
 
