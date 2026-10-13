@@ -167,10 +167,17 @@ function ensureRuntimeDependencies(paths){
       const routineOwnerIndex=paths.indexOf('engine.js');
       paths.splice(routineOwnerIndex>=0?routineOwnerIndex:validationManifestIndex,0,'systems/daily-life/routine-state.js');
     }
+    if(!paths.includes('systems/daily-life/learned-habit-state.js')){
+      const learnedHabitOwnerIndex=paths.indexOf('engine.js');
+      const currentManifestIndex=paths.indexOf('validation/manifest.js');
+      paths.splice(learnedHabitOwnerIndex>=0?learnedHabitOwnerIndex:currentManifestIndex,0,'systems/daily-life/learned-habit-state.js');
+    }
     const resolvedManifestIndex=paths.indexOf('validation/manifest.js');
     if(!paths.includes('validation/rules/agent-carry.js'))paths.splice(resolvedManifestIndex,0,'validation/rules/agent-carry.js');
     const finalManifestIndex=paths.indexOf('validation/manifest.js');
     if(!paths.includes('validation/rules/daily-life-routine.js'))paths.splice(finalManifestIndex,0,'validation/rules/daily-life-routine.js');
+    const learnedHabitManifestIndex=paths.indexOf('validation/manifest.js');
+    if(!paths.includes('validation/rules/daily-life-learned-habit.js'))paths.splice(learnedHabitManifestIndex,0,'validation/rules/daily-life-learned-habit.js');
   }
   return paths;
 }

@@ -46,6 +46,18 @@ assert.ok(engineCore.indexOf('src/systems/agent-carry.js')<engineCore.indexOf('s
 assert.ok(engineCore.indexOf('src/systems/physical.js')<engineCore.indexOf('src/spatial/finalize.js'),'Physical initial-state registration must happen before the Spatial finalizer');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/engine.js'),'runtime profile must finalize initial state before Engine captures factories');
 
+const validationManifestProfile=runtimeProfilePaths([
+  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
+  'engine.js','validation/registry.js','validation/manifest.js'
+]);
+assert.ok(validationManifestProfile.includes('src/systems/daily-life/routine-state.js'),'validation-manifest runtime profiles must include the Daily Life Routine state owner');
+assert.ok(validationManifestProfile.includes('src/systems/daily-life/learned-habit-state.js'),'validation-manifest runtime profiles must include the Learned Habit state owner');
+assert.ok(validationManifestProfile.includes('src/validation/rules/agent-carry.js'),'validation-manifest runtime profiles must include the Agent Carry validator dependency');
+assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-routine.js'),'validation-manifest runtime profiles must include the Daily Life Routine validator dependency');
+assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-learned-habit.js'),'validation-manifest runtime profiles must include the Learned Habit validator dependency');
+assert.ok(validationManifestProfile.indexOf('src/systems/daily-life/learned-habit-state.js')<validationManifestProfile.indexOf('src/engine.js'),'Learned Habit state must register before Engine captures the initial-state factory');
+assert.ok(validationManifestProfile.indexOf('src/validation/rules/daily-life-learned-habit.js')<validationManifestProfile.indexOf('src/validation/manifest.js'),'Learned Habit validator must register before validator manifest finalization');
+
 const traversalOnlyInitialState=initialStateProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','spatial.js','spatial-traversal.js'
 ]);

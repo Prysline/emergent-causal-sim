@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.58.0-object-containment`。
+目前 runtime marker：`11.59.0-learned-habit`。
 
-Current release 建立 Object containment v1：Object 以 `containedBy` 保存唯一 canonical containment relation，Furniture Definition 以 `objectContainment:true` 宣告 capability；Contained Object 不保存自己的 `position`，Spatial 由 containing Furniture 推導 effective location。第一個 consumer 是 Bookshelf，提供最基本 `Held ↔ Contained` lifecycle 與必要 Editor / Presentation projection；不加入 autonomous storage policy、nested containment、capacity / packing 或 generic storage framework。
+Current release 建立 Daily Life Learned Habit v1：Agent 自己真正形成的 episodic experience 經 `episodicMemoryCreated` 與 bounded activity classifier 收斂為 `activityKind + daily-time-bucket` 的 Agent-private `learnedHabits`；第一版支援 `read / eat / talk`，以慢速 deterministic consolidation / decay 對既有合法 Decision Option 提供最多 `+10` 的 bounded evidence。Learned Habit 不建立候選、Action 或 Active Intent，不保存 exact Object / Furniture / Agent target identity，也不取代 Routine、Usage Habit、Need 或 Standing Responsibility。
+
+前一個 `11.58.0-object-containment` 建立 Object containment v1：Object 以 `containedBy` 保存唯一 canonical containment relation，Furniture Definition 以 `objectContainment:true` 宣告 capability；Contained Object 不保存自己的 `position`，Spatial 由 containing Furniture 推導 effective location。第一個 consumer 是 Bookshelf，提供最基本 `Held ↔ Contained` lifecycle 與必要 Editor / Presentation projection；不加入 autonomous storage policy、nested containment、capacity / packing 或 generic storage framework。
 
 Object containment v1 建立 Object-side `containedBy: furnitureId` canonical relation；第一代只允許 `objectContainment:true` Furniture target，Bookshelf 是第一個 consumer。Held / Contained / Supported / Free 為互斥的 derived location classification；Contained Object 不保存自己的 `position`，effective location 由 Spatial 經 Furniture 推導，Furniture 不保存反向 canonical `contents[]`。`Held ↔ Contained` 只提供底層 canonical lifecycle，不加入 housekeeping / habit / autonomous storage policy；既有 bulk food / Resource Container 語意維持不變。
 
@@ -19,6 +21,7 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 - [`docs/agent-carry-relocate.md`](docs/agent-carry-relocate.md)：Agent Carry
 - [`docs/mental-regulation.md`](docs/mental-regulation.md)：Mental Regulation
 - [`docs/daily-life-routine.md`](docs/daily-life-routine.md)：Daily Life Routine
+- [`docs/daily-life-learned-habit.md`](docs/daily-life-learned-habit.md)：Daily Life Learned Habit
 - [`docs/reading-activity.md`](docs/reading-activity.md)：Reading Activity
 - [`docs/development-workflow.md`](docs/development-workflow.md)、[`docs/pr-preflight.md`](docs/pr-preflight.md)：工程流程 / preflight
 
@@ -27,6 +30,7 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 ## Current subsystem boundary index
 
 - **Object Domain**：具體 physical item 的 canonical identity 只在 `state.objects`；`resourceContainer:true` 與 Furniture-side `objectContainment:true` 都是可組合 capability，不建立平行 entity taxonomy。Object containment 的 canonical relation 只在 child Object 的 `containedBy`；Furniture 的 reverse contents 只能投影。Generic physical handling 由 `SimObjectHandling` 持有，Resources 只消費 Resource-container capability。
+- **Daily Life Learned Habit**：`Agent.learnedHabits` 是由 actor 自己已形成的 private episodic experience 收斂出的 Activity-level 慢速慣性；v1 只保存 `activityKind + daily-time-bucket`，不保存 target identity，且只 enrich 已存在的合法 Decision Option。
 - **Relationship Foundation**：Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分開保存。**Relationship → Responder Bias** 只讓 responder decision 消費自己的 canonical relationship，不建立 shared pair score。
 - **Physical Profile Foundation**：Agent physical profile 是 body / locomotion capability authority；`MovementEnvelope` / `PoseEnvelope` 由 canonical profile 即時計算，不保存第二份 geometry cache。
 - **Passage Profile**：edge / opening geometry 由 Spatial / Passage authority 即時派生；不把 traversal feasibility 寫回 Furniture 或 Tile。

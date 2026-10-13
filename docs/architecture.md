@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.58.0-object-containment`。
+目前 runtime marker：`11.59.0-learned-habit`。
 
-本 release 建立 Object containment v1：Object-side `containedBy`、Furniture `objectContainment` capability、Spatial effective-location resolution、Held ↔ Contained canonical lifecycle，以及 Editor / Presentation projection；不加入 autonomous storage policy、nested containment 或 generic storage framework。Sleep conflict 與 Resource-container capability 維持既有 current contract。
+本 release 建立 Daily Life Learned Habit v1：actor 自己真正形成的 episodic experience 透過 bounded classifier 收斂為 Agent-private `learnedHabits`，第一版只學 `read / eat / talk` 的 `activityKind + daily-time-bucket`，再對既有合法 Decision Option 加上有上限、可追溯的 decision contributor。它不建立第二套 candidate / Action / Intent，不保存 exact target identity，也不改寫 Routine、Usage Habit、Memory 或 World truth。前一個 Object containment v1 contract 全部維持 current。
 
 ## Truth boundaries
 
@@ -12,6 +12,14 @@
 - World fact 不等於 Agent knowledge；跨 Agent 決策只能消費合法 observation / evidence。
 - Agent-private cognition / memory / affect / relationship 不直接改寫另一 Agent 的 private state。
 - `state.agentCarries` 與 generic physical-Object `Agent.held` 分離；Agent carry 不塞進 held Object relation，action / intent / observation / memory / relationship 不互相充當 mirror state。
+
+## Daily Life Learned Habit
+
+Learned Habit 的 canonical truth 是 Agent-private `agent.learnedHabits`。它回答「在某個 coarse temporal context，我通常傾向做哪類 Activity」，不回答「既然要做這件事，我習慣用哪個 target」；後者仍是 Usage Habit / target preference 的責任。
+
+形成路徑必須經過 actor 自己已建立的 episodic memory，再由 `memory.sourceEventId` 回看同一 canonical World Event 判斷是否跨過 realized-execution threshold。v1 僅支援 `read` completion、真正 `amount > 0` 的 `eat` consumption、以及 completed `talk` interaction；plan、approach、wait、abort、`eat phase:start` 與旁觀他人行為都不能增加自己的 Learned Habit。
+
+State 僅保存 `activityKind + daily-time-bucket + strength / count / last experience provenance`；不得保存 exact Object / Furniture / Agent target、position 或另一 Agent private state。Strength 使用 deterministic lazy decay + saturating gain；Decision integration 只在既有 core/provider option 已合法存在後追加 bounded `learnedHabit` contributor，不能建立 candidate、改 target、建立 Action / Active Intent 或繞過 feasibility。
 
 ## Resident Action / Intent / Explanation
 
