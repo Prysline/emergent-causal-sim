@@ -1,3 +1,5 @@
+> Current `11.59.0-learned-habit`: `episodicMemoryCreated` 新增 order 50 `dailyLifeLearnedHabit.consolidate`。Memory 已先建立 actor 自己的 canonical episodic projection；50 只沿 `sourceEventId` 判斷 `read / eat / talk` 是否跨過 v1 realized-execution threshold並更新 Agent-private Learned Habit，之後才進 Appraisal order 100。這使 Habit formation 不依賴「喜歡／不喜歡」評估，也不建立第二份 event truth。beforeTick / core / afterTick 的既有順序不變。
+
 > Previous `11.48.1-sleep-perception-approach`: Sleep preferred-Slot perception gating adds no runtime hook and does not change hook order or same-tick visibility. `approachPreferred` is a narrow existing `sleep` Action phase evaluated inside the normal core Action step. The existing beforeTick order 800 `intent.replan-preemption` carrying-state contract from `11.48.0-carrying-replanning` remains unchanged.
 
 > Previous `11.49.0-agent-facing-foundation`: Agent facing Slice A adds canonical authored/runtime orientation state only. It introduces no runtime hook, no hook-order change, and no same-tick perception snapshot semantics.
@@ -16,7 +18,7 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.53.0-mental-regulation-generation`。
+目前 runtime marker：`11.59.0-learned-habit`。
 
 Mental Regulation v4 新增明確 named-hook ordering：beforeTick 1200 `mentalRegulation.capture-execution` 只保存 execution-local snapshot；core tick 真正執行 Action；afterTick 50 `mentalRegulation.settle` 才依 actual realized execution 原子更新 canonical Needs。它不讓 baseline 或 relief 回寫已完成的同 tick deliberation / execution；Presentation observer 只會看到 settlement 後 state。
 
@@ -110,6 +112,8 @@ flowchart TD
     EVENT -. during core loop: enqueue .-> QUEUE[Deferred Core-event FIFO]
     QUEUE -. afterTick 500 flush .-> MEM
     MEM --> EMC[episodicMemoryCreated pipeline]
+    EMC --> H50[50 Learned Habit Consolidation]
+    H50 --> AP100[100+ Appraisal / Relationship / Affect]
     A600 -. non-core event: immediate observation .-> EMC
     A700 -. non-core event: immediate observation .-> EMC
 ```

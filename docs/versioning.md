@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.58.0-object-containment`。
+目前 overall runtime marker：`11.59.0-learned-habit`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -28,6 +28,7 @@ Current relevant markers：
 - Pickup Interaction Geometry：`pickup-interaction-v2-containment`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
+- Daily Life Learned Habit：`daily-life-learned-habit-v1`
 - Mental Regulation：`mental-regulation-v4`
 - Action / Human Social Response：`11.51.0-activity-concurrency`
 - Object Handling：`object-handling-v1`
@@ -52,7 +53,9 @@ Current relevant markers：
 
 ## Current release impact
 
-`11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-spatial-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
+`11.59.0-learned-habit` 建立 Daily Life Learned Habit v1：新增 Agent-private `learnedHabits` truth、`read / eat / talk` realized-experience classifier、`episodicMemoryCreated` order 50 consolidation 與既有合法 Decision Option 的 bounded score contribution。Daily Life Learned Habit own generation = `daily-life-learned-habit-v1`；Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`、Daily Life Routine 維持 `daily-life-routine-v1`、generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`、Runtime Hook Pipeline infrastructure 維持 `runtime-hook-pipeline-2`，因為這些 owner 的 public contract 未被假性換代。Learned Habit 不保存 exact target identity、不建立 candidate / Action / Active Intent，也不讓 infeasible Activity 變合法。
+
+前一個 `11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-spatial-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
 
 前一個 `11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 

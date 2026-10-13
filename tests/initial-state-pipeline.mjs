@@ -38,6 +38,7 @@ const EXPECTED_SCHEMA=[
   {id:'socialOutcomeMemory.schema',order:1300},
   {id:'mentalRegulation.schema',order:1400},
   {id:'dailyLifeRoutine.schema',order:1450},
+  {id:'dailyLifeLearnedHabit.schema',order:1475},
   {id:'relationship.schema',order:1500},
   {id:'agentCarry.schema',order:1550},
   {id:'physical.schema',order:1600},
@@ -71,10 +72,12 @@ for(const agent of Object.values(st.agents||{})){
   assert.ok(agent.affect&&agent.affect.valence===0&&agent.affect.activation===0&&agent.affect.frustration===0,`${agent.id}: neutral affect initialization parity`);
   assert.ok(agent.physical,`${agent.id}: physical profile initialization parity`);
   assert.ok(agent.routine&&Array.isArray(agent.routine.anchors),`${agent.id}: Agent-private Routine state must initialize explicitly`);
+  assert.deepEqual(agent.learnedHabits,{},`${agent.id}: Agent-private Learned Habit state must initialize explicitly`);
 }
 const humanRoutines=Object.values(st.agents||{}).filter(agent=>agent.kind==='human').map(agent=>agent.routine.anchors);
 assert.ok(humanRoutines.every(anchors=>anchors.length===1&&anchors[0].activityKind==='read'),'DAY 0 Human Routine must seed one minimal private read anchor');
 assert.equal(Object.prototype.hasOwnProperty.call(st,'routines'),false,'Routine must not create World-level personal schedule truth');
+assert.equal(Object.prototype.hasOwnProperty.call(st,'learnedHabits'),false,'Learned Habit must not create World-level personal habit truth');
 const pipelineDiningSurface=st.furniture?.diningTable?.spatial?.surfaces?.find(surface=>surface.id==='diningTable:surface');
 assert.ok(pipelineDiningSurface,'Furniture Definition resolution must provide canonical runtime Surface traversal geometry');
 assert.equal(st.agents?.zhen?.position?.surfaceId,'floor','Spatial finalizer must normalize persistent agent surface identity');

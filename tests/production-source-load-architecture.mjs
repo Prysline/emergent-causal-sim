@@ -183,7 +183,7 @@ const validatorRules=fs.readdirSync(validationRulesDir)
   .filter(name=>name.endsWith('.js'))
   .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.equal(validatorRules.length,21,'architecture guard must discover every semantic validator rule');
+assert.equal(validatorRules.length,22,'architecture guard must discover every semantic validator rule');
 for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
@@ -239,6 +239,8 @@ assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence own generation must not fake-bump for Agent facing foundation');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.57.0-sleep-animal-resolution','Sleep Slot Conflict must version the Animal self-displacement + outcome-based repeat-wake contract');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
+assert.equal(W.DAILY_LIFE_LEARNED_HABIT_SCHEMA_VERSION,'daily-life-learned-habit-v1');
+assert.equal(E.DAILY_LIFE_LEARNED_HABIT_VERSION,'daily-life-learned-habit-v1');
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
 assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless production prefix must be complete without Presentation observers');

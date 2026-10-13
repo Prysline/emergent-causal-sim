@@ -47,6 +47,7 @@ const EXPECTED_HOOKS={
     {id:'memoryRetention.normalize-reset',order:500}
   ],
   episodicMemoryCreated:[
+    {id:'dailyLifeLearnedHabit.consolidate',order:50},
     {id:'appraisal.base',order:100},
     {id:'appraisal.social-response',order:200},
     {id:'appraisal.human-social',order:300},
