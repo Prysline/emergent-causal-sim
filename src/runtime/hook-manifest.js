@@ -10,6 +10,7 @@
       {id:'humanSocial.prepare',order:300},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
+      {id:'activityContinuity.prepare-emergency-suspension',order:790},
       {id:'intent.replan-preemption',order:800},
       {id:'socialBid.prepare',order:900},
       {id:'intent.reconcile-before',order:1000},
