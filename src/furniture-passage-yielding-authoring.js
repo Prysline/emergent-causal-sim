@@ -91,7 +91,7 @@
   function parseAuthoringJSON(text){let parsed;try{parsed=JSON.parse(String(text));}catch(error){const wrapped=new Error('Invalid authoring JSON: '+error.message);wrapped.code='world_authoring_json_invalid';throw wrapped;}assertValidAuthoring(parsed);return canonicalizeAuthoring(parsed);}
   function resolveFurnitureInstance(instance){
     const resolved=Base.resolveFurnitureInstance(baseFurnitureInstance(instance)),contract=resolveFurniturePassageYieldingContract(instance);
-    if(contract)resolved.passageYielding=contract;
+    if(contract){resolved.definitionId=instance.definitionId;resolved.origin=clone(instance.origin);resolved.passageYielding=contract;}
     return resolved;
   }
   function resolvedFurnitureMap(authoring){const out={};for(const [id,instance] of Object.entries(authoring?.furniture||{})){try{out[id]=resolveFurnitureInstance(instance);}catch{}}return out;}
