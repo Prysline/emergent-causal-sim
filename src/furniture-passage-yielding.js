@@ -14,7 +14,10 @@
   function translatedResolvedFurniture(furniture,placement){
     if(!furniture?.id||!furniture?.definitionId||!placement?.origin)return null;
     const resolved=D.resolveInstance({id:furniture.id,definitionId:furniture.definitionId,origin:clone(placement.origin),orientation:placement.orientation,name:furniture.name});
-    resolved.passageYielding=clone(furniture.passageYielding);return resolved;
+    resolved.definitionId=furniture.definitionId;
+    resolved.origin=clone(placement.origin);
+    resolved.passageYielding=clone(furniture.passageYielding);
+    return resolved;
   }
   function overlapAmount(a0,a1,b0,b1){return Math.min(a1,b1)-Math.max(a0,b0);}
   function solidsOverlap(left,right){
