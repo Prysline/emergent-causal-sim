@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.59.0-learned-habit`。
+目前 runtime marker：`11.60.0-standing-responsibility`。
 
-本 release 建立 Daily Life Learned Habit v1：actor 自己真正形成的 episodic experience 透過 bounded classifier 收斂為 Agent-private `learnedHabits`，第一版只學 `read / eat / talk` 的 `activityKind + daily-time-bucket`，再對既有合法 Decision Option 加上有上限、可追溯的 decision contributor。它不建立第二套 candidate / Action / Intent，不保存 exact target identity，也不改寫 Routine、Usage Habit、Memory 或 World truth。前一個 Object containment v1 contract 全部維持 current。
+本 release 建立 Standing Responsibility v1：World-level durable `resourceResponsibilityAssignments[]` 與 Agent-private `knownResponsibilityAssignmentIds[]` 分離；authored assignee DAY 0 只取得自己 assignment 的 canonical refs。第一個 consumer 是既有合法 `restockContainer` option，Responsibility 只追加 bounded、可追溯 assignment ID 的 contributor，不建立第二套 candidate、objective necessity、Action 或 Intent。World Authoring 前進至 `world-authoring-v16`；Daily Life Routine、Learned Habit、Resources 與 generic Deliberation / Decision Evidence 保持原 contract。
 
 ## Truth boundaries
 
@@ -12,6 +12,16 @@
 - World fact 不等於 Agent knowledge；跨 Agent 決策只能消費合法 observation / evidence。
 - Agent-private cognition / memory / affect / relationship 不直接改寫另一 Agent 的 private state。
 - `state.agentCarries` 與 generic physical-Object `Agent.held` 分離；Agent carry 不塞進 held Object relation，action / intent / observation / memory / relationship 不互相充當 mirror state。
+
+## Standing Responsibility
+
+Standing Responsibility 回答「為什麼這個長期任務是這個 Agent 的責任」，不回答「世界是否客觀需要做這件事」。v1 只處理 Resources replenishment responsibility。
+
+Canonical World truth 只有 `resourceResponsibilityAssignments[]`；assignment 包含 stable `id`、Agent principal、`responsibility:'restock'` 與 resource scope。Agent-private knowledge 只保存 `knownResponsibilityAssignmentIds[]` refs，不複製 assignment 內容。World assignment 存在不代表所有 Agent 知道它；Decision integration 只能由該 Agent 的 known refs 回查 canonical assignment，不能直接掃 World assignments 當作 Agent knowledge。
+
+Responsibility 不是 candidate provider。Resources / logistics 既有 `restockContainer` legal candidate authority 維持不變；只有既有 legal option 的 resource 與 Agent-known responsibility scope 相符時，Standing Responsibility 才能追加最多 `+8` 的 bounded contributor，並保存 canonical `assignmentId` provenance。Responsibility query 不得建立 objective need、target、Action、Active Intent，也不得讓 infeasible restock 變合法。完成一次 restock 不移除 durable assignment。
+
+Editor 的 Resident inspector 提供 bounded「長期責任」authoring surface，但 mutation 寫回 World-level relation；Resident View 只顯示 Agent 已知責任，Debug Inspector 同時投影 canonical assignments 與 known-ref linkage。詳細 current contract：[`standing-responsibility.md`](standing-responsibility.md)。
 
 ## Daily Life Learned Habit
 
@@ -39,7 +49,7 @@ Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分�
 
 ## World / Spatial / Physical
 
-Current World Authoring = `world-authoring-v15`；Furniture Catalog = `furniture-definitions-v13`。
+Current World Authoring = `world-authoring-v16`；Furniture Catalog = `furniture-definitions-v13`。
 
 Current Spatial Node identity = `spaceId + surfaceId + x/y/z`。`z` 是 World spatial dimension；Furniture `topElevation` 是 local geometry，兩者不得混為同一真相。
 
@@ -101,7 +111,7 @@ Sleeping 本身不是 wake utility bonus。Sleep conflict 把 `wakeDisruption`�
 
 Sleeping relocation candidate 保持 Agent Carry two-stage boundary：requester-time ranking只消費 requester 可知 observation 與公開 Embodiment defaults；candidate destination 使用 canonical Slot `canSleep / slotAllows / slotPoseFits / slotAvailable`、objective `sleepQuality` 與 requester accessibility / relocation cost。不得讀 occupant-private Usage habit / claim / preference、hidden Need，或 target instance hidden mass / held / body geometry來替 candidate ranking 偷看 execution truth。真正建立 carry relation / placement 時仍由 Agent Carry / Spatial / Physical 以完整 World truth驗證。
 
-Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不為 overall `11.57.1-slot-approach-arrival` 假升版。
+Sleep Slot Conflict own marker = `11.57.0-sleep-animal-resolution`。Generic Deliberation / Decision Evidence schema 仍是 `11.48.1-sleep-perception-approach`；Social Bid / Agent Carry / Physical / Spatial / Furniture 未改自身 contract，因此不因目前 overall release 假升版。
 
 ## Object identity / Resource-container capability
 
@@ -142,7 +152,7 @@ Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support
 - 只考慮 `supportsObjects:true` 且能解析到唯一 canonical support Surface 的 Furniture。
 - v2 延續既有 placement algorithm，不建立新的 move-to-place action；候選必須是 Agent **目前所在 node 已可依既有 `supportContactNodes(...)` 接觸**的 Surface，避免把物件瞬移到幾步外的家具。
 - 同一目前可接觸 Surface 內，以 actor 與 Surface cell 的 locality 排序，之後用 stable `supportId / surfaceId / nodeKey` tie-break；不加入 personality、habit、home、housekeeping 或 furniture preference。
-- winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node 並保持無 `supportId`。
+- winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node並保持無 `supportId`。
 - accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
 
 Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享 intentional release placement。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。

@@ -3,7 +3,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 
 globalThis.window=globalThis;
 loadRuntimeProfile([
-  'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
+  'world-authoring.js','world-initializer.js','standing-responsibility-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
   'spatial-candidate-selection.js','spatial-observability.js','systems/physical.js','spatial-passage.js','engine.js',
   'editor-authoring-mutations.js','editor-ordinary-object-authoring.js',
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
@@ -17,7 +17,7 @@ const SP=globalThis.SimSpatial;
 const V=globalThis.SimValidator;
 const W=globalThis.SimWorld;
 
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Object containment consumes the current canonical World Authoring schema without owning its generation literal');
 assert.equal(D.VERSION,'furniture-definitions-v13');
 assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v2-containment');
 assert.equal(SP.OBSERVABILITY_VERSION,'11.58.0-spatial-containment-observability');

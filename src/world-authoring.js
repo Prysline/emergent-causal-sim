@@ -4,7 +4,7 @@
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
   if(!H?.deriveHorizontalGeometry)throw new Error('SimHorizontalGeometry must load before world-authoring.js.');
-  const VERSION='world-authoring-v15';
+  const VERSION='world-authoring-v16';
   const FURNITURE_CATALOG_VERSION=D.VERSION;
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
@@ -46,6 +46,9 @@
     structures:{},
     usageAssignments:[],
     claimEligibility:[],
+    resourceResponsibilityAssignments:[
+      {id:'responsibility:zhen:restock:food',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'food'}}
+    ],
     furniture:{
       diningTable:{id:'diningTable',definitionId:'dining-table',origin:pos(5,2),orientation:'south'},
       chairNW:{id:'chairNW',definitionId:'chair-basic',origin:pos(4,2),orientation:'east',name:'餐椅 A'},
@@ -357,6 +360,23 @@
       const targetOk=validateUsageTarget(relation.target,path+'.target',{slotOnly:true});
       if(relation.activity==='sleep'&&targetOk){const semantic=`sleep|${relation.target.kind}:${relation.target.id}`;if(eligibilitySemantics.has(semantic))errors.push(authoringIssue('authoring_claim_eligibility_duplicate',path,'Exact duplicate claim eligibility relation is not allowed.',{semantic}));else eligibilitySemantics.add(semantic);}
     }
+    const responsibilityIds=new Set(),responsibilitySemantics=new Set();
+    if(authoring.resourceResponsibilityAssignments!==undefined&&!Array.isArray(authoring.resourceResponsibilityAssignments))errors.push(authoringIssue('authoring_resource_responsibilities_invalid','resourceResponsibilityAssignments','resourceResponsibilityAssignments must be an array when present.'));
+    for(let i=0;i<(authoring.resourceResponsibilityAssignments||[]).length;i++){
+      const relation=authoring.resourceResponsibilityAssignments[i],path=`resourceResponsibilityAssignments[${i}]`;
+      if(!isRecord(relation)){errors.push(authoringIssue('authoring_resource_responsibility_invalid',path,'Resource Responsibility Assignment must be an object.'));continue;}
+      if(typeof relation.id!=='string'||!relation.id.trim())errors.push(authoringIssue('authoring_resource_responsibility_id_invalid',path+'.id','Resource Responsibility Assignment id must be a non-empty string.'));
+      else if(responsibilityIds.has(relation.id))errors.push(authoringIssue('authoring_resource_responsibility_id_duplicate',path+'.id',`Resource Responsibility Assignment id ${relation.id} is duplicated.`,{id:relation.id}));else responsibilityIds.add(relation.id);
+      const principal=relation.principal;
+      if(!isRecord(principal)||principal.kind!=='agent'||typeof principal.id!=='string'||!authoring.residents?.[principal.id])errors.push(authoringIssue('authoring_resource_responsibility_principal_invalid',path+'.principal','Resource Responsibility principal must reference an existing Agent.',{principal:clone(principal)}));
+      if(relation.responsibility!=='restock')errors.push(authoringIssue('authoring_resource_responsibility_kind_invalid',path+'.responsibility','Standing Responsibility v1 only supports restock.',{responsibility:relation.responsibility}));
+      const resource=relation.scope?.resource;
+      if(!isRecord(relation.scope)||typeof resource!=='string'||!resource.trim())errors.push(authoringIssue('authoring_resource_responsibility_scope_invalid',path+'.scope','Standing Responsibility v1 scope must contain a non-empty resource id.'));
+      if(isRecord(principal)&&principal.kind==='agent'&&typeof principal.id==='string'&&relation.responsibility==='restock'&&typeof resource==='string'&&resource.trim()){
+        const semantic=`${principal.id}|restock|${resource}`;
+        if(responsibilitySemantics.has(semantic))errors.push(authoringIssue('authoring_resource_responsibility_duplicate',path,'Exact duplicate Resource Responsibility Assignment is not allowed.',{semantic}));else responsibilitySemantics.add(semantic);
+      }
+    }
     const resolvedSolids=Object.values(resolvedFurniture).flatMap(f=>f.spatial?.solids||[]);
     for(const layer of authoring.map?.layers||[])for(const [cellId,authoredCell] of Object.entries(layer.cells||{})){
       if(authoredCell?.terrain!=='floor')continue;
@@ -654,6 +674,7 @@
     if(Array.isArray(copy?.map?.layers))copy.map.layers.sort((a,b)=>(a?.z??0)-(b?.z??0));
     if(Array.isArray(copy?.usageAssignments))copy.usageAssignments.sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
     if(Array.isArray(copy?.claimEligibility))copy.claimEligibility.sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
+    if(Array.isArray(copy?.resourceResponsibilityAssignments))copy.resourceResponsibilityAssignments.sort((a,b)=>String(a?.id||'').localeCompare(String(b?.id||'')));
     return copy;
   }
 

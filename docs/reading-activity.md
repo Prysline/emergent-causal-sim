@@ -1,6 +1,6 @@
 # Reading Activity v1
 
-Current capability marker: `read-activity-v1`. World Authoring: `world-authoring-v15`. Mental Regulation: `mental-regulation-v4`. Ordinary-object interaction: `ordinary-object-interaction-v2`.
+Current capability marker: `read-activity-v1`. World Authoring: `world-authoring-v16`. Mental Regulation: `mental-regulation-v4`. Ordinary-object interaction: `ordinary-object-interaction-v2`.
 
 ## Canonical ownership
 

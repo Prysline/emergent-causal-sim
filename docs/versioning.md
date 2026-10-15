@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.59.0-learned-habit`。
+目前 overall runtime marker：`11.60.0-standing-responsibility`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -29,6 +29,7 @@ Current relevant markers：
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Daily Life Learned Habit：`daily-life-learned-habit-v1`
+- Standing Responsibility：`standing-responsibility-v1`
 - Mental Regulation：`mental-regulation-v4`
 - Action / Human Social Response：`11.51.0-activity-concurrency`
 - Object Handling：`object-handling-v1`
@@ -48,14 +49,16 @@ Current relevant markers：
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v15`
+- World Authoring：`world-authoring-v16`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
 
-`11.59.0-learned-habit` 建立 Daily Life Learned Habit v1：新增 Agent-private `learnedHabits` truth、`read / eat / talk` realized-experience classifier、`episodicMemoryCreated` order 50 consolidation 與既有合法 Decision Option 的 bounded score contribution。Daily Life Learned Habit own generation = `daily-life-learned-habit-v1`；Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`、Daily Life Routine 維持 `daily-life-routine-v1`、generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`、Runtime Hook Pipeline infrastructure 維持 `runtime-hook-pipeline-2`，因為這些 owner 的 public contract 未被假性換代。Learned Habit 不保存 exact target identity、不建立 candidate / Action / Active Intent，也不讓 infeasible Activity 變合法。
+`11.60.0-standing-responsibility` 建立 Standing Responsibility v1：World Authoring 新增 durable `resourceResponsibilityAssignments[]` canonical relation，Agent-private 只保存 `knownResponsibilityAssignmentIds[]` canonical refs；authored assignee DAY 0 知道自己的 assignment。第一個 production consumer 是既有合法 `restockContainer` option，Standing Responsibility 只追加最多 `+8`、含 canonical assignment ID 的 bounded contributor，不建立第二套 candidate、objective necessity、Action 或 Active Intent。World Authoring own generation → `world-authoring-v16`；Standing Responsibility own generation → `standing-responsibility-v1`；overall / Presentation → `11.60.0-standing-responsibility`。Resources、Daily Life Routine、Daily Life Learned Habit、generic Deliberation / Decision Evidence 與 Runtime Hook Pipeline public contract 未被重新定義，因此維持原 generation。
 
-前一個 `11.58.0-object-containment` 建立 Object containment v1：World Authoring → `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-spatial-containment-observability`。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因本 release 假升版。
+前一個 `11.59.0-learned-habit` 建立 Daily Life Learned Habit v1：新增 Agent-private `learnedHabits` truth、`read / eat / talk` realized-experience classifier、`episodicMemoryCreated` order 50 consolidation 與既有合法 Decision Option 的 bounded score contribution。Daily Life Learned Habit own generation = `daily-life-learned-habit-v1`；Memory / Usage Preference 維持 `11.42.0-usage-preference-sleep`、Daily Life Routine 維持 `daily-life-routine-v1`、generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`、Runtime Hook Pipeline infrastructure 維持 `runtime-hook-pipeline-2`，因為這些 owner 的 public contract 未被假性換代。Learned Habit 不保存 exact target identity、不建立 candidate / Action / Active Intent，也不讓 infeasible Activity 變合法。
+
+前一個 `11.58.0-object-containment` 建立 Object containment v1：World Authoring 當時前進至 `world-authoring-v15`、Furniture Catalog → `furniture-definitions-v13`、Pickup Interaction Geometry → `pickup-interaction-v2-containment`、Editor ordinary-object authoring → `editor-ordinary-object-authoring-v3`、Spatial Observability → `11.58.0-spatial-containment-observability`。此段是 historical release evidence，不代表 current World Authoring marker。Spatial Identity / Route、Physical、Agent Carry、Resources 與 Sleep Slot Conflict 不因該 release 假升版。
 
 前一個 `11.57.0-sleep-animal-conflict` 修正 preferred Sleep Slot conflict 的 Animal resolution 與 escalation 語意。
 
@@ -71,7 +74,7 @@ Version impact：overall / Presentation → `11.57.1-slot-approach-arrival`。Sl
 
 前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。該 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 
-詳細跨 subsystem 語意見 [`architecture.md`](architecture.md)。
+詳細 Standing Responsibility 語意見 [`standing-responsibility.md`](standing-responsibility.md)；跨 subsystem 語意見 [`architecture.md`](architecture.md)。
 
 ## Consistency responsibility
 

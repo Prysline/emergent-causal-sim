@@ -1,4 +1,6 @@
-> Current `11.59.0-learned-habit`: `episodicMemoryCreated` 新增 order 50 `dailyLifeLearnedHabit.consolidate`。Memory 已先建立 actor 自己的 canonical episodic projection；50 只沿 `sourceEventId` 判斷 `read / eat / talk` 是否跨過 v1 realized-execution threshold並更新 Agent-private Learned Habit，之後才進 Appraisal order 100。這使 Habit formation 不依賴「喜歡／不喜歡」評估，也不建立第二份 event truth。beforeTick / core / afterTick 的既有順序不變。
+> Current `11.60.0-standing-responsibility`: Standing Responsibility v1 只在既有 legal `restockContainer` option 的同步 Deliberation scoring 中讀 Agent-private `knownResponsibilityAssignmentIds[]`，再解析 canonical World assignment 並加入 bounded `+8` contributor；它不新增 candidate provider、Need、Action、Intent、runtime hook、hook order 或 same-tick visibility。
+
+> Previous `11.59.0-learned-habit`: `episodicMemoryCreated` 新增 order 50 `dailyLifeLearnedHabit.consolidate`。Memory 已先建立 actor 自己的 canonical episodic projection；50 只沿 `sourceEventId` 判斷 `read / eat / talk` 是否跨過 v1 realized-execution threshold並更新 Agent-private Learned Habit，之後才進 Appraisal order 100。這使 Habit formation 不依賴「喜歡／不喜歡」評估，也不建立第二份 event truth。beforeTick / core / afterTick 的既有順序不變。
 
 > Previous `11.48.1-sleep-perception-approach`: Sleep preferred-Slot perception gating adds no runtime hook and does not change hook order or same-tick visibility. `approachPreferred` is a narrow existing `sleep` Action phase evaluated inside the normal core Action step. The existing beforeTick order 800 `intent.replan-preemption` carrying-state contract from `11.48.0-carrying-replanning` remains unchanged.
 
@@ -12,13 +14,13 @@
 
 > Previous `11.52.0-daily-life-routine`: Routine Slice A adds no runtime hook, phase, or hook-order change. Its Agent-private DAY 0 state is installed by the explicit initial-state initializer registry; `dailyLifeRoutine.read` participates only when the existing core chooser gathers Decision Option Providers. It therefore changes candidate evidence, not same-tick execution ordering.
 
-> Current `11.53.0-mental-regulation-generation`: beforeTick 1200 `mentalRegulation.capture-execution` snapshots eligible Human awake state plus pre-core realized-execution evidence; core execution remains authoritative; afterTick 50 `mentalRegulation.settle` converts actual movement / reading feedback into atomic Stimulation / Relaxation settlement before all later afterTick simulation hooks and before Presentation observers. New Need values therefore cannot affect the core execution that produced them, but are canonical for subsequent lifecycle / Presentation and the next new Deliberation.
+> Previous `11.53.0-mental-regulation-generation`: beforeTick 1200 `mentalRegulation.capture-execution` snapshots eligible Human awake state plus pre-core realized-execution evidence; core execution remains authoritative; afterTick 50 `mentalRegulation.settle` converts actual movement / reading feedback into atomic Stimulation / Relaxation settlement before all later afterTick simulation hooks and before Presentation observers. New Need values therefore cannot affect the core execution that produced them, but are canonical for subsequent lifecycle / Presentation and the next new Deliberation.
 
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.59.0-learned-habit`。
+目前 runtime marker：`11.60.0-standing-responsibility`。
 
 Mental Regulation v4 新增明確 named-hook ordering：beforeTick 1200 `mentalRegulation.capture-execution` 只保存 execution-local snapshot；core tick 真正執行 Action；afterTick 50 `mentalRegulation.settle` 才依 actual realized execution 原子更新 canonical Needs。它不讓 baseline 或 relief 回寫已完成的同 tick deliberation / execution；Presentation observer 只會看到 settlement 後 state。
 
@@ -68,7 +70,7 @@ Mental Regulation v4 新增明確 named-hook ordering：beforeTick 1200 `mentalR
 >
 > 表示層規則：**主流程圖描述 lifecycle responsibility，不把 implementation hook ID 或具體玩法動作當成架構階段名稱。** 精確 hook ID 只保留在 registry 表、source 與 regression；圖上的名稱應能在未來加入新互動類型時仍成立。
 
-> Current `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
+> Previous `11.47.0-social-bid-carry-cooperation`：Social Bid responder contract 以 `bidKind` registry 單一持有 responder validation / response provenance；Sleep `carryCooperation` 是 domain consumer。awake accepted response 只形成可失效、target-specific evidence，實際 carry 仍交給 Agent Carry。Runtime ordering 維持 named hook registry；Social Bid event-created observation 不依賴 script wrapper fallback。
 
 
 ## 1. 一個 `E.tick()` 的主流程

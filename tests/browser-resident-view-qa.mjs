@@ -132,6 +132,7 @@ assert.deepEqual(desktop.inspectorDecorators,[
   {id:'relationship.view',order:1025},
   {id:'physical.view',order:1026},
   {id:'locomotion.view',order:1027},
+  {id:'standingResponsibility.view',order:1040},
   {id:'entityReadable.layer',order:1050}
 ],'Inspector presentation ownership must be explicit and deterministically ordered');
 assert.equal(desktop.activeMode,'resident','desktop: Agent should open readable Resident View by default');

@@ -1,5 +1,5 @@
 {
-  "authoringSchema": "world-authoring-v15",
+  "authoringSchema": "world-authoring-v16",
   "doors": {
     "frontDoor": {
       "boundary": {

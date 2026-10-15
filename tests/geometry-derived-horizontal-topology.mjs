@@ -15,9 +15,8 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Horizontal topology consumes the current canonical World Authoring schema without owning its generation literal');
 assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v13');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,'world-authoring-v15');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v13');
 const resolvedTable=A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable);
 assert.equal(resolvedTable.spatial.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
