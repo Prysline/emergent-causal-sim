@@ -10,7 +10,7 @@ const lifecyclePaths=productionScripts.filter(path=>
 );
 const lifecycleFiles=lifecyclePaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/world.js','src/systems/object-handling.js','src/systems/resources.js','src/spatial.js']);
+loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/standing-responsibility-initializer.js','src/world.js','src/systems/object-handling.js','src/systems/resources.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(lifecyclePaths);
@@ -39,6 +39,7 @@ const EXPECTED_SCHEMA=[
   {id:'mentalRegulation.schema',order:1400},
   {id:'dailyLifeRoutine.schema',order:1450},
   {id:'dailyLifeLearnedHabit.schema',order:1475},
+  {id:'standingResponsibility.schema',order:1490},
   {id:'relationship.schema',order:1500},
   {id:'agentCarry.schema',order:1550},
   {id:'physical.schema',order:1600},
@@ -64,6 +65,9 @@ const st=W.createInitialState(20260911);
 assert.equal(st.version,globalThis.SimRelease.VERSION,'full production schema set must preserve current release marker');
 assert.equal(st.agentCarryVersion,'11.46.0-sleep-carry-integration');
 assert.deepEqual(st.agentCarries,{},'Agent carry canonical relation owner must initialize empty');
+assert.deepEqual(st.resourceResponsibilityAssignments,[{id:'responsibility:zhen:restock:food',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'food'}}],'Standing Responsibility schema initializer must project canonical authored World truth exactly once');
+assert.deepEqual(st.agents.zhen.knownResponsibilityAssignmentIds,['responsibility:zhen:restock:food'],'authored assignee must know own responsibility on DAY 0 through the canonical initial-state pipeline');
+assert.deepEqual(st.agents.zhou.knownResponsibilityAssignmentIds,[],'non-assignee must not inherit Standing Responsibility knowledge');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
@@ -94,6 +98,7 @@ custom.furniture.chairNW.origin={x:3,y:4,z:0};
 const customState=W.createInitialStateFromAuthoring(custom,20260911);
 assert.deepEqual(customState.furniture.chairNW.footprint,[{x:3,y:4}],'explicit authoring factory must compile the supplied canonical document');
 assert.equal(customState.version,globalThis.SimRelease.VERSION);
+assert.deepEqual(customState.resourceResponsibilityAssignments,st.resourceResponsibilityAssignments,'explicit authoring factory must run Standing Responsibility through the same canonical lifecycle pipeline');
 assert.deepEqual(W.createInitialState(20260911).furniture.chairNW.footprint,st.furniture.chairNW.footprint,'explicit preview initialization must not mutate the default world factory');
 assert.deepEqual(W.createInitialStateFromAuthoring(custom,20260911),customState,'preview reset source must remain deterministic for the same snapshot and seed');
 

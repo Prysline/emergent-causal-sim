@@ -1,4 +1,8 @@
 (() => {
+  const W=window.SimWorld,I=window.SimStandingResponsibilityInitializer;
+  if(!W?.registerInitialStateInitializer)throw new Error('systems/daily-life/standing-responsibility-state.js requires world.js initial-state pipeline.');
+  if(!I?.projectInitialState)throw new Error('Standing Responsibility initial-state projection must load before systems/daily-life/standing-responsibility-state.js.');
+
   const VERSION='standing-responsibility-v1';
   const STANDING_RESPONSIBILITY_MAX_DECISION_DELTA=8;
 
@@ -43,7 +47,8 @@
     return assignment?.responsibility||assignment?.id||'未知責任';
   }
 
+  W.registerInitialStateInitializer('standingResponsibility.schema',(state,ctx)=>I.projectInitialState(state,ctx?.authoring),1490);
+  W.STANDING_RESPONSIBILITY_SCHEMA_VERSION=VERSION;
   const api={VERSION,STANDING_RESPONSIBILITY_MAX_DECISION_DELTA,knownAssignments,decisionContributionForOption,describeAssignment};
   window.SimStandingResponsibility=api;
-  if(window.SimWorld)window.SimWorld.STANDING_RESPONSIBILITY_SCHEMA_VERSION=VERSION;
 })();

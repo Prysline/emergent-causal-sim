@@ -23,24 +23,33 @@ await page.waitForFunction(()=>window.SimWorldEditor.getDocument().resourceRespo
 const editorSnapshot=await page.evaluate(()=>{
   const doc=window.SimWorldEditor.getDocument();
   const serialized=window.SimWorldAuthoring.serializeAuthoring(doc);
-  const runtime=window.SimWorldInitializer.createInitialState(window.SimWorldAuthoring.parseAuthoringJSON(serialized),{seed:20001,version:'qa'});
+  const roundTrip=window.SimWorldAuthoring.parseAuthoringJSON(serialized);
   return {
     dirty:window.SimWorldEditor.getSession().dirty,
     assignmentIds:doc.resourceResponsibilityAssignments.map(item=>item.id).sort(),
-    known:runtime.agents.zhen.knownResponsibilityAssignmentIds.slice().sort(),
-    canonical:runtime.resourceResponsibilityAssignments.map(item=>item.id).sort(),
+    roundTripAssignmentIds:roundTrip.resourceResponsibilityAssignments.map(item=>item.id).sort(),
     editorText:document.querySelector('[data-standing-responsibility-editor]')?.innerText||''
   };
 });
 assert.equal(editorSnapshot.dirty,true,'responsibility authoring must mark Editor dirty');
 assert.deepEqual(editorSnapshot.assignmentIds,['responsibility:zhen:restock:food','responsibility:zhen:restock:water']);
-assert.deepEqual(editorSnapshot.known,editorSnapshot.assignmentIds,'Editor export → initializer must derive assignee private known refs');
-assert.deepEqual(editorSnapshot.canonical,editorSnapshot.assignmentIds,'runtime must preserve canonical World assignments once');
+assert.deepEqual(editorSnapshot.roundTripAssignmentIds,editorSnapshot.assignmentIds,'Editor authoring must survive canonical export → import without runtime-only truth');
 assert.match(editorSnapshot.editorText,/長期責任/);
 await page.screenshot({path:`${outDir}/editor-standing-responsibility.png`,fullPage:true});
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimStandingResponsibility?.VERSION);
+const runtimeTruth=await page.evaluate(()=>{
+  const state=window.SimEngine.getState();
+  return {
+    canonical:(state.resourceResponsibilityAssignments||[]).map(item=>item.id).sort(),
+    zhenKnown:[...(state.agents.zhen.knownResponsibilityAssignmentIds||[])].sort(),
+    zhouKnown:[...(state.agents.zhou.knownResponsibilityAssignmentIds||[])].sort()
+  };
+});
+assert.deepEqual(runtimeTruth.canonical,['responsibility:zhen:restock:food'],'production runtime must project canonical authored responsibility through the initial-state pipeline');
+assert.deepEqual(runtimeTruth.zhenKnown,runtimeTruth.canonical,'authored assignee must receive own canonical responsibility ref on DAY 0');
+assert.deepEqual(runtimeTruth.zhouKnown,[],'non-assignee must not inherit canonical World responsibility knowledge');
 await page.evaluate(()=>document.querySelector('[data-entity="agent:zhen"]')?.click());
 await page.waitForSelector('[data-standing-responsibility-resident]');
 const residentText=await page.locator('[data-standing-responsibility-resident]').innerText();

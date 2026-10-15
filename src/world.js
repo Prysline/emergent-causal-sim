@@ -77,7 +77,7 @@
     A.assertValidAuthoring(canonical);
     I.assertRuntimeCompatibleAuthoring(canonical);
     const st=I.createInitialState(canonical,{seed:n,version:WORLD_SCHEMA_VERSION,supplyTrigger:SUPPLY_TRIGGER});
-    return runInitialStateInitializers(st,{seed:n});
+    return runInitialStateInitializers(st,{seed:n,authoring:canonical});
   }
 
   function createInitialState(seed=20260911){

@@ -23,6 +23,7 @@
       {id:'mentalRegulation.schema',order:1400},
       {id:'dailyLifeRoutine.schema',order:1450},
       {id:'dailyLifeLearnedHabit.schema',order:1475},
+      {id:'standingResponsibility.schema',order:1490},
       {id:'relationship.schema',order:1500},
       {id:'agentCarry.schema',order:1550},
       {id:'physical.schema',order:1600},

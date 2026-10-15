@@ -5,8 +5,8 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 loadScriptsInThisContext(['src/editor-authoring-mutations.js','src/editor-standing-responsibility-authoring.js']);
 
-const E=globalThis.SimEngine,S=globalThis.SimStandingResponsibility,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,M=globalThis.SimEditorAuthoringMutations,W=globalThis.SimWorld;
-assert.ok(E&&S&&A&&I&&M&&W,'Standing Responsibility production contracts must load');
+const E=globalThis.SimEngine,S=globalThis.SimStandingResponsibility,A=globalThis.SimWorldAuthoring,M=globalThis.SimEditorAuthoringMutations,W=globalThis.SimWorld;
+assert.ok(E&&S&&A&&M&&W,'Standing Responsibility production contracts must load');
 assert.equal(A.VERSION,'world-authoring-v16');
 assert.equal(S.VERSION,'standing-responsibility-v1');
 assert.equal(W.STANDING_RESPONSIBILITY_SCHEMA_VERSION,S.VERSION);
@@ -15,8 +15,8 @@ assert.equal(S.STANDING_RESPONSIBILITY_MAX_DECISION_DELTA,8);
 const defaultAssignment=A.DEFAULT_WORLD_AUTHORING.resourceResponsibilityAssignments.find(item=>item.id==='responsibility:zhen:restock:food');
 assert.deepEqual(defaultAssignment,{id:'responsibility:zhen:restock:food',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'food'}});
 
-let initialized=I.createInitialState(A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),{seed:19001,version:'qa',supplyTrigger:70});
-assert.deepEqual(initialized.resourceResponsibilityAssignments,[defaultAssignment],'initializer must preserve canonical World responsibility truth once');
+let initialized=W.createInitialStateFromAuthoring(A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),19001);
+assert.deepEqual(initialized.resourceResponsibilityAssignments,[defaultAssignment],'canonical World factory must preserve responsibility truth once');
 assert.deepEqual(initialized.agents.zhen.knownResponsibilityAssignmentIds,[defaultAssignment.id],'authored assignee must know own assignment on DAY 0');
 assert.deepEqual(initialized.agents.zhou.knownResponsibilityAssignmentIds,[],'non-assignee must not inherit World responsibility knowledge');
 assert.equal(Object.prototype.hasOwnProperty.call(initialized.agents.zhen,'resourceResponsibilityAssignments'),false,'Agent-private state must reference assignment IDs instead of copying canonical assignment truth');
@@ -87,8 +87,8 @@ invalid(authoring=>{authoring.resourceResponsibilityAssignments[0].scope={};},'a
 const editorResult=M.setResidentRestockResponsibility(A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),{residentId:'zhen',resource:'water',assigned:true});
 assert.equal(editorResult.ok,true,'Editor mutation must author a second replenishment responsibility through canonical World relation');
 const serialized=A.serializeAuthoring(editorResult.candidate),parsed=A.parseAuthoringJSON(serialized);
-initialized=I.createInitialState(parsed,{seed:19006,version:'qa',supplyTrigger:70});
-assert.deepEqual(initialized.agents.zhen.knownResponsibilityAssignmentIds.sort(),['responsibility:zhen:restock:food','responsibility:zhen:restock:water'],'Editor authoring → export → initializer must preserve canonical assignment linkage');
+initialized=W.createInitialStateFromAuthoring(parsed,19006);
+assert.deepEqual(initialized.agents.zhen.knownResponsibilityAssignmentIds.sort(),['responsibility:zhen:restock:food','responsibility:zhen:restock:water'],'Editor authoring → export → canonical World initial-state pipeline must preserve assignment linkage');
 assert.equal(initialized.resourceResponsibilityAssignments.length,2);
 
 console.log('standing responsibility regression passed');
