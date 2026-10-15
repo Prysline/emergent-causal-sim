@@ -3,10 +3,10 @@
   if(!E||!W||!SP||!S)throw new Error('systems/activity-continuity/runtime.js requires Engine, World, Spatial, and Activity Continuity state.');
   if(!E.registerDecisionOptionProvider||!E.registerRuntimeHook)throw new Error('Activity Continuity requires decision-option and runtime-hook contracts.');
   if(typeof E.readAccessPenalty!=='function')throw new Error('Activity Continuity requires canonical read access penalty.');
+  if(!E.EMERGENCY_PREEMPTIBLE||typeof E.emergencyChoice!=='function')throw new Error('Activity Continuity requires canonical emergency preemption policy.');
 
   const VERSION=S.VERSION;
   const RESUME_SCORE_FLOOR=20,RESUME_PROGRESS_BONUS_MAX=20;
-  const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
   const episodeFor=a=>S.ensureAgentState(a);
   const terminal=episode=>S.TERMINAL_LIFECYCLES.includes(episode?.lifecycle);
   function eventMarker(st){return st?.events?.[0]?.id||null;}
@@ -35,7 +35,8 @@
   function makeEpisode(st,a,action){
     const targetId=action?.targetObject,units=Number(action?.feedbackUnits)||0,goal=Number(action?.feedbackGoal)||6;
     if(action?.kind!=='read'||units<=0||units>=goal||!targetId)return null;
-    const episode={id:`activity:${a.id}:${action.started}:read:${targetId}`,kind:'read',lifecycle:'ongoing',startedTick:Number(action.started)||st.tick,lastTransitionTick:st.tick,target:{kind:'object',id:targetId},boundActionStartedTick:Number(action.started)||st.tick,suspendedProgress:null,interruption:null};
+    const started=Number.isInteger(action.started)?action.started:st.tick;
+    const episode={id:`activity:${a.id}:${started}:read:${targetId}`,kind:'read',lifecycle:'ongoing',startedTick:started,lastTransitionTick:st.tick,target:{kind:'object',id:targetId},boundActionStartedTick:started,suspendedProgress:null,interruption:null};
     if(!S.validEpisode(episode))throw new Error('Activity Continuity created an invalid read episode.');
     a.activityEpisode=episode;
     E.addEvent(`${a.name}開始投入一段尚未完成的閱讀。`,'system',[],{actor:a.id,action:'activityStarted',activityEpisodeId:episode.id,activityKind:'read',target:targetId,position:E.positionRef(a.position)});
@@ -55,10 +56,18 @@
     let episode=episodeFor(a);
     if(!episode||terminal(episode)||episode.kind!=='read'||episode.target?.id!==action.targetObject||episode.boundActionStartedTick!==action.started)episode=makeEpisode(st,a,action);
     if(!episode||episode.lifecycle!=='ongoing')return null;
-    episode.lifecycle='suspended';episode.lastTransitionTick=st.tick;episode.boundActionStartedTick=null;episode.suspendedProgress={feedbackUnits:units,feedbackGoal:goal};episode.interruption={type,need,tick:Number(tick)||st.tick};
+    episode.lifecycle='suspended';episode.lastTransitionTick=st.tick;episode.boundActionStartedTick=null;episode.suspendedProgress={feedbackUnits:units,feedbackGoal:goal};episode.interruption={type,need,tick:Number.isInteger(tick)?tick:st.tick};
     if(!S.validEpisode(episode))throw new Error('Activity Continuity suspension produced invalid state.');
     const eventId=E.addEvent(`${a.name}暫停了還沒完成的閱讀。`,'normal',[],{actor:a.id,action:'activitySuspended',activityEpisodeId:episode.id,activityKind:episode.kind,target:episode.target.id,interruptionType:type,emergencyNeed:need,feedbackUnits:units,feedbackGoal:goal,position:E.positionRef(a.position)});
     return {episode,eventId};
+  }
+  function prepareEmergencySuspensions(st){
+    for(const a of Object.values(st?.agents||{})){
+      if(a.action?.kind!=='read'||(Number(a.action.feedbackUnits)||0)<=0)continue;
+      const emergency=E.emergencyChoice(st,a);if(!emergency||a.activeIntent?.kind===emergency.intentKind)continue;
+      const feasible=E.buildAction?.(a,{id:emergency.actionKind});if(!feasible)continue;
+      suspendForInterruption(st,a,{type:'emergency',need:emergency.need,tick:st.tick});
+    }
   }
   function resumeIntoAction(st,a,episode){
     const action=a?.action,progress=episode?.suspendedProgress;if(action?.kind!=='read'||action.targetObject!==episode?.target?.id||!progress)return false;
@@ -93,7 +102,9 @@
   }
   function settle(st,marker){const events=newEventsSince(st,marker);for(const a of Object.values(st?.agents||{}))settleAgent(st,a,events);}
 
+  E.EMERGENCY_PREEMPTIBLE.add('read');
   E.registerDecisionOptionProvider('activityContinuity.resumeRead',(st,a)=>resumeDecisionOption(st,a),470);
+  E.registerRuntimeHook('beforeTick','activityContinuity.prepare-emergency-suspension',()=>prepareEmergencySuspensions(E.getState()),790);
   E.registerRuntimeHook('beforeTick','activityContinuity.capture-events',(ctx)=>{ctx.locals.activityContinuityEventMarker=eventMarker(ctx.state||E.getState());},1250);
   E.registerRuntimeHook('afterTick','activityContinuity.settle',(ctx)=>settle(ctx.state||E.getState(),ctx.locals.activityContinuityEventMarker),75);
 
