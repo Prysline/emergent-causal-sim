@@ -28,6 +28,7 @@ const horizontalGeometryIndex=indexOf('src/horizontal-geometry.js');
 const authoringIndex=indexOf('src/world-authoring.js');
 const capabilityIndex=indexOf('src/embodiment-capabilities.js');
 const initializerIndex=indexOf('src/world-initializer.js');
+const standingInitializerIndex=indexOf('src/standing-responsibility-initializer.js');
 const worldIndex=indexOf('src/world.js');
 const releaseIndex=indexOf('src/release.js');
 const objectHandlingIndex=indexOf('src/systems/object-handling.js');
@@ -54,7 +55,7 @@ const bootstrapIndex=indexOf('src/app/bootstrap.js');
 assert.ok(furnitureDefinitionsIndex<horizontalGeometryIndex&&horizontalGeometryIndex<authoringIndex,'pure horizontal geometry must load after Furniture geometry helpers and before world-authoring.js');
 const horizontalGeometrySource=readRepoFile('src/horizontal-geometry.js');
 assert.doesNotMatch(horizontalGeometrySource,/SimWorld|SimSpatial|SimEngine|SimLocomotion|SimCrowding|\.agents\b/,'shared horizontal geometry kernel must not depend on runtime mutable state or Agent state');
-assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<worldIndex,'shared embodiment capabilities must stay authoring-safe and load before initializer/runtime owners');
+assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<standingInitializerIndex&&standingInitializerIndex<worldIndex,'shared capabilities and Standing Responsibility authoring projection must load deterministically before world.js');
 const capabilitySource=readRepoFile('src/embodiment-capabilities.js');
 assert.doesNotMatch(capabilitySource,/SimEngine|SimSpatial|registerInitialStateInitializer/,'shared embodiment capability contract must stay pure and authoring-safe');
 assert.ok(authoringIndex<worldIndex,'current authoring owner must load before world.js');
@@ -95,6 +96,7 @@ const expectedUiSources=[
   'src/ui/inspectors/relationship.js',
   'src/ui/inspectors/physical.js',
   'src/ui/inspectors/locomotion.js',
+  'src/ui/inspectors/standing-responsibility.js',
   'src/ui/entity-readable.js',
 ];
 assert.deepEqual(scripts.filter(path=>path.startsWith('src/ui/')),expectedUiSources,'production UI must use only semantic current source paths in stable order');
@@ -140,6 +142,7 @@ const engineDependentSubsystemSchemas=[
   'src/systems/appraisal/state.js',
   'src/systems/affect/state.js',
   'src/systems/relationship/state.js',
+  'src/systems/daily-life/standing-responsibility-state.js',
   'src/systems/agent-carry.js'
 ];
 const engineDependentSubsystemRuntimes=[
@@ -198,6 +201,7 @@ const R=globalThis.SimRelease;
 const CURRENT_VERSION=R.VERSION;
 const Resources=globalThis.SimResources;
 const AgentCarry=globalThis.SimAgentCarry;
+const StandingResponsibility=globalThis.SimStandingResponsibility;
 const W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial;
 const P=globalThis.SimPhysical;
@@ -207,7 +211,7 @@ const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
 assert.equal(FD.VERSION,'furniture-definitions-v13');
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'production composition must consume the canonical current World Authoring generation without duplicating its literal');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v5');
 assert.deepEqual(EC.freePosturesForKind('cat'),['standing','lying']);
@@ -235,12 +239,14 @@ assert.equal(C.VERSION,'11.31.0-crowding-8-direction');
 assert.equal(W.AFFECT_SCHEMA_VERSION,'11.35.0-affect-responder-bias');
 assert.equal(W.RELATIONSHIP_SCHEMA_VERSION,'11.15.2-relationship-responder-bias');
 assert.equal(W.MEMORY_SCHEMA_VERSION,'11.42.0-usage-preference-sleep');
-assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Deliberation own generation must not fake-bump for Agent facing foundation');
-assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence own generation must not fake-bump for Agent facing foundation');
+assert.equal(W.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Deliberation own generation must not fake-bump for Standing Responsibility');
+assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,'11.48.1-sleep-perception-approach','Decision Evidence own generation must not fake-bump for Standing Responsibility');
 assert.equal(E.SLEEP_SLOT_CONFLICT_VERSION,'11.57.0-sleep-animal-resolution','Sleep Slot Conflict must version the Animal self-displacement + outcome-based repeat-wake contract');
 assert.equal(E.USAGE_PREFERENCE_VERSION,'11.42.0-usage-preference-sleep');
 assert.equal(W.DAILY_LIFE_LEARNED_HABIT_SCHEMA_VERSION,'daily-life-learned-habit-v1');
 assert.equal(E.DAILY_LIFE_LEARNED_HABIT_VERSION,'daily-life-learned-habit-v1');
+assert.equal(StandingResponsibility.VERSION,'standing-responsibility-v1');
+assert.equal(W.STANDING_RESPONSIBILITY_SCHEMA_VERSION,StandingResponsibility.VERSION);
 assert.equal(W.isInitialStateRegistryFinalized(),true);
 assert.equal(E.isRuntimeHookRegistryFinalized(),true,'simulation runtime-hook registry must finalize before production UI loads');
 assert.deepEqual(E.currentRuntimeObserverManifest(),{afterTick:[],afterReset:[]},'headless production prefix must be complete without Presentation observers');
