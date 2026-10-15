@@ -79,7 +79,7 @@ function invalid(mutator,expectedCode){
   assert.ok(report.errors.some(item=>item.code===expectedCode),`validator must fail loudly with ${expectedCode}`);
 }
 invalid(authoring=>authoring.resourceResponsibilityAssignments.push({...authoring.resourceResponsibilityAssignments[0]}),'authoring_resource_responsibility_id_duplicate');
-invalid(authoring=>authoring.resourceResponsibilityAssignments.push({id:'semantic-duplicate',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'food'}})),'authoring_resource_responsibility_duplicate');
+invalid(authoring=>authoring.resourceResponsibilityAssignments.push({id:'semantic-duplicate',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'food'}}),'authoring_resource_responsibility_duplicate');
 invalid(authoring=>{authoring.resourceResponsibilityAssignments[0].principal.id='missing';},'authoring_resource_responsibility_principal_invalid');
 invalid(authoring=>{authoring.resourceResponsibilityAssignments[0].responsibility='clean';},'authoring_resource_responsibility_kind_invalid');
 invalid(authoring=>{authoring.resourceResponsibilityAssignments[0].scope={};},'authoring_resource_responsibility_scope_invalid');
