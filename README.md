@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.60.0-standing-responsibility`。
+目前 runtime marker：`11.61.0-activity-continuity`。
 
-Current release 建立 Standing Responsibility v1：World 以 durable `resourceResponsibilityAssignments[]` 保存 Resources replenishment responsibility；Agent-private 只保存自己已知的 `knownResponsibilityAssignmentIds[]`。第一個 consumer 是既有合法 `restockContainer` option：責任只追加最多 `+8`、可追溯至 assignment ID 的 bounded decision contributor，不建立第二套 restock candidate、objective need、Action 或 Active Intent，也不取代 Routine、Learned Habit 或 Obligation。World Authoring 升為 `world-authoring-v16`，Editor Resident inspector 可 author Resources 補充責任，Resident View / Debug Inspector 只投影 canonical World truth 與 Agent-private known-ref linkage。
+Current release 建立 Generic Activity Continuity v1：新增 Agent-private `activityEpisode` canonical owner，第一個 production consumer 只有 `read`。閱讀至少產生一次 realized feedback 後才形成 episode；emergency preemption 可把同一段未完成閱讀轉為 `suspended`，但不保存舊 Action / path / reservation。Resume 只形成 bounded Decision Option，仍由既有 Deliberation 與 Needs / 其他 Activities 競爭，不會自動接回。進行中 progress 只存在 live Action；Action 被中斷且不存在時才由 suspended episode 暫存，resume 建立新 Action 後再移回 Action。Activity Continuity own generation = `activity-continuity-v1`；Interruption own generation → `11.61.0-activity-continuity`；Action、generic Deliberation / Decision Evidence、Mental Regulation、Routine、Learned Habit 與 Standing Responsibility 不因本 release 假升版。
+
+前一個 `11.60.0-standing-responsibility` 建立 Standing Responsibility v1：World 以 durable `resourceResponsibilityAssignments[]` 保存 Resources replenishment responsibility；Agent-private 只保存自己已知的 `knownResponsibilityAssignmentIds[]`。第一個 consumer 是既有合法 `restockContainer` option：責任只追加最多 `+8`、可追溯至 assignment ID 的 bounded decision contributor，不建立第二套 restock candidate、objective need、Action 或 Active Intent，也不取代 Routine、Learned Habit 或 Obligation。World Authoring 升為 `world-authoring-v16`，Editor Resident inspector 可 author Resources 補充責任，Resident View / Debug Inspector 只投影 canonical World truth 與 Agent-private known-ref linkage。
 
 前一個 `11.59.0-learned-habit` 建立 Daily Life Learned Habit v1：Agent 自己真正形成的 episodic experience 經 `episodicMemoryCreated` 與 bounded activity classifier 收斂為 `activityKind + daily-time-bucket` 的 Agent-private `learnedHabits`；第一版支援 `read / eat / talk`，以慢速 deterministic consolidation / decay 對既有合法 Decision Option 提供最多 `+10` 的 bounded evidence。Learned Habit 不建立候選、Action 或 Active Intent，不保存 exact Object / Furniture / Agent target identity，也不取代 Routine、Usage Habit、Need 或 Standing Responsibility。
 
@@ -18,6 +20,7 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 
 - [`docs/architecture.md`](docs/architecture.md)：跨 subsystem 現行工程契約
 - [`docs/versioning.md`](docs/versioning.md)：版本與 marker ownership
+- [`docs/activity-continuity.md`](docs/activity-continuity.md)：Generic Activity Continuity / resume truth、lifecycle、progress ownership 與 interruption / Deliberation contract
 - [`docs/standing-responsibility.md`](docs/standing-responsibility.md)：Standing Responsibility v1 truth / knowledge / decision / Editor contract
 - [`docs/interaction-geometry.md`](docs/interaction-geometry.md)：Interaction Geometry / Pickup 詳細契約
 - [`docs/tick-pipeline.md`](docs/tick-pipeline.md)：runtime hook ordering
@@ -32,6 +35,7 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 
 ## Current subsystem boundary index
 
+- **Activity Continuity**：`Agent.activityEpisode` 是已開始但未自然完成 Activity 的 Agent-private canonical owner；v1 最多一個 episode，第一個 consumer 只有 `read`。Resume 只提供 bounded normal Decision Option；不復活舊 Action、不保存 stale path / reservation、不繞過 Deliberation。
 - **Standing Responsibility**：canonical World truth 是 durable `resourceResponsibilityAssignments[]`；Agent-private 只持有已知 assignment ID refs。v1 僅支援 Resources replenishment / `restock` scope；decision integration 只能 enrich 已存在且 legal 的 `restockContainer` option，不能建立 candidate 或 objective necessity。
 - **Object Domain**：具體 physical item 的 canonical identity 只在 `state.objects`；`resourceContainer:true` 與 Furniture-side `objectContainment:true` 都是可組合 capability，不建立平行 entity taxonomy。Object containment 的 canonical relation 只在 child Object 的 `containedBy`；Furniture 的 reverse contents 只能投影。Generic physical handling 由 `SimObjectHandling` 持有，Resources 只消費 Resource-container capability。
 - **Daily Life Learned Habit**：`Agent.learnedHabits` 是由 actor 自己已形成的 private episodic experience 收斂出的 Activity-level 慢速慣性；v1 只保存 `activityKind + daily-time-bucket`，不保存 target identity，且只 enrich 已存在的合法 Decision Option。
