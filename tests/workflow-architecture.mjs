@@ -54,7 +54,8 @@ const semanticNodeTests=[
   'tests/relationship-target-preference.mjs',
   'tests/relationship-responder-bias.mjs',
   'tests/affect-responder-bias.mjs',
-  'tests/presentation-observability.mjs'
+  'tests/presentation-observability.mjs',
+  'tests/standing-responsibility.mjs'
 ];
 for(const path of semanticNodeTests)assert.ok(node.includes(path),'Node regression must cover '+path);
 
@@ -68,7 +69,8 @@ const browserTests=[
   'tests/browser-resident-view-qa.mjs',
   'tests/browser-world-authoring-editor-qa.mjs',
   'tests/browser-runtime-hook-pipeline-qa.mjs',
-  'tests/browser-step-batch-performance-qa.mjs'
+  'tests/browser-step-batch-performance-qa.mjs',
+  'tests/browser-standing-responsibility-qa.mjs'
 ];
 for(const path of browserTests)assert.ok(browser.includes(path),'Browser regression must cover '+path);
 
