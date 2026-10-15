@@ -8,6 +8,7 @@
       {id:'contact.schema',order:30},
       {id:'spatialSurfaceEnvironment.schema',order:50},
       {id:'action.schema',order:100},
+      {id:'activityContinuity.schema',order:175},
       {id:'intent.schema',order:200},
       {id:'socialBid.schema',order:300},
       {id:'interruption.schema',order:400},

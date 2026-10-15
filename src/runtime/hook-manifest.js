@@ -10,14 +10,17 @@
       {id:'humanSocial.prepare',order:300},
       {id:'socialResponse.capture-pet-offers',order:400},
       {id:'intent.soft-reconsideration',order:700},
+      {id:'activityContinuity.prepare-emergency-suspension',order:790},
       {id:'intent.replan-preemption',order:800},
       {id:'socialBid.prepare',order:900},
       {id:'intent.reconcile-before',order:1000},
       {id:'spatial.capture',order:1100},
-      {id:'mentalRegulation.capture-execution',order:1200}
+      {id:'mentalRegulation.capture-execution',order:1200},
+      {id:'activityContinuity.capture-events',order:1250}
     ],
     afterTick:[
       {id:'mentalRegulation.settle',order:50},
+      {id:'activityContinuity.settle',order:75},
       {id:'spatial.effects',order:100},
       {id:'sleepConflict.complete-yield',order:150},
       {id:'intent.reconcile-after',order:200},

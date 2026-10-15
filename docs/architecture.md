@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.60.0-standing-responsibility`。
+目前 runtime marker：`11.61.0-activity-continuity`。
 
-本 release 建立 Standing Responsibility v1：World-level durable `resourceResponsibilityAssignments[]` 與 Agent-private `knownResponsibilityAssignmentIds[]` 分離；authored assignee DAY 0 只取得自己 assignment 的 canonical refs。第一個 consumer 是既有合法 `restockContainer` option，Responsibility 只追加 bounded、可追溯 assignment ID 的 contributor，不建立第二套 candidate、objective necessity、Action 或 Intent。World Authoring 前進至 `world-authoring-v16`；Daily Life Routine、Learned Habit、Resources 與 generic Deliberation / Decision Evidence 保持原 contract。
+本 release 建立 Generic Activity Continuity v1：Agent-private `activityEpisode` 保存已真正開始、尚未自然完成 Activity 的 episode identity / lifecycle；第一個 consumer 只有 `read`。ongoing read progress 仍唯一存在 live Action，只有 emergency interruption 清除 Action 時才把 progress 暫存到 suspended episode；resume 建立新的 concrete Action 後再移回 Action。Resume 只提供 bounded Decision Option，仍經既有 Deliberation，不自動復活 Action，也不保存 stale path / reservation。詳細 contract：[`activity-continuity.md`](activity-continuity.md)。
 
 ## Truth boundaries
 
@@ -12,6 +12,19 @@
 - World fact 不等於 Agent knowledge；跨 Agent 決策只能消費合法 observation / evidence。
 - Agent-private cognition / memory / affect / relationship 不直接改寫另一 Agent 的 private state。
 - `state.agentCarries` 與 generic physical-Object `Agent.held` 分離；Agent carry 不塞進 held Object relation，action / intent / observation / memory / relationship 不互相充當 mirror state。
+
+## Activity Continuity
+
+`Agent.activityEpisode` 是 unfinished Activity continuity 的 Agent-private canonical owner，不是 World-level queue，也不是 Active Intent / Action / Memory 的 mirror。v1 每個 Agent 最多只有一個 current episode slot，第一個 production consumer 只有 `read`。
+
+- plan / approach 不建立 episode；至少一次 realized reading feedback 後才算 episode 已開始。
+- `ongoing` 時 live Action 唯一持有 `feedbackUnits / feedbackGoal`；episode 只持有 episode identity、exact target reference 與 matching Action linkage。
+- `suspended` 時原 Action 已不存在，episode 才持有 bounded `suspendedProgress`。Resume 建立新 Action後 progress 原子移回 Action並清除 suspended copy。
+- `completed / abandoned / invalidated` 是 terminal；domain read completion、ordinary Deliberation 選擇其他 Activity、以及永久 target/affordance失效各自擁有終止原因。
+- temporary unreachability 不等於 invalidation；只暫時不產生 resume candidate。
+- Resume evidence 必須重新進 normal Deliberation；強 Need / 其他 candidate 可以勝出。v1 不建立 backlog 或多 episode stack。
+
+Activity Continuity 不改 hard replan 的「同一 Intent、重新建立 execution plan」語意，也不把 Activity Concurrency 的 execution-local transient behavior 誤稱 episode suspension。World `activityStarted / activitySuspended / activityResumed / activityCompleted / activityAbandoned / activityInvalidated` events 只記錄 observable transition，不讓其他 Agent 自動取得 actor-private suspended truth。
 
 ## Standing Responsibility
 
