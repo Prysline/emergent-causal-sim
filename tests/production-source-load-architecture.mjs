@@ -93,10 +93,10 @@ const expectedUiSources=[
   'src/ui/inspectors/social-outcomes.js',
   'src/ui/observability-controls.js',
   'src/ui/resident-view.js',
+  'src/ui/inspectors/standing-responsibility.js',
   'src/ui/inspectors/relationship.js',
   'src/ui/inspectors/physical.js',
   'src/ui/inspectors/locomotion.js',
-  'src/ui/inspectors/standing-responsibility.js',
   'src/ui/entity-readable.js',
 ];
 assert.deepEqual(scripts.filter(path=>path.startsWith('src/ui/')),expectedUiSources,'production UI must use only semantic current source paths in stable order');
