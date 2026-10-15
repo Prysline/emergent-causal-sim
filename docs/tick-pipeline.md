@@ -1,4 +1,6 @@
-> Current `11.60.0-standing-responsibility`: Standing Responsibility v1 只在既有 legal `restockContainer` option 的同步 Deliberation scoring 中讀 Agent-private `knownResponsibilityAssignmentIds[]`，再解析 canonical World assignment 並加入 bounded `+8` contributor；它不新增 candidate provider、Need、Action、Intent、runtime hook、hook order 或 same-tick visibility。
+> Current `11.61.0-activity-continuity`: Activity Continuity v1 新增 beforeTick 790 `activityContinuity.prepare-emergency-suspension`、beforeTick 1250 `activityContinuity.capture-events` 與 afterTick 75 `activityContinuity.settle`。790 只在 canonical `emergencyChoice` 已成立且對應 emergency Action 可建構時，把 realized unfinished `read` progress 從 live Action 轉入 Agent-private suspended episode；800 仍由既有 Interruption owner執行真正 preemption。1200 Mental Regulation capture仍先於1250；core execution 後，50 Mental Regulation 先 settle realized Need effect，再由75收斂 Activity episode lifecycle，100 Spatial Effects之後繼續原 schedule。Resume 仍在後續 normal Deliberation 建立新 Action，不在 hook 中自動復活舊 Action。
+
+> Previous `11.60.0-standing-responsibility`: Standing Responsibility v1 只在既有 legal `restockContainer` option 的同步 Deliberation scoring 中讀 Agent-private `knownResponsibilityAssignmentIds[]`，再解析 canonical World assignment 並加入 bounded `+8` contributor；它不新增 candidate provider、Need、Action、Intent、runtime hook、hook order 或 same-tick visibility。
 
 > Previous `11.59.0-learned-habit`: `episodicMemoryCreated` 新增 order 50 `dailyLifeLearnedHabit.consolidate`。Memory 已先建立 actor 自己的 canonical episodic projection；50 只沿 `sourceEventId` 判斷 `read / eat / talk` 是否跨過 v1 realized-execution threshold並更新 Agent-private Learned Habit，之後才進 Appraisal order 100。這使 Habit formation 不依賴「喜歡／不喜歡」評估，也不建立第二份 event truth。beforeTick / core / afterTick 的既有順序不變。
 
@@ -20,7 +22,9 @@
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.60.0-standing-responsibility`。
+目前 runtime marker：`11.61.0-activity-continuity`。
+
+Activity Continuity v1 把 emergency suspension 分成兩個明確 owner：beforeTick 790 只在 canonical emergency candidate 確實可執行時先原子保存 unfinished `read` episode progress；beforeTick 800 仍由既有 Interruption runtime 清 Action / Intent 並建立 emergency Action。beforeTick 1250 只保存 event marker；core execution 之後，afterTick 50 Mental Regulation 先 settle realized Need effects，afterTick 75 Activity Continuity 再建立、恢復、完成或終止 episode，之後才進 Spatial Effects 100。這使 episode lifecycle 不反向改寫本 tick 已發生的 read execution，也不把 resume 變成 hook-level auto action。
 
 Mental Regulation v4 新增明確 named-hook ordering：beforeTick 1200 `mentalRegulation.capture-execution` 只保存 execution-local snapshot；core tick 真正執行 Action；afterTick 50 `mentalRegulation.settle` 才依 actual realized execution 原子更新 canonical Needs。它不讓 baseline 或 relief 回寫已完成的同 tick deliberation / execution；Presentation observer 只會看到 settlement 後 state。
 
@@ -84,16 +88,19 @@ flowchart TD
     B275 --> B300[300 Human Social Prepare]
     B300 --> B400[400 Social Response Prepare]
     B400 --> B700[700 Soft Reconsideration]
-    B700 --> B800[800 Replan - Preemption]
+    B700 --> B790[790 Activity Continuity\nEmergency Suspension]
+    B790 --> B800[800 Replan - Preemption]
     B800 --> B900[900 Social Bid Prepare]
     B900 --> B1000[1000 Intent Reconcile]
     B1000 --> B1100[1100 Spatial Capture]
 
     B1100 --> B1200[1200 Mental Regulation Execution Capture]
-    B1200 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical world events]
+    B1200 --> B1250[1250 Activity Continuity Event Capture]
+    B1250 --> CORE[core tick\nstate.tick++ → agents sequentially act\ncanonical world events]
 
     CORE --> A50[afterTick 50\nMental Regulation Settlement]
-    A50 --> A100[afterTick 100\nSpatial Effects]
+    A50 --> A75[75 Activity Continuity Settlement]
+    A75 --> A100[afterTick 100\nSpatial Effects]
     A100 --> A150[150 Sleep Conflict Yield Completion]
     A150 --> A200[200 Intent Reconcile]
     A200 --> A300[300 Social Bid Settle]
@@ -135,11 +142,13 @@ flowchart TD
 | 300 | `humanSocial.prepare` | Human Social Response | 捕捉／發出 `talkOffer`、準備 responder；若 primary Action 與 Social transient 相容，可排入 upcoming core tick 的 execution-local listening / speaking transient | responder candidate 的 Affect score 必須已完成本 tick decay；transient 只協調本 tick execution，不取代 Eating / Intent truth；非 core-loop event 經 core event-created notification 同步形成合法 observation |
 | 400 | `socialResponse.capture-pet-offers` | Social Response | 捕捉 core 前已達 interaction phase 的 response offer | afterTick 600 只 settle 這批 pre-core snapshot；hook ID 是 implementation detail，不代表 pipeline 架構綁死某一玩法 |
 | 700 | `intent.soft-reconsideration` | Deliberation | 一般 soft switch / hysteresis | 先於 emergency / hard replan，且在 core choice 之前完成 |
-| 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成 |
+| 790 | `activityContinuity.prepare-emergency-suspension` | Activity Continuity | 對已 realized、尚未完成的 `read`，在 canonical emergency candidate可執行時把 live progress轉成 suspended episode state | 必須緊鄰且早於800，讓既有 Interruption owner清 Action前完成單一 progress owner轉移；不可因 infeasible emergency proposal先 suspend |
+| 800 | `intent.replan-preemption` | Intent / Interruption | emergency preemption、open Intent replan、abort snapshot | hard interruption 在 core 執行前完成；若790已 suspend，800仍是唯一真正 preemption / emergency Intent+Action owner |
 | 900 | `socialBid.prepare` | Social Bid | waiting action injection、response provenance snapshot | 為 afterTick settlement 保留本 tick 之前的 responder/requester 狀態 |
 | 1000 | `intent.reconcile-before` | Active Intent | Action ↔ Intent linkage 收斂 | core tick 前避免 live Action / Intent linkage 漂移 |
 | 1100 | `spatial.capture` | Spatial Effects | 保存 core 前位置與 event snapshot | afterTick 100 用來判斷本 tick movement / spill effects |
 | 1200 | `mentalRegulation.capture-execution` | Mental Regulation | 保存 eligible Human 的 pre-core awake / wander position / read feedback counter execution-local snapshot | afterTick settlement 必須比較 core 前後 actual execution；snapshot 本身不改 Need |
+| 1250 | `activityContinuity.capture-events` | Activity Continuity | 保存 core 前 newest-event marker | afterTick 75只判斷本 core tick新產生的 read completion / abort evidence；不建立 persistent event mirror |
 
 `memory.capture-events` / beforeTick 600 marker 已不再存在；Memory 不再掃 `state.events` 推斷哪些事件「剛發生」。
 
@@ -151,6 +160,8 @@ Core tick 內部先推進 `state.tick`，再依序讓 Agent 執行自己的 Acti
 
 Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 core checkpoint。Eating 的 `eatingPlate / eatingDirect` 在自己的 canonical Action step只查詢當 tick derived `primaryActivityProgressScale`：沒有 transient或 listening 時為1，speaking時為0並只跳過該 tick 的 consumption/progress；Action、Intent、food contents與 completion owner都不搬到 concurrency runtime。這個 query不消耗 RNG、不建立 World Event，也不跨 tick保存 route／progress mirror。
 
+Activity Continuity 不在 core loop 內插入第二套 execution。若 Agent 在 core chooser 中從 suspended episode重新採納 `read`，core只建立新的 concrete Action；afterTick 75才把 suspended progress移回該新 Action。因為新 Action不會在建立的同一 core tick立刻執行，這個轉移不會漏掉或重複 realized reading feedback。
+
 這一段必須保持為同一個明確 checkpoint：若把 core-loop event 改成 event-created 時立即觸發全部 Memory → Appraisal → Relationship → Affect，後執行 Agent 可能在同一 core tick 提前讀到舊 runtime 原本還不可見的 Agent-private state，會改變 emergent decision semantics。
 
 ## 4. afterTick
@@ -158,6 +169,7 @@ Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 cor
 | Order | Implementation Hook ID | Owner | 主要責任 | 為什麼順序有語義 |
 |---:|---|---|---|---|
 | 50 | `mentalRegulation.settle` | Mental Regulation | 由 pre-core snapshot + core 後 canonical execution 結果產生 awake baseline / realized Activity contributors，原子更新 Stimulation / Relaxation | 必須晚於 core actual execution，且先完成 canonical Need settlement；不回寫本 tick 已發生的 execution |
+| 75 | `activityContinuity.settle` | Activity Continuity | 依 core 後 live Action與本 tick canonical read/abort events建立／恢復／完成／終止 episode | 必須晚於 Mental Regulation 50，確保 realized read effect先 settle；又在 Spatial Effects 100前完成 Agent-private continuity lifecycle，不改寫已發生的 core execution |
 | 100 | `spatial.effects` | Spatial Effects | 根據 pre-core snapshot 套用 movement / contact / spill 衍生效果 | 要先把物理結果寫回世界，再讓後續 lifecycle 看到正式 world state |
 | 150 | `sleepConflict.complete-yield` | Sleep Slot Conflict / Deliberation | responder 實際離開被占用 Slot 後，建立完成讓位的 canonical World Event | 必須晚於 Spatial Effects 確認正式位置、早於 Intent reconcile；不得把 accept response 本身當成 Slot 已釋放 |
 | 200 | `intent.reconcile-after` | Active Intent | core Action 結果後先收斂 Intent linkage | 後續 Social Bid / abort recovery 應讀一致 linkage |
@@ -170,7 +182,7 @@ Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 cor
 | 850 | `deliberation.finalize-decision-evidence` | Deliberation | 將 correction 後仍存活的 initial Action 與 selected structured contributors freeze 成 adopted Decision Evidence | 必須晚於 800，否則會把 provisional target誤標成 final；Presentation只能在此之後讀取 final evidence |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
 
-v11.53.0 新增 beforeTick 1200 `mentalRegulation.capture-execution` 與 afterTick 50 `mentalRegulation.settle`；這兩個 hook 共同鎖定「先 actual execution、後 Mental Regulation settlement」的因果邊界。v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
+v11.61.0 新增 Activity Continuity 790 / 1250 / 75，鎖定「先確定可執行 emergency → suspension progress transfer →既有800真正preemption」以及「core actual execution → Mental Regulation 50 → Activity Continuity 75」兩組因果邊界。v11.53.0 新增 beforeTick 1200 `mentalRegulation.capture-execution` 與 afterTick 50 `mentalRegulation.settle`；這兩個 hook 共同鎖定「先 actual execution、後 Mental Regulation settlement」的因果邊界。v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
 
 ## 4.1 Presentation runtime observers
 
@@ -184,7 +196,9 @@ Presentation observer registry與 simulation runtime-hook manifest分離。Simul
 | 1100 | `residentView.schedule` | Presentation | 排程 Resident View layering / render |
 | 1150 | `relationshipView.schedule` | Presentation | 排程 Relationship readable/debug projection |
 
-Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。\n\n### afterReset observers
+Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/core.js` 的 Presentation batch controller持有：第一個完整 tick前先 yield，之後每個完整 `E.tick()`之間 yield。Intermediate tick仍會依序呼叫三個 afterTick observer，但 handler看見 UI-only intermediate batch context時只 defer / coalesce projection；final tick才真正更新 Mobile Summary / Resident / Relationship，隨後 core full render一次。單一 `E.tick()` 內沒有 yield或 cancellation checkpoint，所以本表的 simulation hook ordering與 same-tick visibility完全不變。
+
+### afterReset observers
 
 | Order | Observer ID | Owner | 責任 |
 |---:|---|---|---|
@@ -200,7 +214,8 @@ Perf-4 不改這份 registry或 observer order。Manual `step(10)` 由 `src/ui/c
 
 ```mermaid
 flowchart LR
-    M[episodic memory created] --> P100[100 Base Appraisal]
+    M[episodic memory created] --> H50[50 Learned Habit Consolidation]
+    H50 --> P100[100 Base Appraisal]
     P100 --> P200[200 Social Response Appraisal]
     P200 --> P300[300 Human Social Appraisal]
     P300 --> P350[350 Relationship Consolidation]
@@ -209,6 +224,7 @@ flowchart LR
 
 | Order | Implementation Hook ID | Owner | 責任 |
 |---:|---|---|---|
+| 50 | `dailyLifeLearnedHabit.consolidate` | Daily Life Learned Habit | 只在 actor 自己已形成的 episodic memory跨過 audited realized Activity threshold 時更新 Agent-private Learned Habit |
 | 100 | `appraisal.base` | Appraisal | 建立 baseline / semantic appraisal |
 | 200 | `appraisal.social-response` | Social Response Appraisal | 覆蓋／補充目前 response-specific appraisal |
 | 300 | `appraisal.human-social` | Human Social Appraisal | 處理 Human social response appraisal |
@@ -229,7 +245,7 @@ flowchart LR
 | 400 | `affect.normalize-reset` | Affect | 正規化 current Affect |
 | 500 | `memoryRetention.normalize-reset` | Memory Retention | 套用 bounded retention / salience cap |
 
-Relationship persistent state 由 `src/systems/relationship/state.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `src/systems/physical.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20+ Crowding完全 derived / uncached；v11.26 Structure connection / Passage從 canonical state同步派生；v11.27 Furniture orientation由 shared resolver產生 resolved geometry；v11.28 Furniture metric solids、positioned Passage options與 Slot approach/egress也沿用既有 authoring / Spatial / core Action owners。這些都不建立 reset-normalized mirror state，也不新增 afterReset hook。
+Activity Continuity 的 `activityEpisode` 由 initial-state schema owner初始化為 `null`；reset 建立全新 canonical state，不需要額外 afterReset mirror normalization。Relationship persistent state 由 `src/systems/relationship/state.js` 的 initial-state layer 建立；目前不需要 simulation-level afterReset normalization hook。Physical Profile 由 `src/systems/physical.js` 的 initial-state layer建立；PassageProfile 完全 derived，不保存 state cache。v11.19 Locomotion schema在 initial state建立最小 `agent.locomotion` execution state；它不需要 simulation-level afterReset hook，新的 reset state直接回到 `{ mode:null, phase:'idle' }`。v11.20+ Crowding完全 derived / uncached；v11.26 Structure connection / Passage從 canonical state同步派生；v11.27 Furniture orientation由 shared resolver產生 resolved geometry；v11.28 Furniture metric solids、positioned Passage options與 Slot approach/egress也沿用既有 authoring / Spatial / core Action owners。這些都不建立 reset-normalized mirror state，也不新增 afterReset hook。
 
 ## 7. Event-created / Memory observation lifecycle
 
@@ -254,7 +270,7 @@ core addEvent
 - **Exactly once**：同一 source event 仍只產生一個 Agent-local episode；重複 delivery / re-observation 不得重複 Appraisal / Relationship consolidation / Affect。
 - **Relationship gate**：Relationship hook 只對 audited direct relational evidence 生效；一般 episode雖經同一 hook，也只 no-op，不把 `agency === other` 自動解讀成人際關係。
 - **No persistent mirror**：deferred queue 是 Memory runtime-local ephemeral integration state，不寫入 canonical simulation state。
-- **No marker sweep**：`memory.capture-events` 與 newest-event marker 已移除；Memory 不再掃 `state.events` 推斷「哪些事件剛發生」。
+- **No marker sweep**：`memory.capture-events` 與 newest-event marker 已移除；Memory 不再掃 `state.events` 推斷「哪些事件剛發生」。Activity Continuity 的1250 marker只服務其單一 tick lifecycle settlement，不是 Memory event discovery也不寫入 state。
 - **Private outcome remains separate**：`privateSocialOutcome` 仍是 requester-private experience path，不折進 generic World Event observation；它只可更新 requester 自己的 directional Relationship。
 
 PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contract：tick 外 direct API、pre-core Human social offer、core-loop world event、Social Response Resolve 600、Human Social Resolve 700 都必須維持原有心理可見時點與 `event.tick → observedTick` provenance。Relationship consolidation 在這些既有心理 checkpoint 中維持 order 350；v11.15.1 target preference 與 v11.15.2 responder bias 都只讀已存在的 Relationship derived signal，不改 event delivery mode。
@@ -269,12 +285,14 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 4. `Social Response Resolve` 600 / `Human Social Resolve` 700 與 `Memory-to-Deliberation Correction` 800 的相對位置改變。
 5. Affect Decay 移到 core tick 後，或 Appraisal / Relationship / Affect 支線順序改變。
 6. Relationship consolidation 被移到 historical Appraisal 完成前，或開始讀 Current Affect / raw event 推定關係。
-7. Soft Reconsideration / Replan-Preemption / Intent Reconcile 的相對順序改變。
-8. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
-9. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
-10. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
-11. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
-12. Activity Concurrency transient 被排到 `humanSocial.prepare → core eating progress → humanSocial.resolve` 之外，或跨 execution tick 殘留並影響後續 primary progress；這會改變同 tick compatibility / interference semantics。
+7. Soft Reconsideration / Activity Continuity Emergency Suspension / Replan-Preemption / Intent Reconcile 的相對順序改變，或790開始在 emergency feasibility尚未成立前提前 suspend。
+8. Mental Regulation 50 與 Activity Continuity 75 的相對順序改變，使 episode settlement早於同 tick realized read Need effect。
+9. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
+10. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
+11. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
+12. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
+13. Activity Concurrency transient 被排到 `humanSocial.prepare → core eating progress → humanSocial.resolve` 之外，或跨 execution tick 殘留並影響後續 primary progress；這會改變同 tick compatibility / interference semantics。
+14. Activity Continuity resume 被改成 hook-level auto Action，或 ongoing/suspended progress同時保留兩份 canonical copy。
 
 這些變更都應同步更新：
 
@@ -289,7 +307,8 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 - hook registry：`E.listRuntimeHooks(phase)`。
 - event-created consumer registry：`E.listEventCreatedListeners()`。
 - architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 exact simulation hook ID / order，並拒絕 extension-owned lifecycle wrapper。
-- Activity Concurrency causal guard：`tests/activity-concurrency-eating-social.mjs` 鎖 baseline eating、listening zero-penalty、speaking local pause、same-Action continuation、Social provenance、sleep incompatibility與 transient cleanup；本 slice不新增 hook-order assertion，因它重用既有 300/core/700 checkpoints。
+- Activity Continuity causal guard：`tests/activity-continuity-read-resume.mjs` 鎖 Agent-private episode ownership、realized-read start、emergency suspension、單一 progress owner、normal-Deliberation resume、ordinary winner abandonment、natural completion與 target invalidation。
+- Activity Concurrency causal guard：`tests/activity-concurrency-eating-social.mjs` 鎖 baseline eating、listening zero-penalty、speaking local pause、same-Action continuation、Social provenance、sleep incompatibility與 transient cleanup。
 - Relationship Foundation causal guard：`tests/relationship-foundation.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
 - Relationship Target Preference causal guard：`tests/relationship-target-preference.mjs` 鎖 bounded relationship delta、Memory + Relationship + distance target ranking、action-level utility isolation、負向不 hard-ban，以及 generic animal affordance eligibility。
 - Relationship Responder Bias causal guard：`tests/relationship-responder-bias.mjs` 鎖 responder → requester directional signal、Human / animal bounded response delta、reverse-direction isolation、general Action utility isolation、World Event privacy 與 no persistent score cache。
