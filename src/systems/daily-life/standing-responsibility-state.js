@@ -46,5 +46,4 @@
   const api={VERSION,STANDING_RESPONSIBILITY_MAX_DECISION_DELTA,knownAssignments,decisionContributionForOption,describeAssignment};
   window.SimStandingResponsibility=api;
   if(window.SimWorld)window.SimWorld.STANDING_RESPONSIBILITY_SCHEMA_VERSION=VERSION;
-  if(window.SimEngine)window.SimEngine.STANDING_RESPONSIBILITY_VERSION=VERSION;
 })();
