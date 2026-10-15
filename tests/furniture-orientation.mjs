@@ -18,7 +18,7 @@ const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
 assert.equal(D.VERSION,'furniture-definitions-v13');
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Furniture orientation consumes the current canonical World Authoring schema without owning its generation literal');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
 
@@ -119,7 +119,7 @@ assert.throws(
   }
 }
 
-// world-authoring-v15 requires orientation and round-trips its facing semantics.
+// Current World Authoring requires orientation and round-trips its facing semantics.
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   assert.deepEqual(

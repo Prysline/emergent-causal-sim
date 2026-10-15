@@ -12,7 +12,7 @@ const M=globalThis.SimEditorAuthoringMutations;
 const O=globalThis.SimEditorOrdinaryObjectAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Editor ordinary-object authoring consumes the current canonical World Authoring schema without owning its generation literal');
 assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v13');
 assert.equal(O.VERSION,'editor-ordinary-object-authoring-v3');
 assert.deepEqual(O.listTemplates().map(item=>item.id),['readable-book']);

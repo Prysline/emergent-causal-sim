@@ -5,7 +5,7 @@ globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,M=globalThis.SimMentalRegulation,SP=globalThis.SimSpatial,A=globalThis.SimWorldAuthoring,V=globalThis.SimValidator;
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Reading activity consumes the current canonical World Authoring schema without owning its generation literal');
 assert.equal(M.VERSION,'mental-regulation-v4');
 assert.equal(E.READ_ACTIVITY_VERSION,'read-activity-v1');
 assert.equal(SP.ORDINARY_OBJECT_INTERACTION_VERSION,'ordinary-object-interaction-v2');
