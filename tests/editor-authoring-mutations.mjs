@@ -13,7 +13,7 @@ const I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Editor mutations consume the current canonical World Authoring schema without owning its generation literal');
 assert.equal(C.VERSION,'embodiment-capabilities-v5');
 
 {
