@@ -32,6 +32,7 @@ function authoredFixture({kind='human',cells=['1,1','2,1'],boundaries={},doors={
   resident.kind=kind;
   resident.initial={facing:'south',placement:{mode:'exact',node:{x:1,y:1,z:0}},posture:{kind:'standing'}};
   authored.residents={resident};
+  authored.resourceResponsibilityAssignments=[];
   const schema=A.validateAuthoring(authored);
   assert.equal(schema.ok,true,schema.errors?.map(issue=>issue.code+':'+issue.path).join(' | '));
   return authored;
