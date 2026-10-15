@@ -4,7 +4,7 @@ import {loadRuntimeProfile} from './helpers/test-profiles.mjs';
 globalThis.window=globalThis;
 loadRuntimeProfile([
   'world-authoring.js','world-initializer.js','standing-responsibility-initializer.js','world.js','release.js','spatial.js','spatial-traversal.js',
-  'systems/physical.js','spatial-passage.js','engine.js',
+  'spatial-candidate-selection.js','spatial-observability.js','systems/physical.js','spatial-passage.js','engine.js',
   'editor-authoring-mutations.js','editor-ordinary-object-authoring.js',
   'validation/registry.js','validation/rules/spatial-node.js','validation/rules/physical-profile.js'
 ]);
