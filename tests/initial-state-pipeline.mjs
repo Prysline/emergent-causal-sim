@@ -24,6 +24,7 @@ const EXPECTED_SCHEMA=[
   {id:'contact.schema',order:30},
   {id:'spatialSurfaceEnvironment.schema',order:50},
   {id:'action.schema',order:100},
+  {id:'activityContinuity.schema',order:175},
   {id:'intent.schema',order:200},
   {id:'socialBid.schema',order:300},
   {id:'interruption.schema',order:400},
@@ -70,6 +71,7 @@ assert.deepEqual(st.agents.zhen.knownResponsibilityAssignmentIds,['responsibilit
 assert.deepEqual(st.agents.zhou.knownResponsibilityAssignmentIds,[],'non-assignee must not inherit Standing Responsibility knowledge');
 for(const agent of Object.values(st.agents||{})){
   assert.equal(agent.activeIntent,null,`${agent.id}: activeIntent initialization parity`);
+  assert.equal(agent.activityEpisode,null,`${agent.id}: Activity Continuity must initialize one Agent-private episode slot explicitly`);
   assert.deepEqual(agent.observedSocialBids,[],`${agent.id}: observedSocialBids initialization parity`);
   assert.deepEqual(agent.relationships,{},`${agent.id}: relationships initialization parity`);
   assert.deepEqual(agent.locomotion,{mode:null,phase:'idle'},`${agent.id}: locomotion initialization parity`);
@@ -80,6 +82,7 @@ for(const agent of Object.values(st.agents||{})){
 }
 const humanRoutines=Object.values(st.agents||{}).filter(agent=>agent.kind==='human').map(agent=>agent.routine.anchors);
 assert.ok(humanRoutines.every(anchors=>anchors.length===1&&anchors[0].activityKind==='read'),'DAY 0 Human Routine must seed one minimal private read anchor');
+assert.equal(Object.prototype.hasOwnProperty.call(st,'activityEpisode'),false,'Activity Continuity must not create World-level episode truth');
 assert.equal(Object.prototype.hasOwnProperty.call(st,'routines'),false,'Routine must not create World-level personal schedule truth');
 assert.equal(Object.prototype.hasOwnProperty.call(st,'learnedHabits'),false,'Learned Habit must not create World-level personal habit truth');
 const pipelineDiningSurface=st.furniture?.diningTable?.spatial?.surfaces?.find(surface=>surface.id==='diningTable:surface');
