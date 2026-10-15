@@ -3,14 +3,14 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js']){
+for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','standing-responsibility-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
 assert.equal(D.VERSION,'furniture-definitions-v13');
-assert.equal(A.VERSION,'world-authoring-v15');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Editor contract must consume the canonical current World Authoring generation without duplicating its literal');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
 const layered=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -25,7 +25,7 @@ const imported=A.parseAuthoringJSON(exported);
 assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'export → import must preserve authoring semantics');
 assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
-assert.equal(imported.authoringSchema,'world-authoring-v15');
+assert.equal(imported.authoringSchema,A.VERSION);
 assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v13');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
@@ -116,12 +116,14 @@ const definitionScript=editorHtml.indexOf('src/furniture-definitions.js');
 const authoringScript=editorHtml.indexOf('src/world-authoring.js');
 const capabilityScript=editorHtml.indexOf('src/embodiment-capabilities.js');
 const initializerScript=editorHtml.indexOf('src/world-initializer.js');
+const standingInitializerScript=editorHtml.indexOf('src/standing-responsibility-initializer.js');
 const previewBridgeScript=editorHtml.indexOf('src/editor-preview-bridge.js');
 const mutationScript=editorHtml.indexOf('src/editor-authoring-mutations.js');
 const editorScript=editorHtml.indexOf('src/editor-ui.js');
-assert.ok(definitionScript>=0&&authoringScript>definitionScript&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&previewBridgeScript>initializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript,'Editor load order must be Furniture Definitions → authoring → shared capabilities → compatibility initializer → preview bridge → mutation owner → UI');
+const standingEditorScript=editorHtml.indexOf('src/editor-standing-responsibility-authoring.js');
+assert.ok(definitionScript>=0&&authoringScript>definitionScript&&capabilityScript>authoringScript&&initializerScript>capabilityScript&&standingInitializerScript>initializerScript&&previewBridgeScript>standingInitializerScript&&mutationScript>previewBridgeScript&&editorScript>mutationScript&&standingEditorScript>editorScript,'Editor load order must make Standing Responsibility authoring projection and UI extension explicit');
 assert.ok(editorHtml.includes('世界建構 · <span id="authoringVersion">—</span>'),'Editor header must expose a runtime-bound authoring version target');
-assert.ok(!editorHtml.includes('世界建構 · world-authoring-v15'),'Editor HTML must not duplicate the World Authoring version literal');
+assert.ok(!/世界建構 · world-authoring-v\d+/.test(editorHtml),'Editor HTML must not duplicate the World Authoring version literal');
 const editorUiSource=fs.readFileSync(new URL('../src/editor-ui.js',import.meta.url),'utf8');
 assert.match(editorUiSource,/\$\('authoringVersion'\)\.textContent=A\.VERSION/,'Editor header must read the canonical SimWorldAuthoring.VERSION owner');
 assert.ok(editorHtml.includes('id="furnitureCatalog"'),'Editor-2 must expose the system Furniture Catalog as the new-instance source');
