@@ -19,7 +19,7 @@ function bind(a,kind,intentKind,extra={}){
 E.reset(20260911);
 let st=E.getState();
 assert.equal(st.version,globalThis.SimRelease.VERSION);
-assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.61.0-activity-continuity');
+assert.equal(E.INTERRUPTION_SCHEMA_VERSION,'11.12.4-activity-continuity');
 noIssues('reset');
 
 // Hard Action failure does not automatically destroy a still-valid Intent.
