@@ -30,20 +30,20 @@ assert.match(authored.text,/固定 parked/);
 await page.screenshot({path:`${outDir}/editor-passage-yielding.png`,fullPage:true});
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimFurniturePassageYielding?.applyRuntimeFurniturePlacement);
+await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimFurniturePassageYielding?.applyRuntimeFurniturePlacement&&window.SimUI?.isStarted?.());
 const moved=await page.evaluate(()=>{
   const st=window.SimEngine.getState(),chair=st.furniture.chairNW;
   chair.definitionId='chair-basic';chair.origin={x:4,y:2,z:0};chair.passageYielding={version:'furniture-passage-yielding-authoring-v1',homePlacement:{origin:{x:4,y:2,z:0},orientation:'east'},parkedPlacement:{origin:{x:3,y:2,z:0},orientation:'east'},source:'explicit'};
   const before={old:[...(st.map.tiles['4,2']?.furnitureIds||[])],next:[...(st.map.tiles['3,2']?.furnitureIds||[])]};
   const result=window.SimFurniturePassageYielding.applyRuntimeFurniturePlacement(st,'chairNW',chair.passageYielding.parkedPlacement);
-  window.SimEngine.tick();
   return {ok:result.ok,reason:result.reason||null,origin:st.furniture.chairNW.origin,displayAt:st.furniture.chairNW.displayAt,before,after:{old:[...(st.map.tiles['4,2']?.furnitureIds||[])],next:[...(st.map.tiles['3,2']?.furnitureIds||[])]}};
 });
 assert.equal(moved.ok,true,moved.reason||'runtime Furniture placement must succeed');
 assert.deepEqual(moved.origin,{x:3,y:2,z:0});
 assert.equal(moved.after.old.includes('chairNW'),false);
 assert.equal(moved.after.next.includes('chairNW'),true);
-await page.waitForTimeout(50);
+await page.click('#step');
+await page.waitForFunction(()=>window.SimEngine.getState().tick>=1);
 const rendered=await page.evaluate(()=>({
   old:!!document.querySelector('.sim-tile[data-tile="4,2"] .furniture-footprint[data-entity="furniture:chairNW"]'),
   next:!!document.querySelector('.sim-tile[data-tile="3,2"] .furniture-footprint[data-entity="furniture:chairNW"]')
