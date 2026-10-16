@@ -30,7 +30,17 @@ function corridorAuthoring(){
   }
   return A.canonicalizeAuthoring(authored);
 }
-function runtime(authored=corridorAuthoring()){return W.createInitialStateFromAuthoring(authored,26016);}
+function addWalkableLowCeiling(st){
+  const ceiling={
+    id:'testLowCeiling',name:'測試低天花板',kind:'test',orientation:'south',
+    footprint:[{x:4,y:4,z:0}],displayAt:{x:4,y:4,z:0},slots:[],
+    spatial:{solids:[{key:'ceiling',layerZ:0,bounds:{x:4,y:4,z:1.8,width:1,depth:1,height:.2}}],surfaces:[]}
+  };
+  st.furniture[ceiling.id]=ceiling;
+  const tile=SP.tileByPos(st,{x:4,y:4,z:0});if(tile&&!tile.furnitureIds.includes(ceiling.id))tile.furnitureIds.push(ceiling.id);
+  return ceiling;
+}
+function runtime(authored=corridorAuthoring()){const st=W.createInitialStateFromAuthoring(authored,26016);addWalkableLowCeiling(st);return st;}
 
 {
   const authored=corridorAuthoring(),chair=authored.furniture.chairNW,contract=A.resolveFurniturePassageYieldingContract(chair);
@@ -74,6 +84,8 @@ function runtime(authored=corridorAuthoring()){return W.createInitialStateFromAu
 
 {
   const st=runtime(),a=st.agents.zhen,chair=st.furniture.chairNW,goal=SP.normalizeNode(st,{x:6,y:4,z:0},'floor');
+  assert.equal(SP.floorNodeFitsMode(st,{x:4,y:4,z:0},a,'walk'),false,'chair + 1.8m ceiling must block Human floor walking in the bottleneck cell');
+  assert.equal(SP.surfaceNodeFitsMode(st,{x:4,y:4,z:0,surfaceId:'chairNW:seat'},a,'walk'),false,'same ceiling must block standing/walking on the chair seat while remaining high enough for floor walking after relocation');
   const current=F.basePlanRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});assert.equal(Number.isFinite(current.traversalCost),false,'fixture must make current normal walk unreachable');
   const observation=P.classifyFurnitureVisualSensoryAvailability(st,a,chair);assert.equal(observation.visualAvailable,true,'candidate Furniture must be observed through Furniture sensory evidence');
   const candidate=F.candidateForNavigation(st,a,goal);assert.ok(candidate,'observed empty chair whose parked counterfactual restores walk must be a candidate');
@@ -94,6 +106,7 @@ function runtime(authored=corridorAuthoring()){return W.createInitialStateFromAu
   assert.deepEqual(st.furniture.chairNW.origin,{x:4,y:3,z:0});
   assert.equal(st.map.tiles['4,4'].furnitureIds.includes('chairNW'),false);assert.equal(st.map.tiles['4,3'].furnitureIds.includes('chairNW'),true,'runtime transaction must atomically refresh tile Furniture membership');
   assert.equal(F.candidateForNavigation(st,a,goal),null,'already parked Furniture must never yield again');
+  assert.equal(SP.floorNodeFitsMode(st,{x:4,y:4,z:0},a,'walk'),true,'1.8m ceiling alone must remain walkable after chair relocation');
   assert.equal(Number.isFinite(F.basePlanRoute(st,a,goal,{mode:'walk',objective:'traversalCost'}).traversalCost),true,'route re-query must immediately consume new runtime geometry without stale cross-tick cache');
 }
 
