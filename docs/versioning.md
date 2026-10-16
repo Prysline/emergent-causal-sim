@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.61.0-activity-continuity`。
+目前 overall runtime marker：`11.62.0-furniture-passage-yielding`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -24,6 +24,10 @@ Subsystem marker只在**自己的 contract**改變時前進；overall release �
 
 Current relevant markers：
 
+- Furniture Passage Yielding：`furniture-passage-yielding-v1`
+- Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
+- Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-furniture-target`
+- Perception Visual Availability production composition：`perception-visual-availability-v2-furniture-target`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v2-containment`
@@ -51,12 +55,14 @@ Current relevant markers：
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v16`
+- World Authoring：`world-authoring-v17`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
 
-`11.61.0-activity-continuity` 建立 Generic Activity Continuity v1：新增 Agent-private `activityEpisode` canonical owner，第一個 production consumer 只有 `read`。Episode 只在 realized reading progress 後建立；emergency preemption 可把同一未完成 episode 轉為 `suspended`，resume 則只建立 bounded normal Decision Option，仍經既有 Deliberation。進行中 progress 仍由 live Action 唯一持有；只有 Action 被中斷且不存在時 suspended episode 才暫存 progress，resume 新建 Action 後再把 progress 移回 Action。新增 beforeTick 790 / 1250 與 afterTick 75 named hooks，因此 hook ordering / same-tick visibility 屬本 release semantic impact。Activity Continuity own generation = `activity-continuity-v1`；Interruption own generation → `11.12.4-activity-continuity`。Action 維持 `11.51.0-activity-concurrency`、generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`、Runtime Hook Pipeline infrastructure 維持 `runtime-hook-pipeline-2`；Mental Regulation、Routine、Learned Habit、Standing Responsibility、Spatial / Route / Interaction Geometry 都不假升版。詳細 contract 見 [`activity-continuity.md`](activity-continuity.md)。
+`11.62.0-furniture-passage-yielding` 建立 Furniture Passage Yielding v1：World Authoring instance contract 增加明確 opt-in `passageYielding` 與固定 `parkedPlacement`，own generation → `world-authoring-v17`；Furniture Definitions schema 未改，維持 `furniture-definitions-v13`。Perception production composition 增加 current resolved Furniture target / runtime opacity projection，對外 markers 前進至 `perception-visual-los-v3-runtime-furniture`、`perception-visual-sight-samples-v2-furniture-target`、`perception-visual-availability-v2-furniture-target`。Passage Yielding recovery 只在 normal walk unreachable、Furniture 已觀察、opposite-side interaction 可達、且 parked hypothetical 恢復 walk 時成立；成功用 narrow runtime Furniture placement transaction 更新 current resolved geometry 與 projections，並產生一筆 canonical World Event。Route own generation 維持 `11.38.0-carried-handling-risk`，Action / generic Deliberation / Decision Evidence / Locomotion / Furniture Definitions 不假升版。詳細 contract 見 [`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
+
+前一個 `11.61.0-activity-continuity` 建立 Generic Activity Continuity v1：新增 Agent-private `activityEpisode` canonical owner，第一個 production consumer 只有 `read`。Episode 只在 realized reading progress 後建立；emergency preemption 可把同一未完成 episode 轉為 `suspended`，resume 則只建立 bounded normal Decision Option，仍經既有 Deliberation。進行中 progress 仍由 live Action 唯一持有；只有 Action 被中斷且不存在時 suspended episode 才暫存 progress，resume 新建 Action 後再把 progress 移回 Action。新增 beforeTick 790 / 1250 與 afterTick 75 named hooks，因此 hook ordering / same-tick visibility 屬本 release semantic impact。Activity Continuity own generation = `activity-continuity-v1`；Interruption own generation → `11.12.4-activity-continuity`。Action 維持 `11.51.0-activity-concurrency`、generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`、Runtime Hook Pipeline infrastructure 維持 `runtime-hook-pipeline-2`；Mental Regulation、Routine、Learned Habit、Standing Responsibility、Spatial / Route / Interaction Geometry 都不假升版。詳細 contract 見 [`activity-continuity.md`](activity-continuity.md)。
 
 前一個 `11.60.0-standing-responsibility` 建立 Standing Responsibility v1：World Authoring 新增 durable `resourceResponsibilityAssignments[]` canonical relation，Agent-private 只保存 `knownResponsibilityAssignmentIds[]` canonical refs；authored assignee DAY 0 知道自己的 assignment。第一個 production consumer 是既有合法 `restockContainer` option，Standing Responsibility 只追加最多 `+8`、含 canonical assignment ID 的 bounded contributor，不建立第二套 candidate、objective necessity、Action 或 Active Intent。World Authoring own generation → `world-authoring-v16`；Standing Responsibility own generation → `standing-responsibility-v1`；overall / Presentation → `11.60.0-standing-responsibility`。Resources、Daily Life Routine、Daily Life Learned Habit、generic Deliberation / Decision Evidence 與 Runtime Hook Pipeline public contract 未被重新定義，因此維持原 generation。
 
@@ -78,7 +84,7 @@ Version impact：overall / Presentation → `11.57.1-slot-approach-arrival`。Sl
 
 前一個 `11.56.0-object-unification` 的 Object identity / Resource-container capability / generic Object handling contract 全部維持 current：concrete physical item 仍只存在 `entities.objects / state.objects`，`Agent.held` 仍是唯一 held physical Object relation，Nearby Placement 仍為 `nearby-placement-v2-object-release`。該 release 不做 Object containment / bookshelf runtime，也不做 Food Object migration；current `contents.food` 繼續作 Resource-container capability 的 production representation。
 
-詳細 Activity Continuity 語意見 [`activity-continuity.md`](activity-continuity.md)；Standing Responsibility 語意見 [`standing-responsibility.md`](standing-responsibility.md)；跨 subsystem 語意見 [`architecture.md`](architecture.md)。
+詳細 Furniture Passage Yielding 語意見 [`furniture-passage-yielding.md`](furniture-passage-yielding.md)；Activity Continuity 語意見 [`activity-continuity.md`](activity-continuity.md)；Standing Responsibility 語意見 [`standing-responsibility.md`](standing-responsibility.md)；跨 subsystem 語意見 [`architecture.md`](architecture.md)。
 
 ## Consistency responsibility
 
