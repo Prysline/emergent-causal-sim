@@ -43,10 +43,16 @@
     for(const solid of solids){const b=solid.bounds;if(!b||![b.x,b.y,b.width,b.depth].every(value=>Number.isFinite(Number(value))))throw new Error(`Invalid Furniture sight geometry: ${furniture.id}:${solid.key}`);minX=Math.min(minX,Number(b.x));maxX=Math.max(maxX,Number(b.x)+Number(b.width));minY=Math.min(minY,Number(b.y));maxY=Math.max(maxY,Number(b.y)+Number(b.depth));}
     return deepFreeze({layerZ:layers[0],targetSamples:[{kind:'resolved-solid-center',position:{x:(minX+maxX)/2-.5,y:(minY+maxY)/2-.5}}]});
   }
+  function observerSightSamples(observer){
+    const position=observer?.position,layerZ=position?.z??0;
+    if(!position||!Number.isInteger(layerZ))throw new Error('Furniture visual availability requires canonical observer layer.');
+    if(position.z!==undefined)return P.derivePhysicalSightSamples(observer);
+    return P.derivePhysicalSightSamples({...observer,position:{...position,z:layerZ}});
+  }
   function classifyFurnitureVisualSensoryAvailability(st,observer,furniture){
     if(!st||!Number.isInteger(st.tick)||st.tick<0)throw new Error('Furniture visual availability requires canonical runtime state.');
     if(!observer?.id||!furniture?.id)throw new Error('Furniture visual availability requires observer Agent + Furniture target.');
-    const observerSight=P.derivePhysicalSightSamples(observer),targetSight=deriveFurnitureSightSamples(furniture);if(observerSight.layerZ!==targetSight.layerZ)return deepFreeze({visualAvailable:false,unavailableReason:'different-layer',sightSamples:{observer:observerSight,target:targetSight}});
+    const observerSight=observerSightSamples(observer),targetSight=deriveFurnitureSightSamples(furniture);if(observerSight.layerZ!==targetSight.layerZ)return deepFreeze({visualAvailable:false,unavailableReason:'different-layer',sightSamples:{observer:observerSight,target:targetSight}});
     const targetSample=targetSight.targetSamples[0],orientationSnapshot=P.captureVisualOrientationSnapshot(st,observer),orientation=P.classifyVisualBearing(orientationSnapshot,observerSight.observerOrigin,targetSample.position),range=P.classifyVisualRange(observerSight.observerOrigin,targetSample.position),opacityProjection=projectRuntimeVisualOpacity(st,targetSight.layerZ,{excludeFurnitureId:furniture.id}),los=P.classifyStaticVisualLos(observerSight.observerOrigin,targetSample.position,opacityProjection),orientationAvailable=orientation.visualClass!=='unavailable',visualAvailable=orientationAvailable&&range.rangeAvailable&&los.losAvailable,unavailableReason=orientationAvailable?(range.rangeAvailable?(los.losAvailable?null:los.unavailableReason):range.unavailableReason):'outside-visual-field';
     return deepFreeze({visualAvailable,unavailableReason,target:{kind:'furniture',id:furniture.id,observedTick:st.tick},sightSamples:{observer:observerSight,target:targetSight},orientation,range,los});
   }
