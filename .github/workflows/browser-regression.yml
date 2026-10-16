@@ -87,6 +87,10 @@ jobs:
             test: tests/browser-standing-responsibility-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-standing-responsibility-qa
+          - suite: furniture-passage-yielding
+            test: tests/browser-furniture-passage-yielding-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-furniture-passage-yielding-qa
           - suite: step-batch-lifecycle
             test: tests/browser-step-batch-lifecycle-qa.mjs
             extra_test: ''
