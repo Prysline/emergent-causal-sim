@@ -4,7 +4,7 @@
   if(!SP?.planRoute||!SP?.supportContactNodes||!SP?.edgeStructurallyOpen||!SP?.tileByPos)throw new Error('furniture-passage-yielding.js requires current Spatial route/contact authority.');
   if(!P?.classifyFurnitureVisualSensoryAvailability)throw new Error('furniture-passage-yielding.js requires Furniture visual availability.');
 
-  const VERSION='furniture-passage-yielding-v1',ROUTE_VERSION='11.62.0-furniture-passage-yielding',EPS=1e-9;
+  const VERSION='furniture-passage-yielding-v1',EPS=1e-9;
   const basePlanRoute=SP.planRoute.bind(SP),clone=value=>value==null?value:JSON.parse(JSON.stringify(value)),zOf=p=>p?.z??0;
   const nodeSame=(left,right)=>!!left&&!!right&&left.x===right.x&&left.y===right.y&&zOf(left)===zOf(right)&&(left.surfaceId??'floor')===(right.surfaceId??'floor');
   const placementSame=(left,right)=>!!left&&!!right&&left.origin?.x===right.origin?.x&&left.origin?.y===right.origin?.y&&zOf(left.origin)===zOf(right.origin)&&left.orientation===right.orientation;
@@ -97,7 +97,7 @@
     const blocked=basePlanRoute(st,a,goal,{...options,mode:'walk'});return {...blocked,mode:'auto',requestedMode:'auto',objective:options.objective||blocked.objective};
   }
   SP.planRoute=(st,a,goal,options={})=>redirectedPlan(st,a,goal,options)||basePlanRoute(st,a,goal,options);
-  SP.ROUTE_SEMANTICS_VERSION=ROUTE_VERSION;SP.PASSAGE_YIELDING_VERSION=VERSION;
+  SP.PASSAGE_YIELDING_VERSION=VERSION;
 
-  window.SimFurniturePassageYielding={VERSION,ROUTE_VERSION,basePlanRoute,placementForFurniture,placementSame,dependencyLegality,geometryLegality,placementLegality,interactionPositions,evaluateFurnitureCandidate,candidateForNavigation,applyRuntimeFurniturePlacement,recomputeFurnitureProjections};
+  window.SimFurniturePassageYielding={VERSION,basePlanRoute,placementForFurniture,placementSame,dependencyLegality,geometryLegality,placementLegality,interactionPositions,evaluateFurnitureCandidate,candidateForNavigation,applyRuntimeFurniturePlacement,recomputeFurnitureProjections};
 })();
