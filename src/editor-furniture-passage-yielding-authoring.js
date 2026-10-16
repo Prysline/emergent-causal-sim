@@ -28,20 +28,25 @@
   window.SimEditorFurniturePassageYieldingAuthoring={VERSION,setFurniturePassageYielding};
 
   if(typeof document==='undefined')return;
-  const E=window.SimWorldEditor;if(!E?.getDocument||!E?.getSession||!E?.loadDocument||!E?.selectEntity)return;
-  const actions=document.getElementById('selectionActions');if(!actions)return;
+  const E=window.SimWorldEditor;if(!E?.getDocument||!E?.getSession||!E?.loadDocument||!E?.semanticFingerprint||!E?.selectEntity)return;
+  const actions=document.getElementById('selectionActions'),dirtyPill=document.getElementById('dirtyStatus');if(!actions)return;
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const nativeLoadDocument=E.loadDocument.bind(E);
-  function commit(result,furnitureId){if(!result.ok)throw new Error((result.issues||[]).map(item=>item.message||item.code).join('; ')||'Passage Yielding editor mutation rejected.');nativeLoadDocument(result.candidate);E.selectEntity('furniture',furnitureId);renderUi();}
+  const nativeLoadDocument=E.loadDocument.bind(E),nativeGetSession=E.getSession.bind(E);
+  let baselineFingerprint=E.semanticFingerprint(),inheritedDirty=nativeGetSession().dirty===true;
+  function dirty(){return inheritedDirty||E.semanticFingerprint()!==baselineFingerprint;}
+  E.getSession=()=>({...nativeGetSession(),dirty:dirty()});
+  E.loadDocument=next=>{const result=nativeLoadDocument(next);baselineFingerprint=E.semanticFingerprint();inheritedDirty=false;renderUi();return result;};
+  function syncDirty(){if(!dirtyPill)return;const value=dirty();dirtyPill.textContent=value?'有未匯出修改':'未修改';dirtyPill.classList.toggle('clean',!value);dirtyPill.classList.toggle('dirty',value);}
+  function commit(result,furnitureId){if(!result.ok)throw new Error((result.issues||[]).map(item=>item.message||item.code).join('; ')||'Passage Yielding editor mutation rejected.');inheritedDirty=true;nativeLoadDocument(result.candidate);E.selectEntity('furniture',furnitureId);renderUi();}
   function renderUi(){
     const existing=actions.querySelector('[data-furniture-passage-yielding-editor]'),selection=E.getSession().selection;
-    if(selection?.kind!=='entity'||selection.type!=='furniture'){existing?.remove();return;}
-    const authoring=E.getDocument(),furniture=authoring.furniture?.[selection.id];if(!furniture){existing?.remove();return;}
+    if(selection?.kind!=='entity'||selection.type!=='furniture'){existing?.remove();syncDirty();return;}
+    const authoring=E.getDocument(),furniture=authoring.furniture?.[selection.id];if(!furniture){existing?.remove();syncDirty();return;}
     const contract=A.resolveFurniturePassageYieldingContract(furniture),enabled=furniture.passageYielding===true,explicit=!!furniture.parkedPlacement,parked=contract?.parkedPlacement||null,signature=JSON.stringify([selection.id,enabled,explicit,parked]);
-    if(existing?.dataset.signature===signature)return;existing?.remove();
+    if(existing?.dataset.signature===signature){syncDirty();return;}existing?.remove();
     const section=document.createElement('div');section.dataset.furniturePassageYieldingEditor='';section.dataset.signature=signature;section.className='selection-card';
     section.innerHTML=`<strong>通道讓路</strong><p class="hint">只 author bounded Passage Yielding contract；runtime 仍會重新檢查觀測、接觸位置、依賴與完整 3D geometry。</p><label><input type="checkbox" data-passage-yielding-enabled ${enabled?'checked':''}> 允許局部收回至 parked placement</label>${enabled?`<label>Parked 來源 <select data-passage-yielding-mode><option value="default" ${explicit?'':'selected'}>Facing 前方一格（default）</option><option value="explicit" ${explicit?'selected':''}>Explicit override</option></select></label><div class="summary-grid"><span>固定 parked</span><b>${parked?`${esc(parked.origin.x)}, ${esc(parked.origin.y)}, Z ${esc(parked.origin.z)} · ${esc(parked.orientation)}`:'不可推導'}</b></div>${explicit&&parked?`<div class="summary-grid"><label>X <input type="number" step="1" data-passage-yielding-coordinate="x" value="${esc(parked.origin.x)}"></label><label>Y <input type="number" step="1" data-passage-yielding-coordinate="y" value="${esc(parked.origin.y)}"></label><label>Z <input type="number" step="1" data-passage-yielding-coordinate="z" value="${esc(parked.origin.z)}"></label></div>`:''}`:''}`;
-    actions.append(section);
+    actions.append(section);syncDirty();
   }
   actions.addEventListener('change',event=>{
     const selection=E.getSession().selection;if(selection?.kind!=='entity'||selection.type!=='furniture')return;const furnitureId=selection.id,authoring=E.getDocument();
@@ -49,5 +54,8 @@
     const mode=event.target.closest?.('[data-passage-yielding-mode]');if(mode){const furniture=authoring.furniture[furnitureId],contract=A.resolveFurniturePassageYieldingContract(furniture);commit(setFurniturePassageYielding(authoring,{furnitureId,enabled:true,useDefault:mode.value==='default',parkedOrigin:contract?.parkedPlacement?.origin}),furnitureId);return;}
     const coord=event.target.closest?.('[data-passage-yielding-coordinate]');if(coord){const furniture=authoring.furniture[furnitureId],contract=A.resolveFurniturePassageYieldingContract(furniture),origin=clone(contract?.parkedPlacement?.origin||{});origin[coord.dataset.passageYieldingCoordinate]=Number(coord.value);commit(setFurniturePassageYielding(authoring,{furnitureId,enabled:true,useDefault:false,parkedOrigin:origin}),furnitureId);}
   });
+  document.getElementById('exportWorld')?.addEventListener('click',()=>setTimeout(()=>{if(nativeGetSession().dirty===false){baselineFingerprint=E.semanticFingerprint();inheritedDirty=false;renderUi();}},0));
+  document.getElementById('resetWorld')?.addEventListener('click',()=>setTimeout(()=>{if(nativeGetSession().dirty===false){baselineFingerprint=E.semanticFingerprint();inheritedDirty=false;renderUi();}},0));
+  document.getElementById('importWorld')?.addEventListener('change',()=>setTimeout(()=>{if(nativeGetSession().dirty===false){baselineFingerprint=E.semanticFingerprint();inheritedDirty=false;renderUi();}},120));
   new MutationObserver(()=>renderUi()).observe(actions,{childList:true});renderUi();
 })();
