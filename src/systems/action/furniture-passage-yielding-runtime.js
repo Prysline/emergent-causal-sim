@@ -27,6 +27,16 @@
     };
     return true;
   }
+
+  const passagePlanRoute=SP.planRoute.bind(SP);
+  SP.planRoute=(st,a,goal,options={})=>{
+    if(options?.mode==='auto'&&a?.action&&!a.action.passageYieldingRecovery&&sameNode(a.action.spatialGoal,goal)){
+      const candidate=F.candidateForNavigation(st,a,goal);
+      if(candidate)armRecovery(st,a,candidate);
+    }
+    return passagePlanRoute(st,a,goal,options);
+  };
+
   function settleRecovery(st,a){
     const action=a?.action,recovery=action?.passageYieldingRecovery;if(!action||!recovery)return false;
     if(!sameNode(action.spatialGoal,recovery.originalGoal))return !!abortRecovery(st,a,'navigation-goal-changed');
