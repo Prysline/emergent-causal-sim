@@ -19,8 +19,8 @@ function corridorAuthoring(){
   const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
   for(const id of ['chairNE','chairSW','chairSE'])delete authored.furniture[id];
   authored.furniture.chairNW={id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:4,z:0},orientation:'north',name:'讓路椅',passageYielding:true};
-  authored.residents.zhen.initial.placement={mode:'exact',node:{x:3,y:5,z:0}};
-  authored.residents.zhen.initial.facing='northEast';
+  authored.residents.zhen.initial.placement={mode:'exact',node:{x:4,y:5,z:0}};
+  authored.residents.zhen.initial.facing='north';
   const layer=authored.map.layers.find(item=>item.z===0);
   const corridor=[{x:3,y:5,z:0},{x:4,y:5,z:0},{x:4,y:4,z:0},{x:5,y:4,z:0},{x:6,y:4,z:0},{x:4,y:3,z:0}],inside=new Set(corridor.map(cell=>`${cell.x},${cell.y}`));
   for(const cell of corridor)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
@@ -90,7 +90,7 @@ function runtime(authored=corridorAuthoring()){const st=W.createInitialStateFrom
   const observation=P.classifyFurnitureVisualSensoryAvailability(st,a,chair);assert.equal(observation.visualAvailable,true,'candidate Furniture must be observed through Furniture sensory evidence');
   const candidate=F.candidateForNavigation(st,a,goal);assert.ok(candidate,'observed empty chair whose parked counterfactual restores walk must be a candidate');
   assert.equal(Number.isFinite(candidate.parkedWalk.traversalCost),true);
-  a.facing='southWest';assert.equal(F.candidateForNavigation(st,a,goal),null,'unobserved Furniture must not be selected from hidden World truth');a.facing='northEast';
+  a.facing='south';assert.equal(F.candidateForNavigation(st,a,goal),null,'unobserved Furniture must not be selected from hidden World truth');a.facing='north';
 
   a.action={kind:'wander',phase:'move',spatialGoal:clone(goal),started:st.tick,wait:0,intentId:'intent:passage-test'};
   a.activeIntent={id:'intent:passage-test',kind:'explore',lifecycle:'actionBound',source:{type:'test'}};
