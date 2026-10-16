@@ -73,9 +73,13 @@
     const hypothetical=hypotheticalState(st,furniture,geometry.candidate),parkedWalk=basePlanRoute(hypothetical,a,goal,{mode:'walk',objective:'traversalCost'});if(!routeReachable(parkedWalk))return null;
     return {furnitureId:furniture.id,goal:clone(goal),currentWalk:currentWalk?clone(currentWalk):null,parkedWalk:clone(parkedWalk),interactionPosition:clone(interaction.position),observation:observed?clone(observed):null,parkedPlacement:clone(furniture.passageYielding.parkedPlacement),source:furniture.passageYielding.source};
   }
+  function candidateFurniture(st){
+    return Object.values(st?.furniture||{}).filter(furniture=>furniture?.passageYielding&&!placementSame(placementForFurniture(furniture),furniture.passageYielding.parkedPlacement)).sort((left,right)=>String(left.id).localeCompare(String(right.id)));
+  }
   function candidateForNavigation(st,a,goal){
-    if(!st||!a?.id||a.offMap||!goal)return null;const currentWalk=basePlanRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});if(routeReachable(currentWalk))return null;
-    for(const furniture of Object.values(st.furniture||{}).sort((left,right)=>String(left.id).localeCompare(String(right.id)))){const candidate=evaluateFurnitureCandidate(st,a,goal,furniture,{currentWalk});if(candidate)return candidate;}
+    if(!st||!a?.id||a.offMap||!goal)return null;const furnitureList=candidateFurniture(st);if(!furnitureList.length)return null;
+    const currentWalk=basePlanRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});if(routeReachable(currentWalk))return null;
+    for(const furniture of furnitureList){const candidate=evaluateFurnitureCandidate(st,a,goal,furniture,{currentWalk});if(candidate)return candidate;}
     return null;
   }
   function recomputeFurnitureProjections(st){
@@ -99,5 +103,5 @@
   SP.planRoute=(st,a,goal,options={})=>redirectedPlan(st,a,goal,options)||basePlanRoute(st,a,goal,options);
   SP.PASSAGE_YIELDING_VERSION=VERSION;
 
-  window.SimFurniturePassageYielding={VERSION,basePlanRoute,placementForFurniture,placementSame,dependencyLegality,geometryLegality,placementLegality,interactionPositions,evaluateFurnitureCandidate,candidateForNavigation,applyRuntimeFurniturePlacement,recomputeFurnitureProjections};
+  window.SimFurniturePassageYielding={VERSION,basePlanRoute,placementForFurniture,placementSame,dependencyLegality,geometryLegality,placementLegality,interactionPositions,evaluateFurnitureCandidate,candidateFurniture,candidateForNavigation,applyRuntimeFurniturePlacement,recomputeFurnitureProjections};
 })();
