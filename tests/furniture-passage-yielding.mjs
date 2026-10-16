@@ -11,7 +11,8 @@ assert.equal(D.VERSION,'furniture-definitions-v13','Furniture Definition schema 
 assert.equal(P.VISUAL_LOS_VERSION,'perception-visual-los-v3-runtime-furniture');
 assert.equal(P.VISUAL_SIGHT_SAMPLES_VERSION,'perception-visual-sight-samples-v2-furniture-target');
 assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v2-furniture-target');
-assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.62.0-furniture-passage-yielding');
+assert.equal(SP.ROUTE_SEMANTICS_VERSION,'11.38.0-carried-handling-risk','Passage Yielding must not fake-bump Route own generation');
+assert.equal(SP.PASSAGE_YIELDING_VERSION,'furniture-passage-yielding-v1');
 
 const clone=value=>JSON.parse(JSON.stringify(value));
 function corridorAuthoring(){
