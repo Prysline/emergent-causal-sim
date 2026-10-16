@@ -22,7 +22,12 @@ function corridorAuthoring(){
   authored.residents.zhen.initial.placement={mode:'exact',node:{x:3,y:5,z:0}};
   authored.residents.zhen.initial.facing='northEast';
   const layer=authored.map.layers.find(item=>item.z===0);
-  for(const id of ['h:5,4','h:6,4','h:5,5','h:6,5','v:4,4','v:7,4'])layer.boundaries[id]={kind:'wall',material:'stone'};
+  const corridor=[{x:3,y:5,z:0},{x:4,y:5,z:0},{x:4,y:4,z:0},{x:5,y:4,z:0},{x:6,y:4,z:0},{x:4,y:3,z:0}],inside=new Set(corridor.map(cell=>`${cell.x},${cell.y}`));
+  for(const cell of corridor)for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const neighbor={x:cell.x+dx,y:cell.y+dy,z:0};
+    if(inside.has(`${neighbor.x},${neighbor.y}`))continue;
+    const boundaryId=A.boundaryIdBetween(cell,neighbor);if(boundaryId)layer.boundaries[boundaryId]={kind:'wall',material:'stone'};
+  }
   return A.canonicalizeAuthoring(authored);
 }
 function runtime(authored=corridorAuthoring()){return W.createInitialStateFromAuthoring(authored,26016);}
@@ -102,7 +107,7 @@ function runtime(authored=corridorAuthoring()){return W.createInitialStateFromAu
 }
 
 {
-  const st=runtime(),a=st.agents.zhen,goal=SP.normalizeNode(st,{x:3,y:6,z:0},'floor');
+  const st=runtime(),a=st.agents.zhen,goal=SP.normalizeNode(st,{x:4,y:5,z:0},'floor');
   assert.equal(Number.isFinite(F.basePlanRoute(st,a,goal,{mode:'walk',objective:'traversalCost'}).traversalCost),true);
   assert.equal(F.candidateForNavigation(st,a,goal),null,'an existing normal walk route must suppress Passage Yielding entirely');
 }
