@@ -95,6 +95,8 @@
     return resolved;
   }
   function resolvedFurnitureMap(authoring){const out={};for(const [id,instance] of Object.entries(authoring?.furniture||{})){try{out[id]=resolveFurnitureInstance(instance);}catch{}}return out;}
+  function deriveHorizontalTopology(authoring,options){return Base.deriveHorizontalTopology(projectedBaseDocument(authoring),options);}
+  function deriveStructureConnections(authoring){return Base.deriveStructureConnections(projectedBaseDocument(authoring));}
   function deepFreeze(value){if(!value||typeof value!=='object'||Object.isFrozen(value))return value;Object.freeze(value);for(const child of Object.values(value))deepFreeze(child);return value;}
   const defaultDocument=clone(Base.DEFAULT_WORLD_AUTHORING);defaultDocument.authoringSchema=VERSION;
 
@@ -105,6 +107,8 @@
     resolveFurniturePassageYieldingContract,
     resolveFurnitureInstance,
     resolvedFurnitureMap,
+    deriveHorizontalTopology,
+    deriveStructureConnections,
     validateAuthoring,
     assertValidAuthoring,
     canonicalizeAuthoring,
