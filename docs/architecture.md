@@ -2,9 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.61.0-activity-continuity`。
+目前 runtime marker：`11.62.0-furniture-passage-yielding`。
 
-本 release 建立 Generic Activity Continuity v1：Agent-private `activityEpisode` 保存已真正開始、尚未自然完成 Activity 的 episode identity / lifecycle；第一個 consumer 只有 `read`。ongoing read progress 仍唯一存在 live Action，只有 emergency interruption 清除 Action 時才把 progress 暫存到 suspended episode；resume 建立新的 concrete Action 後再移回 Action。Resume 只提供 bounded Decision Option，仍經既有 Deliberation，不自動復活 Action，也不保存 stale path / reservation。詳細 contract：[`activity-continuity.md`](activity-continuity.md)。
+本 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 只有在 existing Action 的 normal walk route unreachable、角色以 current Perception 實際觀察到該 Furniture、translation 反側的 canonical interaction position 可達，且 fixed `parkedPlacement` 的 non-mutating counterfactual 能恢復同一 navigation goal 時，才可形成 bounded execution recovery。原 Action / Active Intent 保留 motive truth；runtime placement transaction 以 current resolved 3D solids 重驗 destination、swept transition 與 dependency legality，再原子更新 current Furniture geometry / Tile projection，最後只產生一筆 canonical World Event。詳細 contract：[`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
 
 ## Truth boundaries
 
@@ -12,6 +12,21 @@
 - World fact 不等於 Agent knowledge；跨 Agent 決策只能消費合法 observation / evidence。
 - Agent-private cognition / memory / affect / relationship 不直接改寫另一 Agent 的 private state。
 - `state.agentCarries` 與 generic physical-Object `Agent.held` 分離；Agent carry 不塞進 held Object relation，action / intent / observation / memory / relationship 不互相充當 mirror state。
+
+## Furniture Passage Yielding
+
+Passage Yielding 是 navigation / Action execution recovery，不是新的 Need / high-level Intent，也不是 generic Furniture relocation。
+
+- Canonical authored truth 是 Furniture instance 的 explicit opt-in 與固定 `parkedPlacement`；default parked 只能從 stable authored home + facing 前方一格推導一次。runtime current position 不得讓 parked reference 漂移。
+- v1 只允許 same-layer cardinal 1-cell translation、orientation unchanged；已 parked 後不再產生 candidate，也不能用同 capability 把 Furniture 拉出 parked placement。
+- Destination 與 transition legality 使用 current resolved `spatial.solids`；不以 tile occupancy、overall height 或新的 under-table clearance mirror 取代 3D geometry。parked Furniture 仍保留完整 actual geometry，walk / crawl / prone / visibility 都重算同一 current truth。
+- Slot occupant / reservation / posture binding、supported / contained Object 與 durable usage / claim relation 都使 v1 relocation unavailable；不做 follower transfer 或 claim migration。
+- World blockage 不等於 Agent knowledge。Furniture visual target evidence 從 current resolved Furniture geometry query-time 派生，target-specific visibility 只排除 target 自己的 opacity occluder，仍保留 wall / other Furniture occluders；不建立 persistent `visibleFurniture[]`。
+- Trigger 只有 normal walk unreachable；若 walk route 仍可行就直接 route。Hypothetical parked route 只作 non-mutating counterfactual，不直接改 World。
+- Interaction position 重用 canonical Furniture contact geometry，再依 translation vector限制在移動方向反側；不可達就不是 executable plan。
+- Runtime placement transaction 是唯一 runtime Furniture move owner：重新 resolve current footprint / slots / solids / surfaces / display geometry，並同步 Tile membership / floor geometry / room projection。Editor authoring move helper 不作 runtime World action。
+
+Current World Authoring generation = `world-authoring-v17`；Furniture Definitions 維持 `furniture-definitions-v13`。Passage Yielding capability marker = `furniture-passage-yielding-v1`；Route own generation維持既有 owner，不複製 overall release literal。
 
 ## Activity Continuity
 
@@ -62,7 +77,7 @@ Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分�
 
 ## World / Spatial / Physical
 
-Current World Authoring = `world-authoring-v16`；Furniture Catalog = `furniture-definitions-v13`。
+Current World Authoring = `world-authoring-v17`；Furniture Catalog = `furniture-definitions-v13`。
 
 Current Spatial Node identity = `spaceId + surfaceId + x/y/z`。`z` 是 World spatial dimension；Furniture `topElevation` 是 local geometry，兩者不得混為同一真相。
 
