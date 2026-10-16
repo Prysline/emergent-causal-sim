@@ -31,6 +31,7 @@ const EXPECTED_HOOKS={
     {id:'mentalRegulation.settle',order:50},
     {id:'activityContinuity.settle',order:75},
     {id:'spatial.effects',order:100},
+    {id:'furniturePassageYielding.settle',order:125},
     {id:'sleepConflict.complete-yield',order:150},
     {id:'intent.reconcile-after',order:200},
     {id:'socialBid.settle',order:300},
