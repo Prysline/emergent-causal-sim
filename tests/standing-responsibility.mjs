@@ -7,7 +7,7 @@ loadScriptsInThisContext(['src/editor-authoring-mutations.js','src/editor-standi
 
 const E=globalThis.SimEngine,S=globalThis.SimStandingResponsibility,A=globalThis.SimWorldAuthoring,M=globalThis.SimEditorAuthoringMutations,W=globalThis.SimWorld;
 assert.ok(E&&S&&A&&M&&W,'Standing Responsibility production contracts must load');
-assert.equal(A.VERSION,'world-authoring-v16');
+assert.equal(A.VERSION,'world-authoring-v17');
 assert.equal(S.VERSION,'standing-responsibility-v1');
 assert.equal(W.STANDING_RESPONSIBILITY_SCHEMA_VERSION,S.VERSION);
 assert.equal(S.STANDING_RESPONSIBILITY_MAX_DECISION_DELTA,8);

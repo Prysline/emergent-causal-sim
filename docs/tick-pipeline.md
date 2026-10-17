@@ -1,4 +1,6 @@
-> Current `11.61.0-activity-continuity`: Activity Continuity v1 新增 beforeTick 790 `activityContinuity.prepare-emergency-suspension`、beforeTick 1250 `activityContinuity.capture-events` 與 afterTick 75 `activityContinuity.settle`。790 只在 canonical `emergencyChoice` 已成立且對應 emergency Action 可建構時，把 realized unfinished `read` progress 從 live Action 轉入 Agent-private suspended episode；800 仍由既有 Interruption owner執行真正 preemption。1200 Mental Regulation capture仍先於1250；core execution 後，50 Mental Regulation 先 settle realized Need effect，再由75收斂 Activity episode lifecycle，100 Spatial Effects之後繼續原 schedule。Resume 仍在後續 normal Deliberation 建立新 Action，不在 hook 中自動復活舊 Action。
+> Current `11.62.0-furniture-passage-yielding`: Furniture Passage Yielding v1 新增 afterTick 125 `furniturePassageYielding.settle`。Production `SP.planRoute(...,{mode:'auto'})` 若 existing Action 的原 navigation goal normal walk unreachable，會在 core navigation query 同步建立 bounded recovery evidence並把本次 route 導向 canonical opposite-side Furniture contact；它不建立新的 high-level Intent。afterTick 125 排在 Spatial Effects 100 之後、Sleep Conflict Yield Completion 150 之前，只負責對已 armed recovery 重新檢查 dependency / geometry / interaction / counterfactual，並在 actor 已到 interaction position 時提交唯一 runtime Furniture placement transaction與一筆 canonical World Event；失敗則明確 abort recovery，不 fallback 到 generic relocation。
+
+> Previous `11.61.0-activity-continuity`: Activity Continuity v1 新增 beforeTick 790 `activityContinuity.prepare-emergency-suspension`、beforeTick 1250 `activityContinuity.capture-events` 與 afterTick 75 `activityContinuity.settle`。790 只在 canonical `emergencyChoice` 已成立且對應 emergency Action 可建構時，把 realized unfinished `read` progress 從 live Action 轉入 Agent-private suspended episode；800 仍由既有 Interruption owner執行真正 preemption。1200 Mental Regulation capture仍先於1250；core execution 後，50 Mental Regulation 先 settle realized Need effect，再由75收斂 Activity episode lifecycle，100 Spatial Effects之後繼續原 schedule。Resume 仍在後續 normal Deliberation 建立新 Action，不在 hook 中自動復活舊 Action。
 
 > Previous `11.60.0-standing-responsibility`: Standing Responsibility v1 只在既有 legal `restockContainer` option 的同步 Deliberation scoring 中讀 Agent-private `knownResponsibilityAssignmentIds[]`，再解析 canonical World assignment 並加入 bounded `+8` contributor；它不新增 candidate provider、Need、Action、Intent、runtime hook、hook order 或 same-tick visibility。
 
@@ -16,13 +18,15 @@
 
 > Previous `11.52.0-daily-life-routine`: Routine Slice A adds no runtime hook, phase, or hook-order change. Its Agent-private DAY 0 state is installed by the explicit initial-state initializer registry; `dailyLifeRoutine.read` participates only when the existing core chooser gathers Decision Option Providers. It therefore changes candidate evidence, not same-tick execution ordering.
 
-> Previous `11.53.0-mental-regulation-generation`: beforeTick 1200 `mentalRegulation.capture-execution` snapshots eligible Human awake state plus pre-core realized-execution evidence; core execution remains authoritative; afterTick 50 `mentalRegulation.settle` converts actual movement / reading feedback into atomic Stimulation / Relaxation settlement before all later afterTick simulation hooks and before Presentation observers. New Need values therefore cannot affect the core execution that produced them, but are canonical for subsequent lifecycle / Presentation and the next new Deliberation.
+> Previous `11.53.0-mental-regulation-generation`: beforeTick 1200 `mentalRegulation.capture-execution` snapshots eligible Human awake state plus pre-core realized-execution evidence; core execution remains authoritative; afterTick 50 `mentalRegulation.settle` converts actual movement / reading feedback into atomic Stimulation / Relaxation settlement before all later afterTick simulation hooks and before Presentation observers. New Need values therefore cannot affect the core execution that produced them, but are canonical for subsequent lifecycle / Presentation and the next new Deliberation。
 
 # Tick Pipeline — Current Runtime Ordering Contract
 
 本文件記錄目前 `main` 的**實際 runtime hook 順序**。它不是理想化流程，也不是版本 changelog；表內 phase / order / hook ID 以 `src/runtime-hook-pipeline.js` 與各 runtime 的 `registerRuntimeHook(...)` 為依據。
 
-目前 runtime marker：`11.61.0-activity-continuity`。
+目前 runtime marker：`11.62.0-furniture-passage-yielding`。
+
+Furniture Passage Yielding v1 的 recovery arm 發生在 core navigation 的 production Route query：只有 existing Action 的同一 navigation goal normal walk unreachable，而且 observed Furniture + parked counterfactual + interaction feasibility 都成立時，才把 execution recovery evidence 掛在原 Action；原 Active Intent 不變。afterTick 125 `furniturePassageYielding.settle` 不負責產生高階 motive，而是在 Spatial Effects 100 已完成正式 world effects 後重新檢查 current legality；若 actor 已到 contact，才提交 canonical Furniture placement transaction與單一 World Event。它早於 Sleep Conflict Yield Completion 150 / Intent reconcile 200，因此後續 lifecycle 在同 tick 看見的是 relocation 成功或明確 abort 後的一致 World geometry。
 
 Activity Continuity v1 把 emergency suspension 分成兩個明確 owner：beforeTick 790 只在 canonical emergency candidate 確實可執行時先原子保存 unfinished `read` episode progress；beforeTick 800 仍由既有 Interruption runtime 清 Action / Intent 並建立 emergency Action。beforeTick 1250 只保存 event marker；core execution 之後，afterTick 50 Mental Regulation 先 settle realized Need effects，afterTick 75 Activity Continuity 再建立、恢復、完成或終止 episode，之後才進 Spatial Effects 100。這使 episode lifecycle 不反向改寫本 tick 已發生的 read execution，也不把 resume 變成 hook-level auto action。
 
@@ -30,7 +34,7 @@ Mental Regulation v4 新增明確 named-hook ordering：beforeTick 1200 `mentalR
 
 > `11.46.0-sleep-carry-integration` 整合 sleeping occupant Agent carry、canonical candidate-node selection 與 post-pickup recovery，但**沒有新增、刪除或重新排序 runtime hook**。既有 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield` 的 ordering 維持 `11.44.0-sleep-slot-conflict` 已建立的 contract；candidate selection 與 carry recovery 都在既有同步 query／core `carryAgent` lifecycle 邊界內完成。
 >
-> `11.44.0-sleep-slot-conflict` 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`。275 只處理已被 responder 自己觀察到、且 responder 當下可自主回應的 sleep-slot conflict Bid；它排在 Affect decay 250 之後、Human Social prepare 300 之前，因此 responder-local accept / refuse / delay 讀到本 tick decay 後的 Current Affect/relationship-owned context，且接受後可建立 responder-private yield Intent，待 canonical Slot egress 可執行時再由 responder 自己綁定 departure Action。150 排在 Spatial Effects 100 之後、Intent reconcile 200 之前，只在 responder 已實際離開原 Slot 後建立 `completeSleepSlotYield` World Event；acceptance 本身不等於完成，也不得直接改寫 requester 或 Slot truth。requester 的 occupancy wait 本身仍在 core sleep state machine；generic Social `awaitResponse` 的 injection/timeout 繼續由 900/300 Social Bid hooks 持有。
+> `11.44.0-sleep-slot-conflict` 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`。275 只處理已被 responder 自己觀察到、且 responder 當下可自主回應的 sleep-slot conflict Bid；它排在 Affect decay 250 之後、Human Social prepare 300 之前，因此 responder-local accept / refuse / delay 讀到本 tick decay 後的 Current Affect/relationship-owned context，且接受後可建立 responder-private yield Intent，待 canonical Slot egress 可執行時再由 responder 自己綁定 departure Action。150 排在 Spatial Effects 100 與 Furniture Passage Yielding 125 之後、Intent reconcile 200 之前，只在 responder 已實際離開原 Slot 後建立 `completeSleepSlotYield` World Event；acceptance 本身不等於完成，也不得直接改寫 requester 或 Slot truth。requester 的 occupancy wait 本身仍在 core sleep state machine；generic Social `awaitResponse` 的 injection/timeout 繼續由 900/300 Social Bid hooks 持有。
 >
 > `11.42.0-usage-preference-sleep` 沒有新增、刪除或重新排序 runtime hook。Sleep target preference / Runtime Claim acquisition 在既有 core sleep state machine 同步處理；Usage Habit 仍由既有 afterTick 500 `memory.process-events` 在 actor 的 sleep-start event 被實際觀察後整併；Target Selection Evidence 使用既有 Decision Evidence owner，不新增平行 hook。
 >
@@ -101,7 +105,8 @@ flowchart TD
     CORE --> A50[afterTick 50\nMental Regulation Settlement]
     A50 --> A75[75 Activity Continuity Settlement]
     A75 --> A100[afterTick 100\nSpatial Effects]
-    A100 --> A150[150 Sleep Conflict Yield Completion]
+    A100 --> A125[125 Furniture Passage Yielding Settlement]
+    A125 --> A150[150 Sleep Conflict Yield Completion]
     A150 --> A200[200 Intent Reconcile]
     A200 --> A300[300 Social Bid Settle]
     A300 --> A400[400 Abort Recovery]
@@ -162,6 +167,8 @@ Activity Concurrency v1 的 transient record以 `executionTick` 綁定這個 cor
 
 Activity Continuity 不在 core loop 內插入第二套 execution。若 Agent 在 core chooser 中從 suspended episode重新採納 `read`，core只建立新的 concrete Action；afterTick 75才把 suspended progress移回該新 Action。因為新 Action不會在建立的同一 core tick立刻執行，這個轉移不會漏掉或重複 realized reading feedback。
 
+Furniture Passage Yielding 也不在 core loop 插入第二套 Action。Production Route query 若第一次確認原 navigation goal 的 normal walk unreachable，可以同步 arm existing Action 的 bounded recovery，讓同一次 route query 改往 contact；但 Furniture World mutation 只能在 afterTick 125 的 execution-time re-check 成功後發生。Route query / counterfactual 本身不得 mutation World。
+
 這一段必須保持為同一個明確 checkpoint：若把 core-loop event 改成 event-created 時立即觸發全部 Memory → Appraisal → Relationship → Affect，後執行 Agent 可能在同一 core tick 提前讀到舊 runtime 原本還不可見的 Agent-private state，會改變 emergent decision semantics。
 
 ## 4. afterTick
@@ -171,7 +178,8 @@ Activity Continuity 不在 core loop 內插入第二套 execution。若 Agent �
 | 50 | `mentalRegulation.settle` | Mental Regulation | 由 pre-core snapshot + core 後 canonical execution 結果產生 awake baseline / realized Activity contributors，原子更新 Stimulation / Relaxation | 必須晚於 core actual execution，且先完成 canonical Need settlement；不回寫本 tick 已發生的 execution |
 | 75 | `activityContinuity.settle` | Activity Continuity | 依 core 後 live Action與本 tick canonical read/abort events建立／恢復／完成／終止 episode | 必須晚於 Mental Regulation 50，確保 realized read effect先 settle；又在 Spatial Effects 100前完成 Agent-private continuity lifecycle，不改寫已發生的 core execution |
 | 100 | `spatial.effects` | Spatial Effects | 根據 pre-core snapshot 套用 movement / contact / spill 衍生效果 | 要先把物理結果寫回世界，再讓後續 lifecycle 看到正式 world state |
-| 150 | `sleepConflict.complete-yield` | Sleep Slot Conflict / Deliberation | responder 實際離開被占用 Slot 後，建立完成讓位的 canonical World Event | 必須晚於 Spatial Effects 確認正式位置、早於 Intent reconcile；不得把 accept response 本身當成 Slot 已釋放 |
+| 125 | `furniturePassageYielding.settle` | Furniture Passage Yielding | 對已 armed recovery 重新驗證 current walk blockage、Furniture dependency / destination / swept transition、opposite-side interaction與 parked counterfactual；actor 已到 contact 時提交 canonical Furniture placement transaction與單一 World Event | 必須晚於 Spatial Effects 100 才讀正式 post-core world geometry；又早於 Sleep Conflict 150 / Intent reconcile 200，讓後續 lifecycle 只看到 relocation 成功或明確 abort後的一致 truth |
+| 150 | `sleepConflict.complete-yield` | Sleep Slot Conflict / Deliberation | responder 實際離開被占用 Slot 後，建立完成讓位的 canonical World Event | 必須晚於 Spatial Effects 與 Passage Yielding settlement確認正式位置、早於 Intent reconcile；不得把 accept response 本身當成 Slot 已釋放 |
 | 200 | `intent.reconcile-after` | Active Intent | core Action 結果後先收斂 Intent linkage | 後續 Social Bid / abort recovery 應讀一致 linkage |
 | 300 | `socialBid.settle` | Social Bid | annotate new bids/responses、promote response Intent、timeout | same-tick response-before-timeout 的主要 ordering contract |
 | 400 | `intent.recover-aborts` | Intent / Interruption | 從本 tick abort event 恢復仍有效的 open Intent | 必須在 Memory Observation Process 前完成本 tick interruption lifecycle |
@@ -182,7 +190,7 @@ Activity Continuity 不在 core loop 內插入第二套 execution。若 Agent �
 | 850 | `deliberation.finalize-decision-evidence` | Deliberation | 將 correction 後仍存活的 initial Action 與 selected structured contributors freeze 成 adopted Decision Evidence | 必須晚於 800，否則會把 provisional target誤標成 final；Presentation只能在此之後讀取 final evidence |
 | 900 | `socialOutcome.process` | Requester Social Outcome | 建立 requester-private `privateSocialOutcome`，完成 Appraisal → Relationship → Affect / retention | 這是 private experience path，不是 generic observable World Event observation |
 
-v11.61.0 新增 Activity Continuity 790 / 1250 / 75，鎖定「先確定可執行 emergency → suspension progress transfer →既有800真正preemption」以及「core actual execution → Mental Regulation 50 → Activity Continuity 75」兩組因果邊界。v11.53.0 新增 beforeTick 1200 `mentalRegulation.capture-execution` 與 afterTick 50 `mentalRegulation.settle`；這兩個 hook 共同鎖定「先 actual execution、後 Mental Regulation settlement」的因果邊界。v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
+v11.62.0 新增 afterTick 125 `furniturePassageYielding.settle`，鎖定「core navigation query只 arm bounded recovery → core / Spatial Effects完成 → 125 execution-time re-check +唯一 placement transaction/event → 150/200後續 lifecycle」的因果邊界。v11.61.0 新增 Activity Continuity 790 / 1250 / 75，鎖定「先確定可執行 emergency → suspension progress transfer →既有800真正preemption」以及「core actual execution → Mental Regulation 50 → Activity Continuity 75」兩組因果邊界。v11.53.0 新增 beforeTick 1200 `mentalRegulation.capture-execution` 與 afterTick 50 `mentalRegulation.settle`；這兩個 hook 共同鎖定「先 actual execution、後 Mental Regulation settlement」的因果邊界。v11.51.0 沒有新增或重排 hook；它只讓既有 300 → core → 700 checkpoints共同承接單一 execution-local transient。v11.44.0 新增 beforeTick 275 `sleepConflict.respond` 與 afterTick 150 `sleepConflict.complete-yield`；兩者都屬明確 simulation ordering contract。Cleanup-5B-1 起，Presentation refresh/reset 已從 simulation hook manifest移出；因此上表到 `socialOutcome.process` 即是完整 afterTick simulation schedule。v11.35.0 只重排 beforeTick 的 Affect decay 到 responder preparation 之前。v11.15.1 的 Relationship target preference、v11.15.2 的 Relationship responder bias、v11.16.0 Physical Profile Foundation、v11.17.0 Passage Profile + multi-mode feasibility、v11.18.0 Route Semantics Split、v11.19.0 Locomotion Execution + Posture Transition、v11.20.0 Dynamic Congestion、v11.26.0 Vertical Structure Traversal 與 v11.27.0 Furniture Orientation 都**不新增 simulation runtime hook、也不改上述 order**。Relationship consumers仍只在既有 target/response evaluation 中讀 derived signal；Physical / Passage / Crowding / Structure traversal在 state construction或同步 Spatial route query／Debug projection中即時計算。v11.19.0 的 locomotion lifecycle仍發生在既有 **core tick → per-Agent `stepAction()` → `moveToward()`** 執行邊界；v11.20.0 讓每次 route planning / next-edge execution讀取當下 Crowd Profile，而 v11.26.0 只把明確 Structure endpoint edge納入同一 route query、把 Structure clearance送入既有 Passage/Crowding，以及把 movement direction擴成 XYZ。沒有 Structure/Crowding beforeTick / afterTick phase，也沒有 persistent route / passage / congestion queue/cache。因此 pipeline ordering仍與既有 hook contract相同；版本推進代表同步 route / movement semantics改變，不代表多一個 runtime hook stage。
 
 ## 4.1 Presentation runtime observers
 
@@ -287,12 +295,13 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 6. Relationship consolidation 被移到 historical Appraisal 完成前，或開始讀 Current Affect / raw event 推定關係。
 7. Soft Reconsideration / Activity Continuity Emergency Suspension / Replan-Preemption / Intent Reconcile 的相對順序改變，或790開始在 emergency feasibility尚未成立前提前 suspend。
 8. Mental Regulation 50 與 Activity Continuity 75 的相對順序改變，使 episode settlement早於同 tick realized read Need effect。
-9. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
-10. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
-11. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
-12. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
-13. Activity Concurrency transient 被排到 `humanSocial.prepare → core eating progress → humanSocial.resolve` 之外，或跨 execution tick 殘留並影響後續 primary progress；這會改變同 tick compatibility / interference semantics。
-14. Activity Continuity resume 被改成 hook-level auto Action，或 ongoing/suspended progress同時保留兩份 canonical copy。
+9. Furniture Passage Yielding 的 runtime Furniture mutation 被移到 core route query / counterfactual，或 afterTick 125 被移到 Spatial Effects 100 之前／Sleep Conflict 150 之後，造成同 tick geometry visibility 改變。
+10. presentation hook 提前進入 simulation hooks，或開始回寫 canonical state。
+11. event-created listener 開始持有第二份 persistent World Event truth，或 core `E.addEvent` ownership 被 extension 取代。
+12. `privateSocialOutcome` 被誤改成 generic observable World Event memory，或 requester-private Relationship evidence 遠端更新 counterpart。
+13. Adopted Decision Evidence finalization 被移到 Memory→Deliberation correction 800 之前，或 Presentation / current-derived Inspector evaluation開始回寫／替代 frozen final evidence。
+14. Activity Concurrency transient 被排到 `humanSocial.prepare → core eating progress → humanSocial.resolve` 之外，或跨 execution tick 殘留並影響後續 primary progress；這會改變同 tick compatibility / interference semantics。
+15. Activity Continuity resume 被改成 hook-level auto Action，或 ongoing/suspended progress同時保留兩份 canonical copy。
 
 這些變更都應同步更新：
 
@@ -307,6 +316,7 @@ PR #45 / #46 的 timing regressions是這個 lifecycle 的 compatibility contrac
 - hook registry：`E.listRuntimeHooks(phase)`。
 - event-created consumer registry：`E.listEventCreatedListeners()`。
 - architecture guard：`tests/runtime-hook-pipeline.mjs` 鎖 exact simulation hook ID / order，並拒絕 extension-owned lifecycle wrapper。
+- Furniture Passage Yielding causal guard：`tests/furniture-passage-yielding.mjs` 鎖 fixed parked authoring、observation boundary、3D destination / swept transition、dependency reject、opposite-side contact、normal-walk counterfactual、production route-query recovery arm、runtime placement transaction、current visual opacity與 single canonical Event。
 - Activity Continuity causal guard：`tests/activity-continuity-read-resume.mjs` 鎖 Agent-private episode ownership、realized-read start、emergency suspension、單一 progress owner、normal-Deliberation resume、ordinary winner abandonment、natural completion與 target invalidation。
 - Activity Concurrency causal guard：`tests/activity-concurrency-eating-social.mjs` 鎖 baseline eating、listening zero-penalty、speaking local pause、same-Action continuation、Social provenance、sleep incompatibility與 transient cleanup。
 - Relationship Foundation causal guard：`tests/relationship-foundation.mjs` 鎖 directional ownership、audited evidence、private outcome boundary、exactly-once、Memory pruning independence 與 boundedness。
