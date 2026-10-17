@@ -40,7 +40,8 @@ function addWalkableLowCeiling(st){
   const tile=SP.tileByPos(st,{x:4,y:4,z:0});if(tile&&!tile.furnitureIds.includes(ceiling.id))tile.furnitureIds.push(ceiling.id);
   return ceiling;
 }
-function runtime(authored=corridorAuthoring()){const st=W.createInitialStateFromAuthoring(authored,26016);addWalkableLowCeiling(st);return st;}
+function runtime(authored=corridorAuthoring(),seed=26016){const st=W.createInitialStateFromAuthoring(authored,seed);addWalkableLowCeiling(st);return st;}
+E.configureResetStateSource('furniture-passage-yielding-fixture',seed=>runtime(corridorAuthoring(),seed));
 
 {
   const authored=corridorAuthoring(),chair=authored.furniture.chairNW,contract=A.resolveFurniturePassageYieldingContract(chair);
@@ -83,7 +84,8 @@ function runtime(authored=corridorAuthoring()){const st=W.createInitialStateFrom
 }
 
 {
-  const st=runtime(),a=st.agents.zhen,chair=st.furniture.chairNW,goal=SP.normalizeNode(st,{x:6,y:4,z:0},'floor');
+  E.reset(26016);
+  const st=E.getState(),a=st.agents.zhen,chair=st.furniture.chairNW,goal=SP.normalizeNode(st,{x:6,y:4,z:0},'floor');
   assert.equal(SP.floorNodeFitsMode(st,{x:4,y:4,z:0},a,'walk'),false,'chair + 1.8m ceiling must block Human floor walking in the bottleneck cell');
   assert.equal(SP.surfaceNodeFitsMode(st,{x:4,y:4,z:0,surfaceId:'chairNW:seat'},a,'walk'),false,'same ceiling must block standing/walking on the chair seat while remaining high enough for floor walking after relocation');
   const current=F.basePlanRoute(st,a,goal,{mode:'walk',objective:'traversalCost'});assert.equal(Number.isFinite(current.traversalCost),false,'fixture must make current normal walk unreachable');
