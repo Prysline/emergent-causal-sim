@@ -91,6 +91,10 @@ jobs:
             test: tests/browser-furniture-passage-yielding-qa.mjs
             extra_test: ''
             artifact: artifacts/browser-furniture-passage-yielding-qa
+          - suite: tidying-put-away
+            test: tests/browser-tidying-put-away-qa.mjs
+            extra_test: ''
+            artifact: artifacts/browser-tidying-put-away-qa
           - suite: step-batch-lifecycle
             test: tests/browser-step-batch-lifecycle-qa.mjs
             extra_test: ''
