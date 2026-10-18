@@ -25,7 +25,7 @@
   <main class="workspace">
     <div class="maincol">
       <section class="panel view-panel mobile-active" data-view="map"><div class="panel-head"><div><b>空間圖</b><small>Surface 狀態以地圖層次呈現；選取任何實體後預設開啟玩家可讀檢視，可再切換 Debug Inspector</small></div><div id="worldBadges" class="world-badges"></div></div><div class="panel-body"><div id="map" class="spatial-map"></div></div></section>
-      <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>社交目標由近期 Memory 與慢速 Relationship 排序；Relationship 另可 bounded 修正 responder 對特定 requester 的回應分數，但不改一般 social Action utility</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></div></section>
+      <section class="panel view-panel" data-view="agents"><div class="panel-head"><div><b>目前行動</b><small>社交目標由近期 Memory 與慢速 Relationship 排序；Relationship 另可 bounded 修正 responder 對特定 requester 的回應分數，但不改一般 social Action utility</small></div></div><div class="panel-body"><div id="actions" class="action-board"></div></section>
       <section class="panel view-panel" data-view="timeline"><div class="panel-head timeline-head"><div><b>時間線</b><small>brief reply、explicit decline 與 no-response 保持不同事實邊界；Relationship 只 consolidate Agent 自己已形成的 historical appraisal</small></div><div class="segmented"><button data-logmode="summary" class="active">摘要</button><button data-logmode="full">完整</button></div></div><div class="panel-body"><div id="timeline" class="timeline"></div></div></section>
     </div>
     <aside class="panel inspector-panel view-panel" data-view="inspector"><div class="panel-head"><div><b>實體檢視 / Debug Inspector</b><small>居民關係顯示慢速 Familiarity / Affinity；Debug 可檢查 Physical Profile / multi-mode MovementEnvelopes、Spatial 幾何與 route distance / cost / time、社交目標排序與 responder score 分解</small></div></div><div id="inspector" class="panel-body inspector"></div></aside>
@@ -36,6 +36,7 @@
 <script src="src/furniture-visual-properties.js" defer></script>
 <script src="src/horizontal-geometry.js" defer></script>
 <script src="src/world-authoring.js" defer></script>
+<script src="src/furniture-passage-yielding-authoring.js" defer></script>
 <script src="src/embodiment-capabilities.js" defer></script>
 <script src="src/world-initializer.js" defer></script>
 <script src="src/standing-responsibility-initializer.js" defer></script>
@@ -71,13 +72,16 @@
 <script src="src/systems/physical.js" defer></script>
 <script src="src/systems/perception/visual-sight-samples.js" defer></script>
 <script src="src/systems/perception/visual-availability.js" defer></script>
+<script src="src/systems/perception/furniture-visual-availability.js" defer></script>
 <script src="src/spatial-passage.js" defer></script>
 <script src="src/systems/locomotion.js" defer></script>
+<script src="src/furniture-passage-yielding.js" defer></script>
 <script src="src/crowding-runtime-v1200.js" defer></script>
 <script src="src/spatial/finalize.js" defer></script>
 <script src="src/world/initial-state-manifest.js" defer></script>
 <script src="src/engine.js" defer></script>
 <script src="src/runtime-hook-pipeline.js" defer></script>
+<script src="src/systems/action/furniture-passage-yielding-runtime.js" defer></script>
 <script src="src/systems/action/read-opportunity.js" defer></script>
 <script src="src/systems/mental-regulation/runtime.js" defer></script>
 <script src="src/systems/daily-life/routine-runtime.js" defer></script>

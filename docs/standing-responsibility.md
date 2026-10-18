@@ -2,9 +2,9 @@
 
 Current subsystem generation: `standing-responsibility-v1`.
 
-Current overall runtime marker: `11.60.0-standing-responsibility`.
+Current overall runtime marker: `11.62.0-furniture-passage-yielding`.
 
-Current World Authoring: `world-authoring-v16`.
+Current World Authoring: `world-authoring-v17`.
 
 ## Purpose
 
@@ -49,7 +49,7 @@ Therefore responsibility cannot:
 
 ## World Authoring and validation
 
-`world-authoring-v16` owns `resourceResponsibilityAssignments[]` alongside other World-level relation collections.
+`resourceResponsibilityAssignments[]` was introduced by `world-authoring-v16` and remains preserved by current `world-authoring-v17` alongside other World-level relation collections. The v17 Passage Yielding extension does not redefine Standing Responsibility semantics.
 
 Current v1 validation fails loudly for:
 
@@ -81,8 +81,8 @@ Presentation is read-only projection and must not repair, create, or mirror resp
 ## Version boundaries
 
 - Standing Responsibility: `standing-responsibility-v1`
-- World Authoring: `world-authoring-v16`
-- Overall runtime / Presentation: `11.60.0-standing-responsibility`
+- Current World Authoring: `world-authoring-v17` (`resourceResponsibilityAssignments[]` introduced in v16)
+- Current overall runtime / Presentation: `11.62.0-furniture-passage-yielding`
 - Daily Life Routine remains `daily-life-routine-v1`
 - Daily Life Learned Habit remains `daily-life-learned-habit-v1`
 - generic Deliberation / Decision Evidence remains `11.48.1-sleep-perception-approach`

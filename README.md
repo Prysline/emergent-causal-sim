@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.61.0-activity-continuity`。
+目前 runtime marker：`11.62.0-furniture-passage-yielding`。
 
-Current release 建立 Generic Activity Continuity v1：新增 Agent-private `activityEpisode` canonical owner，第一個 production consumer 只有 `read`。閱讀至少產生一次 realized feedback 後才形成 episode；emergency preemption 可把同一段未完成閱讀轉為 `suspended`，但不保存舊 Action / path / reservation。Resume 只形成 bounded Decision Option，仍由既有 Deliberation 與 Needs / 其他 Activities 競爭，不會自動接回。進行中 progress 只存在 live Action；Action 被中斷且不存在時才由 suspended episode 暫存，resume 建立新 Action 後再移回 Action。Activity Continuity own generation = `activity-continuity-v1`；Interruption own generation → `11.12.4-activity-continuity`；Action、generic Deliberation / Decision Evidence、Mental Regulation、Routine、Learned Habit 與 Standing Responsibility 不因本 release 假升版。
+Current release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 可在角色 normal walk route unreachable、角色實際觀察到阻塞 Furniture、正確反側 interaction position 可達，而且固定 `parkedPlacement` 的 hypothetical geometry 能恢復原 walk goal 時，作為既有 Action / Intent 的 bounded execution recovery 收回一格。Runtime move 使用 resolved 3D solids 做 destination + swept transition legality，並以單一 placement transaction 同步 current Furniture geometry、Tile membership / floor geometry 與 presentation；Perception Furniture target 讀 current runtime geometry 並排除 target self-occlusion。World Authoring 升為 `world-authoring-v17`；Furniture Definitions 維持 `furniture-definitions-v13`；Route own generation不假升版。詳細 contract 見 [`docs/furniture-passage-yielding.md`](docs/furniture-passage-yielding.md)。
+
+前一個 `11.61.0-activity-continuity` 建立 Generic Activity Continuity v1：新增 Agent-private `activityEpisode` canonical owner，第一個 production consumer 只有 `read`。閱讀至少產生一次 realized feedback 後才形成 episode；emergency preemption 可把同一段未完成閱讀轉為 `suspended`，但不保存舊 Action / path / reservation。Resume 只形成 bounded Decision Option，仍由既有 Deliberation 與 Needs / 其他 Activities 競爭，不會自動接回。進行中 progress 只存在 live Action；Action 被中斷且不存在時才由 suspended episode 暫存，resume 建立新 Action 後再移回 Action。Activity Continuity own generation = `activity-continuity-v1`；Interruption own generation → `11.12.4-activity-continuity`；Action、generic Deliberation / Decision Evidence、Mental Regulation、Routine、Learned Habit 與 Standing Responsibility 不因本 release 假升版。
 
 前一個 `11.60.0-standing-responsibility` 建立 Standing Responsibility v1：World 以 durable `resourceResponsibilityAssignments[]` 保存 Resources replenishment responsibility；Agent-private 只保存自己已知的 `knownResponsibilityAssignmentIds[]`。第一個 consumer 是既有合法 `restockContainer` option：責任只追加最多 `+8`、可追溯至 assignment ID 的 bounded decision contributor，不建立第二套 restock candidate、objective need、Action 或 Active Intent，也不取代 Routine、Learned Habit 或 Obligation。World Authoring 升為 `world-authoring-v16`，Editor Resident inspector 可 author Resources 補充責任，Resident View / Debug Inspector 只投影 canonical World truth 與 Agent-private known-ref linkage。
 
@@ -20,6 +22,7 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 
 - [`docs/architecture.md`](docs/architecture.md)：跨 subsystem 現行工程契約
 - [`docs/versioning.md`](docs/versioning.md)：版本與 marker ownership
+- [`docs/furniture-passage-yielding.md`](docs/furniture-passage-yielding.md)：Furniture Passage Yielding authoring / observation / geometry / recovery / runtime transaction contract
 - [`docs/activity-continuity.md`](docs/activity-continuity.md)：Generic Activity Continuity / resume truth、lifecycle、progress ownership 與 interruption / Deliberation contract
 - [`docs/standing-responsibility.md`](docs/standing-responsibility.md)：Standing Responsibility v1 truth / knowledge / decision / Editor contract
 - [`docs/interaction-geometry.md`](docs/interaction-geometry.md)：Interaction Geometry / Pickup 詳細契約
@@ -35,6 +38,7 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 
 ## Current subsystem boundary index
 
+- **Furniture Passage Yielding**：只在 normal walk unreachable 時，對已觀察且 opt-in Furniture 檢查 fixed parked counterfactual，並以 canonical interaction geometry + runtime placement transaction做 bounded recovery；不建立第二份 motive、generic relocation 或 pushing physics。parked 後的 Furniture 仍是完整 current geometry，所有 traversal / visual consumer 重新讀同一 truth。
 - **Activity Continuity**：`Agent.activityEpisode` 是已開始但未自然完成 Activity 的 Agent-private canonical owner；v1 最多一個 episode，第一個 consumer 只有 `read`。Resume 只提供 bounded normal Decision Option；不復活舊 Action、不保存 stale path / reservation、不繞過 Deliberation。
 - **Standing Responsibility**：canonical World truth 是 durable `resourceResponsibilityAssignments[]`；Agent-private 只持有已知 assignment ID refs。v1 僅支援 Resources replenishment / `restock` scope；decision integration 只能 enrich 已存在且 legal 的 `restockContainer` option，不能建立 candidate 或 objective necessity。
 - **Object Domain**：具體 physical item 的 canonical identity 只在 `state.objects`；`resourceContainer:true` 與 Furniture-side `objectContainment:true` 都是可組合 capability，不建立平行 entity taxonomy。Object containment 的 canonical relation 只在 child Object 的 `containedBy`；Furniture 的 reverse contents 只能投影。Generic physical handling 由 `SimObjectHandling` 持有，Resources 只消費 Resource-container capability。
