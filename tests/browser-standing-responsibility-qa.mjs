@@ -12,7 +12,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorStandingResponsibilityAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.VERSION),'world-authoring-v17');
+assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.DEFAULT_WORLD_AUTHORING.authoringSchema===window.SimWorldAuthoring.VERSION),true,'Consumer must follow canonical current World Authoring generation');
 assert.equal(await page.evaluate(()=>window.SimEditorStandingResponsibilityAuthoring.VERSION),'editor-standing-responsibility-authoring-v1');
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 await page.waitForSelector('[data-standing-responsibility-editor]');
