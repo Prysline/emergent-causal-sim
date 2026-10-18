@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring,D=globalThis.SimFurnitureDefinitions,W=globalThis.SimWorld,E=globalThis.SimEngine,SP=globalThis.SimSpatial,P=globalThis.SimPerception,F=globalThis.SimFurniturePassageYielding,R=globalThis.SimFurniturePassageYieldingRuntime;
 assert.ok(A&&D&&W&&E&&SP&&P&&F&&R,'Furniture Passage Yielding production contracts must load');
-assert.equal(A.VERSION,'world-authoring-v17');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Consumer must follow canonical current World Authoring generation');
 assert.equal(D.VERSION,'furniture-definitions-v13','Furniture Definition schema must remain unchanged');
 assert.equal(P.VISUAL_LOS_VERSION,'perception-visual-los-v3-runtime-furniture');
 assert.equal(P.VISUAL_SIGHT_SAMPLES_VERSION,'perception-visual-sight-samples-v2-furniture-target');
