@@ -10,7 +10,7 @@ const lifecyclePaths=productionScripts.filter(path=>
 );
 const lifecycleFiles=lifecyclePaths.map(path=>path.replace(/^src\//,''));
 
-loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/standing-responsibility-initializer.js','src/world.js','src/systems/object-handling.js','src/systems/resources.js','src/spatial.js']);
+loadScriptsInThisContext(['src/furniture-definitions.js','src/horizontal-geometry.js','src/world-authoring.js','src/furniture-passage-yielding-authoring.js','src/tidying-authoring.js','src/embodiment-capabilities.js','src/world-initializer.js','src/standing-responsibility-initializer.js','src/world.js','src/systems/object-handling.js','src/systems/resources.js','src/spatial.js']);
 const canonicalCreateInitialState=globalThis.SimWorld.createInitialState;
 const canonicalCreateInitialStateFromAuthoring=globalThis.SimWorld.createInitialStateFromAuthoring;
 loadScriptsInThisContext(lifecyclePaths);
@@ -41,6 +41,7 @@ const EXPECTED_SCHEMA=[
   {id:'dailyLifeRoutine.schema',order:1450},
   {id:'dailyLifeLearnedHabit.schema',order:1475},
   {id:'standingResponsibility.schema',order:1490},
+  {id:'tidying.schema',order:1492},
   {id:'relationship.schema',order:1500},
   {id:'agentCarry.schema',order:1550},
   {id:'physical.schema',order:1600},
@@ -63,6 +64,8 @@ assert.deepEqual(W.currentInitialStateManifest(),{schema:EXPECTED_SCHEMA,finaliz
 assert.throws(()=>W.registerInitialStateInitializer('late.schema',()=>{},1800),/registry is finalized/);
 
 const st=W.createInitialState(20260911);
+assert.deepEqual(st.objectStorageAssignments,[],'Default World has no fabricated storage home relations');
+for(const agent of Object.values(st.agents))assert.deepEqual(agent.knownObjectStorageAssignmentIds,[],'No resident inherits unrelated World storage knowledge');
 assert.equal(st.version,globalThis.SimRelease.VERSION,'full production schema set must preserve current release marker');
 assert.equal(st.agentCarryVersion,'11.46.0-sleep-carry-integration');
 assert.deepEqual(st.agentCarries,{},'Agent carry canonical relation owner must initialize empty');
