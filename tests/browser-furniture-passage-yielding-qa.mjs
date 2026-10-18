@@ -12,7 +12,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorFurniturePassageYieldingAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.VERSION),'world-authoring-v17');
+assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.DEFAULT_WORLD_AUTHORING.authoringSchema===window.SimWorldAuthoring.VERSION),true,'Consumer must follow canonical current World Authoring generation');
 await page.click('[data-scene-type="furniture"][data-scene-id="chairNW"]');
 await page.waitForSelector('[data-furniture-passage-yielding-editor]');
 assert.equal(await page.locator('[data-passage-yielding-enabled]').isChecked(),false);
