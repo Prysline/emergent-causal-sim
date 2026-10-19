@@ -2,9 +2,11 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.62.0-furniture-passage-yielding`。
+目前 runtime marker：`11.63.0-tidying-put-away`。
 
-本 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 只有在 existing Action 的 normal walk route unreachable、角色以 current Perception 實際觀察到該 Furniture、translation 反側的 canonical interaction position 可達，且 fixed `parkedPlacement` 的 non-mutating counterfactual 能恢復同一 navigation goal 時，才可形成 bounded execution recovery。原 Action / Active Intent 保留 motive truth；runtime placement transaction 以 current resolved 3D solids 重驗 destination、swept transition 與 dependency legality，再原子更新 current Furniture geometry / Tile projection，最後只產生一筆 canonical World Event。詳細 contract：[`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
+Current Tidying v1：`state.objectStorageAssignments[]` 僅是 World home 指定關係，`Agent.knownObjectStorageAssignmentIds[]` 只存私有 reference。Free / Supported Object 仍以 canonical Spatial 位置與 Visual sensory evidence 判定當下可見，Held / Contained 不形成第一版候選。實際 `putAwayObject` 由 Decision Option Provider → Engine Action factory → pickup → carry → `containedBy` commit 與 canonical World Event 完成；失敗／緊急中斷沿用附近 Object release。沒有新增 Need、平行 Object placement truth、global Object scan、Editor GUI、resume queue。
+
+前一個 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 只有在 existing Action 的 normal walk route unreachable、角色以 current Perception 實際觀察到該 Furniture、translation 反側的 canonical interaction position 可達，且 fixed `parkedPlacement` 的 non-mutating counterfactual 能恢復同一 navigation goal 時，才可形成 bounded execution recovery。原 Action / Active Intent 保留 motive truth；runtime placement transaction 以 current resolved 3D solids 重驗 destination、swept transition 與 dependency legality，再原子更新 current Furniture geometry / Tile projection，最後只產生一筆 canonical World Event。詳細 contract：[`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
 
 ## Truth boundaries
 

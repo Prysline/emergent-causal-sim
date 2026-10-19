@@ -25,6 +25,7 @@
       {id:'dailyLifeRoutine.schema',order:1450},
       {id:'dailyLifeLearnedHabit.schema',order:1475},
       {id:'standingResponsibility.schema',order:1490},
+      {id:'tidying.schema',order:1492},
       {id:'relationship.schema',order:1500},
       {id:'agentCarry.schema',order:1550},
       {id:'physical.schema',order:1600},

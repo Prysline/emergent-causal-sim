@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.62.0-furniture-passage-yielding`。
+目前 overall runtime marker：`11.63.0-tidying-put-away`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -24,10 +24,12 @@ Subsystem marker只在**自己的 contract**改變時前進；overall release �
 
 Current relevant markers：
 
+- Tidying / Put-away：`tidying-put-away-v1`
+
 - Furniture Passage Yielding：`furniture-passage-yielding-v1`
 - Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
 - Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-furniture-target`
-- Perception Visual Availability production composition：`perception-visual-availability-v2-furniture-target`
+- Perception Visual Availability production composition：`perception-visual-availability-v3-object-point`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v2-containment`
@@ -55,12 +57,14 @@ Current relevant markers：
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v17`
+- World Authoring：`world-authoring-v18`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
 
-`11.62.0-furniture-passage-yielding` 建立 Furniture Passage Yielding v1：World Authoring instance contract 增加明確 opt-in `passageYielding` 與固定 `parkedPlacement`，own generation → `world-authoring-v17`；Furniture Definitions schema 未改，維持 `furniture-definitions-v13`。Perception production composition 增加 current resolved Furniture target / runtime opacity projection，對外 markers 前進至 `perception-visual-los-v3-runtime-furniture`、`perception-visual-sight-samples-v2-furniture-target`、`perception-visual-availability-v2-furniture-target`。Passage Yielding recovery 只在 normal walk unreachable、Furniture 已觀察、opposite-side interaction 可達、且 parked hypothetical 恢復 walk 時成立；成功用 narrow runtime Furniture placement transaction 更新 current resolved geometry 與 projections，並產生一筆 canonical World Event。Route own generation 維持 `11.38.0-carried-handling-risk`，Action / generic Deliberation / Decision Evidence / Locomotion / Furniture Definitions 不假升版。詳細 contract 見 [`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
+`11.63.0-tidying-put-away` 以 World Authoring v18 author canonical `objectStorageAssignments[]` 與各 Resident `initial.knownObjectStorageAssignmentIds[]`，runtime 初始化由 `tidying.schema` order 1492 對應 World / Agent-private truth。Perception Visual Availability own generation → `perception-visual-availability-v3-object-point`，只對已知 assignment 的 exposed Free / Supported Object 提供狹義 point-target visual evidence。第一個 production consumer 是 Human 自主 `putAwayObject`：透過既有 Decision Option Provider / Deliberation / Engine Action 與 canonical Object held / containment transitions 形成 World Event；緊急中斷沿用原 cleanup；沒有新增 soft reconsideration、Activity Continuity episode 或 Editor GUI。World Authoring → `world-authoring-v18`；Object Handling / Spatial / Physical / generic Deliberation / Intent / Resources 等 own generation 不假升。Default world 無指定 storage assignments。
+
+前一個 `11.62.0-furniture-passage-yielding` 建立 Furniture Passage Yielding v1：World Authoring instance contract 增加明確 opt-in `passageYielding` 與固定 `parkedPlacement`，own generation → `world-authoring-v17`；Furniture Definitions schema 未改，維持 `furniture-definitions-v13`。Perception production composition 增加 current resolved Furniture target / runtime opacity projection，對外 markers 前進至 `perception-visual-los-v3-runtime-furniture`、`perception-visual-sight-samples-v2-furniture-target`、`perception-visual-availability-v2-furniture-target`。Passage Yielding recovery 只在 normal walk unreachable、Furniture 已觀察、opposite-side interaction 可達、且 parked hypothetical 恢復 walk 時成立；成功用 narrow runtime Furniture placement transaction 更新 current resolved geometry 與 projections，並產生一筆 canonical World Event。Route own generation 維持 `11.38.0-carried-handling-risk`，Action / generic Deliberation / Decision Evidence / Locomotion / Furniture Definitions 不假升版。詳細 contract 見 [`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
 
 前一個 `11.61.0-activity-continuity` 建立 Generic Activity Continuity v1：新增 Agent-private `activityEpisode` canonical owner，第一個 production consumer 只有 `read`。Episode 只在 realized reading progress 後建立；emergency preemption 可把同一未完成 episode 轉為 `suspended`，resume 則只建立 bounded normal Decision Option，仍經既有 Deliberation。進行中 progress 仍由 live Action 唯一持有；只有 Action 被中斷且不存在時 suspended episode 才暫存 progress，resume 新建 Action 後再把 progress 移回 Action。新增 beforeTick 790 / 1250 與 afterTick 75 named hooks，因此 hook ordering / same-tick visibility 屬本 release semantic impact。Activity Continuity own generation = `activity-continuity-v1`；Interruption own generation → `11.12.4-activity-continuity`。Action 維持 `11.51.0-activity-concurrency`、generic Deliberation / Decision Evidence 維持 `11.48.1-sleep-perception-approach`、Runtime Hook Pipeline infrastructure 維持 `runtime-hook-pipeline-2`；Mental Regulation、Routine、Learned Habit、Standing Responsibility、Spatial / Route / Interaction Geometry 都不假升版。詳細 contract 見 [`activity-continuity.md`](activity-continuity.md)。
 

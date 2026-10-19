@@ -398,6 +398,17 @@
       case'seekHuman':{const h=choice.targetAgent?state.agents[choice.targetAgent]:nearestAgent(a,'human');action=h&&!h.offMap&&isAnimalAgent(a)?{...base,phase:'move',targetAgent:h.id}:null;break;}
       case'cleanFloor':{const t=choice.targetTile||SP.wettestTile(state);action={...base,phase:'move',targetTile:t?SP.clonePos(t):null};break;}
       case'groom':action={...base,phase:'groom'};break;
+      case'putAwayObject':{
+        const assignment=state.objectStorageAssignments?.find(item=>item.id===choice.storageAssignmentId);
+        const object=assignment&&state.objects?.[assignment.objectId],dest=assignment&&state.furniture?.[assignment.target?.id];
+        const known=a.knownObjectStorageAssignmentIds?.includes(assignment?.id);
+        const observed=choice.observed;
+        const canPick=object&&['free','supported'].includes(SP.objectLocationState(state,object.id))&&!holderOf(object.id)&&O.canHoldObject(state,a,object);
+        const currentEvidence=canPick&&window.SimPerception?.classifyObjectPointVisualAvailability?.(state,a,object);
+        const available=canPick&&dest?.objectContainment===true&&known&&a.kind==='human'&&!a.held&&observed?.observedTick===state.tick&&observed?.target?.id===object.id&&observed.visualAvailable===true&&currentEvidence?.visualAvailable===true&&Number.isFinite(targetTraversalCost(a,{kind:'object',id:object.id},'pickup'))&&Number.isFinite(targetTraversalCost(a,{kind:'furniture',id:dest.id},'default'));
+        action=available?{...base,phase:'toObject',targetObject:object.id,destinationId:dest.id,storageAssignmentId:assignment.id,observedTick:state.tick}:null;
+        break;
+      }
       case'read':{const object=state.objects?.[choice.targetObject],target=object?{kind:'object',id:object.id}:null,valid=a.kind==='human'&&object?.affordances?.includes('read')&&Number.isFinite(targetTraversalCost(a,target,'read'));action=valid?{...base,phase:SP.isAtInteraction(state,a,target,'read')?'reading':'move',targetObject:object.id,feedbackUnits:0,feedbackGoal:6}:null;break;}
       case'wander':{const t=choice.targetTile||randomFloorTile(a);action={...base,phase:'move',targetTile:t?SP.clonePos(t):null,oneShot:true};break;}
       case'restockContainer':{const j=choice.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;}
@@ -501,7 +512,43 @@
   function stepWander(a,p){if(!p.targetTile){finishAction(a,{dropHeld:false});return;}if(moveToExact(a,p.targetTile,'閒晃'))finishAction(a,{dropHeld:false});}
   function stepExternalSupply(a,p){const exit=SP.getExit?.(state,p.exitId),dest=state.objects[p.destinationId],carrier=state.objects[p.carrierId];if(!exit||!SP.exitStructurallyAvailable?.(state,exit)||!dest||!carrier||!logisticsContainerCanCarry(carrier,p.resource)){abortAction(a,'外出補給的出口、入庫點或物流容器已失效');return;}if(p.phase==='toCarrier'){if(!reserve(`object:${carrier.id}`,a)){p.wait=(p.wait||0)+1;if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等不到可用的物流容器');return;}p.wait=0;if(!moveToInteraction(a,{kind:'object',id:carrier.id},`去拿${carrier.name}準備外出`,'pickup'))return;p.phase='takeCarrier';return;}if(p.phase==='takeCarrier'){if(!holdObject(a,carrier.id)){abortAction(a,`沒能拿起${carrier.name}`);return;}releaseReservation(`object:${carrier.id}`,a);addEvent(`${a.name}拿起${carrier.name}，準備帶它外出補給。`,'normal',[],{actor:a.id,action:'takeSupplyCarrier',carrier:carrier.id,position:positionRef(a.position)});p.phase='toExit';return;}if(p.phase==='toExit'){if(a.held!==carrier.id){abortAction(a,`途中已經沒有拿著${carrier.name}`);return;}if(!moveToExact(a,exit.access,'拿著物流容器準備外出補給'))return;p.phase='exit';return;}if(p.phase==='exit'){if(a.held!==carrier.id){abortAction(a,`沒有帶著${carrier.name}，無法外出搬貨`);return;}a.offMap=true;standUp(a);addEvent(`${a.name}帶著${carrier.name}從出口外出補給${resourceName(p.resource)}。`,'normal',[],{actor:a.id,carrier:carrier.id,action:'supplyExit'});p.phase='work';return;}if(p.phase==='work'){if(a.needs.fatigue>88||a.needs.sleepNeed>96||a.needs.thirst>94||a.needs.hunger>94){a.offMap=false;a.position={...exit.access};abortAction(a,'身體狀況太差，提早帶著物流容器回家');return;}applyExertion(a,1.05,'外出補給工作',{thirstFactor:.33,hungerFactor:.10});p.workLeft--;if(p.workLeft<=0){const requested=rand(32,46),m=putResource(carrier.id,p.resource,requested);p.produced=m;a.offMap=false;a.position={...exit.access};p.phase='toDestination';addEvent(`${a.name}完成外出補給，${carrier.name}裡裝了 ${Math.round(m)} 單位${resourceName(p.resource)}，並帶回出口。`,'good',[],{actor:a.id,carrier:carrier.id,action:'supplyReturn',amount:m,resource:p.resource,load:containerLoad(carrier.id)});}return;}if(p.phase==='toDestination'){if(a.held!==carrier.id){abortAction(a,`回家途中已經沒有拿著${carrier.name}`);return;}if(!moveToInteraction(a,{kind:'object',id:dest.id},`把${carrier.name}帶到${dest.name}`,'deposit'))return;p.phase='deposit';return;}if(p.phase==='deposit'){if(a.held!==carrier.id||!actorCanTransfer(a,carrier.id,dest.id,'deposit')){abortAction(a,`${carrier.name}沒有在能入庫的位置`);return;}const m=transferResource(p.resource,carrier.id,dest.id,amountAt(carrier.id,p.resource));state.supply.trips++;state.supply.totalProduced+=m;addEvent(`${a.name}把${carrier.name}裡的 ${Math.round(m)} 單位${resourceName(p.resource)}放進${dest.name}。`,'good',[],{actor:a.id,carrier:carrier.id,action:'supplyDeposit',from:carrier.id,to:dest.id,amount:m,resource:p.resource});finishAction(a);return;}}
 
-  function stepAction(a){const p=a.action;if(!p)return;if(locomotionRuntime())clearLocomotionState(a);switch(p.kind){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petAnimal':case'seekHuman':stepSocial(a,p);break;case'carryAgent':stepCarryAgent(a,p);break;case'restockContainer':stepRestock(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'wander':stepWander(a,p);break;case'externalSupply':stepExternalSupply(a,p);break;default:finishAction(a);}}
+  function stepPutAwayObject(a,p){
+    const assignment=state.objectStorageAssignments?.find(item=>item.id===p.storageAssignmentId);
+    const object=state.objects?.[p.targetObject],dest=state.furniture?.[p.destinationId];
+    if(!assignment||assignment.objectId!==p.targetObject||assignment.target?.id!==p.destinationId||!a.knownObjectStorageAssignmentIds?.includes(assignment.id)||dest?.objectContainment!==true){
+      abortAction(a,'指定收納關係或位置已失效');return;
+    }
+    if(p.phase==='toObject'||p.phase==='take'){
+      if(!object||!['free','supported'].includes(SP.objectLocationState(state,object.id))||holderOf(object.id)||!O.canHoldObject(state,a,object)){
+        abortAction(a,'物件目前已無法拿取');return;
+      }
+      if(p.phase==='toObject'){
+        if(!moveToInteraction(a,{kind:'object',id:object.id},'前往收拾物件','pickup'))return;
+        p.phase='take';return;
+      }
+      if(!reserve('object:'+object.id,a)){
+        p.wait=(p.wait||0)+1;
+        if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等待物件使用權逾時');
+        return;
+      }
+      if(!SP.isAtInteraction(state,a,{kind:'object',id:object.id},'pickup')||!holdObject(a,object.id)){abortAction(a,'無法在合法位置拿取物件');return;}
+      releaseReservation('object:'+object.id,a);
+      addEvent(a.name+'拿起了'+endpointName(object.id)+'，準備歸位。','normal',[],{actor:a.id,objectId:object.id,storageAssignmentId:assignment.id,action:'takeForPutAway'});
+      p.phase='toStorage';return;
+    }
+    if(a.held!==p.targetObject){abortAction(a,'搬運中失去目標物件',{dropHeld:false});return;}
+    if(p.phase==='toStorage'){
+      if(!moveToInteraction(a,{kind:'furniture',id:dest.id},'前往指定收納處'))return;
+      p.phase='store';return;
+    }
+    if(p.phase==='store'){
+      if(!SP.isAtInteraction(state,a,{kind:'furniture',id:dest.id},'default')||!containHeldObject(a,dest.id)){abortAction(a,'無法在指定收納處放入物件');return;}
+      addEvent(a.name+'把'+endpointName(object.id)+'收進'+endpointName(dest.id)+'。','good',[],{actor:a.id,objectId:object.id,storageAssignmentId:assignment.id,destinationId:dest.id,action:'putAwayObject'});
+      finishAction(a,{dropHeld:false});return;
+    }
+    abortAction(a,'未知的收納階段');
+  }
+  function stepAction(a){const p=a.action;if(!p)return;if(locomotionRuntime())clearLocomotionState(a);switch(p.kind){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petAnimal':case'seekHuman':stepSocial(a,p);break;case'carryAgent':stepCarryAgent(a,p);break;case'restockContainer':stepRestock(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'putAwayObject':stepPutAwayObject(a,p);break;case'wander':stepWander(a,p);break;case'externalSupply':stepExternalSupply(a,p);break;default:finishAction(a);}}
   function needDrift(){for(const a of Object.values(state.agents)){const sleeping=isSleeping(a),metabolic=sleeping?.12:1;a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55)*metabolic);a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75)*metabolic);if(!sleeping){a.needs.fatigue=clamp(a.needs.fatigue+rand(.005,.02));a.needs.sleepNeed=clamp(a.needs.sleepNeed+sleepProfile(a).sleepNeedGainPerTick);a.needs.social=clamp(a.needs.social+rand(.05,.3));}else a.needs.social=clamp(a.needs.social+rand(.05,.3)*.12);if(a.kind==='cat')a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28)*metabolic);a.status.intoxication=clamp(a.status.intoxication-rand(.05,.18));}}
   function decayNoise(){state.noiseEvents=state.noiseEvents.map(n=>({...n,ttl:n.ttl-1})).filter(n=>n.ttl>0);}
   function dayRollover(){if(state.minute<1440)return;state.minute-=1440;state.day++;for(const a of Object.values(state.agents))a.metrics.exertionToday=0;}
