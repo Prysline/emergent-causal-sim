@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.63.0-tidying-put-away`。
+目前 runtime marker：`11.64.0-observed-environmental-cleaning`。
 
-Current release 建立 Tidying / Put-away v1：World Authoring v18 明確 author `objectStorageAssignments[]` 與 Resident 初始已知 refs，Agent 只從自己的已知 assignment 出發，依 query-time Object visual availability 形成 bounded put-away Decision Option；正式 Action 逐步拿取、搬運並存入指定 `objectContainment:true` Furniture。canonical Object location 仍由原 Engine/Spatial 處理，中斷不 rollback；default world 不配置 home、Editor GUI 未擴張。Own generation `tidying-put-away-v1`，Perception Visual Availability `perception-visual-availability-v3-object-point`。
+Current release 修正 Human `cleanFloor`：只有腳下同一 Floor Node 的液體量超過 0.2，才會成為自主 Decision、Soft Reconsideration 與 Hard Replanning 的合法目標，不再由全圖濕度推定 Agent 知識。執行前重驗目標與液體，透過 Spatial Environment API 清除；實際移除液體才建立 World Event。未加入鄰近視覺掃描或新衛生 Need，Generic Deliberation / Spatial own generation 不假升。
+
+前一個 release 建立 Tidying / Put-away v1：World Authoring v18 明確 author `objectStorageAssignments[]` 與 Resident 初始已知 refs，Agent 只從自己的已知 assignment 出發，依 query-time Object visual availability 形成 bounded put-away Decision Option；正式 Action 逐步拿取、搬運並存入指定 `objectContainment:true` Furniture。canonical Object location 仍由原 Engine/Spatial 處理，中斷不 rollback；default world 不配置 home、Editor GUI 未擴張。Own generation `tidying-put-away-v1`，Perception Visual Availability `perception-visual-availability-v3-object-point`。
 
 前一個 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 可在角色 normal walk route unreachable、角色實際觀察到阻塞 Furniture、正確反側 interaction position 可達，而且固定 `parkedPlacement` 的 hypothetical geometry 能恢復原 walk goal 時，作為既有 Action / Intent 的 bounded execution recovery 收回一格。Runtime move 使用 resolved 3D solids 做 destination + swept transition legality，並以單一 placement transaction 同步 current Furniture geometry、Tile membership / floor geometry 與 presentation；Perception Furniture target 讀 current runtime geometry 並排除 target self-occlusion。World Authoring 升為 `world-authoring-v17`；Furniture Definitions 維持 `furniture-definitions-v13`；Route own generation不假升版。詳細 contract 見 [`docs/furniture-passage-yielding.md`](docs/furniture-passage-yielding.md)。
 

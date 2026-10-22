@@ -2,9 +2,11 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.63.0-tidying-put-away`。
+目前 runtime marker：`11.64.0-observed-environmental-cleaning`。
 
-Current Tidying v1：`state.objectStorageAssignments[]` 僅是 World home 指定關係，`Agent.knownObjectStorageAssignmentIds[]` 只存私有 reference。Free / Supported Object 仍以 canonical Spatial 位置與 Visual sensory evidence 判定當下可見，Held / Contained 不形成第一版候選。實際 `putAwayObject` 由 Decision Option Provider → Engine Action factory → pickup → carry → `containedBy` commit 與 canonical World Event 完成；失敗／緊急中斷沿用附近 Object release。沒有新增 Need、平行 Object placement truth、global Object scan、Editor GUI、resume queue。
+Current Observed Environmental Cleaning v1：Human 自主 `cleanFloor` 僅由自身同一 Floor Node 的當下局部接觸液體量（>0.2）形成候選，Initial Decision、Soft Reconsideration、Hard Replanning 與 Action builder 共用單一 query-time 判斷；執行前重新檢查 Actor / Floor Node / 液體，經 `SP.takeEnvironmentResource()` 更新唯一 Environment truth，非零移除才寫入 canonical World Event。全圖濕度不等於 Agent 知識；沒有 Environment cache、鄰近視覺偵測或新 Need。
+
+前一個 release 建立 Tidying v1：`state.objectStorageAssignments[]` 僅是 World home 指定關係，`Agent.knownObjectStorageAssignmentIds[]` 只存私有 reference。Free / Supported Object 仍以 canonical Spatial 位置與 Visual sensory evidence 判定當下可見，Held / Contained 不形成第一版候選。實際 `putAwayObject` 由 Decision Option Provider → Engine Action factory → pickup → carry → `containedBy` commit 與 canonical World Event 完成；失敗／緊急中斷沿用附近 Object release。沒有新增 Need、平行 Object placement truth、global Object scan、Editor GUI、resume queue。
 
 前一個 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 只有在 existing Action 的 normal walk route unreachable、角色以 current Perception 實際觀察到該 Furniture、translation 反側的 canonical interaction position 可達，且 fixed `parkedPlacement` 的 non-mutating counterfactual 能恢復同一 navigation goal 時，才可形成 bounded execution recovery。原 Action / Active Intent 保留 motive truth；runtime placement transaction 以 current resolved 3D solids 重驗 destination、swept transition 與 dependency legality，再原子更新 current Furniture geometry / Tile projection，最後只產生一筆 canonical World Event。詳細 contract：[`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
 

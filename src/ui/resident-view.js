@@ -111,7 +111,7 @@
     if(intentKind==='interactWithAnimal'&&(social>0||affinity>0))return social>0&&affinity>0?'因為想找點陪伴，也對動物有親近感。':'因為想和動物互動。';
     if(intentKind==='seekSocialContact'&&social>0)return '因為想找點陪伴。';
     if(intentKind==='socialize'&&social>0)return '因為想找人說說話。';
-    if(find('environment','wetFloorAmount'))return '因為附近有濕滑的地面需要處理。';
+    if(find('environment','wetFloorAmount'))return '因為腳下的地面潮濕，需要處理。';
     if(find('body','pawResidue'))return '因為腳掌或毛上沾了需要清理的東西。';
     if(value('need','groomingNeed')>0)return '因為身上有點需要整理了。';
     const low=find('environment','resourceLow');if(low){const dest=containerName(st,low.destinationId||action.destinationId,'室內容器'),resource=resourceName(low.resource||action.resource);return `因為${dest}裡的${resource}已經不多了。`;}

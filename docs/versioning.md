@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.63.0-tidying-put-away`。
+目前 overall runtime marker：`11.64.0-observed-environmental-cleaning`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -61,6 +61,8 @@ Current relevant markers：
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
+
+`11.64.0-observed-environmental-cleaning` 修正既有 Human `cleanFloor` 的 World / Agent observation 邊界：從同一 Floor Node 的即時液體接觸（>0.2）導出初始 Decision、Soft Reconsideration、Hard Replanning 與 canonical Action 目標，執行前重新驗證 Actor / Node / 液體；透過 Spatial Environment API 移除，只有實際移除才產生 World Event。遠距濕度不構成 Agent knowledge，也不擴充 Furniture Surface cleaning、Perception 或衛生 Need。使用者可觀察行為已改變，overall / derived Presentation 前進；Spatial Environment / generic Deliberation / Decision Evidence / Intent schema / World Authoring / Perception own generation 均維持原值，未新增 own marker。
 
 `11.63.0-tidying-put-away` 以 World Authoring v18 author canonical `objectStorageAssignments[]` 與各 Resident `initial.knownObjectStorageAssignmentIds[]`，runtime 初始化由 `tidying.schema` order 1492 對應 World / Agent-private truth。Perception Visual Availability own generation → `perception-visual-availability-v3-object-point`，只對已知 assignment 的 exposed Free / Supported Object 提供狹義 point-target visual evidence。第一個 production consumer 是 Human 自主 `putAwayObject`：透過既有 Decision Option Provider / Deliberation / Engine Action 與 canonical Object held / containment transitions 形成 World Event；緊急中斷沿用原 cleanup；沒有新增 soft reconsideration、Activity Continuity episode 或 Editor GUI。World Authoring → `world-authoring-v18`；Object Handling / Spatial / Physical / generic Deliberation / Intent / Resources 等 own generation 不假升。Default world 無指定 storage assignments。
 
