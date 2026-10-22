@@ -86,6 +86,7 @@ const ENGINE_CORE_PROFILE=Object.freeze([
   'systems/resources.js',
   'systems/agent-carry.js',
   'systems/physical.js',
+  'spatial-surface-environment.js',
   'spatial/finalize.js',
   'engine.js',
   'validation/registry.js'
@@ -147,6 +148,11 @@ function ensureRuntimeDependencies(paths){
     const consumerIndexes=['systems/resources.js','systems/agent-carry.js','systems/physical.js','engine.js']
       .map(path=>paths.indexOf(path)).filter(index=>index>=0);
     paths.splice(Math.min(...consumerIndexes),0,'systems/object-handling.js');
+  }
+  engineIndex=paths.indexOf('engine.js');
+  if(engineIndex>=0&&!paths.includes('spatial-surface-environment.js')){
+    const beforeFinalize=paths.indexOf('spatial/finalize.js');
+    paths.splice(beforeFinalize>=0?beforeFinalize:engineIndex,0,'spatial-surface-environment.js');
   }
   engineIndex=paths.indexOf('engine.js');
   if(engineIndex>=0&&!paths.includes('spatial-traversal.js')){

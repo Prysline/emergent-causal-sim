@@ -32,6 +32,8 @@ const engineCore=runtimeProfilePaths([
   'engine.js','validation/registry.js'
 ]);
 assert.ok(engineCore.includes('src/spatial-traversal.js'),'Engine runtime profiles must include canonical Spatial Traversal for lifecycle release');
+assert.ok(engineCore.includes('src/spatial-surface-environment.js'),'Engine runtime profiles must include the canonical Spatial Environment resource endpoint used by cleanFloor');
+assert.ok(engineCore.indexOf('src/spatial-surface-environment.js')<engineCore.indexOf('src/engine.js'),'Spatial Environment must register before Engine in test profiles');
 assert.ok(engineCore.includes('src/spatial-candidate-selection.js'),'Engine runtime profiles must include the canonical nearby-placement owner');
 assert.ok(engineCore.includes('src/systems/object-handling.js'),'Engine runtime profiles must include the canonical Object Handling owner');
 assert.ok(engineCore.includes('src/systems/resources.js'),'Engine runtime profiles must include the canonical Resources owner');
@@ -87,7 +89,7 @@ assert.throws(
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','systems/object-handling.js','spatial.js',
-  'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial/finalize.js','engine.js','validation/registry.js'
+  'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial-surface-environment.js','spatial/finalize.js','engine.js','validation/registry.js'
 ]);
 
 const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');
