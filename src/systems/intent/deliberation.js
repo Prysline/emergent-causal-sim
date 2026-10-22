@@ -13,7 +13,6 @@
 
   function actionKind(a){return E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;}
   function foodAmount(st){return Object.values(st.objects||{}).filter(c=>c.canEatFrom).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
-  function wetTotal(st){return Object.values(st.map?.tiles||{}).reduce((sum,t)=>sum+(SP.tileLiquidAmount?.(t)||0),0);}
   function interactionTraversalCost(st,a,target,affordance='default'){
     if(typeof SP.bestInteractionPositionResult==='function')return SP.bestInteractionPositionResult(st,a,target,affordance)?.traversalCost??Infinity;
     const goal=SP.bestInteractionPosition(st,a,target,affordance);return goal?(SP.traversalCost?.(st,a,goal)??SP.pathDistance(st,a,goal)):Infinity;
@@ -58,7 +57,7 @@
       case'socialize':return a.kind==='human'&&(socialTarget||nearestAgent(st,a,'human',{awakeOnly:true}))?canonicalBaseUtility(a,'talk'):0;
       case'interactWithAnimal':return a.kind==='human'&&nearestPettableAnimal(a)?canonicalBaseUtility(a,'petAnimal'):0;
       case'seekSocialContact':return E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14&&(socialTarget||nearestAgent(st,a,'human'))?canonicalBaseUtility(a,'seekHuman'):0;
-      case'removeHazard':return wetTotal(st)>.2?canonicalBaseUtility(a,'cleanFloor'):0;
+      case'removeHazard':return E.localCleanFloorOpportunity?.(a)?canonicalBaseUtility(a,'cleanFloor'):0;
       case'groom':return a.kind==='cat'?canonicalBaseUtility(a,'groom'):0;
       case'explore':return canonicalBaseUtility(a,'wander');
       default:return 0;
