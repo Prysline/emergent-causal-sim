@@ -55,12 +55,15 @@ assert.ok(fallbackTalk?.targetAgent,'talk without explicit target may use its le
 const explicitTalk=E.buildAction(human,{id:'talk',targetAgent:fallbackTalk.targetAgent});
 assert.equal(explicitTalk?.targetAgent,fallbackTalk.targetAgent);
 assert.equal(E.buildAction(human,{id:'talk',targetAgent:'missing-agent'}),null,'invalid explicit target must not silently retarget to nearest human');
-const explicitTile={x:1,y:1};
-assert.deepEqual(E.buildAction(human,{id:'cleanFloor',targetTile:explicitTile})?.targetTile,explicitTile,'explicit targetTile must survive construction');
+const explicitTile=SP.clonePos(SP.nodeForAgent(st,human));
+SP.putEnvironmentResource(st,SP.nodeForAgent(st,human),'water',5);
+assert.deepEqual(E.buildAction(human,{id:'cleanFloor',targetTile:explicitTile})?.targetTile,explicitTile,'cleanFloor accepts an explicitly observed current Floor Node');
 assert.deepEqual(E.buildAction(human,{id:'wander',targetTile:explicitTile})?.targetTile,explicitTile,'explicit wander target must survive construction');
+const otherTile={...explicitTile,x:explicitTile.x===1?2:1};
+assert.equal(E.buildAction(human,{id:'cleanFloor',targetTile:otherTile}),null,'cleanFloor rejects an unobserved explicit remote target');
 const explicitUpperTile={x:1,y:1,z:1};
-assert.deepEqual(E.buildAction(human,{id:'cleanFloor',targetTile:explicitUpperTile})?.targetTile,explicitUpperTile,'cleanFloor construction must preserve non-zero target z');
-assert.deepEqual(E.buildAction(human,{id:'wander',targetTile:explicitUpperTile})?.targetTile,explicitUpperTile,'wander construction must preserve non-zero target z');
+assert.equal(E.buildAction(human,{id:'cleanFloor',targetTile:explicitUpperTile}),null,'cleanFloor cannot target an unobserved other layer');
+assert.deepEqual(E.buildAction(human,{id:'wander',targetTile:explicitUpperTile})?.targetTile,explicitUpperTile,'wander must still preserve non-zero target z');
 st.objects.cupB.contents.water=Math.max(8,st.objects.cupB.contents.water||0);
 assert.equal(E.buildAction(cat,{id:'drinkWater',targetObject:'cupB'})?.targetObject,'cupB','explicit drink targetObject must survive construction');
 
