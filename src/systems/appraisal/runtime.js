@@ -2,6 +2,7 @@
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP||!E.MEMORY_SCHEMA_VERSION)return;
   const VERSION=W.APPRAISAL_SCHEMA_VERSION||'11.13.1-event-appraisal';
   const WAKE_ATTENTION_ATTRIBUTION_VERSION='wake-attention-attribution-v1';
+  const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Appraisal requires Character Traits contract.');
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
   const normNeed=v=>clamp((Number(v)||0)/100,0,1);
@@ -27,7 +28,7 @@
   function petAnimalRule(ctx){
     const {a,memory}=ctx,o=memory.observed||{};
     if(o.targetId===a.id){const social=normNeed(a.needs?.social);addFactor(ctx,{kind:'need',key:'social',level:round(social),relevanceDelta:round(.15+.30*social),congruenceDelta:round(.15+.65*social)});}
-    if(o.actorId===a.id){const affinity=clamp(Number(a.traits?.animalAffinity)||0,0,1);addFactor(ctx,{kind:'trait',key:'animalAffinity',level:round(affinity),relevanceDelta:round(.05+.10*affinity),congruenceDelta:round(.05+.15*affinity)});}
+    if(o.actorId===a.id){const affinity=T.value(a,'animalAffinity');addFactor(ctx,{kind:'trait',key:'animalAffinity',level:round(affinity),relevanceDelta:round(.05+.10*affinity),congruenceDelta:round(.05+.15*affinity)});}
   }
   function spillRule(ctx){
     const {st,a,memory}=ctx,o=memory.observed||{};
