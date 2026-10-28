@@ -4,7 +4,7 @@ import {loadProductionBefore} from './helpers/production-loader.mjs';
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngine,SP=globalThis.SimSpatial,P=globalThis.SimPerception,T=globalThis.SimTidyingState;
-assert.equal(A.VERSION,'world-authoring-v18');
+assert.equal(A.VERSION,'world-authoring-v19');
 assert.equal(T.VERSION,'tidying-put-away-v1');
 assert.equal(E.TIDYING_VERSION,T.VERSION);
 assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v3-object-point');

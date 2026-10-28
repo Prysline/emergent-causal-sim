@@ -6,7 +6,7 @@ const page=await browser.newPage({viewport:{width:1400,height:900}});
 const pageErrors=[];
 page.on('pageerror',error=>pageErrors.push(String(error)));
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
-await page.waitForFunction(()=>window.SimEditorPreviewBridge?.storePreview&&window.SimWorldAuthoring?.VERSION==='world-authoring-v18');
+await page.waitForFunction(()=>window.SimEditorPreviewBridge?.storePreview&&window.SimWorldAuthoring?.VERSION==='world-authoring-v19');
 const preview=await page.evaluate(()=>{
   const A=window.SimWorldAuthoring,doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
   doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
