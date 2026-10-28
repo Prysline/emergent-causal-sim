@@ -1,5 +1,6 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld;if(!E||!W?.SOCIAL_RESPONSE_SCHEMA_VERSION||!E.APPRAISAL_SCHEMA_VERSION)return;
+  const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Appraisal requires Character Traits contract.');
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   const round=v=>Math.round(v*1000)/1000;
   const normNeed=v=>clamp((Number(v)||0)/100,0,1);
@@ -17,7 +18,7 @@
       const social=normNeed(a.needs?.social);relevance=.55;goalCongruence=round(.20+.45*(1-social));
       factors=[{kind:'selfActor',relevanceDelta:.25},{kind:'declinedUnwantedContact',key:'social',level:round(social),relevanceDelta:.30,congruenceDelta:goalCongruence}];
     }else if(o.targetId===a.id){
-      const affinity=clamp(Number(a.traits?.animalAffinity)||0,0,1),extraRelevance=round(.10+.15*affinity),negative=round(.18+.32*affinity);
+      const affinity=T.value(a,'animalAffinity'),extraRelevance=round(.10+.15*affinity),negative=round(.18+.32*affinity);
       relevance=round(.35+extraRelevance);goalCongruence=-negative;
       factors=[{kind:'directTarget',relevanceDelta:.35},{kind:'petOfferDeclined',key:'animalAffinity',level:round(affinity),relevanceDelta:extraRelevance,congruenceDelta:-negative}];
     }

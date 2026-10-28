@@ -1,5 +1,6 @@
 (() => {
   const SP=window.SimSpatial;if(!SP)return;
+  const T=window.SimCharacterTraits;if(!T?.validateTraits)throw new Error('Validator requires Character Traits contract.');
 
   function validateBaseState(st){
     const issues=[],add=(code,message,data={})=>issues.push({code,message,...data}),byTile=new Map(),bySlot=new Map(),heldByObject=new Map();
@@ -27,8 +28,7 @@
       const carryRelation=window.SimAgentCarry?.relationForCarried?.(st,a)||null;
       for(const legacy of ['location','plan','seatSlot','seatedOn','__slotTarget','__eatAfterSeat','__restAfterSlot','carrying'])if(Object.prototype.hasOwnProperty.call(a,legacy))add('legacy_agent_state',`${a.name}仍含舊欄位 ${legacy}。`,{agentId:a.id,field:legacy});
       if(!Number.isFinite(a.needs?.sleepNeed)||a.needs.sleepNeed<0||a.needs.sleepNeed>100)add('sleep_need_invalid',`${a.name}的 sleepNeed 必須是 0–100 的有限數值。`,{agentId:a.id,value:a.needs?.sleepNeed});
-      if(a.traits?.circadianPattern&&!['diurnal','nocturnal','crepuscular'].includes(a.traits.circadianPattern))add('circadian_pattern_invalid',`${a.name}的 circadianPattern 無效。`,{agentId:a.id,value:a.traits.circadianPattern});
-      if(a.traits?.circadianPhaseOffsetMinutes!==undefined&&!Number.isFinite(a.traits.circadianPhaseOffsetMinutes))add('circadian_phase_invalid',`${a.name}的 circadianPhaseOffsetMinutes 必須是有限數值。`,{agentId:a.id,value:a.traits.circadianPhaseOffsetMinutes});
+      for(const problem of T.validateTraits(a.traits,{path:'agents.'+a.id+'.traits'}).errors)add(problem.code,problem.message,{agentId:a.id,path:problem.path});
       if(!a.offMap){
         if(carryRelation){if(a.position)add('carried_agent_persisted_position',`${a.name}被抱持時不應保留 ordinary position truth。`,{agentId:a.id,carrierId:carryRelation.carrierId});}
         else if(!a.position)add('agent_position_missing',`${a.name}沒有 Tile 座標。`,{agentId:a.id});
