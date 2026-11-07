@@ -1,10 +1,11 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;
+  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial,T=window.SimCharacterTraits;
   if(!E||!W?.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
+  if(typeof T?.value!=='function')throw new Error('Human Social Response requires Character Traits contract.');
   if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/human-response.js requires systems/affect/runtime.js.');
   if(typeof E.registerActivityCompatibility!=='function'||typeof E.scheduleTransientExecution!=='function')throw new Error('systems/social/human-response.js requires systems/action/runtime.js activity concurrency contract.');
   if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('src/systems/social/human-response.js requires Spatial nearby placement lifecycle.');
-  const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION||'11.51.0-activity-concurrency';
+  const VERSION=W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION;
   const TALK_RESPONSE_THRESHOLDS=Object.freeze({declineMax:.30,engageMin:.62});
   const TALK_AFFECT_RESPONSE_CAP=.12;
   const TALK_RELATIONSHIP_RESPONSE_CAP=.18;
@@ -18,7 +19,7 @@
   E.registerActivityCompatibility('humanSocial.eat-listening',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect'],transientKind:'socialListening',primaryProgressScale:1});
   E.registerActivityCompatibility('humanSocial.eat-speaking',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect'],transientKind:'socialSpeaking',primaryProgressScale:0});
 
-  function talkBaseEngagementScore(human){const social=clamp((Number(human?.needs?.social)||0)/100,0,1),rawTrait=Number(human?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1);return round(social*.70+sociability*.30);}
+  function talkBaseEngagementScore(human){const social=clamp((Number(human?.needs?.social)||0)/100,0,1);return round(social*.70+T.value(human,'social')*.30);}
   function talkAffectResponseDelta(human){const signal=Number(E.affectResponseSignal(human))||0;return round(clamp(signal*TALK_AFFECT_RESPONSE_CAP,-TALK_AFFECT_RESPONSE_CAP,TALK_AFFECT_RESPONSE_CAP));}
   function talkRelationshipResponseDelta(human,requester){const id=counterpartId(requester);if(!id)return 0;const signal=Number(E.relationshipSignal?.(human,id))||0;return round(clamp(signal*TALK_RELATIONSHIP_RESPONSE_CAP,-TALK_RELATIONSHIP_RESPONSE_CAP,TALK_RELATIONSHIP_RESPONSE_CAP));}
   function talkResponseEvaluation(human,requester=null){const baseScore=talkBaseEngagementScore(human),affectResponseDelta=talkAffectResponseDelta(human),relationshipResponseDelta=talkRelationshipResponseDelta(human,requester),finalScore=round(clamp(baseScore+affectResponseDelta+relationshipResponseDelta,0,1));const response=finalScore<TALK_RESPONSE_THRESHOLDS.declineMax?'decline':finalScore>=TALK_RESPONSE_THRESHOLDS.engageMin?'engage':'brief';return {baseScore,affectResponseDelta,relationshipResponseDelta,finalScore,response};}

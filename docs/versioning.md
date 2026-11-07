@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.65.0-character-traits-foundation`。
+目前 overall runtime marker：`11.66.0-character-traits-social`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -38,7 +38,9 @@ Current relevant markers：
 - Daily Life Learned Habit：`daily-life-learned-habit-v1`
 - Standing Responsibility：`standing-responsibility-v1`
 - Mental Regulation：`mental-regulation-v4`
-- Action / Human Social Response：`11.51.0-activity-concurrency`
+- Action：`11.51.0-activity-concurrency`
+- Human Social Response：`11.66.0-human-social-trait-response`
+- Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
 - Object Handling：`object-handling-v1`
 - Resources：`11.56.0-resource-container-capability`
@@ -62,6 +64,10 @@ Current relevant markers：
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
+
+`11.66.0-character-traits-social`：Character Traits Foundation v1 Slice B1 採方案 B：`src/engine.js` 以 canonical `traits.social` 調節 Social Need 自然累積（`.75 + .5 * social`），但主動 `talk`／`seekHuman` 不再直接重複加上該 Trait utility 或 Decision contributor；Human／Animal Social Response 保留現有 Need/trait 加權、Affect/Relationship 與回應門檻，僅統一透過 `SimCharacterTraits.value` 取用，缺值從舊 consumer 的 `.5` 歸位成 canonical `0`，非法值 fail-closed。Human／Animal Response own generations 前進；Action、Social Bid、Deliberation、Character Traits schema `character-traits-v1`、World Authoring `world-authoring-v19` 等未變更 subsystem 保持原 marker。No new Need, World Event, response cache or alternate decision owner. 詳見 [`character-traits.md`](character-traits.md)。
+
+前一個 release：
 
 `11.65.0-character-traits-foundation`：`character-traits-v1` 收斂既有 sparse Agent traits 的 key、type、range 與缺值規則，`world-authoring-v19` 確保 authoring validation 與 runtime admission 共用契約；Engine／Deliberation／Appraisal 的既有 consumer 與 live state validator 亦讀同一 owner。三位居民既有 authored 值與各公式保留；缺少 `careful` 時，held-object route weights 改沿用 precision 的 `.55`（舊路徑為 0）。未新增 Trait、Need、Action、Decision Option 或其他 subsystem generation。參見 [`character-traits.md`](character-traits.md)。
 

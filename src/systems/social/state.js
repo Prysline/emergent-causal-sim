@@ -20,7 +20,7 @@
     W.DATA_ZH.owner='Private Owner';
   }
 
-  const ANIMAL_RESPONSE_VERSION='11.13.2a-social-response-agency';
+  const ANIMAL_RESPONSE_VERSION='11.66.0-animal-social-trait-response';
   W.registerInitialStateInitializer('socialResponse.schema',(st)=>st,900);
   W.SOCIAL_RESPONSE_SCHEMA_VERSION=ANIMAL_RESPONSE_VERSION;
   if(W.DATA_ZH){
@@ -28,7 +28,7 @@
     W.DATA_ZH.petResponse='撫摸回應';
   }
 
-  const HUMAN_RESPONSE_VERSION='11.51.0-activity-concurrency';
+  const HUMAN_RESPONSE_VERSION='11.66.0-human-social-trait-response';
   W.registerInitialStateInitializer('humanSocialResponse.schema',(st)=>st,1100);
   W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION=HUMAN_RESPONSE_VERSION;
   if(W.DATA_ZH){
