@@ -2,9 +2,11 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.65.0-character-traits-foundation`。
+目前 runtime marker：`11.66.0-character-traits-social`。
 
-Current Character Traits Foundation v1 Slice A：`src/character-traits.js` 是 Trait keys、types、read-time defaults 的唯一契約 owner。World Authoring `world-authoring-v19` author 稀疏 `Resident.traits`，初始化複製為對應 Agent 的 private `traits`；Engine／Deliberation／Appraisal 的原有 consumer 只讀同一狀態，保留 Needs 與 Decision authority。未新增 World trait mirror、跨 Agent 私有狀態寫入或活動。參見 [`character-traits.md`](character-traits.md)。
+Current Character Traits Foundation v1 Slice B1：`social` Trait 在同 Agent 的 Social Need 自然形成（`.75 + .5 * social`）與收到邀請時的 Human／Animal Social Response（Need + Trait bounded score）分別作用；主動 `talk`／`seekHuman` 不重複追加直接 Trait utility。回應消費者採 `SimCharacterTraits.value` 的 canonical 缺值 `0`／invalid fail-closed，既有 Affect／Relationship、Bid／World Event、Agent-private 與緩解契約不變；只前進 Human／Animal response own generations，不改 Action、Social Bid、Character Traits schema 或 World Authoring。詳見 [`character-traits.md`](character-traits.md)。
+
+前一個 Character Traits Foundation v1 Slice A：`src/character-traits.js` 是 Trait keys、types、read-time defaults 的唯一契約 owner。World Authoring `world-authoring-v19` author 稀疏 `Resident.traits`，初始化複製為對應 Agent 的 private `traits`；Engine／Deliberation／Appraisal 的原有 consumer 只讀同一狀態，保留 Needs 與 Decision authority。未新增 World trait mirror、跨 Agent 私有狀態寫入或活動。參見 [`character-traits.md`](character-traits.md)。
 
 Current Observed Environmental Cleaning v1：Human 自主 `cleanFloor` 僅由自身同一 Floor Node 的當下局部接觸液體量（>0.2）形成候選，Initial Decision、Soft Reconsideration、Hard Replanning 與 Action builder 共用單一 query-time 判斷；執行前重新檢查 Actor / Floor Node / 液體，經 `SP.takeEnvironmentResource()` 更新唯一 Environment truth，非零移除才寫入 canonical World Event。全圖濕度不等於 Agent 知識；沒有 Environment cache、鄰近視覺偵測或新 Need。
 
