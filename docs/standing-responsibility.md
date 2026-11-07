@@ -2,9 +2,9 @@
 
 Current subsystem generation: `standing-responsibility-v1`.
 
-Current overall runtime marker: `11.62.0-furniture-passage-yielding`.
+Current overall runtime / Presentation follows the canonical `SimRelease.VERSION` owned by `src/release.js`; this subsystem document does not own a current overall version literal.
 
-Current World Authoring: `world-authoring-v17`.
+Current World Authoring generation follows `SimWorldAuthoring.VERSION` (see `docs/versioning.md`); Standing Responsibility's authoring relation was introduced in `world-authoring-v16`.
 
 ## Purpose
 
@@ -49,7 +49,7 @@ Therefore responsibility cannot:
 
 ## World Authoring and validation
 
-`resourceResponsibilityAssignments[]` was introduced by `world-authoring-v16` and remains preserved by current `world-authoring-v17` alongside other World-level relation collections. The v17 Passage Yielding extension does not redefine Standing Responsibility semantics.
+`resourceResponsibilityAssignments[]` was introduced by `world-authoring-v16` and remains preserved in the current `SimWorldAuthoring.VERSION` contract alongside other World-level relation collections. The `world-authoring-v17` Passage Yielding extension is historical and did not redefine Standing Responsibility semantics.
 
 Current v1 validation fails loudly for:
 
@@ -81,8 +81,9 @@ Presentation is read-only projection and must not repair, create, or mirror resp
 ## Version boundaries
 
 - Standing Responsibility: `standing-responsibility-v1`
-- Current World Authoring: `world-authoring-v17` (`resourceResponsibilityAssignments[]` introduced in v16)
-- Current overall runtime / Presentation: `11.62.0-furniture-passage-yielding`
+- Current World Authoring: `SimWorldAuthoring.VERSION` (see `docs/versioning.md`; `resourceResponsibilityAssignments[]` introduced in v16)
+- Current overall runtime / Presentation: `SimRelease.VERSION` (single canonical owner: `src/release.js`; Presentation projects this version)
+- Historical documentation snapshot after Furniture Passage Yielding (PR #232): overall runtime was `11.62.0-furniture-passage-yielding` (not the current release)
 - Daily Life Routine remains `daily-life-routine-v1`
 - Daily Life Learned Habit remains `daily-life-learned-habit-v1`
 - generic Deliberation / Decision Evidence remains `11.48.1-sleep-perception-approach`
