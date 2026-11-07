@@ -125,6 +125,8 @@ function ensureAuthoringDependencies(paths){
 
 function ensureRuntimeDependencies(paths){
   ensureAuthoringDependencies(paths);
+  const traitIndex=paths.indexOf('engine.js');
+  if(traitIndex>=0&&!paths.includes('character-traits.js'))paths.splice(traitIndex,0,'character-traits.js');
   let engineIndex=paths.indexOf('engine.js');
   const locomotionIndex=paths.indexOf('systems/locomotion.js');
   let physicalIndex=paths.indexOf('systems/physical.js');

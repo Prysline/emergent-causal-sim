@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.64.0-observed-environmental-cleaning`。
+目前 overall runtime marker：`11.65.0-character-traits-foundation`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -57,10 +57,15 @@ Current relevant markers：
 - Memory / Usage Preference：`11.42.0-usage-preference-sleep`
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
-- World Authoring：`world-authoring-v18`
+- Character Traits：`character-traits-v1`
+- World Authoring：`world-authoring-v19`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
+
+`11.65.0-character-traits-foundation`：`character-traits-v1` 收斂既有 sparse Agent traits 的 key、type、range 與缺值規則，`world-authoring-v19` 確保 authoring validation 與 runtime admission 共用契約；Engine／Deliberation／Appraisal 的既有 consumer 與 live state validator 亦讀同一 owner。三位居民既有 authored 值與各公式保留；缺少 `careful` 時，held-object route weights 改沿用 precision 的 `.55`（舊路徑為 0）。未新增 Trait、Need、Action、Decision Option 或其他 subsystem generation。參見 [`character-traits.md`](character-traits.md)。
+
+前一個 release：
 
 `11.64.0-observed-environmental-cleaning` 修正既有 Human `cleanFloor` 的 World / Agent observation 邊界：從同一 Floor Node 的即時液體接觸（>0.2）導出初始 Decision、Soft Reconsideration、Hard Replanning 與 canonical Action 目標，執行前重新驗證 Actor / Node / 液體；透過 Spatial Environment API 移除，只有實際移除才產生 World Event。遠距濕度不構成 Agent knowledge，也不擴充 Furniture Surface cleaning、Perception 或衛生 Need。使用者可觀察行為已改變，overall / derived Presentation 前進；Spatial Environment / generic Deliberation / Decision Evidence / Intent schema / World Authoring / Perception own generation 均維持原值，未新增 own marker。
 

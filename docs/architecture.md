@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.64.0-observed-environmental-cleaning`。
+目前 runtime marker：`11.65.0-character-traits-foundation`。
+
+Current Character Traits Foundation v1 Slice A：`src/character-traits.js` 是 Trait keys、types、read-time defaults 的唯一契約 owner。World Authoring `world-authoring-v19` author 稀疏 `Resident.traits`，初始化複製為對應 Agent 的 private `traits`；Engine／Deliberation／Appraisal 的原有 consumer 只讀同一狀態，保留 Needs 與 Decision authority。未新增 World trait mirror、跨 Agent 私有狀態寫入或活動。參見 [`character-traits.md`](character-traits.md)。
 
 Current Observed Environmental Cleaning v1：Human 自主 `cleanFloor` 僅由自身同一 Floor Node 的當下局部接觸液體量（>0.2）形成候選，Initial Decision、Soft Reconsideration、Hard Replanning 與 Action builder 共用單一 query-time 判斷；執行前重新檢查 Actor / Floor Node / 液體，經 `SP.takeEnvironmentResource()` 更新唯一 Environment truth，非零移除才寫入 canonical World Event。全圖濕度不等於 Agent 知識；沒有 Environment cache、鄰近視覺偵測或新 Need。
 
@@ -30,7 +32,7 @@ Passage Yielding 是 navigation / Action execution recovery，不是新的 Need 
 - Interaction position 重用 canonical Furniture contact geometry，再依 translation vector限制在移動方向反側；不可達就不是 executable plan。
 - Runtime placement transaction 是唯一 runtime Furniture move owner：重新 resolve current footprint / slots / solids / surfaces / display geometry，並同步 Tile membership / floor geometry / room projection。Editor authoring move helper 不作 runtime World action。
 
-Current World Authoring generation = `world-authoring-v17`；Furniture Definitions 維持 `furniture-definitions-v13`。Passage Yielding capability marker = `furniture-passage-yielding-v1`；Route own generation維持既有 owner，不複製 overall release literal。
+Furniture Passage Yielding 當時的 World Authoring generation = `world-authoring-v17`；Furniture Definitions 維持 `furniture-definitions-v13`。Passage Yielding capability marker = `furniture-passage-yielding-v1`；Route own generation維持既有 owner，不複製 overall release literal。
 
 ## Activity Continuity
 
@@ -81,7 +83,7 @@ Relationship 是 Agent-private directional state；`A → B` 與 `B → A` 分�
 
 ## World / Spatial / Physical
 
-Current World Authoring = `world-authoring-v17`；Furniture Catalog = `furniture-definitions-v13`。
+Current World Authoring = `world-authoring-v19`；Furniture Catalog = `furniture-definitions-v13`。
 
 Current Spatial Node identity = `spaceId + surfaceId + x/y/z`。`z` 是 World spatial dimension；Furniture `topElevation` 是 local geometry，兩者不得混為同一真相。
 

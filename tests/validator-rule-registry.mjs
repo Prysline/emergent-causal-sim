@@ -38,7 +38,10 @@ assert.throws(
   'production manifest must not silently skip a missing validator owner'
 );
 const ctx=vm.createContext({console});ctx.window=ctx;ctx.SimSpatial={};
-vm.runInContext(fs.readFileSync(new URL('../src/validation/registry.js',import.meta.url),'utf8'),ctx,{filename:'validation/registry.js'});
+const registrySource=fs.readFileSync(new URL('../src/validation/registry.js',import.meta.url),'utf8');
+assert.throws(()=>vm.runInContext(registrySource,ctx,{filename:'validation/registry.js'}),/Validator requires Character Traits contract/,'validator must fail when the canonical Trait contract is missing');
+vm.runInContext(fs.readFileSync(new URL('../src/character-traits.js',import.meta.url),'utf8'),ctx,{filename:'character-traits.js'});
+vm.runInContext(registrySource,ctx,{filename:'validation/registry.js'});
 ctx.SimValidator.registerValidationLayer('one',(_st,base)=>base,100);
 assert.throws(()=>ctx.SimValidator.finalizeValidationLayers(['one','two']),/missing=\[two\]/,'manifest must fail loudly when a validator file did not register');
 ctx.SimValidator.registerValidationLayer('two',(_st,base)=>base,200);

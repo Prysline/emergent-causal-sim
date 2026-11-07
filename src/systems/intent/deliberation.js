@@ -1,11 +1,12 @@
 (() => {
   const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;if(!E||!W||!SP)return;
   if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('systems/intent/deliberation.js requires Spatial nearby placement lifecycle.');
+  const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Deliberation requires Character Traits contract.');
   const VERSION=W.DELIBERATION_SCHEMA_VERSION||'11.48.1-sleep-perception-approach';
   const SOFT_SWITCH_MARGIN=14,MIN_INTENT_HOLD_TICKS=2;
   const ROUTE_CONTENTS_RISK_WEIGHT_MAX=8,ROUTE_DROP_RISK_WEIGHT_MAX=4;
   function routePreferenceForAction(st,a,action=a?.action){
-    const careful=Math.max(0,Math.min(1,Number(a?.traits?.careful)||0));
+    const careful=T.value(a,'careful');
     const contentsRiskWeight=careful*ROUTE_CONTENTS_RISK_WEIGHT_MAX,dropRiskWeight=careful*ROUTE_DROP_RISK_WEIGHT_MAX;
     return {weights:{timeWeight:0,contentsRiskWeight,dropRiskWeight},contributors:[{kind:'trait',key:'careful',role:'routeWeight',value:careful,actionKind:action?.kind||null,contentsRiskWeight,dropRiskWeight}]};
   }
@@ -37,7 +38,7 @@
   function currentBidUtility(st,a,intent){
     if(intent?.kind==='respondSocialBid'){
       const bid=E.bidEvent?.(st,intent.source?.bidId);if(!bid||bid.data?.bidTo!==a.id)return 0;
-      return 72+(a.traits?.animalAffinity||0)*20;
+      return 72+(T.value(a,'animalAffinity'))*20;
     }
     if(intent?.kind==='awaitResponse')return 52;
     return null;
@@ -71,7 +72,7 @@
       const h=nearestAgent(st,a,'human',{awakeOnly:true});if(h)push('socialize','talk',{targetAgent:h.id},{socialTarget:h});
       const animal=nearestPettableAnimal(a);if(animal)push('interactWithAnimal','petAnimal',{targetAgent:animal.id});
       push('removeHazard','cleanFloor');
-      const bidPick=E.newestObservedAnimalBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap&&E.canPetAnimal?.(a,target))out.push({intentKind:'respondSocialBid',actionKind:'petAnimal',utility:72+(a.traits?.animalAffinity||0)*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,decisionContributors:[{kind:'socialBid',key:'animalAffection',role:'motivation',bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,fromAgent:target.id},{kind:'trait',key:'animalAffinity',role:'modifier',value:a.traits?.animalAffinity||0}]});}
+      const bidPick=E.newestObservedAnimalBid?.(st,a);if(bidPick){const target=st.agents?.[bidPick.bid?.data?.bidFrom];if(target&&!target.offMap&&E.canPetAnimal?.(a,target))out.push({intentKind:'respondSocialBid',actionKind:'petAnimal',utility:72+(T.value(a,'animalAffinity'))*20,targetAgent:target.id,bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,decisionContributors:[{kind:'socialBid',key:'animalAffection',role:'motivation',bidId:bidPick.bid.id,observedTick:bidPick.ref.observedTick,fromAgent:target.id},{kind:'trait',key:'animalAffinity',role:'modifier',value:T.value(a,'animalAffinity')}]});}
     }else{
       push('satisfyHunger','eat');push('groom','groom');push('recoverFatigue','rest');push('sleep','sleep');
       const h=E.isAnimalAgent?.(a)&&(a.needs?.social||0)>14?nearestAgent(st,a,'human'):null;if(h)push('seekSocialContact','seekHuman',{targetAgent:h.id},{socialTarget:h});

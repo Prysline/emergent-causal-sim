@@ -32,6 +32,7 @@ jobs:
       - run: node tests/mental-regulation-stimulation-relaxation.mjs
       - run: node tests/daily-life-routine.mjs
       - run: node tests/learned-habit.mjs
+      - run: node tests/character-traits-foundation.mjs
       - run: node tests/standing-responsibility.mjs
       - run: node tests/tidying-put-away.mjs
       - run: node tests/slot-interaction-egress.mjs
