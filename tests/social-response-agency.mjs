@@ -34,6 +34,7 @@ function latestAction(action){return E.getState().events.find(e=>e.data?.action=
 
 // Response score is deterministic and produces three legible bands from the same animal with only social need changed.
 E.reset(11320);let st=E.getState(),cat=st.agents.orange;
+assert.equal(E.SOCIAL_RESPONSE_SCHEMA_VERSION,'11.66.0-animal-social-trait-response');
 cat.needs.social=5;assert.equal(E.petResponseFor(cat),'avoid');
 cat.needs.social=45;assert.equal(E.petResponseFor(cat),'tolerate');
 cat.needs.social=90;assert.equal(E.petResponseFor(cat),'accept');
@@ -157,4 +158,4 @@ for(let i=0;i<500;i++){
   noIssues(`tick ${i+1}`);
 }
 
-console.log('v11.13.2a social response agency regression: ok');
+console.log('animal social response and trait integration regression: ok');

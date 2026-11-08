@@ -12,7 +12,7 @@ page.on('pageerror',err=>pageErrors.push(String(err)));
 
 async function runScenario(scenario){
   await page.goto(`http://127.0.0.1:4173/?scenario=${scenario}`,{waitUntil:'networkidle'});
-  await page.waitForFunction(()=>window.SimEngine?.SOCIAL_RESPONSE_SCHEMA_VERSION==='11.13.2a-social-response-agency');
+  await page.waitForFunction(()=>window.SimEngine?.SOCIAL_RESPONSE_SCHEMA_VERSION==='11.66.0-animal-social-trait-response');
   await page.click('#step');
   await page.waitForFunction(()=>window.SimEngine.getState().events.some(e=>e.data?.action==='petOffer'));
   const stateBeforeInspector=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
@@ -42,7 +42,7 @@ async function runScenario(scenario){
 assert.ok((await page.goto('http://127.0.0.1:4173/?scenario=pet-accept',{waitUntil:'domcontentloaded'})).ok());
 assert.ok((await page.title()).includes('因果湧現模擬器'));
 const desktop=await runScenario('pet-accept');
-assert.equal(desktop.socialResponseVersion,'11.13.2a-social-response-agency');
+assert.equal(desktop.socialResponseVersion,'11.66.0-animal-social-trait-response');
 assert.equal(desktop.scenarioValue,'pet-accept');
 assert.ok(desktop.offerId,'desktop accept: missing petOffer');
 assert.equal(desktop.responseAction,'acceptPet');
@@ -62,7 +62,7 @@ await page.screenshot({path:`${outDir}/desktop-accept.png`,fullPage:true});
 
 await page.setViewportSize({width:390,height:844});
 const mobile=await runScenario('pet-avoid');
-assert.equal(mobile.socialResponseVersion,'11.13.2a-social-response-agency');
+assert.equal(mobile.socialResponseVersion,'11.66.0-animal-social-trait-response');
 assert.equal(mobile.scenarioValue,'pet-avoid');
 assert.ok(mobile.offerId,'mobile avoid: missing petOffer');
 assert.equal(mobile.responseAction,'avoidPet');

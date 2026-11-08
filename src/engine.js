@@ -342,9 +342,9 @@
       case'drinkAlcohol':return a?.kind==='human'?(n.thirst||0)*.42+(T.value(a,'alcoholLike'))*34+(a.status?.intoxication<35?6:-18):0;
       case'rest':return a?.kind==='cat'?Math.max(0,Math.min(n.fatigue||0,72)-15)*1.05+8:Math.max(0,Math.min(n.fatigue||0,68)-18)*1.25+9;
       case'sleep':return sleepChoice(a)?.score||0;
-      case'talk':return a?.kind==='human'?Math.max(0,(n.social||0)-18)*.9+(T.value(a,'social'))*16:0;
+      case'talk':return a?.kind==='human'?Math.max(0,(n.social||0)-18)*.9:0;
       case'petAnimal':return a?.kind==='human'?8+(T.value(a,'animalAffinity'))*18+(n.social||0)*.18:0;
-      case'seekHuman':return isAnimalAgent(a)?Math.max(0,(n.social||0)-10)*.95+(T.value(a,'social'))*18:0;
+      case'seekHuman':return isAnimalAgent(a)?Math.max(0,(n.social||0)-10)*.95:0;
       case'cleanFloor':{const local=localCleanFloorOpportunity(a);return local?15+local.amount*.9+(a.wellbeing?.safety||0)*.08:0;}
       case'groom':return a?.kind==='cat'?(n.groomingNeed||0)*.83+Object.values(a.contacts?.paws||{}).reduce((x,y)=>x+y,0)*.9+18:0;
       case'wander':return a?.kind==='cat'?20+(T.value(a,'curious'))*25:10;
@@ -361,9 +361,9 @@
       case'drinkAlcohol':add('need','thirst',n.thirst||0);add('trait','alcoholLike',T.value(a,'alcoholLike'),{role:'modifier'});add('status','intoxication',a?.status?.intoxication||0,{role:'modifier'});break;
       case'rest':add('need','fatigue',n.fatigue||0);break;
       case'sleep':add('need','sleepNeed',n.sleepNeed||0);add('circadian','sleepBias',circadianSleepBias(a),{role:'modifier'});if((n.fatigue||0)>65)add('need','fatigue',n.fatigue||0,{role:'modifier'});break;
-      case'talk':add('need','social',n.social||0);add('trait','social',T.value(a,'social'),{role:'modifier'});break;
+      case'talk':add('need','social',n.social||0);break;
       case'petAnimal':add('need','social',n.social||0);add('trait','animalAffinity',T.value(a,'animalAffinity'),{role:'modifier'});break;
-      case'seekHuman':add('need','social',n.social||0);add('trait','social',T.value(a,'social'),{role:'modifier'});break;
+      case'seekHuman':add('need','social',n.social||0);break;
       case'cleanFloor':{const local=localCleanFloorOpportunity(a);if(local)add('environment','wetFloorAmount',local.amount,{role:'trigger',source:'floorContact',observedTick:local.observedTick,nodeKey:local.nodeKey});add('wellbeing','safety',a?.wellbeing?.safety||0,{role:'modifier'});break;}
       case'groom':{const residue=Object.values(a?.contacts?.paws||{}).reduce((sum,value)=>sum+(Number(value)||0),0);add('need','groomingNeed',n.groomingNeed||0);if(residue>.001)add('body','pawResidue',residue,{role:'trigger'});break;}
       case'wander':if(a?.kind==='cat')add('trait','curious',T.value(a,'curious'));break;
@@ -582,7 +582,7 @@
     abortAction(a,'未知的收納階段');
   }
   function stepAction(a){const p=a.action;if(!p)return;if(locomotionRuntime())clearLocomotionState(a);switch(p.kind){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petAnimal':case'seekHuman':stepSocial(a,p);break;case'carryAgent':stepCarryAgent(a,p);break;case'restockContainer':stepRestock(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'putAwayObject':stepPutAwayObject(a,p);break;case'wander':stepWander(a,p);break;case'externalSupply':stepExternalSupply(a,p);break;default:finishAction(a);}}
-  function needDrift(){for(const a of Object.values(state.agents)){const sleeping=isSleeping(a),metabolic=sleeping?.12:1;a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55)*metabolic);a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75)*metabolic);if(!sleeping){a.needs.fatigue=clamp(a.needs.fatigue+rand(.005,.02));a.needs.sleepNeed=clamp(a.needs.sleepNeed+sleepProfile(a).sleepNeedGainPerTick);a.needs.social=clamp(a.needs.social+rand(.05,.3));}else a.needs.social=clamp(a.needs.social+rand(.05,.3)*.12);if(a.kind==='cat')a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28)*metabolic);a.status.intoxication=clamp(a.status.intoxication-rand(.05,.18));}}
+  function needDrift(){for(const a of Object.values(state.agents)){const sleeping=isSleeping(a),metabolic=sleeping?.12:1,socialNeedGain=.75+T.value(a,'social')*.5;a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55)*metabolic);a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75)*metabolic);if(!sleeping){a.needs.fatigue=clamp(a.needs.fatigue+rand(.005,.02));a.needs.sleepNeed=clamp(a.needs.sleepNeed+sleepProfile(a).sleepNeedGainPerTick);a.needs.social=clamp(a.needs.social+rand(.05,.3)*socialNeedGain);}else a.needs.social=clamp(a.needs.social+rand(.05,.3)*.12*socialNeedGain);if(a.kind==='cat')a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28)*metabolic);a.status.intoxication=clamp(a.status.intoxication-rand(.05,.18));}}
   function decayNoise(){state.noiseEvents=state.noiseEvents.map(n=>({...n,ttl:n.ttl-1})).filter(n=>n.ttl>0);}
   function dayRollover(){if(state.minute<1440)return;state.minute-=1440;state.day++;for(const a of Object.values(state.agents))a.metrics.exertionToday=0;}
   function tick(){coreTickDepth++;try{state.tick++;state.minute+=2;dayRollover();decayNoise();needDrift();const A=agentCarryRuntime();for(const a of shuffle(Object.values(state.agents))){if(A?.isCarried?.(state,a))continue;if(a.offMap&&a.action?.kind!=='externalSupply')continue;if(!a.action){if(A?.relationForCarrier?.(state,a))continue;const c=choose(a);if(c)startAction(a,c);continue;}stepAction(a);}return state;}finally{coreTickDepth--;}}

@@ -32,7 +32,7 @@ function armDirectTalk(social,{seed=11331,thirst=18}={}){
 }
 
 E.reset(11330);let st=E.getState(),responder=st.agents.zhen;
-assert.equal(E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,'11.51.0-activity-concurrency');
+assert.equal(E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,'11.66.0-human-social-trait-response');
 responder.needs.social=0;assert.equal(E.talkResponseFor(responder),'decline');
 responder.needs.social=35;assert.equal(E.talkResponseFor(responder),'brief');
 responder.needs.social=90;assert.equal(E.talkResponseFor(responder),'engage');
@@ -73,4 +73,4 @@ assert.ok(weight('sleep',true,'lying')<weight('eat')&&weight('eat')<weight('wand
 assert.ok(weight('sleep',true,'lying')<weight(null,false)&&weight(null,false)<weight(null));
 
 E.reset(61331);for(let i=0;i<500;i++){E.tick();for(const a of Object.values(E.getState().agents))for(const key of ['talkResponseDecision','talkResponseScore','talkResponseUtility','socialResponsePriority','ignoredBy'])assert.equal(Object.hasOwn(a,key),false);noIssues(`tick ${i+1}`);}
-console.log('v11.51.0 human social response + activity concurrency regression: ok');
+console.log('human social response and trait integration regression: ok');

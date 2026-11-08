@@ -1,9 +1,10 @@
 (() => {
-  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial;
+  const E=window.SimEngine,W=window.SimWorld,SP=window.SimSpatial,T=window.SimCharacterTraits;
   if(!E||!W?.SOCIAL_RESPONSE_SCHEMA_VERSION||!SP)return;
+  if(typeof T?.value!=='function')throw new Error('Animal Social Response requires Character Traits contract.');
   if(typeof E.affectResponseSignal!=='function')throw new Error('systems/social/animal-response.js requires systems/affect/runtime.js.');
   if(typeof E.registerSocialBidResponseContract!=='function')throw new Error('systems/social/animal-response.js requires generic Social Bid responder contract.');
-  const VERSION=W.SOCIAL_RESPONSE_SCHEMA_VERSION||'11.13.2a-social-response-agency';
+  const VERSION=W.SOCIAL_RESPONSE_SCHEMA_VERSION;
   const PET_RESPONSE_THRESHOLDS=Object.freeze({avoidMax:.38,acceptMin:.62});
   const PET_AFFECT_RESPONSE_CAP=.12;
   const PET_RELATIONSHIP_RESPONSE_CAP=.18;
@@ -12,7 +13,7 @@
   const actionKind=a=>E.actionKind?E.actionKind(a?.action):a?.action?.kind||null;
   const counterpartId=counterpart=>typeof counterpart==='string'?counterpart:counterpart?.id||null;
 
-  function petBaseResponseScore(animal){const social=clamp((Number(animal?.needs?.social)||0)/100,0,1),rawTrait=Number(animal?.traits?.social),sociability=clamp(Number.isFinite(rawTrait)?rawTrait:.5,0,1);return round(social*.72+sociability*.28);}
+  function petBaseResponseScore(animal){const social=clamp((Number(animal?.needs?.social)||0)/100,0,1);return round(social*.72+T.value(animal,'social')*.28);}
   function petAffectResponseDelta(animal){const signal=Number(E.affectResponseSignal(animal))||0;return round(clamp(signal*PET_AFFECT_RESPONSE_CAP,-PET_AFFECT_RESPONSE_CAP,PET_AFFECT_RESPONSE_CAP));}
   function petRelationshipResponseDelta(animal,human){const id=counterpartId(human);if(!id)return 0;const signal=Number(E.relationshipSignal?.(animal,id))||0;return round(clamp(signal*PET_RELATIONSHIP_RESPONSE_CAP,-PET_RELATIONSHIP_RESPONSE_CAP,PET_RELATIONSHIP_RESPONSE_CAP));}
   function petResponseEvaluation(animal,human=null){const baseScore=petBaseResponseScore(animal),affectResponseDelta=petAffectResponseDelta(animal),relationshipResponseDelta=petRelationshipResponseDelta(animal,human),finalScore=round(clamp(baseScore+affectResponseDelta+relationshipResponseDelta,0,1));const response=finalScore<PET_RESPONSE_THRESHOLDS.avoidMax?'avoid':finalScore>=PET_RESPONSE_THRESHOLDS.acceptMin?'accept':'tolerate';return {baseScore,affectResponseDelta,relationshipResponseDelta,finalScore,response};}

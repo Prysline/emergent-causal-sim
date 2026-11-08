@@ -46,4 +46,43 @@ assert.equal(E.sleepProfile(agent).sleepRecoveryRate,0);
 agent.traits.careful=2;
 assert.ok(V.validateState(st).issues.some(issue=>issue.code==='character_trait_value_invalid'&&issue.agentId===agent.id));
 assert.throws(()=>T.value(agent,'careful'),/Unit trait/);
-console.log('character traits foundation: ok');
+
+const sameNeed=E.reset(6601),human=sameNeed.agents.zhen,animal=sameNeed.agents.orange;
+human.needs.social=50;animal.needs.social=50;
+human.traits.social=0;animal.traits.social=0;
+const talkAtZero=E.baseUtilityForAction(human,'talk'),seekAtZero=E.baseUtilityForAction(animal,'seekHuman');
+assert.equal(E.talkBaseEngagementScore(human),.35);
+assert.equal(E.petBaseResponseScore(animal),.36);
+human.traits.social=1;animal.traits.social=1;
+assert.equal(E.baseUtilityForAction(human,'talk'),talkAtZero,'social Trait must not directly add active talk utility');
+assert.equal(E.baseUtilityForAction(animal,'seekHuman'),seekAtZero,'social Trait must not directly add active seekHuman utility');
+assert.equal(E.talkBaseEngagementScore(human),.65,'Human response retains independent bounded Trait disposition');
+assert.equal(E.petBaseResponseScore(animal),.64,'Animal response retains independent bounded Trait disposition');
+for(const [actor,kind] of [[human,'talk'],[animal,'seekHuman']]){
+  assert.equal(E.decisionContributorsForAction(actor,kind).some(c=>c.kind==='trait'&&c.key==='social'),false,'upstream social Trait must not be counted again as direct active-action evidence');
+}
+delete human.traits.social;delete animal.traits.social;
+assert.equal(T.value(human,'social'),0);
+assert.equal(E.talkBaseEngagementScore(human),.35,'Human sparse social default must be canonical zero');
+assert.equal(E.petBaseResponseScore(animal),.36,'Animal sparse social default must be canonical zero');
+human.traits.social=Infinity;animal.traits.social=1.1;
+assert.throws(()=>E.talkBaseEngagementScore(human),/Trait value/,'Human response must reject invalid present social Trait');
+assert.throws(()=>E.petBaseResponseScore(animal),/Unit trait/,'Animal response must reject out-of-range social Trait');
+
+function socialDriftAt(social,{seed=6602,sleeping=false}={}){
+  const world=E.reset(seed),a=world.agents.zhen;
+  for(const resident of Object.values(world.agents)){resident.offMap=true;resident.action=null;resident.activeIntent=null;}
+  a.needs.social=30;a.traits.social=social;
+  if(sleeping)a.action={kind:'sleep',phase:'sleeping',started:world.tick,sleepTicks:1};
+  const rngBefore=world.rngState;
+  E.tick();
+  return {gain:a.needs.social-30,rngBefore,rngAfter:world.rngState};
+}
+for(const sleeping of [false,true]){
+  const low=socialDriftAt(0,{sleeping}),high=socialDriftAt(1,{sleeping});
+  assert.ok(low.gain>0&&high.gain>low.gain,'higher social Trait must increase Social Need formation');
+  assert.ok(Math.abs(high.gain/low.gain-1.25/.75)<1e-9,'Need gain must use bounded .75–1.25 trait multiplier');
+  assert.equal(low.rngBefore,high.rngBefore,'seed baseline must match');
+  assert.equal(low.rngAfter,high.rngAfter,'Trait multiplier must not change RNG draw count');
+}
+console.log('character traits foundation + social B1 integration: ok');

@@ -18,11 +18,11 @@ Unknown keys, invalid types, NaN/Infinity, out-of-range unit values and negative
 
 ## Consumers and boundaries
 
-Engine keeps existing action-utility / decision-contributor, fatigue, recovery, precision and circadian calculations. Deliberation keeps its existing `animalAffinity` social-bid evidence and `careful` held-object route weights. Appraisal keeps `animalAffinity` contribution to observed interactions. Each consumes the same trait values without creating a parallel decision authority or claiming knowledge of another Agent's private state.
+Slice B1 changes only the social path: Engine Social Need natural gain uses `rand(.05,.3) * (.75 + .5 * socialTrait)` while keeping sleeping factor `.12`, the same random draws and [0,100] clamp. Active `talk` / `seekHuman` action utility and decision contributors now depend on the formed Social Need without adding `social` Trait directly. Other action-utility / decision-contributor, fatigue, recovery, precision and circadian calculations remain unchanged. Deliberation keeps its existing `animalAffinity` social-bid evidence and `careful` held-object route weights. Appraisal keeps `animalAffinity` contribution to observed interactions. Each consumes the same trait values without creating a parallel decision authority or claiming knowledge of another Agent's private state.
 
-The existing three residents keep their authored trait values; the formulas are unchanged. The only resolved behavioral inconsistency is that absent `careful` now reads `0.55` in route preference, matching the existing precision default, instead of the previous zero. Species circadian baseline remains the existing `SimWorld.SPECIES_PROFILES`, not another trait truth.
+All three residents retain their authored trait values. Human talk response keeps `.70 * normalizedSocialNeed + .30 * socialTrait`; animal pet response keeps `.72 * normalizedSocialNeed + .28 * socialTrait`, each with existing Affect / Relationship adjustments and thresholds. These two response consumers now read canonical `SimCharacterTraits.value(agent,'social')` (missing `0`, invalid present value fails), not an independent missing `.5`. The Trait's upstream Need formation and independent responder disposition are distinct causal roles; no second Need, response cache, action selection engine, changed interaction relief or extra World Event is introduced. Slice A previously aligned missing `careful` to `.55` for route preference; its authoring and validation contract remains unchanged. Species circadian baseline remains the existing `SimWorld.SPECIES_PROFILES`, not another trait truth.
 
-This slice does not introduce traits, personalities, hobbies, cooking, tidying, new Needs, activities, World events or optional high-precision modules.
+Slice B1 does not introduce traits, personalities, hobbies, cooking, tidying, new Needs, activities, World events or optional high-precision modules.
 
 ## Regression
 
