@@ -2,7 +2,7 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.66.0-character-traits-social`。
+目前 runtime marker：`11.67.0-food-v1-f0`。
 
 Current Character Traits Foundation v1 Slice B1：`social` Trait 在同 Agent 的 Social Need 自然形成（`.75 + .5 * social`）與收到邀請時的 Human／Animal Social Response（Need + Trait bounded score）分別作用；主動 `talk`／`seekHuman` 不重複追加直接 Trait utility。回應消費者採 `SimCharacterTraits.value` 的 canonical 缺值 `0`／invalid fail-closed，既有 Affect／Relationship、Bid／World Event、Agent-private 與緩解契約不變；只前進 Human／Animal response own generations，不改 Action、Social Bid、Character Traits schema 或 World Authoring。詳見 [`character-traits.md`](character-traits.md)。
 
@@ -13,6 +13,8 @@ Current Observed Environmental Cleaning v1：Human 自主 `cleanFloor` 僅由自
 前一個 release 建立 Tidying v1：`state.objectStorageAssignments[]` 僅是 World home 指定關係，`Agent.knownObjectStorageAssignmentIds[]` 只存私有 reference。Free / Supported Object 仍以 canonical Spatial 位置與 Visual sensory evidence 判定當下可見，Held / Contained 不形成第一版候選。實際 `putAwayObject` 由 Decision Option Provider → Engine Action factory → pickup → carry → `containedBy` commit 與 canonical World Event 完成；失敗／緊急中斷沿用附近 Object release。沒有新增 Need、平行 Object placement truth、global Object scan、Editor GUI、resume queue。
 
 前一個 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 只有在 existing Action 的 normal walk route unreachable、角色以 current Perception 實際觀察到該 Furniture、translation 反側的 canonical interaction position 可達，且 fixed `parkedPlacement` 的 non-mutating counterfactual 能恢復同一 navigation goal 時，才可形成 bounded execution recovery。原 Action / Active Intent 保留 motive truth；runtime placement transaction 以 current resolved 3D solids 重驗 destination、swept transition 與 dependency legality，再原子更新 current Furniture geometry / Tile projection，最後只產生一筆 canonical World Event。詳細 contract：[`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
+
+Current Food F0：完全可食、具正式 Object identity 的 Meal 使用單一 `meal.edibleMassGrams`；`eat` 每有效 tick 原子扣真實公克、更新 actor-private Hunger 並產生 canonical Event。`contents.food`、`foodStock()` 和原本 plate / serving / restock 仍是不同的 legacy Resource amount；不相加、不轉換。聆聽續吃、說話暫停，緊急中斷不回滾，學習習慣按 Meal Action 的首次真實攝取而非每 tick 計一次。World Authoring generation 為 v20，Food generation 為 `food-v1-f0`。見 [`food-v1-f0.md`](food-v1-f0.md)。
 
 ## Truth boundaries
 

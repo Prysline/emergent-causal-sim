@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 const A=globalThis.SimWorldAuthoring,T=globalThis.SimCharacterTraits,I=globalThis.SimWorldInitializer,E=globalThis.SimEngine,V=globalThis.SimValidator;
 const clone=x=>JSON.parse(JSON.stringify(x));
 assert.equal(T.VERSION,'character-traits-v1');
-assert.equal(A.VERSION,'world-authoring-v19');
+assert.ok(Number(A.VERSION.split('v').pop())>=19,'Character Traits require v19 or later World Authoring');
 assert.equal(A.CHARACTER_TRAITS_VERSION,T.VERSION);
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true);
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),original=clone(authored.residents.zhen.traits);

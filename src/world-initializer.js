@@ -425,7 +425,7 @@
         if(exit?.kind==='offMap'&&exit.access&&ref&&A.boundaryPassable(authoring,ref.z,ref.id)&&baseWalkable(authoring,exit.access,cache))out.push(exit.access);
       }
     }else if(type==='food'){
-      for(const c of Object.values(authoring.entities?.objects||{}))if(c.canEatFrom&&Number(c.contents?.food)>0)out.push(...objectAccessPositions(authoring,c,'eatFrom',cache));
+      for(const c of Object.values(authoring.entities?.objects||{}))if(c.canEatFrom&&(Number(c.contents?.food)>0||Number(c.meal?.edibleMassGrams)>0))out.push(...objectAccessPositions(authoring,c,'eatFrom',cache));
     }else if(type==='water'){
       for(const c of Object.values(authoring.entities?.objects||{}))if(c.canDrinkFrom&&Number(c.contents?.water)>0)out.push(...objectAccessPositions(authoring,c,'drinkFrom',cache));
       for(const s of Object.values(authoring.entities?.sources||{}))if(s.resource==='water')out.push(...objectAccessPositions(authoring,s,'fill',cache));
@@ -568,7 +568,7 @@
   }
 
   function createInitialState(authoring,{seed=20260911,version,supplyTrigger=70}={}){
-    if(A.VERSION==='world-authoring-v19')A.assertValidAuthoring(authoring);
+    if(A.VERSION==='world-authoring-v20')A.assertValidAuthoring(authoring);
     const n=(Number(seed)>>>0)||20260911,placementReport=assertInitialPlacements(authoring),zLevels=runtimeLayers(authoring).map(layer=>layer.z);
     const map={width:authoring.map.width,height:authoring.map.height,cellSizeMeters:authoring.map.cellSizeMeters,zLevels,tiles:buildTiles(authoring),boundaries:buildBoundaries(authoring),rooms:{},roomRevision:0};
     const lowLevel=authoring.compatibility?.passageConstraints;

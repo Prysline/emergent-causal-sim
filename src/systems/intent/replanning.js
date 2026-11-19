@@ -7,7 +7,7 @@
     socialize:'talk',interactWithAnimal:'petAnimal',seekSocialContact:'seekHuman',removeHazard:'cleanFloor',groom:'groom',explore:'wander'
   };
   const REPLAN_SUPPORTED=new Set([...Object.keys(REPLAN_ACTION_BY_INTENT),'respondSocialBid']);
-  const EMERGENCY_PREEMPTIBLE=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest']);
+  const EMERGENCY_PREEMPTIBLE=new Set(['wander','talk','petAnimal','seekHuman','cleanFloor','groom','rest','eat']);
   const MAX_REPLAN_ATTEMPTS=3;
   const CARRY_WAIT_TICKS=2,CARRY_WAIT_BASE_UTILITY=20,CARRY_NEUTRAL_PLACEMENT_BASE_UTILITY=45,CARRY_NO_PLACEMENT_WAIT_BONUS=30;
   const carryingDecisionOptionProviders=[];

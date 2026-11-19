@@ -56,7 +56,7 @@
     const action=data.action;
     let qualifies=false;
     if(action==='read')qualifies=Number(data.feedbackUnits)>0;
-    else if(action==='eat')qualifies=data.phase!=='start'&&Number(data.amount)>0;
+    else if(action==='eat')qualifies=data.phase!=='start'&&(data.foodKind==='meal'?(data.firstIntake===true&&Number(data.intakeGrams)>0):Number(data.amount)>0);
     else if(action==='talk')qualifies=true;
     if(!qualifies||!SUPPORTED_ACTIVITY_KINDS.includes(action))return null;
     const minute=minuteFromEventTime(event.time),context=contextForMinute(minute);if(!context)return null;
