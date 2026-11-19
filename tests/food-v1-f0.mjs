@@ -105,6 +105,23 @@ assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
   noIssues('partial exhaustion');
 }
 {
+  const {st,a,meal}=setup({seed:261127,hunger:10,mass:300});
+  const p=startMeal(a);
+  assert.equal(p.targetMassGrams,125,'initial Hunger must set one bounded Action-local intake target');
+  E.tick();E.tick();E.tick();
+  assert.equal(st.objects[meal.id].meal.edibleMassGrams,175,'reaching desired intake stops without retiring an unfinished Meal');
+  assert.equal(a.action,null);
+  assert.deepEqual(mealEvents(st).map(e=>e.data.intakeGrams),[50,50,25]);
+  near(mealEvents(st).reduce((sum,e)=>sum+e.data.hungerRelief,0),10,'target-complete intake has segment-invariant relief');
+  noIssues('Action target completion');
+}
+{
+  const {st,meal}=setup({seed:261128});
+  meal.contents={food:2};
+  const violations=V.validateState(st).issues.map(issue=>issue.code);
+  assert.ok(violations.includes('food_meal_double_inventory'),'live validator must reject a Meal + legacy stock shadow');
+}
+{
   const {st,a,meal}=setup({seed:261123});
   const p=startMeal(a);
   const listening=E.scheduleTransientExecution(st,a,{kind:'socialListening',sourceId:'food-f0-listen',executionTick:st.tick+1});
