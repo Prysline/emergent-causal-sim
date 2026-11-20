@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.68.0-movable-object-containment`。
+目前 overall runtime marker：`11.69.0-food-v1-f1a-ingredient`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -60,11 +60,16 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v21`
-- Food：`food-v1-f0`
+- World Authoring：`world-authoring-v22`
+- Food Meal F0：`food-v1-f0`
+- Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
+
+`11.69.0-food-v1-f1a-ingredient`：新增獨立 Ingredient Object 與 `SimIngredient` 的唯一物理重量規則。首個抽象 Type A 預設 300g／1000kg/m³；實例使用 `handling.massKg` 作唯一可變質量，`ingredient.typeId / densityKgPerM3` 保存種類與建立時選定的有效密度，公克與體積只能推導。`World Authoring v22`、runtime Validator、真實 Engine／Spatial／Container 搬運 fixture 維持單一 Object 身份與重量，無 Food 專用搬運流程或 `contents.food` 影子庫存。Ingredient own generation `food-ingredient-v1`；Meal F0 `food-v1-f0`、Object Handling、Resources、Spatial、Physical、Action 等既有 generation 不變。Food migration、Cooking、Meal 盛盤與完整場景留待後續 Gate。詳見 [`food-v1-f1a-ingredient.md`](food-v1-f1a-ingredient.md)。
+
+前一個 release：
 
 `11.68.0-movable-object-containment`：擴充 ordinary `Object.containedBy` 以明確 opt-in 的 portable Object 為合法 target，不建立 container-side child mirror；`objectStorage.maxItems / maxMassKg` 界定最小普通物件容量，contained child 的 `handling.massKg` 作單一物理重量來源。Spatial 跟隨容器持有人／支撐位置，既有 Engine contain/take、Resource container load、Inspector 投影及 runtime validator 消費同一 canonical 關係；普通物件散落、巢狀收納與 Food 質量轉換維持後續 Gate。World Authoring → `world-authoring-v21`、Object Handling → `object-handling-v2-movable-containment`、Resources → `11.68.0-movable-object-cargo`、Pickup Geometry → `pickup-interaction-v3-movable-containment`；其餘 subsystem 未變。詳見 [`movable-object-containment.md`](movable-object-containment.md)。
 
