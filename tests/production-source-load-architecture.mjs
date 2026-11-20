@@ -210,7 +210,7 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v13');
+assert.equal(FD.VERSION,'furniture-definitions-v14-kitchen');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'production composition must consume the canonical current World Authoring generation without duplicating its literal');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v5');
