@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.69.0-food-v1-f1a-ingredient`。
+目前 overall runtime marker：`11.70.0-food-v1-f1b-bounded-cooking`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -63,9 +63,14 @@ Current relevant markers：
 - World Authoring：`world-authoring-v22`
 - Food Meal F0：`food-v1-f0`
 - Food Ingredient：`food-ingredient-v1`
-- Furniture Catalog：`furniture-definitions-v13`
+- Furniture Catalog：`furniture-definitions-v14-kitchen`
+- Food Cooking：`food-cooking-f1b1`
 
 ## Current release impact
+
+`11.70.0-food-v1-f1b-bounded-cooking`：加入第一個有界 Cooking Activity consumer：只在觀察到完整 Type A Ingredient 與實際鍋子、合法可到達的 gas-stove Furniture 時，沿用既有 Decision Option、Engine Action、Spatial、預約與中斷機制逐 tick 加工；完成時重驗並原子退休整顆 Ingredient，於同一爐具支撐位置建立可由原本 `eat` Action 消費的 F0 Meal，並以單一 World Event 記錄實際投入／產出／加工流出 g（首個等重案例 300/300/0，非通用 100% yield）。新增 kitchen-counter／gas-stove Furniture Definition，`furniture-definitions-v14-kitchen`；Cooking generation `food-cooking-f1b1`，World Authoring v22、Meal F0、Ingredient v1、通用 Handling/Resources/Intent/Spatial own markers 未變。鍋內收納、盛餐、供應與舊 `contents.food` 遷移不包含。詳見 [`food-v1-f1b-cooking.md`](food-v1-f1b-cooking.md)。
+
+前一個 release：
 
 `11.69.0-food-v1-f1a-ingredient`：新增獨立 Ingredient Object 與 `SimIngredient` 的唯一物理重量規則。首個抽象 Type A 預設 300g／1000kg/m³；實例使用 `handling.massKg` 作唯一可變質量，`ingredient.typeId / densityKgPerM3` 保存種類與建立時選定的有效密度，公克與體積只能推導。`World Authoring v22`、runtime Validator、真實 Engine／Spatial／Container 搬運 fixture 維持單一 Object 身份與重量，無 Food 專用搬運流程或 `contents.food` 影子庫存。Ingredient own generation `food-ingredient-v1`；Meal F0 `food-v1-f0`、Object Handling、Resources、Spatial、Physical、Action 等既有 generation 不變。Food migration、Cooking、Meal 盛盤與完整場景留待後續 Gate。詳見 [`food-v1-f1a-ingredient.md`](food-v1-f1a-ingredient.md)。
 
