@@ -1,8 +1,8 @@
 (() => {
   const W=window.SimWorld,O=window.SimObjectHandling;
   if(!W?.RESOURCE_TYPES)throw new Error('systems/resources.js requires world.js.');
-  if(!O?.resolveObject||!O?.heldObject)throw new Error('systems/resources.js requires systems/object-handling.js.');
-  const VERSION='11.56.0-resource-container-capability';
+  if(!O?.resolveObject||!O?.heldObject||!O?.objectStorageStatus)throw new Error('systems/resources.js requires systems/object-handling.js.');
+  const VERSION='11.68.0-movable-object-cargo';
   const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
   const clamp01=value=>Math.max(0,Math.min(1,Number(value)||0));
   const CONTAINMENT_CONTENTS_FACTOR=Object.freeze({open:1,covered:.25,sealed:0});
@@ -23,7 +23,7 @@
   function containerLoad(st,idOrObject){
     const container=resolveContainer(st,idOrObject);
     if(!container)return 0;
-    return Math.max(0,Number(container.emptyLoad)||0)+Object.entries(container.contents||{}).reduce((sum,[resourceId,amount])=>sum+resourceLoad(resourceId,amount),0);
+    return Math.max(0,Number(container.emptyLoad)||0)+Object.entries(container.contents||{}).reduce((sum,[resourceId,amount])=>sum+resourceLoad(resourceId,amount),0)+(container.objectContainment===true?O.objectStorageStatus(st,container).massKg:0);
   }
   function heldContainer(st,agent){
     const object=O.heldObject(st,agent);
@@ -94,7 +94,10 @@
     const container=heldContainer(st,agent);return container?handlingRiskForContainer(st,container,exposure):{contentsLoss:0,containerDrop:0};
   }
   function effectiveCarryLoad(st,agent){
-    return agent?.held?containerLoad(st,agent.held):0;
+    const item=agent?.held&&st?.objects?.[agent.held];if(!item)return 0;
+    if(item.resourceContainer===true)return containerLoad(st,item);
+    const ownMass=item.handling?.massKg;
+    return (Number.isFinite(ownMass)&&ownMass>0?ownMass:0)+(item.objectContainment===true?O.objectStorageStatus(st,item).massKg:0);
   }
 
   window.SimResources=Object.freeze({
