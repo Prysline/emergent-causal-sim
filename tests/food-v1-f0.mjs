@@ -122,6 +122,19 @@ assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
   assert.ok(violations.includes('food_meal_double_inventory'),'live validator must reject a Meal + legacy stock shadow');
 }
 {
+  const {st,a,meal}=setup({seed:261130,mass:300});
+  const before=meal.meal.edibleMassGrams;
+  const originalPosture=structuredClone(a.posture);
+  for(const kind of ['prone','hovering',null]){
+    a.posture=kind===null?{}:{kind,slotId:null,furnitureId:null};
+    assert.doesNotThrow(()=>E.canSatisfyHunger(a),'unsupported canonical PoseEnvelope must not invent Meal visual knowledge');
+    assert.equal(meal.meal.edibleMassGrams,before,'an observation query must not consume Food');
+  }
+  a.posture=originalPosture;
+  assert.equal(st.objects[meal.id].meal.edibleMassGrams,300);
+  noIssues('invalid pose query does not change persisted World');
+}
+{
   const {st,a,meal}=setup({seed:261123});
   const p=startMeal(a);
   const listening=E.scheduleTransientExecution(st,a,{kind:'socialListening',sourceId:'food-f0-listen',executionTick:st.tick+1});

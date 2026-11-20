@@ -250,9 +250,15 @@
   function foodStock(){return Object.values(state.objects).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
   function chooseMealSource(a){
     if(!a||a.offMap)return null;
+    const candidates=Object.values(state.objects).filter(c=>F.hasMeal(c)&&F.remainingGrams(c)>0&&c.canEatFrom&&!holderOf(c.id));
+    if(!candidates.length)return null;
     const classify=window.SimPerception?.classifyObjectPointVisualAvailability;
     if(typeof classify!=='function')throw new Error('Food Object discovery requires canonical Object visual availability.');
-    return Object.values(state.objects).filter(c=>F.hasMeal(c)&&F.remainingGrams(c)>0&&c.canEatFrom&&!holderOf(c.id))
+    const getPoseEnvelope=window.SimPhysical?.getPoseEnvelope;
+    if(typeof getPoseEnvelope!=='function')throw new Error('Food Object discovery requires canonical Physical PoseEnvelope.');
+    const pose=getPoseEnvelope(a,a.posture?.kind);
+    if(!pose||!['height','width','length'].every(key=>Number.isFinite(pose[key])&&pose[key]>0))return null;
+    return candidates
       .map(c=>{const target={kind:'object',id:c.id},atContact=SP.isAtInteraction(state,a,target,'eatFrom');const visible=atContact||classify(state,a,c).visualAvailable;const d=visible?targetTraversalCost(a,target,'eatFrom'):Infinity;return {c,d};})
       .filter(item=>Number.isFinite(item.d)).sort((x,y)=>x.d-y.d||x.c.id.localeCompare(y.c.id))[0]?.c||null;
   }
