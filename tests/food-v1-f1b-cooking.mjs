@@ -66,6 +66,11 @@ const action=E.buildAction(a,chosen);
 assert.equal(action?.kind,'cookMeal');
 assert.equal(action?.phase,'toStation');
 a.action=action;E.ensureIntentForAction?.(st,a);
+E.tick();
+const competitor=st.agents.zhou;
+competitor.offMap=false;competitor.position={...a.position};competitor.facing='south';competitor.action=null;competitor.activeIntent=null;
+assert.equal(E.cookingDecisionOption(st,competitor),null,'reserved Ingredient/pot must not produce a competing Cooking option');
+competitor.offMap=true;
 assert.equal(C.complete(st,a,{...action,progressTicks:4},E.addEvent).completed,false,'premature completion is not a legal standalone transaction');
 let finished=false;
 for(let t=0;t<70;t++){
@@ -108,7 +113,8 @@ assert.ok(st.events.some(e=>e.data?.action==='eat'&&e.data?.foodKind==='meal'&&e
 ({st,a,input}=setup(20261121));
 const initial=E.cookingDecisionOption(st,a);assert.ok(initial);
 a.action=E.buildAction(a,initial);E.ensureIntentForAction?.(st,a);
-E.tick();
+for(let t=0;t<3;t++)E.tick();
+assert.ok(st.objects.ingredientA1,'progress before completion cannot debit an Ingredient');
 delete st.objects.potA;
 E.tick();
 assert.ok(st.objects.ingredientA1,'pot loss must preserve source Ingredient');
