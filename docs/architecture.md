@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.68.0-movable-object-containment`。
+目前 runtime marker：`11.69.0-food-v1-f1a-ingredient`。
+
+Current Food F1-A Ingredient：`SimIngredient` 定義首個完整抽象 Type A、預設重量／密度、實際物件生成與 fail-closed 檢查；Concrete Ingredient 仍使用 `state.objects` 和 generic `Object.containedBy`，唯一實際質量為 `handling.massKg`。`ingredient.typeId / densityKgPerM3` 保存種類與建立時有效密度；公克與物理體積只讀推導，不增量記錄 `Resource contents.food`。World Authoring v22 和 runtime Validator 共用此契約；真實 Engine/Spatial/Resources 搬運及負重由既有 consumer 支援。Food F0 Meal `meal.edibleMassGrams` 仍是另一種未整合盛盤的獨立 Meal 真相；非 Cooking 或舊 Food migration。詳見 [`food-v1-f1a-ingredient.md`](food-v1-f1a-ingredient.md)。
 
 Current Movable Object Containment v1：`Object.containedBy` 仍是唯一 ordinary Object containment authority，允許明確 opt-in 的 portable Object target；物件容器不儲存與 child-side 競爭的 `contents[]`。`objectStorage.maxItems / maxMassKg` 是獨立於 Resource amount-capacity 的有界 cargo gate；普通 cargo `handling.massKg` 由 Object Handling 讀取，Resource Container 自身既有 `emptyLoad + contents × resourceLoad` 再加派生 ordinary cargo mass。Spatial canonical effective location 隨 portable parent 移動，Engine contain/take 使用既有拾取幾何及持有關係，Inspector 只投影相同世界真相；無 nested/cargo scatter、Food grams 轉換或第二套 Action。詳見 [`movable-object-containment.md`](movable-object-containment.md)。
 
@@ -16,7 +18,7 @@ Current Observed Environmental Cleaning v1：Human 自主 `cleanFloor` 僅由自
 
 前一個 release 建立 Furniture Passage Yielding v1：明確 opt-in 的 Furniture 只有在 existing Action 的 normal walk route unreachable、角色以 current Perception 實際觀察到該 Furniture、translation 反側的 canonical interaction position 可達，且 fixed `parkedPlacement` 的 non-mutating counterfactual 能恢復同一 navigation goal 時，才可形成 bounded execution recovery。原 Action / Active Intent 保留 motive truth；runtime placement transaction 以 current resolved 3D solids 重驗 destination、swept transition 與 dependency legality，再原子更新 current Furniture geometry / Tile projection，最後只產生一筆 canonical World Event。詳細 contract：[`furniture-passage-yielding.md`](furniture-passage-yielding.md)。
 
-Current Food F0：`src/food-contract.js` 是 `SimFood` 的單一 canonical Food mass owner，獨立於 World Authoring generation；`src/food-authoring.js` 只負責 v20 schema overlay／default Meal。完全可食、具正式 Object identity 的 Meal 使用單一 `meal.edibleMassGrams`；`eat` 每有效 tick 原子扣真實公克、更新 actor-private Hunger 並產生 canonical Event。`contents.food`、`foodStock()` 和原本 plate / serving / restock 仍是不同的 legacy Resource amount；不相加、不轉換。聆聽續吃、說話暫停，緊急中斷不回滾，學習習慣按 Meal Action 的首次真實攝取而非每 tick 計一次。Food F0 首次引入時的 World Authoring generation 為 v20，現行為 v21；Food generation 仍為 `food-v1-f0`；既有 Human Social Response Activity Compatibility 將 `eatingMeal` 納入吃飯時聆聽／發言的既有規則，own generation 為 `11.67.0-human-social-meal-compatibility`。見 [`food-v1-f0.md`](food-v1-f0.md)。
+Current Food F0：`src/food-contract.js` 是 `SimFood` 的單一 canonical Food mass owner，獨立於 World Authoring generation；`src/food-authoring.js` 只負責 v20 schema overlay／default Meal。完全可食、具正式 Object identity 的 Meal 使用單一 `meal.edibleMassGrams`；`eat` 每有效 tick 原子扣真實公克、更新 actor-private Hunger 並產生 canonical Event。`contents.food`、`foodStock()` 和原本 plate / serving / restock 仍是不同的 legacy Resource amount；不相加、不轉換。聆聽續吃、說話暫停，緊急中斷不回滾，學習習慣按 Meal Action 的首次真實攝取而非每 tick 計一次。Food F0 首次引入時的 World Authoring generation 為 v20，現行為 v22；Meal F0 generation 仍為 `food-v1-f0`；既有 Human Social Response Activity Compatibility 將 `eatingMeal` 納入吃飯時聆聽／發言的既有規則，own generation 為 `11.67.0-human-social-meal-compatibility`。見 [`food-v1-f0.md`](food-v1-f0.md)。
 
 ## Truth boundaries
 

@@ -58,6 +58,10 @@ assert.ok(validationManifestProfile.includes('src/systems/daily-life/routine-sta
 assert.ok(validationManifestProfile.includes('src/systems/daily-life/learned-habit-state.js'),'validation-manifest runtime profiles must include the Learned Habit state owner');
 assert.ok(validationManifestProfile.includes('src/validation/rules/food-meal.js'),'Validator manifest profiles must register the canonical Food layer');
 assert.ok(validationManifestProfile.indexOf('src/validation/rules/food-meal.js')<validationManifestProfile.indexOf('src/validation/manifest.js'),'Food validator must register before the validation manifest finalizes');
+assert.ok(validationManifestProfile.includes('src/food-ingredient-contract.js'),'Validation profiles must load Ingredient truth owner');
+assert.ok(validationManifestProfile.includes('src/validation/rules/food-ingredient.js'),'Validation profiles must include Ingredient layer');
+assert.ok(validationManifestProfile.indexOf('src/food-ingredient-contract.js')<validationManifestProfile.indexOf('src/validation/rules/food-ingredient.js'),'Ingredient contract must load before own validator');
+assert.ok(validationManifestProfile.indexOf('src/validation/rules/food-ingredient.js')<validationManifestProfile.indexOf('src/validation/manifest.js'),'Ingredient validator must register before manifest finalizes');
 assert.ok(validationManifestProfile.includes('src/validation/rules/agent-carry.js'),'validation-manifest runtime profiles must include the Agent Carry validator dependency');
 assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-routine.js'),'validation-manifest runtime profiles must include the Daily Life Routine validator dependency');
 assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-learned-habit.js'),'validation-manifest runtime profiles must include the Learned Habit validator dependency');

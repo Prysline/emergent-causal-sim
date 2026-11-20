@@ -1,6 +1,6 @@
 # Movable Object Containment v1 — canonical Object cargo
 
-Status: PR candidate (not merged). Production authority is code + regression after exact-head CI verification.
+Status: merged into `main` by PR #240 (squash commit `1d26f8c935a9293751b40e849c31f07d088d6148`); authoritative runtime contract verified by PR exact-head and post-merge Node regressions.
 
 ## Ownership and schema
 
@@ -17,7 +17,7 @@ These bounded values describe the admitted **ordinary Object cargo**. Neither fi
 
 An ordinary child admitted to a portable Object container requires a strictly positive finite `handling.massKg`, owned by generic Object Handling. It remains the single physical mass input for that Object in this slice. `SimObjectHandling.objectStorageStatus` derives current child count and mass from `containedBy`; `SimResources.containerLoad` combines existing Resource container empty-load and resource-derived load with this derived mass. The legacy `fillRatio` continues to measure **only Resource amount** and is not a second Object inventory metric.
 
-Food Ingredient and Meal canonical grams must be projected into Object physical mass by a future Food integration contract, not copied into a parallel writable `handling.massKg` cache. This slice does not migrate Food, add cooking, split Meal, or eliminate legacy `contents.food`.
+The subsequent Food F1-A Ingredient contract stores Ingredient physical mass solely in existing `Object.handling.massKg`, so this generic Container mass consumer already reads Ingredient load without duplication. Existing Meal F0 edible mass is a distinct canonical value; its future plate / physical mass integration remains pending. Neither this containment slice nor Ingredient F1-A migrates `contents.food`, adds Cooking, or splits Meals.
 
 ## Position, interaction and lifecycle
 

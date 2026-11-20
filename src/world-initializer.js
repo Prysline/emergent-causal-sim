@@ -568,7 +568,7 @@
   }
 
   function createInitialState(authoring,{seed=20260911,version,supplyTrigger=70}={}){
-    if(['world-authoring-v20','world-authoring-v21'].includes(A.VERSION))A.assertValidAuthoring(authoring);
+    if(['world-authoring-v20','world-authoring-v21','world-authoring-v22'].includes(A.VERSION))A.assertValidAuthoring(authoring);
     const n=(Number(seed)>>>0)||20260911,placementReport=assertInitialPlacements(authoring),zLevels=runtimeLayers(authoring).map(layer=>layer.z);
     const map={width:authoring.map.width,height:authoring.map.height,cellSizeMeters:authoring.map.cellSizeMeters,zLevels,tiles:buildTiles(authoring),boundaries:buildBoundaries(authoring),rooms:{},roomRevision:0};
     const lowLevel=authoring.compatibility?.passageConstraints;
