@@ -132,6 +132,12 @@ function ensureRuntimeDependencies(paths){
     const prior=paths.indexOf('food-contract.js');if(prior>=0)paths.splice(prior,1);
     paths.splice(paths.indexOf('engine.js'),0,'food-contract.js');
   }
+  if(coreEngineIndex>=0){
+    for(const dep of ['food-ingredient-contract.js','food-cooking-contract.js']){
+      const prior=paths.indexOf(dep);if(prior>=0)paths.splice(prior,1);
+      paths.splice(paths.indexOf('engine.js'),0,dep);
+    }
+  }
   const traitIndex=paths.indexOf('engine.js');
   if(traitIndex>=0&&!paths.includes('character-traits.js'))paths.splice(traitIndex,0,'character-traits.js');
   let engineIndex=paths.indexOf('engine.js');
@@ -181,9 +187,11 @@ function ensureRuntimeDependencies(paths){
     const priorFoodRule=paths.indexOf('validation/rules/food-meal.js');
     if(priorFoodRule>=0)paths.splice(priorFoodRule,1);
     paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-meal.js');
-    const ingredientContractIndex=paths.indexOf('food-ingredient-contract.js');
-    if(ingredientContractIndex>=0)paths.splice(ingredientContractIndex,1);
-    paths.splice(paths.indexOf('validation/manifest.js'),0,'food-ingredient-contract.js');
+    // Engine profiles already place Ingredient before Cooking and Engine.
+    // Moving it to the validator manifest boundary would load Cooking first.
+    if(!paths.includes('food-ingredient-contract.js')){
+      paths.splice(paths.indexOf('validation/manifest.js'),0,'food-ingredient-contract.js');
+    }
     const ingredientRuleIndex=paths.indexOf('validation/rules/food-ingredient.js');
     if(ingredientRuleIndex>=0)paths.splice(ingredientRuleIndex,1);
     paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-ingredient.js');

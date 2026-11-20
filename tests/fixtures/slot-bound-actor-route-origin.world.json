@@ -608,7 +608,7 @@
       }
     }
   },
-  "furnitureCatalogVersion": "furniture-definitions-v13",
+  "furnitureCatalogVersion": "furniture-definitions-v14-kitchen",
   "id": "mvp-default-house",
   "label": "Current MVP Default World",
   "map": {

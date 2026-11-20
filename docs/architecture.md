@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.69.0-food-v1-f1a-ingredient`。
+目前 runtime marker：`11.70.0-food-v1-f1b-bounded-cooking`。
+
+Current Food F1-B1 Cooking：`SimFoodCooking` 僅擁有 first bounded Type A whole-Ingredient → Meal 等重 recipe rule；input mass 單位來自 `SimIngredient.massGrams(Object.handling.massKg)`，output 食用重量由 `SimFood` F0 `Meal.edibleMassGrams` 擁有，完成時單一 material-transaction Event 連回已退休原料 ID。Decision option 使用當下可視證據及 `gas-stove` canonical Furniture 支撐／互動幾何，Engine 原有 Action／reservation／interruption 逐 tick 消費，成品仍在原合法爐具 Surface 且原有 eat 消費。pot 是同一爐具位置的普通 Object；尚無其內容物 containment 或單獨烹調庫存。Furniture Catalog 前進 v14、Cooking own generation `food-cooking-f1b1`；World Authoring v22、F0 Meal、Ingredient v1、Action／Spatial／Resources own markers 不假升。詳見 [`food-v1-f1b-cooking.md`](food-v1-f1b-cooking.md)。
 
 Current Food F1-A Ingredient：`SimIngredient` 定義首個完整抽象 Type A、預設重量／密度、實際物件生成與 fail-closed 檢查；Concrete Ingredient 仍使用 `state.objects` 和 generic `Object.containedBy`，唯一實際質量為 `handling.massKg`。`ingredient.typeId / densityKgPerM3` 保存種類與建立時有效密度；公克與物理體積只讀推導，不增量記錄 `Resource contents.food`。World Authoring v22 和 runtime Validator 共用此契約；真實 Engine/Spatial/Resources 搬運及負重由既有 consumer 支援。Food F0 Meal `meal.edibleMassGrams` 仍是另一種未整合盛盤的獨立 Meal 真相；非 Cooking 或舊 Food migration。詳見 [`food-v1-f1a-ingredient.md`](food-v1-f1a-ingredient.md)。
 

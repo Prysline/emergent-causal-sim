@@ -1,0 +1,21 @@
+# Food v1 F1-B1 — Bounded Cooking Action and kitchen affordances
+
+Status: PR candidate, pending exact-head Node / Browser verification. This slice is a first real production cooking consumer, **not** integrated closed-loop Food v1 completion.
+
+## Authoritative boundaries
+
+- Ingredient canonical physical mass remains **only** `Object.handling.massKg` (`SimIngredient.massGrams` is derived). The recipe takes exactly **one whole** `Ingredient Type A` Object; there is no partial slicing, stack, Resource equivalence or secondary inventory.
+- `SimFoodCooking` owns **one explicit demonstration conversion rule** `ingredient-A-equimass`: tracked input grams = resulting Meal edible grams + recorded process outflow grams, where outflow is **0 g** for the first fixture. This is not a universal 100% cooking-yield policy or general RecipeRule engine.
+- A `gas-stove` is a real Furniture Definition with `cookingStation:true` and a canonical support surface. `kitchen-counter` is separate Furniture with an Object support surface, but is not interchangeable with the stove. A real portable ordinary Object marked `cookingPot:true` must be supported on the same stove. The pot has no Food-specific contents mirror; this first slice does not simulate a complete contained cooking vessel. `Furniture Definitions` advances to `furniture-definitions-v14-kitchen`, while World Authoring continues v22 (no new authoring document schema).
+- Only an **exposed, visually available** Ingredient and cooking pot on a valid stove can create the existing generic Decision Option; world inventory alone is not Agent-private knowledge. The existing `SimEngine.registerDecisionOptionProvider` and `buildAction` / `stepAction` / reservations / Spatial interaction geometry are used, not another chooser.
+- `cookMeal` keeps one Action identity through approach and four effective cooking ticks. Emergency preemption uses the existing Intent Replanning boundary and must not debit material early. At completion, all ingredient/pot/station/contact/ownership checks run again and the transaction retires the entire original Ingredient and creates one F0-compatible Meal Object on **the same stove support surface**, never remotely at the dining table.
+- The completion generates exactly **one** canonical material-transformation World Event with Ingredient ID/type, resulting Meal ID, one recipe ID, real input/output/outflow grams, pot/stove refs and causal identity. `Meal.producedByEventId` is a reference, not a duplicate second material truth. Retired input remains discoverable historically through the event; it is no longer in `state.objects`.
+- The output Meal retains canonical `meal.edibleMassGrams` and the existing `eat` Action can perform the F0 per-tick intake. `SimFood` remains `food-v1-f0`, `SimIngredient` remains `food-ingredient-v1`, Object Handling/Resources/Spatial/Intent/Deliberation retain prior own generations. Only new `SimFoodCooking` (`food-cooking-f1b1`), the kitchen Furniture catalog and overall release `11.70.0-food-v1-f1b-bounded-cooking` advance.
+
+## Evidence and scope of claims
+
+`tests/food-v1-f1b-cooking.mjs` creates a real initial-state kitchen fixture using the stove, counter, pot and a 300 g Type A Ingredient. It verifies authoring and surface geometry, observation-gated Action eligibility, real tick progress, material conservation and event provenance, automatic existing F0 meal intake, and interruption / pot removal without duplication. Production Node / Browser regression is required before requesting merge.
+
+## Still intentionally deferred
+
+No default-world kitchen replenishment, no plate-side Meal portion transfer or automatic serving, no Ingredient material from `externalSupply`, no removal of legacy `contents.food`, no gas/fuel/temperature model, no Object contents inside the pot, no spilling, and no generalized recipes. In particular, a pot sitting on the stove is a checked physical cooking implement but food has **not** been modeled as physically contained inside it in this slice. The next slice must close this physical placement gap before claiming detailed cookware behavior. Ingredient A → Meal at the same stove is the deliberately bounded first production case. These siblings remain independently visible as pending future gates; current WORLD 001 ACTIVE priorities are unchanged.

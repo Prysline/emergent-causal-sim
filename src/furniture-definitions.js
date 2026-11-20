@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v13';
+  const VERSION='furniture-definitions-v14-kitchen';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -75,6 +75,24 @@
           {key:'back',bounds:{x:.10,y:0,z:.42,width:1.80,depth:.18,height:.38}}
         ]
       }
+    },
+    'gas-stove':{
+      id:'gas-stove',name:'瓦斯爐',icon:'🔥',kind:'stove',
+      orientationSemantics:'frame',supportsObjects:true,cookingStation:true,
+      footprint:[local(0,0)],displayOffset:local(0,0),slots:[],
+      spatial:{solids:[
+        {key:'body',bounds:{x:.08,y:.08,z:0,width:.84,depth:.84,height:.82},
+          faces:{top:{supportsBodyOccupancy:true,surfaceKey:'cooktop',surfaceLabel:'瓦斯爐檯面'}}}
+      ]}
+    },
+    'kitchen-counter':{
+      id:'kitchen-counter',name:'廚房櫃台',icon:'▤',kind:'counter',
+      orientationSemantics:'frame',supportsObjects:true,
+      footprint:[local(0,0)],displayOffset:local(0,0),slots:[],
+      spatial:{solids:[
+        {key:'body',bounds:{x:.08,y:.08,z:0,width:.84,depth:.84,height:.82},
+          faces:{top:{supportsBodyOccupancy:true,surfaceKey:'countertop',surfaceLabel:'廚房工作檯面'}}}
+      ]}
     },
     'cabinet-tall':{
       id:'cabinet-tall',
@@ -223,7 +241,7 @@
     if(Object.prototype.hasOwnProperty.call(definition,'blocksMovement'))throw new Error('Furniture Definition '+key+' must use spatial.solids instead of blocksMovement.');
     if(typeof definition.name!=='string'||!definition.name)throw new Error('Furniture Definition '+key+' requires name.');
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
-    for(const capability of ['supportsObjects','objectContainment'])if(definition[capability]!==undefined&&typeof definition[capability]!=='boolean')throw new Error('Furniture Definition '+key+' '+capability+' must be boolean when provided.');
+    for(const capability of ['supportsObjects','objectContainment','cookingStation'])if(definition[capability]!==undefined&&typeof definition[capability]!=='boolean')throw new Error('Furniture Definition '+key+' '+capability+' must be boolean when provided.');
     if(definition.orientationSemantics!==undefined&&!['facing','frame'].includes(definition.orientationSemantics))throw new Error('Furniture Definition '+key+' orientationSemantics must be facing / frame.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
     definition.footprint.forEach((position,index)=>assertLocalPosition(position,key+'.footprint['+index+']'));
@@ -504,6 +522,7 @@
       })
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
+    if(definition.cookingStation===true)resolved.cookingStation=true;
     if(definition.objectContainment===true)resolved.objectContainment=true;
     if(definition.spatial){
       resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,layerZ:instance.origin.z,bounds:metricBoundsToWorld(definition,instance,solid.bounds)})),surfaces:[]};
