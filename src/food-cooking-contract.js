@@ -59,7 +59,7 @@
     // The sole material mutation happens after all executable preconditions pass.
     delete st.objects[ingredient.id];
     st.objects[mealId]=meal;
-    const eventId=emitEvent(agent.name+'將完整食材料理成餐點。','good',[],{
+    const eventId=emitEvent(agent.name+'將完整食材料理成餐點。','good',[action.loadEventId],{
       actor:agent.id,action:'cookMeal',phase:'complete',recipeId:RECIPE_ID,
       stationId:station.id,potId:pot.id,ingredientId:ingredient.id,mealId,
       ingredientTypeId:ingredient.ingredient.typeId,inputMassGrams,mealMassGrams,
