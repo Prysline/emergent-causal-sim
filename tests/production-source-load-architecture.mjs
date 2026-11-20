@@ -186,7 +186,7 @@ const validatorRules=fs.readdirSync(validationRulesDir)
   .filter(name=>name.endsWith('.js'))
   .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.equal(validatorRules.length,23,'architecture guard must discover the Food F0 validator alongside all existing semantic layers');
+assert.equal(validatorRules.length,24,'architecture guard must discover both Food Meal and Ingredient semantic validation layers');
 for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
