@@ -9,7 +9,7 @@ loadRuntimeProfile([
 ]);
 
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.56.0-resource-container-capability';
+const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const PHYSICAL_VERSION='11.56.0-physical-object-handling';
 const PASSAGE_VERSION='11.39.1-surface-boundary-transition';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
