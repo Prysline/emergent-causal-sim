@@ -39,9 +39,9 @@ E.configureResetStateSource('movable-containment-fixture',seed=>W.createInitialS
 E.reset(20261120);
 const st=E.getState(),a=st.agents.zhen,b=st.agents.zhou,carrier=st.objects.basket;
 for(const agent of Object.values(st.agents))if(agent.id!==a.id)agent.offMap=true;
-const pickup=SP.interactionGeometry(st,{kind:'object',id:'basket'},a,'pickup');
-assert.ok(pickup.positions.length,'portable carrier must have a legal object pickup interaction position');
-a.position={...pickup.positions[0]};a.posture={kind:'standing',slotId:null,furnitureId:null};
+const receive=SP.interactionGeometry(st,{kind:'object',id:'basket'},a,'receive');
+assert.ok(receive.positions.length,'portable carrier must have a legal Object receive interaction position');
+a.position={...receive.positions[0]};a.posture={kind:'standing',slotId:null,furnitureId:null};
 function put(id){
   const child=st.objects[id];
   a.held=id;delete child.position;
@@ -92,6 +92,7 @@ assert.equal(containedPickup.mode,'objectContainerReach');
 assert.deepEqual(containedPickup.positions,SP.interactionGeometry(st,{kind:'object',id:'basket'},a,'pickup').positions);
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'cargoA'},a,'read').positions.length,0);
 a.position={...containedPickup.positions[0]};
+if(containedPickup.witnesses?.[0]?.requiredPosture)a.posture={kind:containedPickup.witnesses[0].requiredPosture,slotId:null,furnitureId:null};
 assert.equal(E.takeContainedObject(a,'cargoA'),true,'pickup must consume the original child-side containment relation');
 assert.equal(a.held,'cargoA');
 assert.equal(st.objects.cargoA.containedBy,undefined);
