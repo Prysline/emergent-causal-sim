@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.67.0-food-v1-f0`。
+目前 runtime marker：`11.68.0-movable-object-containment`。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
+
+Movable Object Containment v1：普通 Object 繼續使用唯一 `containedBy` 關係，可指向明確 opt-in 的可攜 Object 容器；容器不保存第二份子物件清單。既有 Spatial、Object Handling、Engine、Resources、Inspector 共同消費此狀態，並以 `objectStorage.maxItems / maxMassKg` 和已確立的普通 Object `handling.massKg` 做有界承載／派生負重。Food／Meal 的質量適配、巢狀容器與散落物理維持後續 Gate。詳見 [`docs/movable-object-containment.md`](docs/movable-object-containment.md)。
 
 Food v1 Slice F0：ready-to-eat Meal Object 以公克為唯一剩餘可食庫存；既有 `eat` Action 每有效 tick 攝取最多 50g，按真實攝取量降低 Hunger（0.08/g），與 legacy `contents.food` Resource amount 嚴格分離。詳見 [`docs/food-v1-f0.md`](docs/food-v1-f0.md)。
 
