@@ -39,7 +39,7 @@ Current relevant markers：
 - Standing Responsibility：`standing-responsibility-v1`
 - Mental Regulation：`mental-regulation-v4`
 - Action：`11.51.0-activity-concurrency`
-- Human Social Response：`11.66.0-human-social-trait-response`
+- Human Social Response：`11.67.0-human-social-meal-compatibility`
 - Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
 - Object Handling：`object-handling-v1`
@@ -66,7 +66,7 @@ Current relevant markers：
 
 ## Current release impact
 
-`11.67.0-food-v1-f0`：新增 fully edible ready-to-eat Meal Object 與 canonical integer edible mass (grams)，既有 `eat` 逐有效 tick 50g 上限攝取、每公克 0.08 Hunger relief、合法接觸與觀測、食物競爭、零量退休與 World Event；Activity Concurrency 聆聽／說話契約不變。Legacy Resource `contents.food` 和 `foodStock()` 維持 Resource units；Learned Habit 同一 Meal Action 僅首次實際 intake 形成一次 qualifying experience。World Authoring own generation → `world-authoring-v20`，Food own generation → `food-v1-f0`；其他 subsystem generations 不假升，特別是 Character Traits、Object Handling、Resources、Memory、Intent。詳見 [`food-v1-f0.md`](food-v1-f0.md)。
+`11.67.0-food-v1-f0`：新增 fully edible ready-to-eat Meal Object 與 canonical integer edible mass (grams)，既有 `eat` 逐有效 tick 50g 上限攝取、每公克 0.08 Hunger relief、合法接觸與觀測、食物競爭、零量退休與 World Event；Activity Concurrency 聆聽／說話契約不變：Human Social Response 原有的 `eat-listening`／`eat-speaking` compatibility phase set 納入新 `eatingMeal`，前者倍率 1、後者倍率 0；其 own generation → `11.67.0-human-social-meal-compatibility`。Legacy Resource `contents.food` 和 `foodStock()` 維持 Resource units；Learned Habit 同一 Meal Action 僅首次實際 intake 形成一次 qualifying experience。World Authoring own generation → `world-authoring-v20`，Food own generation → `food-v1-f0`；其他 subsystem generations 不假升，特別是 Character Traits、Object Handling、Resources、Memory、Intent。詳見 [`food-v1-f0.md`](food-v1-f0.md)。
 
 前一個 release：
 

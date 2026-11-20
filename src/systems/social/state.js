@@ -28,7 +28,7 @@
     W.DATA_ZH.petResponse='撫摸回應';
   }
 
-  const HUMAN_RESPONSE_VERSION='11.66.0-human-social-trait-response';
+  const HUMAN_RESPONSE_VERSION='11.67.0-human-social-meal-compatibility';
   W.registerInitialStateInitializer('humanSocialResponse.schema',(st)=>st,1100);
   W.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION=HUMAN_RESPONSE_VERSION;
   if(W.DATA_ZH){

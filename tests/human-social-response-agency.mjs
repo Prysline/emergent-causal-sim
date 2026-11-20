@@ -32,7 +32,7 @@ function armDirectTalk(social,{seed=11331,thirst=18}={}){
 }
 
 E.reset(11330);let st=E.getState(),responder=st.agents.zhen;
-assert.equal(E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,'11.66.0-human-social-trait-response');
+assert.equal(E.HUMAN_SOCIAL_RESPONSE_SCHEMA_VERSION,'11.67.0-human-social-meal-compatibility');
 responder.needs.social=0;assert.equal(E.talkResponseFor(responder),'decline');
 responder.needs.social=35;assert.equal(E.talkResponseFor(responder),'brief');
 responder.needs.social=90;assert.equal(E.talkResponseFor(responder),'engage');
