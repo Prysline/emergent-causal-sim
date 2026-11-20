@@ -119,7 +119,7 @@
       if(holderOf(target.id)||reservationOwner('object:'+target.id)?.id&&reservationOwner('object:'+target.id).id!==a.id)return false;
       if(!O.objectStorageLegality(state,target.id,object.id))return false;
     }
-    if(!SP.isAtInteraction?.(state,a,{kind:target.kind,id:target.id},target.kind==='object'?'pickup':'default'))return false;
+    if(!SP.isAtInteraction?.(state,a,{kind:target.kind,id:target.id},target.kind==='object'?'receive':'default'))return false;
     delete object.position;delete object.supportId;object.containedBy=target.id;a.held=null;return true;
   }
   function releaseHeld(a){if(!a.held)return null;if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('engine.js requires Spatial nearby placement lifecycle.');const result=SP.releaseHeldObjectNearby(state,a);if(!result)throw new Error('Held Object release requires a canonical nearby placement result.');return result;}
