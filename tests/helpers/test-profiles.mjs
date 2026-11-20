@@ -181,6 +181,12 @@ function ensureRuntimeDependencies(paths){
     const priorFoodRule=paths.indexOf('validation/rules/food-meal.js');
     if(priorFoodRule>=0)paths.splice(priorFoodRule,1);
     paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-meal.js');
+    const ingredientContractIndex=paths.indexOf('food-ingredient-contract.js');
+    if(ingredientContractIndex>=0)paths.splice(ingredientContractIndex,1);
+    paths.splice(paths.indexOf('validation/manifest.js'),0,'food-ingredient-contract.js');
+    const ingredientRuleIndex=paths.indexOf('validation/rules/food-ingredient.js');
+    if(ingredientRuleIndex>=0)paths.splice(ingredientRuleIndex,1);
+    paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-ingredient.js');
     if(!paths.includes('systems/daily-life/routine-state.js')){
       const routineOwnerIndex=paths.indexOf('engine.js');
       paths.splice(routineOwnerIndex>=0?routineOwnerIndex:validationManifestIndex,0,'systems/daily-life/routine-state.js');
