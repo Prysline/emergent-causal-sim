@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.69.0-food-v1-f1a-ingredient`。
+目前 runtime marker：`11.70.0-food-v1-f1b-bounded-cooking`。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
+
+Food v1 Slice F1-B1：新增 kitchen gas-stove、kitchen-counter Furniture 與鍋子普通 Object 的實際工作位置；沿用 Decision Option / Engine Action / Spatial，讓居民在合法觀察與接觸後將完整 Type A Ingredient 等重轉換為同位置 F0 Meal，記錄投入／產出／加工流出與可追溯 World Event，並由現有 `eat` 消費。首個鍋具為必需工作物件，尚未模擬鍋內收納；Food 供餐、舊 Resource 移除與預設完整場景另有後續 Gate。詳見 [`docs/food-v1-f1b-cooking.md`](docs/food-v1-f1b-cooking.md)。
 
 Food v1 Slice F1-A：每份完整 Ingredient 是獨立 Object；Ingredient Type A 在建立時固定預設質量／有效密度，唯一實際物理質量放在 `handling.massKg`，公克與體積由 query-time 推導。沿用既有可搬運容器與 Engine 的放入、拿取、負重、Spatial；未加入 Cooking／Meal 盛盤、外出補給食材化或移除 `contents.food`。詳見 [`docs/food-v1-f1a-ingredient.md`](docs/food-v1-f1a-ingredient.md)。
 
