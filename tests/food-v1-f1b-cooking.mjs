@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring;
 const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCooking;
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator,D=globalThis.SimFurnitureDefinitions;
-assert.equal(C.VERSION,'food-cooking-f1b1');
+assert.equal(C.VERSION,'food-cooking-f1b2-pot-loading');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v1-f0');
 assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
@@ -21,6 +21,7 @@ doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},
 doc.furniture.counterA={id:'counterA',definitionId:'kitchen-counter',origin:{x:3,y:5,z:0},orientation:'south'};
 doc.entities.objects.potA={
   id:'potA',name:'料理鍋',icon:'🍲',cookingPot:true,portable:true,
+  objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.6},
   handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
   position:{x:3,y:4,z:0},supportId:'stoveA'
 };
@@ -46,6 +47,7 @@ function setup(seed=20261120){
 }
 let {st,a,input}=setup();
 assert.equal(C.eligible(st,input.id,'stoveA')?.inputMassGrams,300);
+assert.equal(C.eligible(st,input.id,'stoveA')?.location,'exposed');
 assert.equal(C.eligible(st,input.id,'counterA'),null,'countertop is not a stove');
 const contact=SP.bestInteractionPositionResult(st,a,{kind:'furniture',id:'stoveA'},'default');
 assert.ok(Number.isFinite(contact?.traversalCost),'stove must have legal interaction geometry');
@@ -80,8 +82,12 @@ for(let t=0;t<70;t++){
 assert.equal(finished,true,'real Engine tick loop must finish Cooking Action');
 assert.equal(a.action,null);
 assert.equal(st.objects.ingredientA1,undefined,'whole Ingredient retired exactly once');
+assert.equal(globalThis.SimObjectHandling.objectStorageStatus(st,'potA').count,0,'Cooking leaves no phantom ingredient inside pot');
 const events=st.events.filter(e=>e.data?.action==='cookMeal'&&e.data?.phase==='complete');
 assert.equal(events.length,1,'one and only one canonical transformation Event');
+const loads=st.events.filter(e=>e.data?.action==='cookMeal'&&e.data?.phase==='loadPot');
+assert.equal(loads.length,1,'one physical put-in-pot world event before transformation');
+assert.deepEqual(events[0].causeIds,[loads[0].id],'canonical material transform must cite pot-loading event');
 const event=events[0],meal=st.objects[event.data.mealId];
 assert.ok(meal&&F.validMeal(meal),'Cooking must yield a legal F0 Meal Object');
 assert.equal(event.data.recipeId,C.RECIPE_ID);
