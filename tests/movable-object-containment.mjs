@@ -72,7 +72,7 @@ const original=SP.objectPosition(st,'basket');
 for(const p of [{x:3,y:3,z:0},{x:2,y:3,z:0},{x:3,y:2,z:0}]){
   a.position={...p};
   for(const id of ['cargoA','cargoB']){
-    assert.deepEqual(SP.objectPosition(st,id),p,'child effective position must track carried parent');
+    assert.ok(SP.same(SP.objectPosition(st,id),p),'child effective position must track carried parent');
     assert.ok(SP.nodeSame(st,SP.objectNode(st,id),SP.objectNode(st,'basket')));
   }
   assert.equal(R.effectiveCarryLoad(st,a),2.05);
