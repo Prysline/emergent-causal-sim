@@ -133,10 +133,9 @@ function ensureRuntimeDependencies(paths){
     paths.splice(paths.indexOf('engine.js'),0,'food-contract.js');
   }
   if(coreEngineIndex>=0){
-    for(const dep of ['food-ingredient-contract.js','food-cooking-contract.js']){
-      const prior=paths.indexOf(dep);if(prior>=0)paths.splice(prior,1);
-      paths.splice(paths.indexOf('engine.js'),0,dep);
-    }
+    const dep='food-ingredient-contract.js',prior=paths.indexOf(dep);
+    if(prior>=0)paths.splice(prior,1);
+    paths.splice(paths.indexOf('engine.js'),0,dep);
   }
   const traitIndex=paths.indexOf('engine.js');
   if(traitIndex>=0&&!paths.includes('character-traits.js'))paths.splice(traitIndex,0,'character-traits.js');
@@ -210,6 +209,13 @@ function ensureRuntimeDependencies(paths){
     if(!paths.includes('validation/rules/daily-life-routine.js'))paths.splice(finalManifestIndex,0,'validation/rules/daily-life-routine.js');
     const learnedHabitManifestIndex=paths.indexOf('validation/manifest.js');
     if(!paths.includes('validation/rules/daily-life-learned-habit.js'))paths.splice(learnedHabitManifestIndex,0,'validation/rules/daily-life-learned-habit.js');
+  }
+  // Cooking requires the canonical Object Handling and Spatial owners.
+  // Resolve it after slim profiles insert their missing physical/spatial dependencies.
+  if(paths.includes('engine.js')){
+    const dep='food-cooking-contract.js',prior=paths.indexOf(dep);
+    if(prior>=0)paths.splice(prior,1);
+    paths.splice(paths.indexOf('engine.js'),0,dep);
   }
   return paths;
 }
