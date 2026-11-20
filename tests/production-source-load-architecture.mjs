@@ -9,7 +9,7 @@ import {
 
 globalThis.window=globalThis;
 
-const RESOURCES_VERSION='11.56.0-resource-container-capability';
+const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
 const scripts=productionScriptPaths();
 const indexOf=path=>{

@@ -51,6 +51,7 @@ jobs:
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/object-unification.mjs
       - run: node tests/object-containment.mjs
+      - run: node tests/movable-object-containment.mjs
       - run: node tests/agent-facing-foundation.mjs
       - run: node tests/agent-turn-execution.mjs
       - run: node tests/perception-visual-orientation.mjs

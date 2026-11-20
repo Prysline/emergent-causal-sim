@@ -65,7 +65,7 @@
   }
   function objectView(st,id){
     const o=st.objects?.[id];if(!o)return '';
-    const p=SP.objectPosition(st,id),holder=SP.holderOf(st,id),container=o.containedBy&&st.furniture?.[o.containedBy],support=o.supportId&&st.furniture?.[o.supportId];
+    const p=SP.objectPosition(st,id),holder=SP.holderOf(st,id),container=o.containedBy&&(st.furniture?.[o.containedBy]||st.objects?.[o.containedBy]),support=o.supportId&&st.furniture?.[o.supportId];
     const where=holder?`${holder.name}正拿著`:container?`收納在${container.name}裡`:support?`放在${support.name}上`:placeText(st,p);
     const abilities=(o.affordances||[]).map(x=>x==='read'?'可以閱讀':x);
     abilities.push(o.portable?'可以拿起來':'固定在原處');
@@ -78,7 +78,9 @@
       container?fact('收納於',container.name):'',
       support?fact('放置於',support.name):''
     ]):container?factCard('收納位置',[fact('收納於',container.name)]):support?factCard('放置位置',[fact('承載於',support.name)]):'';
-    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
+    const contained=o.objectContainment===true?Object.values(st.objects||{}).filter(item=>item.containedBy===id):[];
+    const cargo=contained.length?chipsCard('收納物',contained.map(item=>entityChip('object',item.id,item.name,item.icon||'◻'))):'';
+    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${cargo}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
   }
   function sourceView(st,id){
     const o=st.sources?.[id];if(!o)return '';

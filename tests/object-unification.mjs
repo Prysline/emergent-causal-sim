@@ -18,8 +18,8 @@ const V=globalThis.SimValidator;
 const AC=globalThis.SimAgentCarry;
 
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Object unification consumes the current canonical World Authoring schema without owning its generation literal');
-assert.equal(O.VERSION,'object-handling-v1');
-assert.equal(R.VERSION,'11.56.0-resource-container-capability');
+assert.equal(O.VERSION,'object-handling-v2-movable-containment');
+assert.equal(R.VERSION,'11.68.0-movable-object-cargo');
 assert.equal(P.VERSION,'11.56.0-physical-object-handling');
 assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v2-object-release');
 assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration','Agent Carry semantics/generation must remain independent from Object unification');

@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.67.0-food-v1-f0`。
+目前 overall runtime marker：`11.68.0-movable-object-containment`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -32,7 +32,7 @@ Current relevant markers：
 - Perception Visual Availability production composition：`perception-visual-availability-v3-object-point`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
-- Pickup Interaction Geometry：`pickup-interaction-v2-containment`
+- Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Daily Life Learned Habit：`daily-life-learned-habit-v1`
@@ -42,8 +42,8 @@ Current relevant markers：
 - Human Social Response：`11.67.0-human-social-meal-compatibility`
 - Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
-- Object Handling：`object-handling-v1`
-- Resources：`11.56.0-resource-container-capability`
+- Object Handling：`object-handling-v2-movable-containment`
+- Resources：`11.68.0-movable-object-cargo`
 - Physical `11.56.0-physical-object-handling`
 - Agent Carry：`11.46.0-sleep-carry-integration`
 - Social Bid：`11.47.0-social-bid-carry-cooperation`
@@ -60,11 +60,15 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v20`
+- World Authoring：`world-authoring-v21`
 - Food：`food-v1-f0`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
+
+`11.68.0-movable-object-containment`：擴充 ordinary `Object.containedBy` 以明確 opt-in 的 portable Object 為合法 target，不建立 container-side child mirror；`objectStorage.maxItems / maxMassKg` 界定最小普通物件容量，contained child 的 `handling.massKg` 作單一物理重量來源。Spatial 跟隨容器持有人／支撐位置，既有 Engine contain/take、Resource container load、Inspector 投影及 runtime validator 消費同一 canonical 關係；普通物件散落、巢狀收納與 Food 質量轉換維持後續 Gate。World Authoring → `world-authoring-v21`、Object Handling → `object-handling-v2-movable-containment`、Resources → `11.68.0-movable-object-cargo`、Pickup Geometry → `pickup-interaction-v3-movable-containment`；其餘 subsystem 未變。詳見 [`movable-object-containment.md`](movable-object-containment.md)。
+
+前一個 release：
 
 `11.67.0-food-v1-f0`：新增 fully edible ready-to-eat Meal Object 與 canonical integer edible mass (grams)，既有 `eat` 逐有效 tick 50g 上限攝取、每公克 0.08 Hunger relief、合法接觸與觀測、食物競爭、零量退休與 World Event；Activity Concurrency 聆聽／說話契約不變：Human Social Response 原有的 `eat-listening`／`eat-speaking` compatibility phase set 納入新 `eatingMeal`，前者倍率 1、後者倍率 0；其 own generation → `11.67.0-human-social-meal-compatibility`。Legacy Resource `contents.food` 和 `foodStock()` 維持 Resource units；Learned Habit 同一 Meal Action 僅首次實際 intake 形成一次 qualifying experience。World Authoring own generation → `world-authoring-v20`，Food own generation → `food-v1-f0`；其他 subsystem generations 不假升，特別是 Character Traits、Object Handling、Resources、Memory、Intent。詳見 [`food-v1-f0.md`](food-v1-f0.md)。
 

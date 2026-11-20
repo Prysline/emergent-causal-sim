@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.56.0-resource-container-capability';
+const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const dropEventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&e.data?.action==='containerDrop');
 const contentEventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&(e.data?.action==='spill'||e.data?.action==='contentsDrop'));

@@ -392,6 +392,8 @@
     const objects=authoring.entities?.objects||{},sourceEntries=authoring.entities?.sources||{};
     for(const [key,object] of Object.entries(objects)){
       const basePath=`entities.objects.${key}`;
+      if(resolvedFurniture[key])errors.push(authoringIssue('authoring_object_id_collision',basePath+'.id','Object id must not collide with Furniture id.'));
+
       if(!isRecord(object)){errors.push(authoringIssue('authoring_object_invalid',basePath,'Object entry must be an object.'));continue;}
       if(object.id!==key)errors.push(authoringIssue('authoring_object_id_mismatch',`${basePath}.id`,`Object key ${key} does not match id ${String(object.id)}.`));
       const affordances=object.affordances;
@@ -400,11 +402,17 @@
         else if(new Set(affordances).size!==affordances.length)errors.push(authoringIssue('authoring_object_affordances_duplicate',`${basePath}.affordances`,'Object affordances must not contain duplicates.'));
       }
       if(object.containedBy!==undefined){
-        if(typeof object.containedBy!=='string'||!object.containedBy.trim())errors.push(authoringIssue('authoring_object_contained_by_invalid',`${basePath}.containedBy`,'Object containedBy must be a non-empty Furniture id.'));
+        if(typeof object.containedBy!=='string'||!object.containedBy.trim())errors.push(authoringIssue('authoring_object_contained_by_invalid',`${basePath}.containedBy`,'Object containedBy must be a non-empty Furniture or Object id.'));
         else{
-          const container=resolvedFurniture[object.containedBy];
-          if(!container)errors.push(authoringIssue('authoring_object_container_missing',`${basePath}.containedBy`,`Object containedBy ${object.containedBy} does not exist.`,{containedBy:object.containedBy}));
-          else if(container.objectContainment!==true)errors.push(authoringIssue('authoring_object_container_capability_missing',`${basePath}.containedBy`,`Furniture ${object.containedBy} does not support Object containment.`,{containedBy:object.containedBy}));
+          const furniture=resolvedFurniture[object.containedBy],target=objects[object.containedBy];
+          if(furniture&&target)errors.push(authoringIssue('authoring_object_container_ambiguous',`${basePath}.containedBy`,'Containment target matches both Furniture and Object.'));
+          else if(!furniture&&!target)errors.push(authoringIssue('authoring_object_container_missing',`${basePath}.containedBy`,`Object containedBy ${object.containedBy} does not exist.`,{containedBy:object.containedBy}));
+          else if(furniture?.objectContainment!==true&&target?.objectContainment!==true)errors.push(authoringIssue('authoring_object_container_capability_missing',`${basePath}.containedBy`,`Target ${object.containedBy} does not support Object containment.`,{containedBy:object.containedBy}));
+          if(target){
+            if(object.id===target.id)errors.push(authoringIssue('authoring_object_container_self',`${basePath}.containedBy`,'Object cannot contain itself.'));
+            if(object.objectContainment===true||object.resourceContainer===true)errors.push(authoringIssue('authoring_object_cargo_kind_unsupported',`${basePath}.containedBy`,'Movable Object containment v1 only supports ordinary, non-container Object cargo.'));
+            if(!Number.isFinite(object.handling?.massKg)||object.handling.massKg<=0)errors.push(authoringIssue('authoring_object_cargo_mass_invalid',`${basePath}.handling.massKg`,'Contained ordinary Object requires positive canonical handling.massKg.'));
+          }
         }
         if(object.position!==undefined)errors.push(authoringIssue('authoring_contained_object_position_conflict',`${basePath}.position`,'Contained Object must not define its own canonical position.'));
         if(object.supportId!==undefined)errors.push(authoringIssue('authoring_contained_object_support_conflict',`${basePath}.supportId`,'Contained Object must not also define supportId.'));
@@ -424,6 +432,13 @@
           if(!Number.isInteger(handling.handsRequired)||handling.handsRequired<0)errors.push(authoringIssue('authoring_object_hands_required_invalid',`${basePath}.handling.handsRequired`,'Portable Object handsRequired must be a non-negative integer.'));
         }
       }
+      if(object.handling?.massKg!==undefined&&(!Number.isFinite(object.handling.massKg)||object.handling.massKg<=0))errors.push(authoringIssue('authoring_object_mass_invalid',`${basePath}.handling.massKg`,'Object handling.massKg must be positive and finite.'));
+      if(object.objectContainment===true){
+        const storage=object.objectStorage;
+        if(object.portable!==true)errors.push(authoringIssue('authoring_object_container_not_portable',basePath+'.portable','Movable Object container must be portable.'));
+        if(!isRecord(storage)||!Number.isInteger(storage.maxItems)||storage.maxItems<=0||!Number.isFinite(storage.maxMassKg)||storage.maxMassKg<=0)errors.push(authoringIssue('authoring_object_storage_capacity_invalid',basePath+'.objectStorage','Movable Object container requires positive maxItems and maxMassKg.'));
+        if(object.resourceContainer!==true&&(!Number.isFinite(object.handling?.massKg)||object.handling.massKg<=0))errors.push(authoringIssue('authoring_object_container_mass_invalid',basePath+'.handling.massKg','Non-Resource movable container requires positive own massKg.'));
+      }else if(object.objectStorage!==undefined)errors.push(authoringIssue('authoring_object_storage_capability_missing',basePath+'.objectStorage','objectStorage requires objectContainment:true.'));
       if(object.resourceContainer===true){
         if(!isRecord(object.contents))errors.push(authoringIssue('authoring_resource_container_contents_invalid',`${basePath}.contents`,'Resource-container Object must define contents as an object.'));
         if(!Number.isFinite(Number(object.capacity))||Number(object.capacity)<0)errors.push(authoringIssue('authoring_resource_container_capacity_invalid',`${basePath}.capacity`,'Resource-container Object capacity must be a non-negative finite number.'));
@@ -450,6 +465,15 @@
         if(!support)errors.push(authoringIssue('authoring_object_support_missing',`${basePath}.supportId`,`Object supportId ${object.supportId} does not exist.`,{supportId:object.supportId}));
         else if(object.position&&!((support.footprint||[]).some(p=>samePosition(p,object.position))))errors.push(authoringIssue('authoring_object_support_position_mismatch',`${basePath}.position`,`Object ${key} is positioned outside support ${object.supportId} footprint.`,{objectId:key,supportId:object.supportId}));
       }
+    }
+    // Capacity derives from child-side containedBy references; no reverse contents mirror.
+    for(const [id,container] of Object.entries(objects)){
+      if(container?.objectContainment!==true)continue;
+      const storage=container.objectStorage;
+      if(!isRecord(storage)||!Number.isInteger(storage.maxItems)||storage.maxItems<=0||!Number.isFinite(storage.maxMassKg)||storage.maxMassKg<=0)continue;
+      const children=Object.values(objects).filter(child=>child?.containedBy===id);
+      const massKg=children.reduce((sum,child)=>sum+(Number.isFinite(child.handling?.massKg)&&child.handling.massKg>0?child.handling.massKg:0),0);
+      if(children.length>storage.maxItems||massKg>storage.maxMassKg+1e-9)errors.push(authoringIssue('authoring_object_storage_capacity_exceeded','entities.objects.'+id+'.objectStorage','Movable Object container authored contents exceed maxItems or maxMassKg.',{objectId:id,count:children.length,massKg}));
     }
     for(const key of Object.keys(objects))if(sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Object id ${key} collides with another authored entity id.`,{id:key}));
 

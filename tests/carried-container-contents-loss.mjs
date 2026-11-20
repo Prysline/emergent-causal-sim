@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.56.0-resource-container-capability';
+const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 const near=(actual,expected,eps=1e-9,msg='')=>assert.ok(Math.abs(actual-expected)<=eps,`${msg} expected ${expected}, got ${actual}`);
 const eventsFor=(st,containerId)=>st.events.filter(e=>e.data?.container===containerId&&(e.data?.action==='spill'||e.data?.action==='contentsDrop'));

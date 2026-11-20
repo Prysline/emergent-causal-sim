@@ -110,9 +110,18 @@
   function releaseReservation(key,a){if(state.reservations[key]===a.id)delete state.reservations[key];}
   function releaseAgentReservations(a,prefix=null){for(const [k,id] of Object.entries({...state.reservations}))if(id===a.id&&(!prefix||k.startsWith(prefix)))delete state.reservations[k];}
   function holderOf(id){return SP.holderOf(state,id);}
-  function holdObject(a,id){const object=state.objects[id];if(!O.canHoldObject(state,a,object))return false;const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;if(object.containedBy){const container=state.furniture?.[object.containedBy];if(!container||container.objectContainment!==true||!SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup'))return false;}if(a.held&&a.held!==id)releaseHeld(a);a.held=id;delete object.supportId;delete object.containedBy;return true;}
+  function holdObject(a,id){const object=state.objects[id];if(!O.canHoldObject(state,a,object))return false;const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;if(object.containedBy){const target=SP.objectContainerTarget(state,object.containedBy);if(!target||target.entity.objectContainment!==true||(target.kind==='object'&&holderOf(target.id))||!SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup'))return false;}if(a.held&&a.held!==id)releaseHeld(a);a.held=id;delete object.supportId;delete object.containedBy;return true;}
   function takeContainedObject(aOrId,id){const a=typeof aOrId==='string'?state.agents?.[aOrId]:aOrId,object=state.objects?.[id];if(!a||!object?.containedBy)return false;return holdObject(a,id);}
-  function containHeldObject(aOrId,furnitureId){const a=typeof aOrId==='string'?state.agents?.[aOrId]:aOrId,object=a?.held&&state.objects?.[a.held],container=state.furniture?.[furnitureId];if(!a||!object||!container||container.objectContainment!==true)return false;if(!SP.isAtInteraction?.(state,a,{kind:'furniture',id:furnitureId},'default'))return false;delete object.position;delete object.supportId;object.containedBy=furnitureId;a.held=null;return true;}
+  function containHeldObject(aOrId,targetId){
+    const a=typeof aOrId==='string'?state.agents?.[aOrId]:aOrId,object=a?.held&&state.objects?.[a.held],target=SP.objectContainerTarget(state,targetId);
+    if(!a||!object||!target||target.entity.objectContainment!==true)return false;
+    if(target.kind==='object'){
+      if(holderOf(target.id)||reservationOwner('object:'+target.id)?.id&&reservationOwner('object:'+target.id).id!==a.id)return false;
+      if(!O.objectStorageLegality(state,target.id,object.id))return false;
+    }
+    if(!SP.isAtInteraction?.(state,a,{kind:target.kind,id:target.id},target.kind==='object'?'receive':'default'))return false;
+    delete object.position;delete object.supportId;object.containedBy=target.id;a.held=null;return true;
+  }
   function releaseHeld(a){if(!a.held)return null;if(typeof SP.releaseHeldObjectNearby!=='function')throw new Error('engine.js requires Spatial nearby placement lifecycle.');const result=SP.releaseHeldObjectNearby(state,a);if(!result)throw new Error('Held Object release requires a canonical nearby placement result.');return result;}
   function locomotionRuntime(){return window.SimLocomotion||null;}
   function usageRuntime(){return window.SimUsage||null;}

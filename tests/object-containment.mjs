@@ -19,7 +19,7 @@ const W=globalThis.SimWorld;
 
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Object containment consumes the current canonical World Authoring schema without owning its generation literal');
 assert.equal(D.VERSION,'furniture-definitions-v13');
-assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v2-containment');
+assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v3-movable-containment');
 assert.equal(SP.OBSERVABILITY_VERSION,'11.58.0-spatial-containment-observability');
 assert.equal(globalThis.SimEditorOrdinaryObjectAuthoring.VERSION,'editor-ordinary-object-authoring-v3');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.entities.objects.bookA.containedBy,undefined,'default readable book must not start inside a Bookshelf');

@@ -32,9 +32,15 @@
       if(entity.containedBy&&entity.supportId)add('contained_object_support_conflict',`${entity.name||entity.id} 同時宣告 containedBy=${entity.containedBy} 與 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,containedBy:entity.containedBy,supportId:entity.supportId});
       if(entity.containedBy&&entity.position)add('contained_object_position_conflict',`${entity.name||entity.id} 已被收納，不能同時保留自己的 canonical position。`,{entityType,entityId:entity.id,containedBy:entity.containedBy});
       if(entity.containedBy){
-        const container=st.furniture?.[entity.containedBy];
-        if(!container)add('contained_object_furniture_missing',`${entity.name||entity.id} 的 containedBy=${entity.containedBy} 找不到 Furniture。`,{entityType,entityId:entity.id,containedBy:entity.containedBy});
-        else if(container.objectContainment!==true)add('contained_object_capability_missing',`${container.name||entity.containedBy} 不支援 Object containment。`,{entityType,entityId:entity.id,containedBy:entity.containedBy});
+        const id=entity.containedBy,furniture=st.furniture?.[id],container=st.objects?.[id];
+        if(furniture&&container)add('contained_object_target_ambiguous','Object containment target matches Furniture and Object.',{entityId:entity.id,containedBy:id});
+        else if(!furniture&&!container)add('contained_object_target_missing','Contained Object target does not exist.',{entityId:entity.id,containedBy:id});
+        else if((furniture||container).objectContainment!==true)add('contained_object_capability_missing','Containment target lacks objectContainment.',{entityId:entity.id,containedBy:id});
+        if(container){
+          if(entity.id===id)add('contained_object_self','Object cannot contain itself.',{entityId:entity.id});
+          if(entity.objectContainment===true||entity.resourceContainer===true)add('contained_object_nested_unsupported','Movable containment v1 cannot hold nested/container Objects.',{entityId:entity.id});
+          if(!Number.isFinite(entity.handling?.massKg)||entity.handling.massKg<=0)add('contained_object_mass_invalid','Movable cargo requires positive handling.massKg.',{entityId:entity.id});
+        }
         continue;
       }
       if(!entity.position||holder)continue;
@@ -47,6 +53,15 @@
           if(!(support.surface.cells||[]).some(cell=>sameLocalPosition(cell,entity.position)))add('supported_object_cell_mismatch',`${entity.name||entity.id} 的 position 不在 ${entity.supportId} canonical support Surface 的任何 Cell。`,{entityType,entityId:entity.id,supportId:entity.supportId,position:SP.nodeKey(st,SP.normalizeNode(st,entity.position,'floor')),surfaceId:expected});
         }
       }
+    }
+    const handling=window.SimObjectHandling;
+    for(const container of Object.values(st?.objects||{})){
+      if(container.objectContainment!==true)continue;
+      try{
+        if(!handling?.objectStorageStatus)throw new Error('Missing canonical Object storage resolver.');
+        const status=handling.objectStorageStatus(st,container);
+        if(!status.withinCapacity)add('contained_object_capacity_exceeded','Movable Object contents exceed maxItems or maxMassKg.',{containerId:container.id,count:status.count,massKg:status.massKg});
+      }catch(error){add('contained_object_storage_invalid',error.message,{containerId:container.id});}
     }
     for(const f of Object.values(st?.furniture||{})){
       const solids=f.spatial?.solids;

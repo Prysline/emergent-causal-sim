@@ -3,7 +3,7 @@
   if(!W.registerInitialStateInitializer)throw new Error('spatial-traversal.js requires world.js initial-state pipeline.');
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
-  const PICKUP_INTERACTION_VERSION='pickup-interaction-v2-containment';
+  const PICKUP_INTERACTION_VERSION='pickup-interaction-v3-movable-containment';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -175,7 +175,12 @@
   function objectNode(st,id){
     const holder=SP.holderOf(st,id);if(holder)return nodeForAgent(st,holder);
     const obj=st.objects?.[id]||st.sources?.[id];if(!obj)return null;
-    if(obj.containedBy){const position=SP.furniturePosition?.(st,obj.containedBy);return position?normalizeNode(st,position,FLOOR):null;}
+    if(obj.containedBy){
+      const target=SP.objectContainerTarget(st,obj.containedBy);
+      if(target?.kind==='object')return objectNode(st,target.id);
+      const position=target?.kind==='furniture'?SP.furniturePosition(st,target.id):null;
+      return position?normalizeNode(st,position,FLOOR):null;
+    }
     if(!obj.position)return null;
     let surfaceId=obj.position.surfaceId||FLOOR;
     if(obj?.supportId){const entry=supportSurfaceForFurniture(st,obj.supportId);if(entry)surfaceId=entry.surface.id;}
@@ -708,9 +713,11 @@
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
       if(entity.containedBy){
         if(affordance!=='pickup')return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
-        const container=st.furniture?.[entity.containedBy];if(!container||container.objectContainment!==true)return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
-        const access=interactionGeometry(st,{kind:'furniture',id:entity.containedBy},agent,'pickup');
-        return {...access,mode:'furnitureReach',target,affordance,containedBy:entity.containedBy};
+        const container=SP.objectContainerTarget(st,entity.containedBy);
+        if(!container||container.entity.objectContainment!==true)return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
+        if(container.kind==='object'&&SP.holderOf(st,container.id))return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
+        const access=interactionGeometry(st,{kind:container.kind,id:container.id},agent,'pickup');
+        return {...access,mode:container.kind==='furniture'?'furnitureReach':'objectContainerReach',target,affordance,containedBy:entity.containedBy};
       }
       if(affordance==='pickup'){
         if(node.surfaceId===FLOOR){
