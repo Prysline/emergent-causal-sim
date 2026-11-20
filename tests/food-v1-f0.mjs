@@ -163,6 +163,20 @@ assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
   noIssues('multi-Agent contention');
 }
 {
+  const {st,a,meal}=setup({seed:261131,mass:300,hunger:95});
+  const p=startMeal(a);
+  a.activeIntent=null; // Legacy/action-only fixtures must not self-preempt an already-running eat.
+  a.needs.hunger=95;
+  const priorTick=st.tick;
+  E.tick();
+  assert.equal(a.action,p,'Hunger emergency cannot interrupt and recreate the same eating Action');
+  assert.equal(st.tick,priorTick+1);
+  assert.equal(meal.meal.edibleMassGrams,250,'self-matching urgency must preserve realized eating progress');
+  assert.equal(st.events.some(e=>e.data?.action==='intentPreempt'&&e.data?.priorActionKind==='eat'&&e.data?.nextActionKind==='eat'),false);
+  E.ensureIntentForAction?.(st,a);
+  noIssues('same-Action hunger urgency does not reset eating');
+}
+{
   const {st,a,meal}=setup({seed:261125,mass:300});
   startMeal(a);E.tick();
   const alreadyEaten=mealEvents(st)[0].data.intakeGrams;
