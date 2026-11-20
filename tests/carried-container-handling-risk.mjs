@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
 const APP_VERSION=globalThis.SimRelease.VERSION;
-const RESOURCES_VERSION='11.56.0-resource-container-capability';
+const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
 const LOCOMOTION_VERSION='11.50.1-prone-transition-burden';
 const DELIBERATION_VERSION='11.48.1-sleep-perception-approach';
