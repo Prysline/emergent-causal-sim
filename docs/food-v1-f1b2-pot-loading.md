@@ -1,6 +1,6 @@
 # Food F1-B2 — Physical pot loading via canonical Object containment
 
-Status: PR candidate on `feat/food-f1b2-pot-loading`; not merged. Exact-head CI required. Historical F1-B1 is merged PR #242.
+Status: merged in PR #243 (squash `d84ae363a1bbe89c6713272ecbfab38ae0b825e8`) on `main`. Exact-head Node #44758215928 and Browser #44758216201 passed; post-merge Node #44768949382 and Pages #44768947191 also completed successfully. Historical predecessor F1-B1 merged in PR #242.
 
 ## Narrow production consumer
 
@@ -16,7 +16,7 @@ The generic Perception contract deliberately treats contained Objects as **not v
 
 ## Truth and regression
 
-- `SimFoodCooking` generation moves to `food-cooking-f1b2-pot-loading`. Overall runtime candidate `11.71.0-food-v1-f1b2-pot-loading`. Unchanged: `SimIngredient` v1, `SimFood` F0, Object Handling v2, Spatial, Perception, Engine's generic physical lifecycle, Furniture Catalog v14, World Authoring v22.
+- `SimFoodCooking` generation moves to `food-cooking-f1b2-pot-loading`. Overall runtime at the F1-B2 merge `11.71.0-food-v1-f1b2-pot-loading`. Unchanged: `SimIngredient` v1, `SimFood` F0, Object Handling v2, Spatial, Perception, Engine's generic physical lifecycle, Furniture Catalog v14, World Authoring v22.
 - `tests/food-v1-f1b-cooking.mjs` verifies actual real Agent Action from exposed source through pot insertion, causal load-to-completion, mass conservation, default F0 `eat`, reservations and interruption.
 - `tests/food-v1-f1b2-pot-loading.mjs` verifies authored Ingredient physically contained within the pot, canonical Object load and location, Perception hidden-truth boundary, no competing inferred Cooking decision, failed forged completion, safe generic recovery and re-insertion. The test uses production-composed Engine/Spatial/Validator, not a parallel Cooking harness.
 - Empty pot and one whole Ingredient are the only supported demonstration inputs. Another item, overweight material, inaccessible pickup/receive, moved pot, missing Ingredient, or missing loading provenance blocks completion; no silent generic fallback.
