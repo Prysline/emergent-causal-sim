@@ -17,7 +17,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 const local=(x,y,z=0)=>({x,y,z});
 const fp=value=>A.semanticFingerprint(value);
 
-assert.equal(D.VERSION,'furniture-definitions-v13');
+assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Furniture orientation consumes the current canonical World Authoring schema without owning its generation literal');
 assert.deepEqual(D.ORIENTATIONS,['north','east','south','west']);
 assert.deepEqual(A.FURNITURE_ORIENTATIONS,['north','east','south','west']);
