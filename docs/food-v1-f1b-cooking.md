@@ -1,6 +1,6 @@
 # Food v1 F1-B1 — Bounded Cooking Action and kitchen affordances
 
-Status: PR candidate, pending exact-head Node / Browser verification. This slice is a first real production cooking consumer, **not** integrated closed-loop Food v1 completion.
+Status: historical F1-B1 slice, merged in PR #242 (squash `c6a8940ce12b2466871aee26a1e2d2853034e687`). Its verified first production Cooking consumer did **not** model pot contents. The next F1-B2 candidate adds real pot containment; refer to [`food-v1-f1b2-pot-loading.md`](food-v1-f1b2-pot-loading.md) for the proposed current behavior. Other Food integration gaps remain open.
 
 ## Authoritative boundaries
 
