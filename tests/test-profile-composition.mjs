@@ -31,6 +31,8 @@ const engineCore=runtimeProfilePaths([
   'world-authoring.js','world-initializer.js','world.js','release.js','spatial.js',
   'engine.js','validation/registry.js'
 ]);
+assert.ok(engineCore.includes('src/food-contract.js'),'Engine test profiles must include canonical Food contract independent from v20 Authoring');
+assert.ok(engineCore.indexOf('src/food-contract.js')<engineCore.indexOf('src/engine.js'),'Food contract must load before Engine in every test profile');
 assert.ok(engineCore.includes('src/spatial-traversal.js'),'Engine runtime profiles must include canonical Spatial Traversal for lifecycle release');
 assert.ok(engineCore.includes('src/spatial-surface-environment.js'),'Engine runtime profiles must include the canonical Spatial Environment resource endpoint used by cleanFloor');
 assert.ok(engineCore.indexOf('src/spatial-surface-environment.js')<engineCore.indexOf('src/engine.js'),'Spatial Environment must register before Engine in test profiles');
@@ -54,6 +56,8 @@ const validationManifestProfile=runtimeProfilePaths([
 ]);
 assert.ok(validationManifestProfile.includes('src/systems/daily-life/routine-state.js'),'validation-manifest runtime profiles must include the Daily Life Routine state owner');
 assert.ok(validationManifestProfile.includes('src/systems/daily-life/learned-habit-state.js'),'validation-manifest runtime profiles must include the Learned Habit state owner');
+assert.ok(validationManifestProfile.includes('src/validation/rules/food-meal.js'),'Validator manifest profiles must register the canonical Food layer');
+assert.ok(validationManifestProfile.indexOf('src/validation/rules/food-meal.js')<validationManifestProfile.indexOf('src/validation/manifest.js'),'Food validator must register before the validation manifest finalizes');
 assert.ok(validationManifestProfile.includes('src/validation/rules/agent-carry.js'),'validation-manifest runtime profiles must include the Agent Carry validator dependency');
 assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-routine.js'),'validation-manifest runtime profiles must include the Daily Life Routine validator dependency');
 assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-learned-habit.js'),'validation-manifest runtime profiles must include the Learned Habit validator dependency');
@@ -89,7 +93,7 @@ assert.throws(
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
   'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','systems/object-handling.js','spatial.js',
-  'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial-surface-environment.js','spatial/finalize.js','engine.js','validation/registry.js'
+  'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial-surface-environment.js','spatial/finalize.js','food-contract.js','engine.js','validation/registry.js'
 ]);
 
 const workflow=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');

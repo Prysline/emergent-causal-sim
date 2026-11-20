@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.66.0-character-traits-social`。
+目前 runtime marker：`11.67.0-food-v1-f0`。
 
-Current release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
+前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
+
+Food v1 Slice F0：ready-to-eat Meal Object 以公克為唯一剩餘可食庫存；既有 `eat` Action 每有效 tick 攝取最多 50g，按真實攝取量降低 Hunger（0.08/g），與 legacy `contents.food` Resource amount 嚴格分離。詳見 [`docs/food-v1-f0.md`](docs/food-v1-f0.md)。
 
 前一個 release 建立 Character Traits Foundation v1 Slice A：`character-traits-v1` 統一既有稀疏特質、型別與範圍驗證、read-time default，以及 Engine／Deliberation／Appraisal consumer。World Authoring 升為 `world-authoring-v19`；`careful` 缺值統一使用原 precision 路徑的 `.55`，原有居民的 authored 值不變。未新增 Trait、Need、活動或第二套決策 authority。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
 

@@ -16,8 +16,8 @@
   const resetForScenario=E.reset;
   const counterpartId=counterpart=>typeof counterpart==='string'?counterpart:counterpart?.id||null;
 
-  E.registerActivityCompatibility('humanSocial.eat-listening',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect'],transientKind:'socialListening',primaryProgressScale:1});
-  E.registerActivityCompatibility('humanSocial.eat-speaking',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect'],transientKind:'socialSpeaking',primaryProgressScale:0});
+  E.registerActivityCompatibility('humanSocial.eat-listening',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect','eatingMeal'],transientKind:'socialListening',primaryProgressScale:1});
+  E.registerActivityCompatibility('humanSocial.eat-speaking',{primaryActionKind:'eat',primaryPhases:['eatingPlate','eatingDirect','eatingMeal'],transientKind:'socialSpeaking',primaryProgressScale:0});
 
   function talkBaseEngagementScore(human){const social=clamp((Number(human?.needs?.social)||0)/100,0,1);return round(social*.70+T.value(human,'social')*.30);}
   function talkAffectResponseDelta(human){const signal=Number(E.affectResponseSignal(human))||0;return round(clamp(signal*TALK_AFFECT_RESPONSE_CAP,-TALK_AFFECT_RESPONSE_CAP,TALK_AFFECT_RESPONSE_CAP));}

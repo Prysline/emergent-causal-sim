@@ -88,6 +88,7 @@ const ENGINE_CORE_PROFILE=Object.freeze([
   'systems/physical.js',
   'spatial-surface-environment.js',
   'spatial/finalize.js',
+  'food-contract.js',
   'engine.js',
   'validation/registry.js'
 ]);
@@ -125,6 +126,12 @@ function ensureAuthoringDependencies(paths){
 
 function ensureRuntimeDependencies(paths){
   ensureAuthoringDependencies(paths);
+  // Food mass contract is independent from the v20 Authoring overlay: minimal legacy profiles still need the Engine dependency.
+  const coreEngineIndex=paths.indexOf('engine.js');
+  if(coreEngineIndex>=0){
+    const prior=paths.indexOf('food-contract.js');if(prior>=0)paths.splice(prior,1);
+    paths.splice(paths.indexOf('engine.js'),0,'food-contract.js');
+  }
   const traitIndex=paths.indexOf('engine.js');
   if(traitIndex>=0&&!paths.includes('character-traits.js'))paths.splice(traitIndex,0,'character-traits.js');
   let engineIndex=paths.indexOf('engine.js');
@@ -171,6 +178,9 @@ function ensureRuntimeDependencies(paths){
   }
   const validationManifestIndex=paths.indexOf('validation/manifest.js');
   if(validationManifestIndex>=0){
+    const priorFoodRule=paths.indexOf('validation/rules/food-meal.js');
+    if(priorFoodRule>=0)paths.splice(priorFoodRule,1);
+    paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-meal.js');
     if(!paths.includes('systems/daily-life/routine-state.js')){
       const routineOwnerIndex=paths.indexOf('engine.js');
       paths.splice(routineOwnerIndex>=0?routineOwnerIndex:validationManifestIndex,0,'systems/daily-life/routine-state.js');

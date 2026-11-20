@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.66.0-character-traits-social`。
+目前 overall runtime marker：`11.67.0-food-v1-f0`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -39,7 +39,7 @@ Current relevant markers：
 - Standing Responsibility：`standing-responsibility-v1`
 - Mental Regulation：`mental-regulation-v4`
 - Action：`11.51.0-activity-concurrency`
-- Human Social Response：`11.66.0-human-social-trait-response`
+- Human Social Response：`11.67.0-human-social-meal-compatibility`
 - Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
 - Object Handling：`object-handling-v1`
@@ -60,10 +60,15 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v19`
+- World Authoring：`world-authoring-v20`
+- Food：`food-v1-f0`
 - Furniture Catalog：`furniture-definitions-v13`
 
 ## Current release impact
+
+`11.67.0-food-v1-f0`：新增 fully edible ready-to-eat Meal Object 與 canonical integer edible mass (grams)，既有 `eat` 逐有效 tick 50g 上限攝取、每公克 0.08 Hunger relief、合法接觸與觀測、食物競爭、零量退休與 World Event；Activity Concurrency 聆聽／說話契約不變：Human Social Response 原有的 `eat-listening`／`eat-speaking` compatibility phase set 納入新 `eatingMeal`，前者倍率 1、後者倍率 0；其 own generation → `11.67.0-human-social-meal-compatibility`。Legacy Resource `contents.food` 和 `foodStock()` 維持 Resource units；Learned Habit 同一 Meal Action 僅首次實際 intake 形成一次 qualifying experience。World Authoring own generation → `world-authoring-v20`，Food own generation → `food-v1-f0`；其他 subsystem generations 不假升，特別是 Character Traits、Object Handling、Resources、Memory、Intent。詳見 [`food-v1-f0.md`](food-v1-f0.md)。
+
+前一個 release：
 
 `11.66.0-character-traits-social`：Character Traits Foundation v1 Slice B1 採方案 B：`src/engine.js` 以 canonical `traits.social` 調節 Social Need 自然累積（`.75 + .5 * social`），但主動 `talk`／`seekHuman` 不再直接重複加上該 Trait utility 或 Decision contributor；Human／Animal Social Response 保留現有 Need/trait 加權、Affect/Relationship 與回應門檻，僅統一透過 `SimCharacterTraits.value` 取用，缺值從舊 consumer 的 `.5` 歸位成 canonical `0`，非法值 fail-closed。Human／Animal Response own generations 前進；Action、Social Bid、Deliberation、Character Traits schema `character-traits-v1`、World Authoring `world-authoring-v19` 等未變更 subsystem 保持原 marker。No new Need, World Event, response cache or alternate decision owner. 詳見 [`character-traits.md`](character-traits.md)。
 
