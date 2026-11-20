@@ -1,6 +1,6 @@
 # Food v1 Slice F0 — Ready-to-eat Meal Object (Current)
 
-Status: implementation on `feat/food-v1-f0-ready-meal`; no Cooking F1 or general Meal production pipeline.
+Status: implemented in `main` by PR #238; Cooking F1 and a general Meal production pipeline remain out of scope.
 
 ## Canonical inventory and physical contract
 
