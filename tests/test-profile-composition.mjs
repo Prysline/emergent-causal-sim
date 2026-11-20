@@ -35,6 +35,8 @@ assert.ok(engineCore.includes('src/food-contract.js'),'Engine test profiles must
 assert.ok(engineCore.indexOf('src/food-contract.js')<engineCore.indexOf('src/engine.js'),'Food contract must load before Engine in every test profile');
 assert.ok(engineCore.indexOf('src/food-ingredient-contract.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Cooking contract must load only after Ingredient contract in every Engine profile');
 assert.ok(engineCore.indexOf('src/food-cooking-contract.js')<engineCore.indexOf('src/engine.js'),'Cooking contract must load before Engine in every test profile');
+assert.ok(engineCore.indexOf('src/systems/object-handling.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Cooking must load after canonical Object Handling owner');
+assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Cooking must load after Spatial finalization in slim profiles');
 assert.ok(engineCore.includes('src/spatial-traversal.js'),'Engine runtime profiles must include canonical Spatial Traversal for lifecycle release');
 assert.ok(engineCore.includes('src/spatial-surface-environment.js'),'Engine runtime profiles must include the canonical Spatial Environment resource endpoint used by cleanFloor');
 assert.ok(engineCore.indexOf('src/spatial-surface-environment.js')<engineCore.indexOf('src/engine.js'),'Spatial Environment must register before Engine in test profiles');
