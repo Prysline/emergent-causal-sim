@@ -22,6 +22,7 @@
   }
   function complete(st,agent,action,emitEvent){
     if(!st||!agent||action?.kind!=='cookMeal'||action.progressTicks!==REQUIRED_TICKS||typeof emitEvent!=='function')return {completed:false,reason:'invalid-context'};
+    if(agent.action!==action||st.reservations?.['object:'+action.ingredientId]!==agent.id||st.reservations?.['object:'+action.potId]!==agent.id||st.reservations?.['furniture:'+action.stationId]!==agent.id||!window.SimSpatial?.isAtInteraction?.(st,agent,{kind:'furniture',id:action.stationId},'default'))return {completed:false,reason:'execution-not-authorized'};
     const context=eligible(st,action.ingredientId,action.stationId);
     if(!context)return {completed:false,reason:'inputs-unavailable'};
     if(action.potId!==context.pot.id)return {completed:false,reason:'pot-changed'};
