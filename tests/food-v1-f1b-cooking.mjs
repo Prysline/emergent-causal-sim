@@ -119,7 +119,8 @@ assert.ok(st.events.some(e=>e.data?.action==='eat'&&e.data?.foodKind==='meal'&&e
 ({st,a,input}=setup(20261121));
 const initial=E.cookingDecisionOption(st,a);assert.ok(initial);
 a.action=E.buildAction(a,initial);E.ensureIntentForAction?.(st,a);
-for(let t=0;t<3;t++)E.tick();
+E.tick();
+assert.equal(globalThis.SimObjectHandling.objectStorageStatus(st,'potA').count,0,'pot disappearance scenario must precede loading');
 assert.ok(st.objects.ingredientA1,'progress before completion cannot debit an Ingredient');
 delete st.objects.potA;
 E.tick();
