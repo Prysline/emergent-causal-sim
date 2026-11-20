@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,A=window.SimWorldAuthoring;
   if(!W?.registerInitialStateInitializer)throw new Error('systems/daily-life/tidying-state.js requires world.js initial-state pipeline.');
-  if(A?.VERSION!=='world-authoring-v20')throw new Error('Tidying requires World Authoring v20.');
+  if(!['world-authoring-v20','world-authoring-v21'].includes(A?.VERSION))throw new Error('Tidying requires World Authoring v20 or v21.');
   const VERSION='tidying-put-away-v1';
   const clone=value=>JSON.parse(JSON.stringify(value));
   function project(st,{authoring}={}){
