@@ -12,7 +12,7 @@ const A=globalThis.SimWorldAuthoring;
 const M=globalThis.SimEditorAuthoringMutations;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v13');
+assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
 
 const definition=D.getDefinition('cabinet-tall');
 assert.ok(definition,'Furniture Catalog must expose cabinet-tall');
