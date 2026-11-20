@@ -34,6 +34,9 @@ const releaseIndex=indexOf('src/release.js');
 const objectHandlingIndex=indexOf('src/systems/object-handling.js');
 const resourcesIndex=indexOf('src/systems/resources.js');
 const agentCarryIndex=indexOf('src/systems/agent-carry.js');
+const cookingContractIndex=indexOf('src/food-cooking-contract.js');
+const ingredientContractIndex=indexOf('src/food-ingredient-contract.js');
+const spatialFinalizeIndex=indexOf('src/spatial/finalize.js');
 const engineIndex=indexOf('src/engine.js');
 const initialManifestIndex=indexOf('src/world/initial-state-manifest.js');
 const spatialTraversalIndex=indexOf('src/spatial-traversal.js');
@@ -67,6 +70,7 @@ assert.equal(resourcesIndex,objectHandlingIndex+1,'Resources owner must load imm
 assert.equal(agentCarryIndex,resourcesIndex+1,'Agent Carry owner must remain adjacent after Resources in production composition');
 assert.ok(spatialTraversalIndex<spatialAgentCarryIndex&&agentCarryIndex<spatialAgentCarryIndex,'Agent carry position projection must load after both Agent Carry truth owner and Spatial Traversal');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
+assert.ok(ingredientContractIndex<cookingContractIndex&&objectHandlingIndex<cookingContractIndex&&spatialFinalizeIndex<cookingContractIndex&&cookingContractIndex<initialManifestIndex,'Cooking must initialize after canonical Ingredient, Object Handling and Spatial owners, and before Engine');
 assert.ok(objectHandlingIndex<resourcesIndex&&objectHandlingIndex<agentCarryIndex&&agentCarryIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must keep Object Handling before Resources / Agent Carry, then Agent Carry -> Physical -> Passage -> Locomotion -> Crowding');
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');

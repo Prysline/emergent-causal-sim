@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-f1b1')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-f1b2-pot-loading')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
   const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Engine requires Character Traits contract.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6,CARRY_RECOVERY_RETRY_TICKS=2;
@@ -447,13 +447,15 @@
         const context=choice.ingredientId&&choice.stationId?C.eligible(state,choice.ingredientId,choice.stationId):null;
         const P=window.SimPerception,ingredientObservation=context&&P?.classifyObjectPointVisualAvailability?.(state,a,context.ingredient),potObservation=context&&P?.classifyObjectPointVisualAvailability?.(state,a,context.pot);
         const evidence=choice.observed,stationTarget={kind:'furniture',id:choice.stationId};
-        const available=a.kind==='human'&&!a.offMap&&!a.held&&context
+        const available=a.kind==='human'&&!a.offMap&&!a.held&&context?.location==='exposed'
+          &&Number.isFinite(targetTraversalCost(a,{kind:'object',id:context.ingredient.id},'pickup'))
+          &&Number.isFinite(targetTraversalCost(a,{kind:'object',id:context.pot.id},'receive'))
           &&evidence?.observedTick===state.tick&&evidence?.ingredientId===context.ingredient.id&&evidence?.potId===context.pot.id
           &&ingredientObservation?.visualAvailable===true&&potObservation?.visualAvailable===true
           &&(!reservationOwner('object:'+context.ingredient.id)||reservationOwner('object:'+context.ingredient.id).id===a.id)
           &&(!reservationOwner('object:'+context.pot.id)||reservationOwner('object:'+context.pot.id).id===a.id)
           &&Number.isFinite(targetTraversalCost(a,stationTarget,'default'));
-        action=available?{...base,phase:'toStation',ingredientId:context.ingredient.id,stationId:context.station.id,potId:context.pot.id,recipeId:C.RECIPE_ID,progressTicks:0}:null;
+        action=available?{...base,phase:'toStation',ingredientId:context.ingredient.id,stationId:context.station.id,potId:context.pot.id,recipeId:C.RECIPE_ID,progressTicks:0,loadEventId:null}:null;
         break;
       }
       case'read':{const object=state.objects?.[choice.targetObject],target=object?{kind:'object',id:object.id}:null,valid=a.kind==='human'&&object?.affordances?.includes('read')&&Number.isFinite(targetTraversalCost(a,target,'read'));action=valid?{...base,phase:SP.isAtInteraction(state,a,target,'read')?'reading':'move',targetObject:object.id,feedbackUnits:0,feedbackGoal:6}:null;break;}
@@ -661,9 +663,13 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
     abortAction(a,'未知的收納階段');
   }
   function stepCookMeal(a,p){
-    const context=C.eligible(state,p.ingredientId,p.stationId);
-    if(!context||context.pot.id!==p.potId){abortAction(a,'料理所需食材、鍋具或爐具已失效',{dropHeld:false});return;}
-    if(a.held){abortAction(a,'料理時不能同時搬運其他物件');return;}
+    const context=C.eligible(state,p.ingredientId,p.stationId,{actorId:a.id});
+    if(!context||context.pot.id!==p.potId){
+      abortAction(a,'料理所需食材、鍋具或爐具已失效',{dropHeld:a.held===p.ingredientId});return;
+    }
+    if(a.held&&a.held!==p.ingredientId){
+      abortAction(a,'料理時不能同時搬運其他物件',{dropHeld:false});return;
+    }
     if(p.phase==='toStation'){
       if(!reserve('object:'+p.ingredientId,a)||!reserve('object:'+p.potId,a)||!reserve('furniture:'+p.stationId,a)){
         p.wait=(p.wait||0)+1;
@@ -671,22 +677,59 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
         return;
       }
       if(!moveToInteraction(a,{kind:'furniture',id:p.stationId},'前往瓦斯爐','default'))return;
+      p.phase='toIngredient';return;
+    }
+    if(state.reservations['object:'+p.ingredientId]!==a.id||state.reservations['object:'+p.potId]!==a.id||state.reservations['furniture:'+p.stationId]!==a.id){
+      abortAction(a,'料理預約已失效',{dropHeld:a.held===p.ingredientId});return;
+    }
+    if(p.phase==='toIngredient'){
+      if(context.location!=='exposed'){
+        abortAction(a,'料理材料不在可拿取的檯面',{dropHeld:false});return;
+      }
+      if(!moveToInteraction(a,{kind:'object',id:p.ingredientId},'前往拿取食材','pickup'))return;
+      if(!holdObject(a,p.ingredientId)){
+        abortAction(a,'無法拿取料理材料',{dropHeld:false});return;
+      }
+      p.phase='toPot';return;
+    }
+    if(p.phase==='toPot'){
+      if(context.location!=='carried'||a.held!==p.ingredientId){
+        abortAction(a,'料理材料不再由自己持有',{dropHeld:a.held===p.ingredientId});return;
+      }
+      if(!moveToInteraction(a,{kind:'object',id:p.potId},'將食材放入鍋具','receive'))return;
+      if(!containHeldObject(a,p.potId)){
+        abortAction(a,'鍋具無法合法收納料理材料',{dropHeld:true});return;
+      }
+      p.loadEventId=addEvent(a.name+'將完整食材放入料理鍋。','normal',[],{
+        actor:a.id,action:'cookMeal',phase:'loadPot',ingredientId:p.ingredientId,
+        potId:p.potId,stationId:p.stationId,unit:'g',inputMassGrams:context.inputMassGrams,
+        entities:['object:'+p.ingredientId,'object:'+p.potId,'furniture:'+p.stationId]
+      });
+      p.phase='toCookingContact';return;
+    }
+    if(p.phase==='toCookingContact'){
+      if(context.location!=='loaded'||a.held){
+        abortAction(a,'料理材料尚未合法放入鍋中',{dropHeld:false});return;
+      }
+      if(!moveToInteraction(a,{kind:'furniture',id:p.stationId},'返回瓦斯爐料理','default'))return;
       p.phase='cooking';p.progressTicks=0;return;
     }
     if(p.phase==='cooking'){
-      if(!SP.isAtInteraction(state,a,{kind:'furniture',id:p.stationId},'default')){
-        p.phase='toStation';return;
+      if(context.location!=='loaded'||a.held){
+        abortAction(a,'鍋內材料已被取走',{dropHeld:false});return;
       }
-      if(state.reservations['object:'+p.ingredientId]!==a.id||state.reservations['object:'+p.potId]!==a.id||state.reservations['furniture:'+p.stationId]!==a.id){
-        abortAction(a,'料理預約已失效',{dropHeld:false});return;
+      if(!SP.isAtInteraction(state,a,{kind:'furniture',id:p.stationId},'default')){
+        p.phase='toCookingContact';return;
       }
       p.progressTicks++;
       if(p.progressTicks<C.REQUIRED_TICKS)return;
       const result=C.complete(state,a,p,addEvent);
-      if(!result.completed){abortAction(a,'料理完成時材料重驗失敗：'+result.reason,{dropHeld:false});return;}
+      if(!result.completed){
+        abortAction(a,'料理完成時材料重驗失敗：'+result.reason,{dropHeld:false});return;
+      }
       finishAction(a,{dropHeld:false});return;
     }
-    abortAction(a,'未知料理階段',{dropHeld:false});
+    abortAction(a,'未知料理階段',{dropHeld:a.held===p.ingredientId});
   }
   function stepAction(a){const p=a.action;if(!p)return;if(locomotionRuntime())clearLocomotionState(a);switch(p.kind){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petAnimal':case'seekHuman':stepSocial(a,p);break;case'carryAgent':stepCarryAgent(a,p);break;case'restockContainer':stepRestock(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'cookMeal':stepCookMeal(a,p);break;case'putAwayObject':stepPutAwayObject(a,p);break;case'wander':stepWander(a,p);break;case'externalSupply':stepExternalSupply(a,p);break;default:finishAction(a);}}
   function needDrift(){for(const a of Object.values(state.agents)){const sleeping=isSleeping(a),metabolic=sleeping?.12:1,socialNeedGain=.75+T.value(a,'social')*.5;a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55)*metabolic);a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75)*metabolic);if(!sleeping){a.needs.fatigue=clamp(a.needs.fatigue+rand(.005,.02));a.needs.sleepNeed=clamp(a.needs.sleepNeed+sleepProfile(a).sleepNeedGainPerTick);a.needs.social=clamp(a.needs.social+rand(.05,.3)*socialNeedGain);}else a.needs.social=clamp(a.needs.social+rand(.05,.3)*.12*socialNeedGain);if(a.kind==='cat')a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28)*metabolic);a.status.intoxication=clamp(a.status.intoxication-rand(.05,.18));}}

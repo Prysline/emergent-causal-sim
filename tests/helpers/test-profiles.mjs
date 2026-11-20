@@ -133,10 +133,9 @@ function ensureRuntimeDependencies(paths){
     paths.splice(paths.indexOf('engine.js'),0,'food-contract.js');
   }
   if(coreEngineIndex>=0){
-    for(const dep of ['food-ingredient-contract.js','food-cooking-contract.js']){
-      const prior=paths.indexOf(dep);if(prior>=0)paths.splice(prior,1);
-      paths.splice(paths.indexOf('engine.js'),0,dep);
-    }
+    const dep='food-ingredient-contract.js',prior=paths.indexOf(dep);
+    if(prior>=0)paths.splice(prior,1);
+    paths.splice(paths.indexOf('engine.js'),0,dep);
   }
   const traitIndex=paths.indexOf('engine.js');
   if(traitIndex>=0&&!paths.includes('character-traits.js'))paths.splice(traitIndex,0,'character-traits.js');
@@ -211,6 +210,13 @@ function ensureRuntimeDependencies(paths){
     const learnedHabitManifestIndex=paths.indexOf('validation/manifest.js');
     if(!paths.includes('validation/rules/daily-life-learned-habit.js'))paths.splice(learnedHabitManifestIndex,0,'validation/rules/daily-life-learned-habit.js');
   }
+  // Cooking requires the canonical Object Handling and Spatial owners.
+  // Resolve it after slim profiles insert their missing physical/spatial dependencies.
+  if(paths.includes('engine.js')){
+    const dep='food-cooking-contract.js',prior=paths.indexOf(dep);
+    if(prior>=0)paths.splice(prior,1);
+    paths.splice(paths.indexOf('engine.js'),0,dep);
+  }
   return paths;
 }
 
@@ -239,7 +245,10 @@ export function runtimeProfilePaths(paths){
   if(engineIndex<0)throw new Error('Runtime test profile requires engine.js.');
   if(!current.includes('world.js'))throw new Error('Runtime test profile requires world.js.');
   if(!current.includes('spatial.js'))throw new Error('Runtime test profile requires spatial.js.');
-  if(!current.includes('spatial/finalize.js'))current.splice(engineIndex,0,'spatial/finalize.js');
+  if(!current.includes('spatial/finalize.js')){
+    const cookingIndex=current.indexOf('food-cooking-contract.js');
+    current.splice(cookingIndex>=0?cookingIndex:engineIndex,0,'spatial/finalize.js');
+  }
   const finalizerIndex=current.indexOf('spatial/finalize.js');
   const resolvedEngineIndex=current.indexOf('engine.js');
   if(finalizerIndex>resolvedEngineIndex)throw new Error('spatial/finalize.js must load before engine.js.');

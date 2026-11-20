@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.70.0-food-v1-f1b-bounded-cooking`。
+目前 runtime marker：`11.71.0-food-v1-f1b2-pot-loading`。
+
+Current Food F1-B2 Pot Loading：Cooking Action 沿用現有 Engine ordinary Object pickup/containHeldObject、canonical Spatial pickup/receive interaction、同一 Actor Intent 與予約，先將可觀察完整 Ingredient 從爐面放入具備 `objectContainment:true`、有界 `objectStorage` 的鍋子；鍋內物件只保存子端 `containedBy`，質量與負重不另開 Food 鏡像。`loadPot` World Event 為原料原子轉換 `complete` 的 causeId；未有合法放入、當下仍在鍋內、持續預約與接觸時不可完成。鍋內 Ingredient 對其他 Agent 不憑空可視，完成後的 F0 Meal 仍在合法爐具表面供原有 eat 使用。Cooking own generation 為 `food-cooking-f1b2-pot-loading`；World Authoring v22、Furniture v14、Ingredient v1、Meal F0、Object Handling／Spatial／Perception 不假增版。詳見 [`food-v1-f1b2-pot-loading.md`](food-v1-f1b2-pot-loading.md)。
 
 Current Food F1-B1 Cooking：`SimFoodCooking` 僅擁有 first bounded Type A whole-Ingredient → Meal 等重 recipe rule；input mass 單位來自 `SimIngredient.massGrams(Object.handling.massKg)`，output 食用重量由 `SimFood` F0 `Meal.edibleMassGrams` 擁有，完成時單一 material-transaction Event 連回已退休原料 ID。Decision option 使用當下可視證據及 `gas-stove` canonical Furniture 支撐／互動幾何，Engine 原有 Action／reservation／interruption 逐 tick 消費，成品仍在原合法爐具 Surface 且原有 eat 消費。pot 是同一爐具位置的普通 Object；尚無其內容物 containment 或單獨烹調庫存。Furniture Catalog 前進 v14、Cooking own generation `food-cooking-f1b1`；World Authoring v22、F0 Meal、Ingredient v1、Action／Spatial／Resources own markers 不假升。詳見 [`food-v1-f1b-cooking.md`](food-v1-f1b-cooking.md)。
 
