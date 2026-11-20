@@ -132,6 +132,12 @@ function ensureRuntimeDependencies(paths){
     const prior=paths.indexOf('food-contract.js');if(prior>=0)paths.splice(prior,1);
     paths.splice(paths.indexOf('engine.js'),0,'food-contract.js');
   }
+  if(coreEngineIndex>=0){
+    for(const dep of ['food-ingredient-contract.js','food-cooking-contract.js']){
+      const prior=paths.indexOf(dep);if(prior>=0)paths.splice(prior,1);
+      paths.splice(paths.indexOf('engine.js'),0,dep);
+    }
+  }
   const traitIndex=paths.indexOf('engine.js');
   if(traitIndex>=0&&!paths.includes('character-traits.js'))paths.splice(traitIndex,0,'character-traits.js');
   let engineIndex=paths.indexOf('engine.js');
