@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.70.0-food-v1-f1b-bounded-cooking`。
+目前 overall runtime marker：`11.71.0-food-v1-f1b2-pot-loading`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -64,9 +64,13 @@ Current relevant markers：
 - Food Meal F0：`food-v1-f0`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v14-kitchen`
-- Food Cooking：`food-cooking-f1b1`
+- Food Cooking：`food-cooking-f1b2-pot-loading`
 
 ## Current release impact
+
+`11.71.0-food-v1-f1b2-pot-loading`：F1-B1 的 Cooking Action 由『鍋具與食材同置爐面』改為真正使用原有 Engine Object pickup／`containHeldObject` 將完整 Ingredient 放入有界可搬運鍋具（`Object.containedBy=potId`），並以 `loadPot` 單一 World Event 連接後續 `complete` 質量轉換。鍋具負重由現有 Object Handling 派生；材料在持有／收納狀態切換期間仍只有單一 canonical 身份與 `handling.massKg`。Cooking completion 必須重驗鍋內唯一 Ingredient、預約、Interaction 及載入事件，否則 fail closed。Meal F0 成品仍合法支撐在同一爐面，不能假稱為可攜鍋內 Meal；Serving／externalSupply／舊 `contents.food` migration 與完整場景尚待其他 Gate。Cooking generation → `food-cooking-f1b2-pot-loading`；Furniture v14、World Authoring v22、Ingredient v1、Meal F0、Object Handling、Spatial、Perception 等 own markers 不變。詳見 [`food-v1-f1b2-pot-loading.md`](food-v1-f1b2-pot-loading.md)。
+
+前一個 release：
 
 `11.70.0-food-v1-f1b-bounded-cooking`：加入第一個有界 Cooking Activity consumer：只在觀察到完整 Type A Ingredient 與實際鍋子、合法可到達的 gas-stove Furniture 時，沿用既有 Decision Option、Engine Action、Spatial、預約與中斷機制逐 tick 加工；完成時重驗並原子退休整顆 Ingredient，於同一爐具支撐位置建立可由原本 `eat` Action 消費的 F0 Meal，並以單一 World Event 記錄實際投入／產出／加工流出 g（首個等重案例 300/300/0，非通用 100% yield）。新增 kitchen-counter／gas-stove Furniture Definition，`furniture-definitions-v14-kitchen`；Cooking generation `food-cooking-f1b1`，World Authoring v22、Meal F0、Ingredient v1、通用 Handling/Resources/Intent/Spatial own markers 未變。鍋內收納、盛餐、供應與舊 `contents.food` 遷移不包含。詳見 [`food-v1-f1b-cooking.md`](food-v1-f1b-cooking.md)。
 
