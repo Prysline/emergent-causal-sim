@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial,O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimValidator;
-assert.equal(A.VERSION,'world-authoring-v21');
+assert.equal(A.VERSION,'world-authoring-v22');
 assert.equal(O.VERSION,'object-handling-v2-movable-containment');
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
