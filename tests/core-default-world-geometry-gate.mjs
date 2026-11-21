@@ -389,62 +389,38 @@ for (const name of ['A', 'B']) {
     }));
 }
 
-// TEST-ONLY temporary consumer preflight for layout comparison (PR #246).
-// An unsupported PoseEnvelope yields no legal visual evidence. Never synthesize
-// standing sight samples or mutate canonical Agent-private knowledge.
-// Remove this scoped shim after the separate bug-fix workstream is merged.
-const productionObjectVisibility = P.classifyObjectPointVisualAvailability;
-let unsupportedPostureQueries = 0;
-P.classifyObjectPointVisualAvailability = (st, observer, object) => {
-  const posture = observer?.posture?.kind;
-  if ((posture === 'kneeling' || posture === 'prone') &&
-      !globalThis.SimPhysical.getPoseEnvelope(observer, posture)) {
-    unsupportedPostureQueries++;
-    return Object.freeze({
-      visualAvailable: false,
-      unavailableReason: 'unsupported-pose-envelope',
-      observedTick: st.tick,
+// Autonomous Deliberation smoke: production sight posture preflight must be
+// effective without any test-only Perception overrides or fabricated observations.
+for (const name of ['A', 'B']) {
+  currentControlledDoc = controlledCandidate(name);
+  E.reset(20261121);
+  const st = E.getState();
+  for (const agent of Object.values(st.agents)) {
+    Object.assign(agent.needs, {
+      hunger: 45, thirst: 38, fatigue: 38, sleepNeed: 43,
+      social: 35, stimulation: 15, relaxation: 15,
     });
   }
-  return productionObjectVisibility(st, observer, object);
-};
-try {
-  for (const name of ['A', 'B']) {
-    currentControlledDoc = controlledCandidate(name);
-    E.reset(20261121);
-    const st = E.getState();
-    for (const agent of Object.values(st.agents)) {
-      Object.assign(agent.needs, {
-        hunger: 45, thirst: 38, fatigue: 38, sleepNeed: 43,
-        social: 35, stimulation: 15, relaxation: 15,
-      });
+  const before = V.validateState(st);
+  assert.equal(before.issueCount, 0,
+    name + ' initial state: ' + before.issues.map(x => x.code).join(','));
+  const choices = [];
+  for (let tick = 0; tick < 36; tick++) {
+    E.tick();
+    for (const [id, thought] of Object.entries(st.thoughts || {})) {
+      if (thought?.tick === st.tick && thought.pick?.id) choices.push(id + ':' + thought.pick.id);
     }
-    const before = V.validateState(st);
-    assert.equal(before.issueCount, 0,
-      name + ' initial state: ' + before.issues.map(x => x.code).join(','));
-    const choices = [];
-    for (let tick = 0; tick < 36; tick++) {
-      E.tick();
-      for (const [id, thought] of Object.entries(st.thoughts || {})) {
-        if (thought?.tick === st.tick && thought.pick?.id) choices.push(id + ':' + thought.pick.id);
-      }
-    }
-    const after = V.validateState(st);
-    assert.equal(after.issueCount, 0,
-      name + ' after autonomous ticks: ' + after.issues.map(x => x.code).join(','));
-    assert.equal(st.tick, 36, name + ': autonomous Engine must advance 36 ticks');
-    assert.ok(choices.length > 0, name + ': Deliberation must make real decisions');
-    console.log('Core default autonomous tick smoke ' + name + ': ' +
-      JSON.stringify({
-        tick: st.tick, choices: [...new Set(choices)].sort(),
-        events: st.events.length,
-        agentActions: Object.fromEntries(Object.values(st.agents).map(a => [a.id, a.action?.kind || null])),
-      }));
   }
-} finally {
-  P.classifyObjectPointVisualAvailability = productionObjectVisibility;
+  const after = V.validateState(st);
+  assert.equal(after.issueCount, 0,
+    name + ' after autonomous ticks: ' + after.issues.map(x => x.code).join(','));
+  assert.equal(st.tick, 36, name + ': autonomous Engine must advance 36 ticks');
+  assert.ok(choices.length > 0, name + ': Deliberation must make real decisions');
+  console.log('Core default autonomous tick smoke ' + name + ': ' +
+    JSON.stringify({
+      tick: st.tick, choices: [...new Set(choices)].sort(),
+      events: st.events.length,
+      agentActions: Object.fromEntries(Object.values(st.agents).map(a => [a.id, a.action?.kind || null])),
+    }));
 }
-assert.ok(unsupportedPostureQueries > 0,
-  'The layout fixture must exercise the known unsupported-posture boundary');
-console.log('TEMPORARY layout test-only visual guard: ' +
-  unsupportedPostureQueries + ' unsupported-posture queries, not a production fix');
+
