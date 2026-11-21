@@ -28,6 +28,7 @@ jobs:
           node-version: 22
       - run: node tests/check-source-syntax.mjs
       - run: node tests/food-v1-f0.mjs
+      - run: node tests/food-meal-serving.mjs
       - run: node tests/food-v1-f1a-ingredient.mjs
       - run: node tests/food-v1-f1b-cooking.mjs
       - run: node tests/food-v1-f1b2-pot-loading.mjs
