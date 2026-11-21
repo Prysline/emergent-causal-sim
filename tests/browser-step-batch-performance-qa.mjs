@@ -1,5 +1,11 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
+
+globalThis.window=globalThis;
+loadProductionBefore('src/ui/core.js');
+const fixedBenchmarkWorld=legacyResourceWorld(globalThis.SimWorldAuthoring);
 import {chromium} from 'playwright';
 
 const outDir='artifacts/browser-step-batch-performance-qa';
@@ -219,6 +225,15 @@ async function installInstrumentation(){
 async function openCase({selected=false}={}){
   await page.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await page.waitForFunction(()=>window.SimEngine?.getState?.()&&window.SimUI?.isStarted?.());
+  // The 3813-query baseline belongs to the original explicit 12×8
+  // benchmark workload, not to whatever geometry the current product default
+  // happens to ship. Run it as a separate test-only authoring fixture.
+  await page.evaluate(doc=>{
+    const E=window.SimEngine,W=window.SimWorld;
+    E.configureResetStateSource('step-batch-fixed-legacy-house',
+      seed=>W.createInitialStateFromAuthoring(doc,seed));
+    document.getElementById('reset').click();
+  },fixedBenchmarkWorld);
   if(selected){
     const agent=page.locator('[data-entity="agent:zhen"]').first();
     await agent.click();
