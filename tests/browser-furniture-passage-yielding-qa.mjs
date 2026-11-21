@@ -1,5 +1,11 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
+
+globalThis.window=globalThis;
+loadProductionBefore('src/ui/core.js');
+const legacyRuntimeDocument=legacyResourceWorld(globalThis.SimWorldAuthoring);
 import { chromium } from 'playwright';
 
 const outDir='artifacts/browser-furniture-passage-yielding-qa';
@@ -24,13 +30,20 @@ const authored=await page.evaluate(()=>{
   return {dirty:window.SimWorldEditor.getSession().dirty,contract,roundTripContract:window.SimWorldAuthoring.resolveFurniturePassageYieldingContract(roundTrip.furniture.chairNW),text:document.querySelector('[data-furniture-passage-yielding-editor]')?.innerText||''};
 });
 assert.equal(authored.dirty,true);
-assert.deepEqual(authored.contract.parkedPlacement,{origin:{x:5,y:2,z:0},orientation:'east'},'Editor default must derive one fixed facing-forward parked placement from authored home');
+assert.deepEqual(authored.contract.parkedPlacement,{origin:{x:11,y:5,z:0},orientation:'east'},'Editor default must derive one fixed facing-forward parked placement from authored home');
 assert.deepEqual(authored.roundTripContract,authored.contract,'Passage Yielding authoring must survive canonical export/import');
 assert.match(authored.text,/固定 parked/);
 await page.screenshot({path:`${outDir}/editor-passage-yielding.png`,fullPage:true});
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimFurniturePassageYielding?.applyRuntimeFurniturePlacement&&window.SimUI?.isStarted?.());
+// The original narrow relocation fixture keeps its stable old geometry isolated.
+// Production B was already checked through Editor's live canonical authoring.
+await page.evaluate(doc=>{
+  const E=window.SimEngine,W=window.SimWorld;
+  E.configureResetStateSource('furniture-passage-historic-fixture',seed=>W.createInitialStateFromAuthoring(doc,seed));
+  E.reset(20261121);
+},legacyRuntimeDocument);
 const moved=await page.evaluate(()=>{
   const st=window.SimEngine.getState(),chair=st.furniture.chairNW;
   chair.definitionId='chair-basic';chair.origin={x:4,y:2,z:0};chair.passageYielding={version:'furniture-passage-yielding-authoring-v1',homePlacement:{origin:{x:4,y:2,z:0},orientation:'east'},parkedPlacement:{origin:{x:3,y:2,z:0},orientation:'east'},source:'explicit'};

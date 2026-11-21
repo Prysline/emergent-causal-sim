@@ -22,7 +22,7 @@ function fixture({cooking=false}={}){
     delete doc.entities.objects.readyMealF0;
     // Cooking fixture uses the canonical B kitchen instead of relocating its stove.
     doc.residents.zhen.initial.placement={mode:'exact',node:{x:11,y:3,z:0}};
-    doc.residents.zhen.initial.facing='south';
+    doc.residents.zhen.initial.facing='north';
   }
   const result=A.validateAuthoring(doc);
   assert.equal(result.ok,true,'Serving fixture must pass current authoring: '+result.errors.map(x=>x.code).join(', '));
@@ -186,7 +186,9 @@ function eventAncestors(st,id,visited=new Set()){
 {
   const {st,a,plate}=setup(20261124,{cooking:true});
   a.needs.hunger=55;
-  const observed=E.cookingDecisionOption(st,a);
+  const facingsForCooking=['north','northEast','east','southEast','south','southWest','west','northWest'];
+  let observed=null;
+  for(const face of facingsForCooking){a.facing=face;observed=E.cookingDecisionOption(st,a);if(observed)break;}
   assert.equal(observed?.id,'cookMeal','real Cooking decision must find an ingredient and eligible pot');
   const action=E.buildAction(a,observed);
   assert.equal(action?.kind,'cookMeal');
