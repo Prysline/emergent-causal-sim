@@ -280,6 +280,18 @@
     if(!(amount>.2))return null;
     return {targetTile:SP.clonePos(node),amount,observedTick:state.tick,nodeKey:positionRef(node)};
   }
+  // The legacy Resource serving dishes remain distinct from new ordinary Object plates.
+  function chooseMealServingDish(a,meal){
+    if(a?.kind!=='human'||a.offMap||a.held||!meal||meal.containedBy)return null;
+    if(!Number.isFinite(targetTraversalCost(a,{kind:'object',id:meal.id},'serve')))return null;
+    const plates=Object.values(state.objects).filter(plate=>F.isServingPlate(plate)
+      &&O.canHoldObject(state,a,plate)&&!O.containedObjects(state,plate.id).length
+      &&!holderOf(plate.id)&&!reservationOwner('object:'+plate.id))
+      .map(plate=>({plate,d:targetTraversalCost(a,{kind:'object',id:plate.id},'pickup')}))
+      .filter(item=>Number.isFinite(item.d))
+      .sort((x,y)=>x.d-y.d||x.plate.id.localeCompare(y.plate.id));
+    return plates[0]?.plate||null;
+  }
   function edibleFoodContainers(a){return Object.values(state.objects).filter(c=>c.canEatFrom&&(c.contents?.food||0)>.05&&(!holderOf(c.id)||holderOf(c.id)?.id===a?.id));}
   function availableFoodAmount(a){return edibleFoodContainers(a).reduce((sum,c)=>sum+(c.contents?.food||0),0);}
   function chooseFoodSource(a,{readyOnly=false}={}){const source=edibleFoodContainers(a).filter(c=>!readyOnly||SP.hasRole(c,'readyFood')).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'eatFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d||(x.c.servingDish?0:1)-(y.c.servingDish?0:1));return source[0]?.c||null;}
@@ -490,9 +502,86 @@
         p.foodSource=meal.id;p.container=null;p.targetMassGrams=F.targetIntakeGrams(p.mealStartHunger??a.needs.hunger,meal);
         p.consumedMassGrams=0;p.lastIntakeEventId=null;
         if(p.targetMassGrams<=0){finishAction(a);return;}
-        p.mealStartEventId=addEvent(a.name+'開始食用'+meal.name+'。','normal',[],{actor:a.id,action:'eat',phase:'start',from:meal.id,foodKind:'meal',position:positionRef(a.position)});
+        const plate=chooseMealServingDish(a,meal);
+        if(plate&&reserve('object:'+plate.id,a)){
+          p.container=plate.id;
+          p.mealStartEventId=addEvent(a.name+'準備將'+meal.name+'盛入餐盤。','normal',[meal.producedByEventId].filter(Boolean),{actor:a.id,action:'eat',phase:'startServing',from:meal.id,to:plate.id,foodKind:'meal',position:positionRef(a.position)});
+          p.phase='toMealDish';return;
+        }
+        p.mealStartEventId=addEvent(a.name+'開始食用'+meal.name+'。','normal',[meal.servedByEventId||meal.producedByEventId].filter(Boolean),{actor:a.id,action:'eat',phase:'start',from:meal.id,foodKind:'meal',position:positionRef(a.position)});
         p.phase='toMeal';return;
       }
+    }
+    if(p.phase==='toMealDish'){
+      const plate=state.objects[p.container];
+      if(!F.isServingPlate(plate)||O.containedObjects(state,plate.id).length||holderOf(plate.id)?.id!==undefined||!reserve('object:'+plate.id,a)){
+        abortAction(a,'餐盤已無法合法取得',{dropHeld:false});return;
+      }
+      if(!moveToInteraction(a,{kind:'object',id:plate.id},'前往拿取盛餐餐盤','pickup'))return;
+      p.phase='takeMealDish';return;
+    }
+    if(p.phase==='takeMealDish'){
+      if(!holdObject(a,p.container)){abortAction(a,'無法拿起餐盤',{dropHeld:false});return;}
+      releaseReservation('object:'+p.container,a);
+      addEvent(a.name+'拿起了'+endpointName(p.container)+'。','normal',[p.mealStartEventId].filter(Boolean),{actor:a.id,action:'takeServingDish',container:p.container,position:positionRef(a.position)});
+      p.phase='toMealServe';return;
+    }
+    if(p.phase==='toMealServe'){
+      if(a.held!==p.container){abortAction(a,'失去盛餐用餐盤',{dropHeld:false});return;}
+      const source=state.objects[p.foodSource];
+      if(!source||!F.validMeal(source)||source.containedBy||holderOf(source.id)){
+        abortAction(a,'待盛取的餐點已經不存在');return;
+      }
+      if(!moveToInteraction(a,{kind:'object',id:source.id},'攜餐盤前往盛取餐點','serve'))return;
+      p.phase='serveMeal';return;
+    }
+    if(p.phase==='serveMeal'){
+      const source=state.objects[p.foodSource],plate=state.objects[p.container];
+      if(a.held!==p.container||!source||!F.validMeal(source)||source.containedBy||holderOf(source.id)||!F.isServingPlate(plate)){
+        abortAction(a,'目前無法繼續盛取餐點');return;
+      }
+      if(!SP.isAtInteraction(state,a,{kind:'object',id:source.id},'serve')){p.phase='toMealServe';return;}
+      if(!reserve('object:'+source.id,a)){
+        p.wait=(p.wait||0)+1;
+        if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'餐點持續被其他行動佔用');
+        return;
+      }
+      p.wait=0;
+      const originalMealId=source.id,originEventId=source.servedByEventId||source.producedByEventId;
+      const newMealId='served:'+source.id+':'+state.tick+':'+a.id;
+      const result=F.serveMeal(state,originalMealId,p.container,p.targetMassGrams,newMealId);
+      releaseReservation('object:'+originalMealId,a);
+      if(!result.served){abortAction(a,'盛餐條件已失效：'+result.reason);return;}
+      const e=addEvent(a.name+'將'+result.actualGrams+' 公克餐點盛入'+endpointName(p.container)+'。','good',
+        [p.mealStartEventId,originEventId].filter(Boolean),{
+          actor:a.id,action:'eat',phase:'serveMeal',foodKind:'meal',
+          from:originalMealId,to:p.container,sourceMealId:originalMealId,mealId:result.servedMealId,
+          servedGrams:result.actualGrams,remainingSourceGrams:result.remainingSourceGrams,
+          fullTransfer:result.full,unit:'g',position:positionRef(a.position),
+          entities:['object:'+originalMealId,'object:'+result.servedMealId,'object:'+p.container]
+        });
+      state.objects[result.servedMealId].servedByEventId=e;
+      p.foodSource=result.servedMealId;p.targetMassGrams=result.actualGrams;p.consumedMassGrams=0;
+      p.mealStartEventId=e;p.phase='toMealDining';return;
+    }
+    if(p.phase==='toMealDining'){
+      if(a.held!==p.container){abortAction(a,'途中失去了裝有餐點的餐盤',{dropHeld:false});return;}
+      if(!p.mealDiningPosition){
+        const seat=mealSlots(a)[0];
+        p.mealDiningPosition=seat?.position?{...seat.position}:null;
+      }
+      if(p.mealDiningPosition&&!moveToExact(a,p.mealDiningPosition,'將盛好的餐點帶到用餐位置'))return;
+      p.phase='placeMealDish';return;
+    }
+    if(p.phase==='placeMealDish'){
+      if(a.held!==p.container){abortAction(a,'無法放下裝有餐點的餐盤',{dropHeld:false});return;}
+      const placement=releaseHeld(a);
+      const e=addEvent(a.name+'放下裝有餐點的'+endpointName(p.container)+'。','normal',[p.mealStartEventId],{
+        actor:a.id,action:'eat',phase:'placeMealDish',container:p.container,mealId:p.foodSource,
+        supportId:placement?.supportId||null,position:positionRef(a.position),
+        entities:['object:'+p.container,'object:'+p.foodSource]
+      });
+      p.mealStartEventId=e;p.phase='toMeal';return;
     }
     if(p.phase==='toMeal'){
       const meal=state.objects[p.foodSource],target={kind:'object',id:p.foodSource};
