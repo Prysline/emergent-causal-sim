@@ -1,11 +1,5 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import {loadProductionBefore} from './helpers/production-loader.mjs';
-import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
-
-globalThis.window=globalThis;
-loadProductionBefore('src/ui/core.js');
-const legacyRuntimeDocument=legacyResourceWorld(globalThis.SimWorldAuthoring);
 import { chromium } from 'playwright';
 
 const outDir='artifacts/browser-furniture-passage-yielding-qa';
@@ -37,22 +31,16 @@ await page.screenshot({path:`${outDir}/editor-passage-yielding.png`,fullPage:tru
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimFurniturePassageYielding?.applyRuntimeFurniturePlacement&&window.SimUI?.isStarted?.());
-// The original narrow relocation fixture keeps its stable old geometry isolated.
-// Production B was already checked through Editor's live canonical authoring.
-await page.evaluate(doc=>{
-  const E=window.SimEngine,W=window.SimWorld;
-  E.configureResetStateSource('furniture-passage-historic-fixture',seed=>W.createInitialStateFromAuthoring(doc,seed));
-  E.reset(20261121);
-},legacyRuntimeDocument);
+// Exercise the same explicit relocation transaction on free cells in B.
 const moved=await page.evaluate(()=>{
   const st=window.SimEngine.getState(),chair=st.furniture.chairNW;
-  chair.definitionId='chair-basic';chair.origin={x:4,y:2,z:0};chair.passageYielding={version:'furniture-passage-yielding-authoring-v1',homePlacement:{origin:{x:4,y:2,z:0},orientation:'east'},parkedPlacement:{origin:{x:3,y:2,z:0},orientation:'east'},source:'explicit'};
-  const before={old:[...(st.map.tiles['4,2']?.furnitureIds||[])],next:[...(st.map.tiles['3,2']?.furnitureIds||[])]};
+  chair.definitionId='chair-basic';chair.origin={x:10,y:5,z:0};chair.passageYielding={version:'furniture-passage-yielding-authoring-v1',homePlacement:{origin:{x:10,y:5,z:0},orientation:'east'},parkedPlacement:{origin:{x:9,y:5,z:0},orientation:'east'},source:'explicit'};
+  const before={old:[...(st.map.tiles['10,5']?.furnitureIds||[])],next:[...(st.map.tiles['9,5']?.furnitureIds||[])]};
   const result=window.SimFurniturePassageYielding.applyRuntimeFurniturePlacement(st,'chairNW',chair.passageYielding.parkedPlacement);
-  return {ok:result.ok,reason:result.reason||null,origin:st.furniture.chairNW.origin,displayAt:st.furniture.chairNW.displayAt,before,after:{old:[...(st.map.tiles['4,2']?.furnitureIds||[])],next:[...(st.map.tiles['3,2']?.furnitureIds||[])]}};
+  return {ok:result.ok,reason:result.reason||null,origin:st.furniture.chairNW.origin,displayAt:st.furniture.chairNW.displayAt,before,after:{old:[...(st.map.tiles['10,5']?.furnitureIds||[])],next:[...(st.map.tiles['9,5']?.furnitureIds||[])]}};
 });
 assert.equal(moved.ok,true,moved.reason||'runtime Furniture placement must succeed');
-assert.deepEqual(moved.origin,{x:3,y:2,z:0});
+assert.deepEqual(moved.origin,{x:9,y:5,z:0});
 assert.equal(moved.after.old.includes('chairNW'),false);
 assert.equal(moved.after.next.includes('chairNW'),true);
 await page.click('#step');

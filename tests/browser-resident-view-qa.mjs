@@ -99,7 +99,7 @@ for(const text of Object.values(postureProjection.missing))assert.match(text,/å§
 const placeProjection=await page.evaluate(()=>{
   const E=window.SimEngine,SP=window.SimSpatial,UI=window.SimUI,st=E.getState(),a=st.agents.zhen;
   const original={position:structuredClone(a.position),posture:structuredClone(a.posture)};
-  a.position={...SP.normalizeNode(st,st.furniture.diningTable.origin,'floor')};a.posture={kind:'standing',slotId:null,furnitureId:null};UI.setCurrentZ(UI.getCurrentZ());
+  a.position={...SP.normalizeNode(st,st.furniture.diningTable.footprint[0],'floor')};a.posture={kind:'standing',slotId:null,furnitureId:null};UI.setCurrentZ(UI.getCurrentZ());
   const standing=document.querySelector('.action-card.agent-zhen .action-location')?.textContent||'';
   const chair=SP.getSlot(st,'chairNE:seat');a.position={...chair.position};a.posture={kind:'sitting',slotId:chair.id,furnitureId:chair.furnitureId};UI.setCurrentZ(UI.getCurrentZ());
   const sitting=document.querySelector('.action-card.agent-zhen .action-location')?.textContent||'';
