@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {useLegacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,F=globalThis.SimFood,A=globalThis.SimWorldAuthoring;
+const E=globalThis.SimEngine,F=globalThis.SimFood,A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const near=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-8,msg+' expected '+b+', got '+a);
 const noIssues=label=>{const report=V.validateState(E.getState());assert.equal(report.issueCount,0,label+': '+report.issues.map(i=>i.code).join(', '));};
@@ -42,7 +43,7 @@ function startMeal(a){
   return p;
 }
 
-assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(A.VERSION,'world-authoring-v25');
 assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(F.INTAKE_GRAMS_PER_TICK,50);
 assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
@@ -189,8 +190,9 @@ assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
   noIssues('emergency after real intake');
 }
 {
+  useLegacyResourceWorld(A,W,E);
   const {st,a}=setup({seed:261126});
-  const plate=st.objects.plateA;
+  const plate=st.objects.legacyResourcePlateA;
   plate.contents={food:6};delete plate.supportId;plate.position={...a.position};a.held=plate.id;
   a.action={kind:'eat',phase:'eatingPlate',container:plate.id,started:st.tick,wait:0};
   E.ensureIntentForAction?.(st,a);
