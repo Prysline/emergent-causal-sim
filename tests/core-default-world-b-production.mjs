@@ -101,7 +101,7 @@ const servingEvents=()=>st.events.filter(e=>e.data?.foodKind==='meal'&&e.data?.p
 const intakeEvents=()=>st.events.filter(e=>e.data?.foodKind==='meal'&&e.data?.phase==='intake');
 until(()=>servingEvents().length===1,70);
 const event=servingEvents()[0],portion=st.objects[event.data.mealId];
-assert.equal(event.data.plateId,plate.id);
+assert.equal(event.data.to,plate.id,'Serving Event must reference the real carried plate Object');
 assert.equal(event.data.servedGrams,300);
 assert.equal(event.data.remainingSourceGrams,300);
 assert.equal(portion.containedBy,plate.id);
