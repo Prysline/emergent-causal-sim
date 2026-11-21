@@ -1,6 +1,6 @@
 (() => {
   const Base=window.SimWorldAuthoring,F=window.SimFood;
-  if(Base?.VERSION!=='world-authoring-v19'||F?.VERSION!=='food-v1-f0')throw new Error('Food F0 authoring requires World Authoring v19 and the canonical Food v1 F0 contract.');
+  if(Base?.VERSION!=='world-authoring-v19'||F?.VERSION!=='food-v2-meal-serving')throw new Error('Food F0 authoring requires World Authoring v19 and the canonical Food v1 F0 contract.');
   const VERSION='world-authoring-v20',clone=Base.cloneAuthoring;
   const hasMeal=F.hasMeal,validMeal=F.validMeal;
   function baseDocument(source){
@@ -13,7 +13,9 @@
     if(source?.authoringSchema!==VERSION)errors.push({code:'authoring_schema_unsupported',path:'authoringSchema',message:'Expected '+VERSION});
     for(const [id,object] of Object.entries(source?.entities?.objects||{})){
       if(!hasMeal(object))continue;
-      if(!validMeal(object))errors.push({code:'food_meal_invalid',path:'entities.objects.'+id+'.meal',message:'Meal requires positive integer edible grams / standard serving grams, eatFrom affordance, exposed Object placement, and no parallel Resource inventory.'});
+      if(!validMeal(object))errors.push({code:'food_meal_invalid',path:'entities.objects.'+id+'.meal',message:'Meal requires valid integer grams, eatFrom affordance, unique placement and no parallel inventory.'});
+      else if(object.containedBy&&!F.isServingPlate(source?.entities?.objects?.[object.containedBy]))
+        errors.push({code:'food_meal_plate_invalid',path:'entities.objects.'+id+'.containedBy',message:'Contained Meal requires a clearly exposed ordinary Object serving plate.'});
     }
     return {ok:errors.length===0,errors};
   }
