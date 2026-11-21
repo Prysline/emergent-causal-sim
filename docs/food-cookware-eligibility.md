@@ -2,7 +2,7 @@
 
 ## Scope and truth
 
-- Current overall: `11.72.0-food-cookware-eligibility`; Cooking: `food-cooking-v1-cookware-eligibility`; World Authoring: `world-authoring-v23`.
+- Version boundary introduced by PR #245 (historical, not a current-release claim): overall `11.72.0-food-cookware-eligibility`; Cooking `food-cooking-v1-cookware-eligibility`; World Authoring `world-authoring-v23`. The canonical current overall release is owned by `src/release.js`; later Cooking acquisition work advances its own generation without changing this cookware qualification contract.
 - A portable ordinary Object may declare `cookingEligible: true` independently of a pot name or `kind`. The pure `SimFoodCookwareEligibility` contract (`food-cookware-eligibility-v1`) answers this temporary qualification question. A missing or explicit `false` is not eligible. Invalid types, any legacy `cookingPot` and a Resource-container marked eligible are authoring/runtime validation errors; loading a legacy document requires explicit migration, not runtime fallback.
 - Qualification is **not** heat resistance, ignition immunity or universal cooking legality. Material / Thermal / Combustion and multiple cooking techniques remain deferred.
 - Current `gas-stove` / `cookingStation:true` + `supportsObjects:true` remains the only implemented station profile. `kitchen-counter` is an ordinary support surface.

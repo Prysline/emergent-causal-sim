@@ -1,6 +1,6 @@
 # Food／Cooking — Autonomous Ingredient Acquisition v1
 
-Status: independently committed on feature branch, pending Draft PR exact-head CI and review; NOT merged into main.
+Status: [Draft PR #247](https://github.com/Prysline/emergent-causal-sim/pull/247), exact-head CI pending. NOT merged into main.
 
 ## Minimal lifecycle and canonical owners
 - One complete Type A Ingredient exists only as `state.objects[ingredientId]` with its physical grams derived from `Object.handling.massKg`; no Food-only inventory. Cooking uses existing bounded `ingredient-A-equimass` D1 recipe and existing `gas-stove` station plus `cookingEligible` pot.
