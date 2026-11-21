@@ -67,7 +67,8 @@ assert.equal(SP.recomputeRooms(initial) instanceof Object,true);
 assert.equal(Object.keys(SP.recomputeRooms(initial)).length,1);
 initial.doors.bedroomDoor.state='closed';
 assert.equal(Object.keys(SP.recomputeRooms(initial)).length,2);
-assert.equal(V.validateState(W.createInitialStateFromAuthoring(doc,20261121)).issueCount,0);
+// The full Validator references Engine current state through its memory providers;
+// validate only after the Engine reset source and runtime have been initialized.
 
 // Real production B Engine: a visibly reachable plate triggers the existing
 // eat Action -> physical serve -> nearby placement -> incremental intake.
@@ -79,6 +80,7 @@ E.configureResetStateSource('canonical-b-serving-integration',
   seed=>W.createInitialStateFromAuthoring(servingDoc,seed));
 E.reset(20261126);
 const st=E.getState(),a=st.agents.zhen,source=st.objects.readyMealF0,plate=st.objects.plateA;
+assert.equal(V.validateState(st).issueCount,0,'full canonical validation requires an initialized Engine');
 for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
 Object.assign(a.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
 a.action=null;a.activeIntent=null;
