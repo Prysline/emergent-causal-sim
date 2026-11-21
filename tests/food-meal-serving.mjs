@@ -18,7 +18,7 @@ function fixture({cooking=false}={}){
     objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
     handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,massKg:.3},
     position:{x:5,y:2,z:0},supportId:'diningTable',
-    interactions:{pickup:{mode:'supportReach'},eatFrom:{mode:'reach'}}
+    interactions:{pickup:{mode:'supportReach'},eatFrom:{mode:'supportReach'}}
   };
   if(cooking){
     delete doc.entities.objects.readyMealF0;
