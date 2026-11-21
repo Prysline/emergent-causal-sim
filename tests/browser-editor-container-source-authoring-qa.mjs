@@ -37,7 +37,7 @@ assert.match(snapshot.actionText,/移除物件/);
 assert.equal(snapshot.sceneCount,1);
 
 await page.click('#containerPresetCatalog [data-container-preset-id="ready-food"]');
-await page.click('[data-cell="5,2"]');
+await page.click('[data-cell="11,5"]');
 await page.waitForSelector('[data-container-source-support="furniture"][data-support-id="diningTable"]');
 await page.click('[data-container-source-support="furniture"][data-support-id="diningTable"]');
 await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['mealTray-1']);
