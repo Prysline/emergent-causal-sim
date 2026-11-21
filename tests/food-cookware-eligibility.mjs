@@ -21,7 +21,7 @@ function addPot(id,maxMassKg,qualified=true){
     position:{x:3,y:4,z:0},supportId:'stoveA'
   };
 }
-addPot('potA',.2);addPot('potB',.6);
+addPot('potA',.2);addPot('potB',.6);addPot('potC',.6,false);
 doc.entities.objects.ingredientA1=I.createIngredientObject({id:'ingredientA1',typeId:'A',position:{x:3,y:4,z:0},supportId:'stoveA'});
 delete doc.entities.objects.readyMealF0;
 doc.residents.zhen.initial.placement={mode:'exact',node:{x:3,y:3,z:0}};
@@ -80,11 +80,13 @@ assert.ok(F.validMeal(st.objects[completes[0].data.mealId]));
 assert.equal(st.objects[completes[0].data.mealId].meal.edibleMassGrams,300);
 assert.equal(V.validateState(st).issueCount,0);
 ({st,a}=setup(20261122));
+st.objects.potC.cookingEligible=true; // second valid alternative must not replace pinned potB
 choice=E.cookingDecisionOption(st,a);assert.equal(choice?.potId,'potB');
 a.action=E.buildAction(a,choice);E.ensureIntentForAction?.(st,a);
 E.tick();
 st.objects.potB.cookingEligible=false;
 assert.equal(C.eligible(st,'ingredientA1','stoveA',{potId:'potB'}),null);
+assert.equal(C.eligible(st,'ingredientA1','stoveA')?.pot.id,'potC','an alternative remains genuinely legal');
 E.tick();
 assert.equal(a.action,null,'runtime must abort, not switch to an available pot');
 assert.ok(st.objects.ingredientA1,'aborted Action must not consume the Ingredient');

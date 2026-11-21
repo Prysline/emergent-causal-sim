@@ -10,7 +10,7 @@ assert.equal(C.VERSION,'food-cooking-v1-cookware-eligibility');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v1-f0');
 assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
-assert.equal(A.VERSION,'world-authoring-v23','unchanged Authoring schema must not mechanically bump');
+assert.equal(A.VERSION,'world-authoring-v23','current Cooking authoring schema is the explicitly advanced v23');
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
