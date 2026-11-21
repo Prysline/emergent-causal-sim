@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {useLegacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+useLegacyResourceWorld(A,W,E);
 const APP_VERSION=globalThis.SimRelease.VERSION;
 const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -86,7 +88,7 @@ try{
 
   {
     E.reset(14102);
-    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.legacyResourcePlateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     for(const furniture of Object.values(st.furniture||{}))furniture.supportsObjects=false;
     const releaseNode=floor(st,2,6);
@@ -126,7 +128,7 @@ try{
 
   {
     E.reset(14104);
-    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.legacyResourcePlateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     plate.contents={food:6};delete plate.supportId;plate.position={...a.position};a.held=null;
     a.action={kind:'eat',phase:'eatingPlate',container:plate.id,started:st.tick,wait:0};
