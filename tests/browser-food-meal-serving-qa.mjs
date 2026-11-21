@@ -20,7 +20,7 @@ const initial=await page.evaluate(()=>{
     objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:6,y:3,z:0},supportId:'diningTable',
-    interactions:{eatFrom:{mode:'reach'},pickup:{mode:'supportReach'}}
+    interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}
   };
   const served=F.serveMeal(st,source.id,'servingQaPlate',120,'servingQaPortion');
   return {served,remaining:F.remainingGrams(source),plate:st.objects.servingQaPlate.id,portion:st.objects.servingQaPortion?.containedBy};
@@ -86,7 +86,7 @@ const execution=await page.evaluate(()=>{
     objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:6,y:3,z:0},supportId:'diningTable',
-    interactions:{eatFrom:{mode:'reach'},pickup:{mode:'supportReach'}}
+    interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}
   };
   for(const a of Object.values(st.agents))if(a.id!==actor.id)a.offMap=true;
   Object.assign(actor.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
