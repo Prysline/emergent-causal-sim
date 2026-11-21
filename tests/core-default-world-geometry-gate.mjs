@@ -268,40 +268,6 @@ for (const name of ['A', 'B']) {
 let currentControlledDoc = null;
 E.configureResetStateSource('core-default-world-ab-controlled', seed =>
   W.createInitialStateFromAuthoring(currentControlledDoc, seed));
-for (const name of ['A', 'B']) {
-  currentControlledDoc = controlledCandidate(name);
-  E.reset(20261121);
-  const st = E.getState();
-  for (const agent of Object.values(st.agents)) {
-    Object.assign(agent.needs, {
-      hunger: 45, thirst: 38, fatigue: 38, sleepNeed: 43,
-      social: 35, stimulation: 15, relaxation: 15,
-    });
-  }
-  const before = V.validateState(st);
-  assert.equal(before.issueCount, 0,
-    name + ' initial state: ' + before.issues.map(x => x.code).join(','));
-  const choices = [];
-  for (let tick = 0; tick < 36; tick++) {
-    E.tick();
-    for (const [id, thought] of Object.entries(st.thoughts || {})) {
-      if (thought?.tick === st.tick && thought.pick?.id) choices.push(id + ':' + thought.pick.id);
-    }
-  }
-  const after = V.validateState(st);
-  assert.equal(after.issueCount, 0,
-    name + ' after autonomous ticks: ' + after.issues.map(x => x.code).join(','));
-  assert.equal(st.tick, 36, name + ': autonomous Engine must advance 36 ticks');
-  assert.ok(choices.length > 0, name + ': Deliberation must make real decisions');
-  console.log('Core default autonomous tick smoke ' + name + ': ' +
-    JSON.stringify({
-      tick: st.tick, choices: [...new Set(choices)].sort(),
-      events: st.events.length,
-      agentActions: Object.fromEntries(Object.values(st.agents).map(a => [a.id, a.action?.kind || null])),
-    }));
-}
-
-
 // Core Default World x Food v2 integration, using the current production
 // Cooking decision consumer and real Engine action lifecycle. The Action is
 // explicitly selected by this test, not falsely described as a Deliberation
@@ -420,5 +386,40 @@ for (const name of ['A', 'B']) {
       sourceId: phases.pickupIngredient.data.sourceId,
       eventIds: ['pickupIngredient', 'loadPot', 'complete'].map(p => phases[p].id),
       mealId: cooked.id, intakeEventId: intake.id, ticks: st.tick,
+    }));
+}
+
+// Preserve the autonomous Deliberation smoke after the Food lifecycle checks;
+// a separate posture/Perception failure must remain visible, not be bypassed.
+for (const name of ['A', 'B']) {
+  currentControlledDoc = controlledCandidate(name);
+  E.reset(20261121);
+  const st = E.getState();
+  for (const agent of Object.values(st.agents)) {
+    Object.assign(agent.needs, {
+      hunger: 45, thirst: 38, fatigue: 38, sleepNeed: 43,
+      social: 35, stimulation: 15, relaxation: 15,
+    });
+  }
+  const before = V.validateState(st);
+  assert.equal(before.issueCount, 0,
+    name + ' initial state: ' + before.issues.map(x => x.code).join(','));
+  const choices = [];
+  for (let tick = 0; tick < 36; tick++) {
+    E.tick();
+    for (const [id, thought] of Object.entries(st.thoughts || {})) {
+      if (thought?.tick === st.tick && thought.pick?.id) choices.push(id + ':' + thought.pick.id);
+    }
+  }
+  const after = V.validateState(st);
+  assert.equal(after.issueCount, 0,
+    name + ' after autonomous ticks: ' + after.issues.map(x => x.code).join(','));
+  assert.equal(st.tick, 36, name + ': autonomous Engine must advance 36 ticks');
+  assert.ok(choices.length > 0, name + ': Deliberation must make real decisions');
+  console.log('Core default autonomous tick smoke ' + name + ': ' +
+    JSON.stringify({
+      tick: st.tick, choices: [...new Set(choices)].sort(),
+      events: st.events.length,
+      agentActions: Object.fromEntries(Object.values(st.agents).map(a => [a.id, a.action?.kind || null])),
     }));
 }
