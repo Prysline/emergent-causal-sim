@@ -1,0 +1,80 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+
+const outDir='artifacts/browser-food-meal-serving-qa';
+fs.mkdirSync(outDir,{recursive:true});
+const browser=await chromium.launch({headless:true});
+const page=await browser.newPage({viewport:{width:1440,height:900}});
+const pageErrors=[];
+page.on('pageerror',error=>pageErrors.push(String(error)));
+await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
+await page.waitForFunction(()=>window.SimUI?.isStarted?.()&&window.SimRelease?.VERSION&&window.SimEngine?.UI_ENTITY_READABLE_VERSION===window.SimRelease.VERSION);
+
+const initial=await page.evaluate(()=>{
+  const E=window.SimEngine,F=window.SimFood,st=E.getState();
+  const source=st.objects.readyMealF0;
+  if(!source)throw new Error('Browser baseline must include the existing Meal');
+  st.objects.servingQaPlate={
+    id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
+    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
+    handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
+    position:{x:6,y:3,z:0},supportId:'diningTable',
+    interactions:{eatFrom:{mode:'reach'},pickup:{mode:'supportReach'}}
+  };
+  const served=F.serveMeal(st,source.id,'servingQaPlate',120,'servingQaPortion');
+  return {served,remaining:F.remainingGrams(source),plate:st.objects.servingQaPlate.id,portion:st.objects.servingQaPortion?.containedBy};
+});
+assert.equal(initial.served.served,true);
+assert.equal(initial.served.actualGrams,120);
+assert.equal(initial.remaining,180);
+assert.equal(initial.portion,initial.plate);
+
+async function select(id){
+  await page.evaluate(id=>{
+    const node=document.createElement('button');
+    node.dataset.entity='object:'+id;node.hidden=true;document.body.appendChild(node);
+    node.click();node.remove();
+  },id);
+  await page.waitForFunction(id=>window.SimUI.getInspectorSelection()?.id===id,id);
+  await page.waitForSelector('[data-v1141-entity-readable]');
+}
+await select('servingQaPortion');
+const initialProjection=await page.evaluate(()=>{
+  const SP=window.SimSpatial,st=window.SimEngine.getState();
+  return {
+    text:document.querySelector('[data-v1141-entity-readable]')?.innerText||'',
+    portionMarkers:[...document.querySelectorAll('[data-entity="object:servingQaPortion"]')].filter(el=>el.closest('#map')).length,
+    plateMarkers:[...document.querySelectorAll('[data-entity="object:servingQaPlate"]')].filter(el=>el.closest('#map')).length,
+    location:SP.objectLocationState(st,'servingQaPortion'),
+    sourceMass:window.SimFood.remainingGrams(st.objects.readyMealF0)
+  };
+});
+assert.match(initialProjection.text,/剩餘可食重量/,'Inspector must project Food grams instead of Resource contents');
+assert.match(initialProjection.text,/120 g/);
+assert.match(initialProjection.text,/驗證餐盤/);
+assert.equal(initialProjection.portionMarkers,0,'contained Meal must not get an independent map marker');
+assert.equal(initialProjection.plateMarkers,1,'real physical plate must stay mapped');
+assert.equal(initialProjection.location,'contained');
+assert.equal(initialProjection.sourceMass,180);
+await page.screenshot({path:outDir+'/meal-serving-inspector.png',fullPage:true});
+
+await page.evaluate(()=>{
+  const E=window.SimEngine,st=E.getState();
+  window.SimFood.consumeMeal(st,'servingQaPortion',50);
+});
+await select('servingQaPlate');
+await select('servingQaPortion');
+const updated=await page.evaluate(()=>({
+  text:document.querySelector('[data-v1141-entity-readable]')?.innerText||'',
+  mass:window.SimFood.remainingGrams(window.SimEngine.getState().objects.servingQaPortion),
+  load:window.SimObjectHandling.objectStorageStatus(window.SimEngine.getState(),'servingQaPlate').massKg,
+  issues:window.SimValidator.validateState(window.SimEngine.getState()).issues.map(x=>x.code)
+}));
+assert.match(updated.text,/70 g/,'Inspector must reread the current canonical grams after intake');
+assert.equal(updated.mass,70);
+assert.ok(Math.abs(updated.load-.07)<1e-9);
+assert.deepEqual(updated.issues,[]);
+assert.deepEqual(pageErrors,[],'Browser must not report uncaught errors');
+await browser.close();
+console.log('Browser Food Meal Serving v1 canonical Inspector and map projection QA: ok');
