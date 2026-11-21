@@ -33,8 +33,8 @@ assert.equal(SP.PASSAGE_PROFILE_VERSION,PASSAGE_VERSION);
 assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
 
 const expectedHandling={
-  plateA:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},
-  plateB:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},
+  legacyResourcePlateA:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},
+  legacyResourcePlateB:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},
   basket:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2},
   waterBucket:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1},
   cupA:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},

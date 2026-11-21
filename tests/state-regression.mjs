@@ -96,7 +96,7 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,plate=st.objects.plateA;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.objects.mealTray.contents.food=0;plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};const before=plate.contents.food;for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null);}assert.ok((plate.contents.food||0)<before);noIssues('cat eats plate');
+  const st=E.getState(),cat=st.agents.orange,plate=st.objects.legacyResourcePlateA;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.objects.mealTray.contents.food=0;plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};const before=plate.contents.food;for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null);}assert.ok((plate.contents.food||0)<before);noIssues('cat eats plate');
 }
 
 E.reset(20260911);
