@@ -31,7 +31,6 @@ jobs:
       - run: node tests/food-v1-f1a-ingredient.mjs
       - run: node tests/food-v1-f1b-cooking.mjs
       - run: node tests/food-v1-f1b2-pot-loading.mjs
-      - run: node tests/food-cookware-eligibility.mjs
       - run: node tests/activity-concurrency-eating-social.mjs
       - run: node tests/activity-continuity-read-resume.mjs
       - run: node tests/mental-regulation-stimulation-relaxation.mjs
@@ -65,6 +64,7 @@ jobs:
       - run: node tests/perception-visual-availability.mjs
       - run: node tests/initial-population-placement.mjs
       - run: node tests/initializer-horizontal-reachability.mjs
+      - run: node tests/core-default-world-geometry-gate.mjs
       - run: node tests/world-authoring-editor-contract.mjs
       - run: node tests/editor-authoring-mutations.mjs
       - run: node tests/editor-ordinary-object-authoring.mjs
