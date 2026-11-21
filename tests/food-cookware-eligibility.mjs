@@ -9,7 +9,7 @@ const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
 assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
-assert.equal(A.VERSION,'world-authoring-v23');
+assert.equal(A.VERSION,'world-authoring-v24');
 
 const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
