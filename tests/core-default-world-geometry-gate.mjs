@@ -119,7 +119,7 @@ function makeCandidate(name) {
   const [stoveX, stoveY] = plan.furniture.stoveA;
   const [counterX, counterY] = plan.furniture.counterA;
   doc.entities.objects.potA = {
-    id: 'potA', name: '料理鍋', icon: '🍲', cookingPot: true, portable: true,
+    id: 'potA', name: '料理鍋', icon: '🍲', cookingEligible: true, portable: true,
     objectContainment: true, objectStorage: { maxItems: 1, maxMassKg: 0.6 },
     handling: {
       carryGeometry: { width: 0.35, height: 0.25, length: 0.35 },
