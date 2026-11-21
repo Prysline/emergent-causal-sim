@@ -3,7 +3,7 @@ import {loadProductionBefore} from './helpers/production-loader.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
-const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngine,SP=globalThis.SimSpatial,P=globalThis.SimPerception,T=globalThis.SimTidyingState;
+const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngine,SP=globalThis.SimSpatial,P=globalThis.SimPerception,T=globalThis.SimTidyingState,V=globalThis.SimValidator;
 assert.ok(Number(A.VERSION.split('v').pop())>=19,'Tidying requires at least the v19 World Authoring contract');
 assert.equal(T.VERSION,'tidying-put-away-v1');
 assert.equal(E.TIDYING_VERSION,T.VERSION);
@@ -41,6 +41,25 @@ assert.deepEqual(initialized.agents.zhou.knownObjectStorageAssignmentIds,[]);
 assert.equal(initialized.agents.zhen.objectStorageAssignments,undefined);
 
 E.configureResetStateSource('tidying-fixture',seed=>W.createInitialStateFromAuthoring(doc,seed));
+for(const posture of ['kneeling','prone']){
+  E.reset(20261018);
+  const world=E.getState(),actor=world.agents.zhen,book=world.objects.bookA;
+  for(const other of Object.values(world.agents))if(other.id!==actor.id)other.offMap=true;
+  const standingOption=E.tidyingDecisionOption(world,actor);
+  assert.equal(standingOption?.id,'putAwayObject');
+  actor.posture={kind:posture,slotId:null,furnitureId:null};
+  assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion(actor),true);
+  assert.throws(()=>P.classifyObjectPointVisualAvailability(world,actor,book),new RegExp('do not support posture '+posture));
+  assert.equal(E.tidyingDecisionOption(world,actor),null,'no unobserved put-away option');
+  assert.equal(E.buildAction(actor,standingOption),null,'Action revalidates posture');
+  const before=JSON.stringify(book),tick=world.tick;
+  E.tick();
+  assert.equal(world.tick,tick+1,'real Engine tick continues for '+posture);
+  assert.ok(!world.thoughts[actor.id]?.options?.some(x=>x.id==='putAwayObject'));
+  assert.equal(JSON.stringify(book),before,'no Object mutation');
+  assert.equal(world.events.filter(e=>e.data?.action==='putAwayObject').length,0,'no fabricated Event');
+  assert.equal(V.validateState(world).issueCount,0);
+}
 E.reset(20261018);
 const st=E.getState(),a=st.agents.zhen,book=st.objects.bookA;
 for(const agent of Object.values(st.agents)){

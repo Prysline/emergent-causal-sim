@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+目前 runtime marker：`11.74.0-unsupported-posture-visual-guard`。
+
+本版修正合法跪爬／匍匐姿勢缺少 static PoseEnvelope 時，Cooking / Tidying 視覺候選與直接 Action revalidation 可能中止 Engine tick 的跨系統問題。依 canonical Embodiment / Physical profile 確認視覺前置證據；缺少時不產生依賴該證據的行動，但 Perception API 仍明確失敗。沒有新增 kneeling / prone 3D geometry、預設住宅、Serving 或 D2 行為。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
 

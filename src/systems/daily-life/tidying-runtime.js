@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,S=window.SimTidyingState,P=window.SimPerception,SP=window.SimSpatial,O=window.SimObjectHandling;
-  if(!E?.registerDecisionOptionProvider||!S?.knownAssignments||!P?.classifyObjectPointVisualAvailability||!SP?.bestInteractionPositionResult||!O?.canHoldObject)throw new Error('Tidying requires canonical Engine, Spatial, Handling and Perception consumers.');
+  if(!E?.registerDecisionOptionProvider||!S?.knownAssignments||!P?.classifyObjectPointVisualAvailability||!P?.lacksVisualPoseEnvelopeForSupportedLocomotion||!SP?.bestInteractionPositionResult||!O?.canHoldObject)throw new Error('Tidying requires canonical Engine, Spatial, Handling and Perception consumers.');
   function candidate(st,agent,assignment){
     const object=st.objects?.[assignment.objectId],destination=st.furniture?.[assignment.target.id];
     if(!object||!destination||destination.objectContainment!==true||object.containedBy===destination.id||agent.held)return null;
@@ -17,6 +17,7 @@
   }
   function decisionOptionFor(st,agent){
     if(agent?.kind!=='human'||agent.offMap||agent.held)return null;
+    if(P.lacksVisualPoseEnvelopeForSupportedLocomotion(agent))return null;
     const out=S.knownAssignments(st,agent).map(assignment=>candidate(st,agent,assignment)).filter(Boolean);
     out.sort((a,b)=>b.score-a.score||a.storageAssignmentId.localeCompare(b.storageAssignmentId));
     return out[0]||null;

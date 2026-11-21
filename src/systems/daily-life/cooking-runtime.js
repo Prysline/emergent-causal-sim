@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,C=window.SimFoodCooking,P=window.SimPerception,SP=window.SimSpatial;
-  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition'||!P?.classifyObjectPointVisualAvailability||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
+  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition'||!P?.classifyObjectPointVisualAvailability||!P?.lacksVisualPoseEnvelopeForSupportedLocomotion||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
   function candidate(st,a,ingredient,station,pot){
     const context=C.eligible(st,ingredient.id,station.id,{potId:pot.id});
     if(!context||context.location!=='exposed')return null;
@@ -27,6 +27,7 @@
   }
   function decisionOptionFor(st,a){
     if(a?.kind!=='human'||a.offMap||a.held)return null;
+    if(P.lacksVisualPoseEnvelopeForSupportedLocomotion(a))return null;
     const stations=Object.values(st?.furniture||{}).filter(f=>f.cookingStation===true).sort((a,b)=>a.id.localeCompare(b.id));
     const ingredients=Object.values(st?.objects||{}).filter(o=>window.SimIngredient.hasIngredient(o))
       .sort((a,b)=>a.id.localeCompare(b.id));

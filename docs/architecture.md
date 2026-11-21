@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+目前 runtime marker：`11.74.0-unsupported-posture-visual-guard`。
+
+Current posture × visual consumer boundary：`kneeling` / `prone` 是 Human 合法 locomotion posture，但缺少 static `PoseEnvelope` 時無法建立 canonical sight sample；Perception direct classification 繼續明確 throw，不使用 standing fallback。共用 query-time `lacksVisualPoseEnvelopeForSupportedLocomotion` 僅讓 Cooking / Tidying 視覺依賴候選與 Engine direct Action construction 返回不可用；未知姿勢與非法 Physical / visual input 不受此 gate 掩蓋。World Object / Event 與 Agent-private observation 不新增真相；Core Default World PR #246 與 Serving 獨立驗證。
 
 Current Food autonomous Ingredient acquisition：Cooking 的觀察與容量決策允許完整 Ingredient 位於任一真正 `supportsObjects` Furniture 表面（首例 kitchen-counter），而非必先放在爐具。原有 `cookMeal` Action 固定實際來源 `sourceId` 和合法鍋具 `potId`，透過通用 Object pickup／containHeldObject 真正跨位置裝鍋；來源變動或預約失效不能繼續。單一 World Event pickupIngredient → loadPot → complete 形成因果引用。F0 Meal 仍在爐面，World Authoring v23 與 Serving／D2 不變。
 
