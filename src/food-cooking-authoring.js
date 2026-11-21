@@ -1,7 +1,7 @@
 (() => {
   const Base=window.SimWorldAuthoring,K=window.SimFoodCookwareEligibility;
   if(Base?.VERSION!=='world-authoring-v22'||K?.VERSION!=='food-cookware-eligibility-v1')throw new Error('Cooking authoring requires World Authoring v22 and canonical cookware eligibility.');
-  const VERSION='world-authoring-v23',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v24',clone=Base.cloneAuthoring;
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
   function validateAuthoring(source){
     const base=Base.validateAuthoring(baseDocument(source)),errors=[...base.errors];

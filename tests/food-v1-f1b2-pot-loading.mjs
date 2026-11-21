@@ -9,7 +9,7 @@ const O=globalThis.SimObjectHandling,R=globalThis.SimResources,SP=globalThis.Sim
 const P=globalThis.SimPerception,V=globalThis.SimValidator;
 assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(F.VERSION,'food-v1-f0');
+assert.equal(F.VERSION,'food-v2-meal-serving');
 
 const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};

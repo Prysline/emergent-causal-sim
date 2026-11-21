@@ -78,9 +78,13 @@
       container?fact('收納於',container.name):'',
       support?fact('放置於',support.name):''
     ]):container?factCard('收納位置',[fact('收納於',container.name)]):support?factCard('放置位置',[fact('承載於',support.name)]):'';
+    const food=window.SimFood?.hasMeal?.(o)?factCard('餐點',[
+      fact('剩餘可食重量',window.SimFood.remainingGrams(o)+' g'),
+      o.containedBy?fact('盛放容器',container?.name||o.containedBy):''
+    ]):'';
     const contained=o.objectContainment===true?Object.values(st.objects||{}).filter(item=>item.containedBy===id):[];
     const cargo=contained.length?chipsCard('收納物',contained.map(item=>entityChip('object',item.id,item.name,item.icon||'◻'))):'';
-    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${cargo}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
+    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${food}${cargo}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
   }
   function sourceView(st,id){
     const o=st.sources?.[id];if(!o)return '';

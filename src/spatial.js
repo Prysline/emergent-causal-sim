@@ -183,6 +183,16 @@
       const entity=st.objects?.[target.id];if(!entity)return {mode:'none',positions:[],target,affordance};const holder=holderOf(st,target.id),p=objectPosition(st,target.id);if(!p)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[clonePos(agent.position)]:reachPositions(st,p);return {mode:'heldReach',positions,target,affordance,holderId:holder.id};}
       if(entity.containedBy){
+        // Only explicitly exposed Meal plates delegate eatFrom contact to their real
+        // container geometry. Other contained Objects still permit pickup only.
+        const plate=affordance==='eatFrom'?window.SimFood?.servingPlateForMeal?.(st,entity):null;
+        if(plate){
+          const plateHolder=holderOf(st,plate.id);
+          if(plateHolder&&plateHolder.id!==agent?.id)
+            return {mode:'none',positions:[],target,affordance,containedBy:plate.id};
+          const access=interactionGeometry(st,{kind:'object',id:plate.id},agent,'eatFrom');
+          return {...access,mode:'exposedMealPlateReach',target,affordance,containedBy:plate.id};
+        }
         if(affordance!=='pickup')return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
         const container=objectContainerTarget(st,entity.containedBy);
         if(!container||container.entity.objectContainment!==true)return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};

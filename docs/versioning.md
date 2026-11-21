@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.74.0-unsupported-posture-visual-guard`。
+目前 overall runtime marker：`11.75.0-food-meal-serving`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -29,10 +29,11 @@ Current relevant markers：
 - Furniture Passage Yielding：`furniture-passage-yielding-v1`
 - Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
 - Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-locomotion-posture-guard`
-- Perception Visual Availability production composition：`perception-visual-availability-v3-object-point`
+- Perception Visual Availability production composition：`perception-visual-availability-v4-exposed-meal`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
+- Meal Plate EatFrom Interaction：`meal-plate-eat-from-v1`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Daily Life Learned Habit：`daily-life-learned-habit-v1`
@@ -42,7 +43,7 @@ Current relevant markers：
 - Human Social Response：`11.67.0-human-social-meal-compatibility`
 - Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
-- Object Handling：`object-handling-v2-movable-containment`
+- Object Handling：`object-handling-v3-meal-mass-projection`
 - Resources：`11.68.0-movable-object-cargo`
 - Physical `11.56.0-physical-object-handling`
 - Agent Carry：`11.46.0-sleep-carry-integration`
@@ -60,14 +61,18 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v23`
-- Food Meal F0：`food-v1-f0`
+- World Authoring：`world-authoring-v24`
+- Food Meal / Serving：`food-v2-meal-serving`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v14-kitchen`
 - Food Cooking：`food-cooking-v2-autonomous-ingredient-acquisition`
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.75.0-food-meal-serving`：在既有 `eat` Action 中新增 opt-in Meal plate partial serving 路線。完全可食 Meal 依 canonical `edibleMassGrams` 原子拆分並以原本 `Object.containedBy` 位於合法外露可攜餐盤；實際 `Agent.held` 搬運、Spatial nearby placement、Perception/Interaction 和每 tick 食用維持各自 owner，Serving Event 與 Cooking completion / intake 构成單一因果鏈。Object cargo kg 只從 Food grams 投影；legacy Resource `contents.food` 的 amount / `foodStock` / transfer 不轉換，其他 contained Objects 不外露。Own markers：Food `food-v2-meal-serving`、Object Handling `object-handling-v3-meal-mass-projection`、Perception Visual Availability `perception-visual-availability-v4-exposed-meal`、World Authoring `world-authoring-v24`；Cooking／Ingredient／Resources、Physical／Locomotion 沿用既有自有 marker。CI: 保留 repo workflow architecture 的三個既有 workflow，不修改由 Core PR #246 單一 owner 持有的共用 Node workflow；既有 Browser matrix 的 `food-meal-serving` case 透過 `extra_test` 執行 `tests/food-meal-serving.mjs`，並執行真實 Browser Serving QA。Serving Merge Gate 仍要求完整 exact-head canonical Node suite 和 Browser suite 各自通過。詳見 [Meal Serving v1](food-meal-serving.md)。
+
+前一個 release：
 
 `11.74.0-unsupported-posture-visual-guard`：合法 `kneelCrawl / proneCrawl` 對應 `kneeling / prone`，但缺少 canonical static PoseEnvelope 時，Perception `derivePhysicalSightSamples` 與物件／Agent 視覺 API 仍明確失敗。新增狹義 query-time preflight，僅讓 Cooking / Tidying provider 與 Engine Action construction 在缺少視覺前置證據時不產生動作，避免自主 tick 中止；不製造假觀察、知識、World Object mutation / Event。Perception Sight Samples 自有 generation 前進 `perception-visual-sight-samples-v2-locomotion-posture-guard`；原本本頁列出的 v2-furniture-target 與 main code v1 不一致，本次依實作重新對齊。Physical、Locomotion、Cooking recipe、Tidying storage、Perception Object-point、World Authoring 自有 marker 不假升版。Core Default World PR #246 仍為獨立 integration gate。
 

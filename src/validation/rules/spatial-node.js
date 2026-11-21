@@ -39,7 +39,7 @@
         if(container){
           if(entity.id===id)add('contained_object_self','Object cannot contain itself.',{entityId:entity.id});
           if(entity.objectContainment===true||entity.resourceContainer===true)add('contained_object_nested_unsupported','Movable containment v1 cannot hold nested/container Objects.',{entityId:entity.id});
-          if(!Number.isFinite(entity.handling?.massKg)||entity.handling.massKg<=0)add('contained_object_mass_invalid','Movable cargo requires positive handling.massKg.',{entityId:entity.id});
+          try{window.SimObjectHandling.cargoMassKg(entity);}catch(error){add('contained_object_mass_invalid',error.message,{entityId:entity.id});}
         }
         continue;
       }

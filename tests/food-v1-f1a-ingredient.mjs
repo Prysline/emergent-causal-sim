@@ -10,8 +10,8 @@ const O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimV
 const close=(a,b,message)=>assert.ok(Math.abs(a-b)<1e-10,message+': expected '+b+', got '+a);
 
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(A.VERSION,'world-authoring-v23');
-assert.equal(F.VERSION,'food-v1-f0','Meal F0 owner must not be mechanically bumped');
+assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(F.VERSION,'food-v2-meal-serving','Meal owner must advance only for the approved serving contract');
 assert.ok(Object.isFrozen(I.TYPES)&&Object.isFrozen(I.TYPES.A),'Type defaults must be immutable');
 assert.deepEqual(Object.keys(I.TYPES),['A'],'F1-A only introduces the approved first abstract Type');
 for(const input of [
@@ -44,7 +44,7 @@ basket.objectStorage={maxItems:2,maxMassKg:.8};
 assert.equal(A.validateAuthoring(base).ok,true);
 const roundTrip=A.parseAuthoringJSON(A.serializeAuthoring(base));
 assert.deepEqual(roundTrip.entities.objects.ingredientA2,second,'authoring round-trip preserves concrete mass and density');
-assert.equal(roundTrip.authoringSchema,'world-authoring-v23');
+assert.equal(roundTrip.authoringSchema,'world-authoring-v24');
 
 function authoredReject(mutate,code){
   const doc=A.cloneAuthoring(base);mutate(doc);

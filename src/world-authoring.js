@@ -9,6 +9,13 @@
   const CELL_SIZE_METERS=1;
   const pos=(x,y,z=0)=>({x,y,z});
   const boundaryRef=(z,id)=>({z,id});
+  function authoredCargoMassKg(item){
+    if(item&&Object.prototype.hasOwnProperty.call(item,'meal')){
+      const grams=item.meal?.edibleMassGrams;
+      return Number.isSafeInteger(grams)&&grams>0?grams/1000:null;
+    }
+    return Number.isFinite(item?.handling?.massKg)&&item.handling.massKg>0?item.handling.massKg:null;
+  }
 
   function buildDefaultCells(){
     const cells={};
@@ -411,7 +418,7 @@
           if(target){
             if(object.id===target.id)errors.push(authoringIssue('authoring_object_container_self',`${basePath}.containedBy`,'Object cannot contain itself.'));
             if(object.objectContainment===true||object.resourceContainer===true)errors.push(authoringIssue('authoring_object_cargo_kind_unsupported',`${basePath}.containedBy`,'Movable Object containment v1 only supports ordinary, non-container Object cargo.'));
-            if(!Number.isFinite(object.handling?.massKg)||object.handling.massKg<=0)errors.push(authoringIssue('authoring_object_cargo_mass_invalid',`${basePath}.handling.massKg`,'Contained ordinary Object requires positive canonical handling.massKg.'));
+            if(authoredCargoMassKg(object)===null)errors.push(authoringIssue('authoring_object_cargo_mass_invalid',`${basePath}.handling.massKg`,'Contained ordinary Object requires positive canonical cargo mass.'));
           }
         }
         if(object.position!==undefined)errors.push(authoringIssue('authoring_contained_object_position_conflict',`${basePath}.position`,'Contained Object must not define its own canonical position.'));
@@ -472,7 +479,7 @@
       const storage=container.objectStorage;
       if(!isRecord(storage)||!Number.isInteger(storage.maxItems)||storage.maxItems<=0||!Number.isFinite(storage.maxMassKg)||storage.maxMassKg<=0)continue;
       const children=Object.values(objects).filter(child=>child?.containedBy===id);
-      const massKg=children.reduce((sum,child)=>sum+(Number.isFinite(child.handling?.massKg)&&child.handling.massKg>0?child.handling.massKg:0),0);
+      const massKg=children.reduce((sum,child)=>sum+(authoredCargoMassKg(child)||0),0);
       if(children.length>storage.maxItems||massKg>storage.maxMassKg+1e-9)errors.push(authoringIssue('authoring_object_storage_capacity_exceeded','entities.objects.'+id+'.objectStorage','Movable Object container authored contents exceed maxItems or maxMassKg.',{objectId:id,count:children.length,massKg}));
     }
     for(const key of Object.keys(objects))if(sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Object id ${key} collides with another authored entity id.`,{id:key}));

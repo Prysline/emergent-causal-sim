@@ -4,6 +4,7 @@
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const PICKUP_INTERACTION_VERSION='pickup-interaction-v3-movable-containment';
+  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v1';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -712,6 +713,17 @@
       const holder=SP.holderOf(st,target.id),node=objectNode(st,target.id);if(!node)return {mode:'none',positions:[],target,affordance};
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
       if(entity.containedBy){
+        // This is the canonical traversal override of the core Spatial resolver.
+        // Only explicitly exposed Food Meal inside an eligible plate can delegate
+        // eatFrom to that plate's real metric interaction geometry.
+        const plate=affordance==='eatFrom'?window.SimFood?.servingPlateForMeal?.(st,entity):null;
+        if(plate){
+          const plateHolder=SP.holderOf(st,plate.id);
+          if(plateHolder&&plateHolder.id!==agent?.id)
+            return {mode:'none',positions:[],target,affordance,containedBy:plate.id};
+          const access=interactionGeometry(st,{kind:'object',id:plate.id},agent,'eatFrom');
+          return {...access,mode:'exposedMealPlateReach',target,affordance,containedBy:plate.id};
+        }
         if(affordance!=='pickup')return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
         const container=SP.objectContainerTarget(st,entity.containedBy);
         if(!container||container.entity.objectContainment!==true)return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
@@ -810,5 +822,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,PICKUP_INTERACTION_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v2',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,PICKUP_INTERACTION_VERSION,MEAL_PLATE_INTERACTION_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v2',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();
