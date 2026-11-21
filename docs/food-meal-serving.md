@@ -14,7 +14,7 @@ Workstream: [Meal Serving v1](https://app.notion.com/p/41fb4185273f815c8bc6f089b
 An exposed serving plate is deliberately opt-in: ordinary `portable:true`, `objectContainment:true`, valid `objectStorage`, `canEatFrom:true` and `interactions.eatFrom.mode` being a legal reach mode, without Resource `contents`. It is an ordinary Object, not legacy `resourceContainer` / `servingDish`.
 
 - A Meal inside such a plate may be visually observed only via the canonical Perception projection of the plate's current real position and sight. If the plate is held by the observer, local access is permitted; a plate held by another actor is not made remotely edible/observable through Meal visibility.
-- Only this explicit Food case projects contained Meal `eatFrom` interaction via the plate's canonical Spatial geometry. All other contained Objects still have their prior pickup-only interaction and hidden-point availability.
+- Only this explicit Food case projects contained Meal `eatFrom` interaction via the plate's canonical Spatial geometry. Production `src/spatial-traversal.js` overrides the base `src/spatial.js` resolver; both must delegate to the same `SimFood.servingPlateForMeal` truth and the **effective traversal owner** exports `MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v1'`. All other contained Objects still have their prior pickup-only interaction and hidden-point availability.
 - Visible World inventory never equals universal Agent knowledge. `eat` source selection uses same-tick actual visual availability or legal contact and reachable interaction, with execution-time revalidation.
 
 ## Actual action lifecycle
