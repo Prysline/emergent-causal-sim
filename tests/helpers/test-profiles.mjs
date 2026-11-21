@@ -194,6 +194,9 @@ function ensureRuntimeDependencies(paths){
     const ingredientRuleIndex=paths.indexOf('validation/rules/food-ingredient.js');
     if(ingredientRuleIndex>=0)paths.splice(ingredientRuleIndex,1);
     paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-ingredient.js');
+    const cookwareRuleIndex=paths.indexOf('validation/rules/food-cookware.js');
+    if(cookwareRuleIndex>=0)paths.splice(cookwareRuleIndex,1);
+    paths.splice(paths.indexOf('validation/manifest.js'),0,'validation/rules/food-cookware.js');
     if(!paths.includes('systems/daily-life/routine-state.js')){
       const routineOwnerIndex=paths.indexOf('engine.js');
       paths.splice(routineOwnerIndex>=0?routineOwnerIndex:validationManifestIndex,0,'systems/daily-life/routine-state.js');
@@ -213,6 +216,9 @@ function ensureRuntimeDependencies(paths){
   // Cooking requires the canonical Object Handling and Spatial owners.
   // Resolve it after slim profiles insert their missing physical/spatial dependencies.
   if(paths.includes('engine.js')){
+    const eligibility='food-cookware-eligibility.js',eligibilityIndex=paths.indexOf(eligibility);
+    if(eligibilityIndex>=0)paths.splice(eligibilityIndex,1);
+    paths.splice(paths.indexOf('engine.js'),0,eligibility);
     const dep='food-cooking-contract.js',prior=paths.indexOf(dep);
     if(prior>=0)paths.splice(prior,1);
     paths.splice(paths.indexOf('engine.js'),0,dep);

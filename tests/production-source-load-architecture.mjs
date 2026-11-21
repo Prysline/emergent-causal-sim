@@ -34,6 +34,9 @@ const releaseIndex=indexOf('src/release.js');
 const objectHandlingIndex=indexOf('src/systems/object-handling.js');
 const resourcesIndex=indexOf('src/systems/resources.js');
 const agentCarryIndex=indexOf('src/systems/agent-carry.js');
+const cookwareEligibilityIndex=indexOf('src/food-cookware-eligibility.js');
+const cookingAuthoringIndex=indexOf('src/food-cooking-authoring.js');
+const cookwareValidatorIndex=indexOf('src/validation/rules/food-cookware.js');
 const cookingContractIndex=indexOf('src/food-cooking-contract.js');
 const ingredientContractIndex=indexOf('src/food-ingredient-contract.js');
 const spatialFinalizeIndex=indexOf('src/spatial/finalize.js');
@@ -70,7 +73,7 @@ assert.equal(resourcesIndex,objectHandlingIndex+1,'Resources owner must load imm
 assert.equal(agentCarryIndex,resourcesIndex+1,'Agent Carry owner must remain adjacent after Resources in production composition');
 assert.ok(spatialTraversalIndex<spatialAgentCarryIndex&&agentCarryIndex<spatialAgentCarryIndex,'Agent carry position projection must load after both Agent Carry truth owner and Spatial Traversal');
 assert.equal(initialManifestIndex,engineIndex-1,'initial-state manifest must finalize immediately before engine loads');
-assert.ok(ingredientContractIndex<cookingContractIndex&&objectHandlingIndex<cookingContractIndex&&spatialFinalizeIndex<cookingContractIndex&&cookingContractIndex<initialManifestIndex,'Cooking must initialize after canonical Ingredient, Object Handling and Spatial owners, and before Engine');
+assert.ok(ingredientContractIndex<cookwareEligibilityIndex&&cookwareEligibilityIndex<cookingContractIndex&&cookingAuthoringIndex<initializerIndex&&objectHandlingIndex<cookingContractIndex&&spatialFinalizeIndex<cookingContractIndex&&cookingContractIndex<initialManifestIndex,'Cooking must initialize after canonical Ingredient, Object Handling and Spatial owners, and before Engine');
 assert.ok(objectHandlingIndex<resourcesIndex&&objectHandlingIndex<agentCarryIndex&&agentCarryIndex<physicalIndex&&physicalIndex<passageIndex&&passageIndex<locomotionIndex&&locomotionIndex<crowdingIndex,'production embodiment load order must keep Object Handling before Resources / Agent Carry, then Agent Carry -> Physical -> Passage -> Locomotion -> Crowding');
 assert.ok(crowdingIndex<initialManifestIndex,'embodiment initial-state registrants must load before initial-state manifest finalization');
 assert.equal(pipelineIndex,engineIndex+1,'runtime hook dispatcher must immediately wrap the canonical engine before feature hooks load');
@@ -79,6 +82,7 @@ assert.ok(usageIndex>engineIndex&&usageIndex<sleepConflictIndex&&sleepConflictIn
 assert.ok(hookManifestIndex<validatorIndex,'simulation hook manifest must finalize before validation/UI composition');
 assert.ok(validatorIndex>pipelineIndex,'validator registry may finalize independently of the runtime-hook manifest');
 assert.ok(manifestIndex>validatorIndex,'validator manifest must finalize after the base registry');
+assert.ok(validatorIndex<cookwareValidatorIndex&&cookwareValidatorIndex<manifestIndex,'Cookware validator must register before the canonical manifest');
 assert.ok(manifestIndex<uiIndex,'validator registry must finalize before the base UI');
 assert.equal(labelsIndex,uiIndex+1,'Presentation labels owner must load immediately after the base UI');
 const expectedUiSources=[
@@ -190,7 +194,9 @@ const validatorRules=fs.readdirSync(validationRulesDir)
   .filter(name=>name.endsWith('.js'))
   .map(name=>'src/validation/rules/'+name)
   .sort();
-assert.equal(validatorRules.length,24,'architecture guard must discover both Food Meal and Ingredient semantic validation layers');
+for(const name of ['food-meal.js','food-ingredient.js','food-cookware.js']){
+  assert.ok(validatorRules.includes('src/validation/rules/'+name),'canonical production validation must include '+name);
+}
 for(const path of validatorRules){
   assert.ok(indexOf(path)>validatorIndex,path+' must load after validation/registry.js');
   assert.ok(indexOf(path)<manifestIndex,path+' must load before validation/manifest.js');
