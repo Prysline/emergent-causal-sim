@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+目前 overall runtime marker：`11.74.0-food-meal-serving`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -29,7 +29,7 @@ Current relevant markers：
 - Furniture Passage Yielding：`furniture-passage-yielding-v1`
 - Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
 - Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-furniture-target`
-- Perception Visual Availability production composition：`perception-visual-availability-v3-object-point`
+- Perception Visual Availability production composition：`perception-visual-availability-v4-exposed-meal`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
@@ -42,7 +42,7 @@ Current relevant markers：
 - Human Social Response：`11.67.0-human-social-meal-compatibility`
 - Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
-- Object Handling：`object-handling-v2-movable-containment`
+- Object Handling：`object-handling-v3-meal-mass-projection`
 - Resources：`11.68.0-movable-object-cargo`
 - Physical `11.56.0-physical-object-handling`
 - Agent Carry：`11.46.0-sleep-carry-integration`
@@ -60,14 +60,18 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v23`
-- Food Meal F0：`food-v1-f0`
+- World Authoring：`world-authoring-v24`
+- Food Meal / Serving：`food-v2-meal-serving`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v14-kitchen`
 - Food Cooking：`food-cooking-v2-autonomous-ingredient-acquisition`
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.74.0-food-meal-serving`：在既有 `eat` Action 中新增 opt-in Meal plate partial serving 路線。完全可食 Meal 依 canonical `edibleMassGrams` 原子拆分並以原本 `Object.containedBy` 位於合法外露可攜餐盤；實際 `Agent.held` 搬運、Spatial nearby placement、Perception/Interaction 和每 tick 食用維持各自 owner，Serving Event 與 Cooking completion / intake 构成單一因果鏈。Object cargo kg 只從 Food grams 投影；legacy Resource `contents.food` 的 amount / `foodStock` / transfer 不轉換，其他 contained Objects 不外露。Own markers：Food `food-v2-meal-serving`、Object Handling `object-handling-v3-meal-mass-projection`、Perception Visual Availability `perception-visual-availability-v4-exposed-meal`、World Authoring `world-authoring-v24`；Cooking／Ingredient／Resources、Physical／Locomotion 沿用既有自有 marker。詳見 [Meal Serving v1](food-meal-serving.md)。
+
+前一個 release：
 
 `11.73.0-food-autonomous-ingredient-acquisition`：Cooking 由僅限同爐面取料擴充為自主從合法 Furniture 支撐表面（首例廚房櫃台）觀察、前往、持有並放入指定鍋具。Action sourceId、potId 重驗，pickupIngredient → loadPot → complete Event 保留原料的單一物件位置、容量與質量真相。Cooking generation `food-cooking-v2-autonomous-ingredient-acquisition`；World Authoring v23、Ingredient、Meal F0、Object Handling／Spatial 自有 generation 未改。Core Default World、Serving、D2 與 Ingredient replenishment 仍獨立未完成。詳見 [Food autonomous Ingredient acquisition](food-autonomous-ingredient-acquisition.md)。
 
