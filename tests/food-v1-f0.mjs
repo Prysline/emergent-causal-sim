@@ -10,6 +10,9 @@ const SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const near=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-8,msg+' expected '+b+', got '+a);
 const noIssues=label=>{const report=V.validateState(E.getState());assert.equal(report.issueCount,0,label+': '+report.issues.map(i=>i.code).join(', '));};
 const mealEvents=st=>st.events.filter(e=>e.data?.action==='eat'&&e.data?.foodKind==='meal'&&e.data?.phase==='intake').reverse();
+// F0 direct-eating tests deliberately use the historical Resource-only plates;
+// the canonical B house now opts into physical Food v2 plate serving.
+useLegacyResourceWorld(A,W,E);
 
 function setup({seed=261120,mass=300,hunger=80,withSecond=false}={}){
   E.reset(seed);
@@ -190,7 +193,6 @@ assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
   noIssues('emergency after real intake');
 }
 {
-  useLegacyResourceWorld(A,W,E);
   const {st,a}=setup({seed:261126});
   const plate=st.objects.legacyResourcePlateA;
   plate.contents={food:6};delete plate.supportId;plate.position={...a.position};a.held=plate.id;
