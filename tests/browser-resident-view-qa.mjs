@@ -352,6 +352,8 @@ const mobileMapStateBeforeSelection=await page.evaluate(()=>JSON.stringify(windo
 // Find a genuinely hit-testable point on the Agent's map marker. A 16-column
 // house makes each mobile tile narrower; the furniture's separate handle can
 // overlap the marker center without hiding the Agent's actual click target.
+// A wider canonical house scrolls within its own map panel on mobile.
+await page.locator(`#map [data-entity="agent:${mobileMapFixture.agentId}"]`).scrollIntoViewIfNeeded();
 const mobileAgentHit=await page.evaluate(({agentId})=>{
   const marker=document.querySelector(`#map [data-entity="agent:${agentId}"]`);
   if(!marker)return null;
@@ -370,6 +372,7 @@ await page.waitForFunction(({agentId})=>{const s=window.SimUI.getInspectorSelect
 assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileMapStateBeforeSelection,'mobile agent selection must not mutate simulation state');
 
 await page.click('.mobile-nav [data-tab="map"]');
+await page.locator(`#map .spatial-furniture-handle[data-furniture-id="${mobileMapFixture.furnitureId}"]`).scrollIntoViewIfNeeded();
 const furnitureHit=await page.evaluate(({furnitureId})=>{
   const handle=document.querySelector(`#map .spatial-furniture-handle[data-furniture-id="${furnitureId}"]`);if(!handle)return null;
   const r=handle.getBoundingClientRect(),points=[[r.left+2,r.top+2],[r.right-2,r.top+2],[r.left+2,r.bottom-2],[r.right-2,r.bottom-2]];
