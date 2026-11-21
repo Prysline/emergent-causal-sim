@@ -140,6 +140,27 @@ function eventAncestors(st,id,visited=new Set()){
   assert.deepEqual(issues(),[]);
 }
 {
+  // A reachable but unobserved plate is World truth, not this Agent's serving knowledge.
+  const {st,a,meal,plate}=setup(20261127);
+  delete plate.supportId;plate.position={x:10,y:6,z:0};
+  const sourceContact=SP.bestInteractionPositionResult(st,a,{kind:'object',id:meal.id},'eatFrom');
+  assert.ok(sourceContact?.position);
+  a.position={...sourceContact.position};
+  const route=SP.bestInteractionPositionResult(st,a,{kind:'object',id:plate.id},'pickup');
+  assert.ok(Number.isFinite(route?.traversalCost),'unobserved plate is still physically reachable');
+  assert.equal(SP.isAtInteraction(st,a,{kind:'object',id:plate.id},'pickup'),false);
+  const facings=['north','northEast','east','southEast','south','southWest','west','northWest'];
+  assert.ok(facings.some(face=>{
+    a.facing=face;
+    return P.classifyObjectPointVisualAvailability(st,a,plate).visualAvailable===false;
+  }),'a canonical visual blind orientation must exist');
+  const action=startEat(st,a);
+  E.tick();
+  assert.equal(action.phase,'toMeal','World plate existence alone must not trigger serving');
+  assert.equal(servingEvents(st).length,0);
+  assert.deepEqual(issues(),[]);
+}
+{
   const {st,a,meal,plate}=setup(20261123);
   const contact=SP.bestInteractionPositionResult(st,a,{kind:'object',id:meal.id},'eatFrom');
   assert.ok(contact?.position);
@@ -182,6 +203,13 @@ function eventAncestors(st,id,visited=new Set()){
   assert.equal(st.objects.ingredientA1,undefined);
   assert.equal(st.objects[completion.data.mealId].meal.edibleMassGrams,300);
   a.needs.hunger=80;
+  const facings=['north','northEast','east','southEast','south','southWest','west','northWest'];
+  const observedPlate=facings.some(face=>{
+    a.facing=face;
+    return P.classifyObjectPointVisualAvailability(st,a,plate).visualAvailable===true
+      || SP.isAtInteraction(st,a,{kind:'object',id:plate.id},'pickup');
+  });
+  assert.equal(observedPlate,true,'cooked serving fixture must provide actual observed plate evidence');
   const eat=startEat(st,a);
   E.tick();assert.equal(eat.phase,'toMealDish','cooked Meal must enter physical serving path');
   until(()=>servingEvents(st).length===1,80);
