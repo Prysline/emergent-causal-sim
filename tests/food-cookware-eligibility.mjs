@@ -8,7 +8,7 @@ const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCookin
 const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
-assert.equal(C.VERSION,'food-cooking-v1-cookware-eligibility');
+assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(A.VERSION,'world-authoring-v23');
 
 const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);

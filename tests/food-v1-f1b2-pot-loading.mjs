@@ -7,7 +7,7 @@ const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthorin
 const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCooking;
 const O=globalThis.SimObjectHandling,R=globalThis.SimResources,SP=globalThis.SimSpatial;
 const P=globalThis.SimPerception,V=globalThis.SimValidator;
-assert.equal(C.VERSION,'food-cooking-v1-cookware-eligibility');
+assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v1-f0');
 
