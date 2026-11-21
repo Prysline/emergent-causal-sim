@@ -91,7 +91,16 @@ assert.throws(()=>isolatedEngine.registerRuntimeHook('beforeTick','qa.duplicate-
 E.reset(20260911);
 noIssues('reset');
 for(let i=0;i<200;i++){
+  const before=E.getState(),prior=before.agents.zhou;
+  const priorAction=prior.action?{kind:prior.action.kind,phase:prior.action.phase,carrierId:prior.action.carrierId,sourceId:prior.action.sourceId,destinationId:prior.action.destinationId}:null;
+  const priorHeld=prior.held,priorIntent=prior.activeIntent?{id:prior.activeIntent.id,kind:prior.activeIntent.kind,lifecycle:prior.activeIntent.lifecycle}:null;
+  const priorEvents=new Set(before.events.map(e=>e.id));
   E.tick();
+  const now=E.getState(),zhou=now.agents.zhou;
+  if(now.tick>=135&&now.tick<=145){
+    const carrierId=priorAction?.carrierId||zhou.action?.carrierId||'basket';
+    console.log('CARRIER_DIAG '+JSON.stringify({tick:now.tick,before:{held:priorHeld,action:priorAction,intent:priorIntent},after:{held:zhou.held,action:zhou.action?{kind:zhou.action.kind,phase:zhou.action.phase,carrierId:zhou.action.carrierId,sourceId:zhou.action.sourceId,destinationId:zhou.action.destinationId}:null,intent:zhou.activeIntent?{id:zhou.activeIntent.id,kind:zhou.activeIntent.kind,lifecycle:zhou.activeIntent.lifecycle}:null},carrier:{id:carrierId,position:now.objects[carrierId]?.position,supportId:now.objects[carrierId]?.supportId,contents:now.objects[carrierId]?.contents},reservations:Object.entries(now.reservations).filter(([k,id])=>id===zhou.id||k==='object:'+carrierId),events:now.events.filter(e=>!priorEvents.has(e.id)).filter(e=>e.data?.actor===zhou.id||e.data?.container===carrierId).map(e=>({id:e.id,action:e.data?.action,container:e.data?.container,phase:e.data?.phase,position:e.data?.position,causeIds:e.causeIds}))}));
+  }
   noIssues(`tick ${i+1}`);
 }
 assert.equal(E.getState().tick,200,'pipeline must advance the canonical core exactly once per E.tick call');
