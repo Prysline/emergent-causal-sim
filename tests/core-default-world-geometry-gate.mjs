@@ -192,3 +192,111 @@ for (const name of ['A', 'B']) {
   }
   console.log(name + ': authoring, initializer, state and Spatial geometry passed');
 }
+
+
+// Controlled activity opportunities and autonomous tick smoke, using the real production
+// consumers. Only the fixtures change; they never replace DEFAULT_WORLD_AUTHORING.
+const E = globalThis.SimEngine;
+const V = globalThis.SimValidator;
+const P = globalThis.SimPerception;
+const commonStarts = { zhen: [8, 6], zhou: [9, 5], orange: [6, 7] };
+function controlledCandidate(name) {
+  const doc = makeCandidate(name);
+  for (const [id, [x, y]] of Object.entries(commonStarts)) {
+    doc.residents[id].initial.placement = { mode: 'exact', node: p(x, y) };
+  }
+  const report = I.analyzeInitialPlacements(doc);
+  assert.equal(report.ok, true, name + ' controlled starts: ' + JSON.stringify(report.hardErrors));
+  assert.deepEqual(report.diagnostics, []);
+  return doc;
+}
+
+for (const name of ['A', 'B']) {
+  const doc = controlledCandidate(name);
+  const st = W.createInitialStateFromAuthoring(doc, 20261121);
+  const opportunities = {};
+  for (const id of ['zhen', 'zhou']) {
+    const agent = st.agents[id];
+    const read = E.bestReadableObjectOpportunity(st, agent);
+    const fill = SP.bestInteractionPositionResult(st, agent, { kind: 'source', id: 'tap' }, 'fill');
+    const meal = SP.bestInteractionPositionResult(st, agent, { kind: 'object', id: 'readyMealF0' }, 'eatFrom');
+    const stove = SP.bestInteractionPositionResult(st, agent, { kind: 'furniture', id: 'stoveA' }, 'default');
+    const sleep = SP.sleepTargets(st, agent);
+    const rest = SP.restTargets(st, agent);
+    const other = id === 'zhen' ? 'zhou' : 'zhen';
+    const social = SP.bestInteractionPositionResult(st, agent, { kind: 'agent', id: other }, 'social');
+    for (const [activity, result] of Object.entries({ read, fill, meal, stove, social })) {
+      assert.ok(Number.isFinite(result?.traversalCost),
+        name + ': ' + id + ' lacks legal ' + activity + ' opportunity');
+    }
+    assert.ok(sleep.length > 0, name + ': ' + id + ' lacks legal sleeping target');
+    assert.ok(rest.length > 0, name + ': ' + id + ' lacks legal resting target');
+    opportunities[id] = {
+      read: read.traversalCost, fill: fill.traversalCost,
+      meal: meal.traversalCost, stove: stove.traversalCost,
+      social: social.traversalCost, sleep: sleep[0].score, rest: rest[0].score,
+    };
+  }
+
+  const bed = doc.furniture.bed.origin;
+  const los = P.classifyStaticVisualLos(doc.furniture.stoveA.origin,
+    p(bed.x + 1, bed.y + 1), P.projectStaticVisualOpacity(doc, 0));
+  assert.equal(los.losAvailable, name === 'A',
+    name + ': static kitchen-to-bedroom visual occlusion');
+
+  assert.equal(Object.keys(SP.recomputeRooms(st)).length, 1, name + ': open doors are one room');
+  if (name === 'B') {
+    // The wall and the door must affect both traversal topology and the actual
+    // room-based agent-context consumer. No private knowledge is manufactured.
+    const zhen = st.agents.zhen, zhou = st.agents.zhou;
+    zhen.position = p(6, 4);
+    zhou.position = p(6, 5);
+    assert.equal(E.observeAgentContext(st, zhen, zhou).observable, true,
+      'open bedroom door permits same-room agent context');
+    st.doors.bedroomDoor.state = 'closed';
+    assert.equal(Object.keys(SP.recomputeRooms(st)).length, 2);
+    const observation = E.observeAgentContext(st, zhen, zhou);
+    assert.equal(observation.observable, false);
+    assert.equal(observation.reason, 'different-room');
+  }
+  console.log('Core default controlled activity opportunities ' +
+    name + ': ' + JSON.stringify(opportunities));
+}
+
+// Use the same seed, start positions and needs, but allow the real Deliberation
+// and Action runtime to choose their own trajectories. Do not lock a story.
+let currentControlledDoc = null;
+E.configureResetStateSource('core-default-world-ab-controlled', seed =>
+  W.createInitialStateFromAuthoring(currentControlledDoc, seed));
+for (const name of ['A', 'B']) {
+  currentControlledDoc = controlledCandidate(name);
+  E.reset(20261121);
+  const st = E.getState();
+  for (const agent of Object.values(st.agents)) {
+    Object.assign(agent.needs, {
+      hunger: 45, thirst: 38, fatigue: 38, sleepNeed: 43,
+      social: 35, stimulation: 15, relaxation: 15,
+    });
+  }
+  const before = V.validateState(st);
+  assert.equal(before.issueCount, 0,
+    name + ' initial state: ' + before.issues.map(x => x.code).join(','));
+  const choices = [];
+  for (let tick = 0; tick < 36; tick++) {
+    E.tick();
+    for (const [id, thought] of Object.entries(st.thoughts || {})) {
+      if (thought?.tick === st.tick && thought.pick?.id) choices.push(id + ':' + thought.pick.id);
+    }
+  }
+  const after = V.validateState(st);
+  assert.equal(after.issueCount, 0,
+    name + ' after autonomous ticks: ' + after.issues.map(x => x.code).join(','));
+  assert.equal(st.tick, 36, name + ': autonomous Engine must advance 36 ticks');
+  assert.ok(choices.length > 0, name + ': Deliberation must make real decisions');
+  console.log('Core default autonomous tick smoke ' + name + ': ' +
+    JSON.stringify({
+      tick: st.tick, choices: [...new Set(choices)].sort(),
+      events: st.events.length,
+      agentActions: Object.fromEntries(Object.values(st.agents).map(a => [a.id, a.action?.kind || null])),
+    }));
+}
