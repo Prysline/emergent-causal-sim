@@ -284,10 +284,16 @@
   function chooseMealServingDish(a,meal){
     if(a?.kind!=='human'||a.offMap||a.held||!meal||meal.containedBy)return null;
     if(!Number.isFinite(targetTraversalCost(a,{kind:'object',id:meal.id},'serve')))return null;
+    const classify=window.SimPerception?.classifyObjectPointVisualAvailability;
+    if(typeof classify!=='function')throw new Error('Meal plate selection requires canonical Object visual availability.');
     const plates=Object.values(state.objects).filter(plate=>F.isServingPlate(plate)
       &&O.canHoldObject(state,a,plate)&&!O.containedObjects(state,plate.id).length
       &&!holderOf(plate.id)&&!reservationOwner('object:'+plate.id))
-      .map(plate=>({plate,d:targetTraversalCost(a,{kind:'object',id:plate.id},'pickup')}))
+      .map(plate=>{
+        const target={kind:'object',id:plate.id};
+        const observed=SP.isAtInteraction(state,a,target,'pickup')||classify(state,a,plate)?.visualAvailable===true;
+        return {plate,d:observed?targetTraversalCost(a,target,'pickup'):Infinity};
+      })
       .filter(item=>Number.isFinite(item.d))
       .sort((x,y)=>x.d-y.d||x.plate.id.localeCompare(y.plate.id));
     return plates[0]?.plate||null;
