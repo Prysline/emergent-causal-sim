@@ -33,6 +33,7 @@ Current relevant markers：
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
+- Meal Plate EatFrom Interaction：`meal-plate-eat-from-v1`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Daily Life Learned Habit：`daily-life-learned-habit-v1`
