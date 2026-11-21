@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='object-handling-v2-movable-containment';
+  const VERSION='object-handling-v3-meal-mass-projection';
   const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
 
   function resolveObject(st,idOrObject){
@@ -15,8 +15,10 @@
   // Child-side containedBy remains the sole canonical ordinary-Object inventory relation.
   function containedObjects(st,containerId){return Object.values(st?.objects||{}).filter(item=>item.containedBy===containerId);}
   function cargoMassKg(item){
-    const mass=item?.handling?.massKg;
-    if(!Number.isFinite(mass)||mass<=0)throw new Error('Contained Object '+String(item?.id||'?')+' requires positive handling.massKg.');
+    // Fully edible Meal cargo mass is derived from the same canonical grams consumed by eat.
+    const F=window.SimFood;
+    const mass=F?.hasMeal(item)?F.remainingGrams(item)/1000:item?.handling?.massKg;
+    if(!Number.isFinite(mass)||mass<=0)throw new Error('Contained Object '+String(item?.id||'?')+' requires positive canonical cargo mass.');
     if(item.resourceContainer===true||item.objectContainment===true)throw new Error('Nested / Resource Object cargo is not supported in movable containment v1.');
     return mass;
   }
