@@ -1,7 +1,7 @@
 (() => {
   // One deliberately bounded recipe; no generic recipe engine or second Food inventory.
   const I=window.SimIngredient,F=window.SimFood,O=window.SimObjectHandling,SP=window.SimSpatial,K=window.SimFoodCookwareEligibility;
-  if(I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v1-f0'||!O?.objectStorageStatus||!SP?.objectPosition||K?.VERSION!=='food-cookware-eligibility-v1')throw new Error('Cooking requires Ingredient v1 and the canonical Meal F0 contract.');
+  if(I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v2-meal-serving'||!O?.objectStorageStatus||!SP?.objectPosition||K?.VERSION!=='food-cookware-eligibility-v1')throw new Error('Cooking requires Ingredient v1 and the canonical Meal F0 contract.');
   const VERSION='food-cooking-v2-autonomous-ingredient-acquisition',RECIPE_ID='ingredient-A-equimass',REQUIRED_TICKS=4;
   function onStationFootprint(station,position){
     return !!position&&station?.footprint?.some(p=>p.x===position.x&&p.y===position.y&&(p.z||0)===(position.z||0));
