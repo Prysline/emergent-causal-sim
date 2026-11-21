@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+目前 overall runtime marker：`11.74.0-unsupported-posture-visual-guard`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -28,7 +28,7 @@ Current relevant markers：
 
 - Furniture Passage Yielding：`furniture-passage-yielding-v1`
 - Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
-- Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-furniture-target`
+- Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-locomotion-posture-guard`
 - Perception Visual Availability production composition：`perception-visual-availability-v3-object-point`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
@@ -68,6 +68,8 @@ Current relevant markers：
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.74.0-unsupported-posture-visual-guard`：合法 `kneelCrawl / proneCrawl` 對應 `kneeling / prone`，但缺少 canonical static PoseEnvelope 時，Perception `derivePhysicalSightSamples` 與物件／Agent 視覺 API 仍明確失敗。新增狹義 query-time preflight，僅讓 Cooking / Tidying provider 與 Engine Action construction 在缺少視覺前置證據時不產生動作，避免自主 tick 中止；不製造假觀察、知識、World Object mutation / Event。Perception Sight Samples 自有 generation 前進 `perception-visual-sight-samples-v2-locomotion-posture-guard`；原本本頁列出的 v2-furniture-target 與 main code v1 不一致，本次依實作重新對齊。Physical、Locomotion、Cooking recipe、Tidying storage、Perception Object-point、World Authoring 自有 marker 不假升版。Core Default World PR #246 仍為獨立 integration gate。
 
 `11.73.0-food-autonomous-ingredient-acquisition`：Cooking 由僅限同爐面取料擴充為自主從合法 Furniture 支撐表面（首例廚房櫃台）觀察、前往、持有並放入指定鍋具。Action sourceId、potId 重驗，pickupIngredient → loadPot → complete Event 保留原料的單一物件位置、容量與質量真相。Cooking generation `food-cooking-v2-autonomous-ingredient-acquisition`；World Authoring v23、Ingredient、Meal F0、Object Handling／Spatial 自有 generation 未改。Core Default World、Serving、D2 與 Ingredient replenishment 仍獨立未完成。詳見 [Food autonomous Ingredient acquisition](food-autonomous-ingredient-acquisition.md)。
 

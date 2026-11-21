@@ -31,7 +31,7 @@ const clearProjection=Object.freeze([]);
 assert.equal(P.VISUAL_ORIENTATION_VERSION,'perception-visual-orientation-v1');
 assert.equal(P.VISUAL_RANGE_VERSION,'perception-visual-range-v1');
 assert.equal(P.VISUAL_LOS_VERSION,'perception-visual-los-v2');
-assert.equal(P.VISUAL_SIGHT_SAMPLES_VERSION,'perception-visual-sight-samples-v1');
+assert.equal(P.VISUAL_SIGHT_SAMPLES_VERSION,'perception-visual-sight-samples-v2-locomotion-posture-guard');
 assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v1');
 
 const available=P.classifyVisualSensoryAvailability(state,observer,target,clearProjection);
@@ -83,6 +83,10 @@ assert.throws(()=>P.classifyVisualSensoryAvailability(null,observer,target,clear
 assert.throws(()=>P.classifyVisualSensoryAvailability(state,{...observer,id:null},target,clearProjection),/observer Agent id/);
 assert.throws(()=>P.classifyVisualSensoryAvailability(state,observer,target,null),/explicit visual opacity projection/);
 assert.throws(()=>P.classifyVisualSensoryAvailability(state,observer,{...target,position:{x:4,y:4,z:1}},clearProjection),/does not support cross-layer sight/);
+for(const posture of ['kneeling','prone']){
+  assert.throws(()=>P.classifyVisualSensoryAvailability(state,{...observer,posture:{kind:posture}},target,clearProjection),new RegExp('do not support posture '+posture));
+  assert.throws(()=>P.classifyVisualSensoryAvailability(state,observer,{...target,posture:{kind:posture}},clearProjection),new RegExp('do not support posture '+posture));
+}
 
 const originalDerive=P.derivePhysicalSightSamples;
 let deriveCount=0;
