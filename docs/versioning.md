@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.76.0-core-default-world-b`。
+目前 overall runtime marker：`11.76.1-logistics-carrier-drop-lifecycle`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -69,6 +69,8 @@ Current relevant markers：
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.76.1-logistics-carrier-drop-lifecycle`：修正原有 completed-edge `containerDrop` 與物流 Action 同 tick lifecycle 的整合缺口：合法掉落保持 canonical Object 位置、貨物與 `containerDrop` Event；當該物件是 `restockContainer` / `externalSupply` 必要 carrier 時，Engine 即刻執行既有 Action abort、reservation cleanup，產生引用 drop Event 的 abort Event，afterTick Intent reconciliation 沿用原順序。無變動 Resources handling-risk probability、World Authoring v25、Food、Object Handling、Intent schema 或 Runtime Hook ordering，自有 subsystem markers 不機械上升。固定 seed 200-tick B production regression 及強制掉落的真實 Logistics lifecycle regression 提供驗證。
 
 `11.76.0-core-default-world-b`：Core Default World 正式預設場景由最後一層 World Authoring v25 投影為 16×10 公共／私人分區 B 住宅（不是 WORLD 001），含合法臥室門、餐桌、休息、料理鍋／原料配置與 Source port。`plateA/B` 是唯一正式普通 Object 可攜 Serving Plates，使用 Food v2 Meal mass／Object containment；舊 Resource 餐盤僅保留在舊世代基準與隔離回歸，改名為 `legacyResourcePlateA/B`，不得與新版同時出現在正式場景。其他 Resource 模型不因此自動完成 migration；World Authoring v24 的 Food 契約未改。
 

@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.76.0-core-default-world-b`。
+目前 runtime marker：`11.76.1-logistics-carrier-drop-lifecycle`。
+
+Current Logistics carrier drop integration：Engine 在 completed movement edge 的 `containerDrop` canonical consequence 後，對仍依賴該 carrier 的 `restockContainer` / `externalSupply` 即時呼叫原有 `abortAction`、清理 reservations，並由 existing afterTick Intent reconciliation 收束 actionBound Intent；`abort` Event 引用原 `containerDrop` Event。Spatial nearby intentional release、Resources handling risk / accidental drop placement、其他 Action 與 Runtime Hook 排序不變。
 
 Core Default World B（正式預設場景）：最後一層 `src/core-default-world-authoring.js` 將既有 Food v24 Authoring 合成唯一 `world-authoring-v25` 的 `DEFAULT_WORLD_AUTHORING`，提供 16×10 公共／私人分區住宅、實體臥室門、合法生活／Cooking 家具、爐具上 `potA`、櫃台上 `ingredientA1` 及桌上的 Food Meal。正式餐盤 `plateA/B` 是唯一的普通可攜 Serving Plates，以 `Object.containedBy` 和 Food `edibleMassGrams` 保存一份位置與質量真相。舊資源盤全面以 `legacyResourcePlateA/B` 識別，只供獨立回歸 fixture；不得在正式場景混入。舊 `mealTray`／`foodPantry` 等 Resource 機制仍各自獨立，不在本次遷移。正式世界仍非 WORLD 001。
 

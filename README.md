@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.76.0-core-default-world-b`。
+目前 runtime marker：`11.76.1-logistics-carrier-drop-lifecycle`。
+
+Logistics carrier drop lifecycle：當實際 completed movement edge 產生合法 `containerDrop`，依賴該容器的 `restockContainer`／`externalSupply` 會在同一 tick 經既有 abort lifecycle 中止，並讓中止 World Event 引用掉落事件；實際掉落位置、剩餘內容物及已確定發生的事件不回滾。意外掉落機率與其他 Action 不因此改變。
 
 Core Default World B：正式預設住宅採用有實際隔間與臥室門的 16×10 公共／私人分區格局，配置可接觸的瓦斯爐、廚房櫃台、料理鍋及 Ingredient A；正式餐盤 `plateA`／`plateB` 均使用 Food v2 普通 Object 盛餐契約，舊 Resource 餐盤不出現在正式預設場景。舊 Resource 餐盤 ID／名稱已標為 `legacyResourcePlateA/B`，僅供舊機制的隔離 fixture 使用。此變更不是整體 Resource → Food migration。
 

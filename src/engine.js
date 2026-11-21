@@ -183,8 +183,8 @@
     if(random()>=probability)return false;
     const dropNode=SP.normalizeNode?SP.normalizeNode(state,step.to,step.to?.surfaceId||'floor'):{...step.to};
     c.position={...dropNode};delete c.supportId;a.held=null;
-    addEvent(`${a.name}在移動中失手掉了${c.name}。`,'bad',[],{actor:a.id,container:c.id,action:'containerDrop',consequenceKind:'containerDrop',position:positionRef(dropNode),completedEdge:completedEdgeRef(step),handlingExposure:{...exposure},handlingRisk:{contentsLoss:facts.occurrenceProbability,containerDrop:probability}});
-    return true;
+    const dropEventId=addEvent(`${a.name}在移動中失手掉了${c.name}。`,'bad',[],{actor:a.id,container:c.id,action:'containerDrop',consequenceKind:'containerDrop',position:positionRef(dropNode),completedEdge:completedEdgeRef(step),handlingExposure:{...exposure},handlingRisk:{contentsLoss:facts.occurrenceProbability,containerDrop:probability}});
+    return dropEventId;
   }
 
   function targetLabel(t){if(!t)return'目標';if(t.kind==='agent')return state.agents[t.id]?.name||t.id;if(t.kind==='slot'){const s=SP.getSlot(state,t.id);return state.furniture[s?.furnitureId]?.name||'座位';}if(t.kind==='tile')return`(${t.position.x}, ${t.position.y}${(SP.zOf?.(t.position)??t.position.z??0)!==0?`, z=${SP.zOf?.(t.position)??t.position.z}`:''})`;return state.objects[t.id]?.name||state.sources[t.id]?.name||state.furniture[t.id]?.name||t.id;}
@@ -219,7 +219,15 @@
     const handlingContext=completedEdgeHandlingContext(a,step,executionManeuver);
     const enterResult=onEnterTile(a);
     if(!enterResult?.carriedContentsLoss)applyCompletedEdgeContentsLoss(a,step,executionManeuver,handlingContext);
-    applyCompletedEdgeContainerDrop(a,step,executionManeuver,handlingContext);
+    const dropEventId=applyCompletedEdgeContainerDrop(a,step,executionManeuver,handlingContext);
+    if(dropEventId){
+      const action=a.action;
+      const requiredCarrierId=action?.kind==='externalSupply'?action.carrierId:action?.kind==='restockContainer'?(action.strategy==='carryContainer'?action.destinationId:action.carrierId):null;
+      if(requiredCarrierId===handlingContext?.container?.id){
+        abortAction(a,'移動途中失手掉落'+handlingContext.container.name+'，無法繼續搬運',{dropHeld:false,causeIds:[dropEventId]});
+        return false;
+      }
+    }
     const arrived=atSpatialPosition(a,goal);if(arrived)delete a.action.locomotionCredit;return arrived;
   }
   function moveToInteraction(a,target,reason,affordance='default'){
@@ -495,7 +503,7 @@
   }
   function startAction(a,choice){a.action=buildAction(a,choice);if(a.action)addEvent(`${a.name}開始準備${ZH[choice.id]||choice.id}。`,'system',[],{actor:a.id,action:choice.id,phase:'plan',planLifecycle:'initialProvisional',position:positionRef(a.position)});}
   function finishAction(a,{dropHeld=true}={}){releaseAgentReservations(a);if(dropHeld&&a.held)releaseHeld(a);clearLocomotionState(a);a.action=null;}
-  function abortAction(a,reason,{dropHeld=true}={}){addEvent(`${a.name}放棄目前的行動。`,'normal',[],{actor:a.id,action:'abort',actionKind:a.action?.kind||'',reason});finishAction(a,{dropHeld});}
+  function abortAction(a,reason,{dropHeld=true,causeIds=[]}={}){addEvent(`${a.name}放棄目前的行動。`,'normal',causeIds,{actor:a.id,action:'abort',actionKind:a.action?.kind||'',reason});finishAction(a,{dropHeld});}
 
   function restRecoveryInfo(a){const noise=SP.noiseAt(state,a.position);let surfaceQuality=.18,surfaceKind='standing',slot=null;if(a.posture?.kind==='sitting'&&a.posture.slotId){slot=SP.getSlot(state,a.posture.slotId);surfaceQuality=slot?.restQuality??.35;surfaceKind='seat';}else if(a.posture?.kind==='lying'&&a.posture.slotId){slot=SP.getSlot(state,a.posture.slotId);surfaceQuality=slot?.restQuality??.55;surfaceKind='lyingSurface';}else if(a.posture?.kind==='lying'){surfaceQuality=a.kind==='cat'?.42:.35;surfaceKind='floor';}const baseEfficiency=clamp(.92-noise*.025,.25,1.08),surfaceMultiplier=surfaceKind==='seat'?clamp(.90+surfaceQuality*.25,.9,1.15):surfaceKind==='lyingSurface'?clamp(.92+surfaceQuality*.28,.92,1.22):surfaceKind==='floor'?clamp(.82+surfaceQuality*.24,.78,1.05):.72,restEfficiency=clamp(baseEfficiency*surfaceMultiplier,.12,1.30),recoveryRate=T.value(a,'recoveryRate'),recovery=3.2*restEfficiency*recoveryRate;return {recovery,restEfficiency,baseEfficiency,surfaceMultiplier,surfaceKind,slotId:slot?.id||null,furnitureId:slot?.furnitureId||null,recoveryRate,noise,localComfort:SP.comfortAt(state,a.position)};}
   function sleepRecoveryInfo(a){const noise=SP.noiseAt(state,a.position),slot=a.posture?.slotId?SP.getSlot(state,a.posture.slotId):null,surfaceQuality=slot?(slot.sleepQuality??slot.restQuality??.35):.25,baseEfficiency=clamp(.98-noise*.018,.35,1.08),surfaceMultiplier=clamp(.86+surfaceQuality*.34,.86,1.20),sleepEfficiency=clamp(baseEfficiency*surfaceMultiplier,.15,1.30),recoveryRate=T.value(a,'recoveryRate'),recovery=4.4*sleepEfficiency*recoveryRate,profile=sleepProfile(a),sleepNeedRecovery=profile.sleepNeedRecoveryPerTick*sleepEfficiency*profile.sleepRecoveryRate;return {recovery,sleepNeedRecovery,sleepEfficiency,baseEfficiency,surfaceMultiplier,surfaceQuality,slotId:slot?.id||null,furnitureId:slot?.furnitureId||null,recoveryRate,sleepRecoveryRate:profile.sleepRecoveryRate,noise,localComfort:SP.comfortAt(state,a.position)};}
