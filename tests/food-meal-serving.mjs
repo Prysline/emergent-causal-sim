@@ -10,6 +10,7 @@ const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValida
 assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(O.VERSION,'object-handling-v3-meal-mass-projection');
 assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v1','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){
   const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -126,6 +127,7 @@ function eventAncestors(st,id,visited=new Set()){
   assert.equal(SP.interactionGeometry(st,{kind:'object',id:meal.id},b,'eatFrom').positions.length,0);
   assert.equal(SP.isAtInteraction(st,a,{kind:'object',id:meal.id},'eatFrom'),true,'owner may eat from a held plate');
   a.held=null;a.offMap=true;plate.supportId='diningTable';
+  assert.equal(SP.interactionGeometry(st,{kind:'object',id:meal.id},b,'eatFrom').mode,'exposedMealPlateReach','the effective production traversal owner must delegate Food plate eatFrom');
   const approach=SP.bestInteractionPositionResult(st,b,{kind:'object',id:meal.id},'eatFrom');
   assert.ok(Number.isFinite(approach?.traversalCost));
   b.position={...approach.position};
