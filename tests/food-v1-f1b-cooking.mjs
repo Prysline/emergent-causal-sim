@@ -8,9 +8,9 @@ const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCookin
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator,D=globalThis.SimFurnitureDefinitions;
 assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(F.VERSION,'food-v1-f0');
+assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
-assert.equal(A.VERSION,'world-authoring-v23','current Cooking authoring schema is the explicitly advanced v23');
+assert.equal(A.VERSION,'world-authoring-v24','current Cooking authoring schema is the explicitly advanced v23');
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
