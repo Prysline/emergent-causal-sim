@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+目前 runtime marker：`11.74.0-food-meal-serving`。
+
+Meal Serving & Physical Transfer v1：既有 `eat` Action 在可合法觀察到 Meal 與可用明確外露普通餐盤時，可依真實公克分裝、由 `Agent.held` 搬運並按 canonical nearby placement 放下，再由自己或其他居民以既有 `eatingMeal` 逐 tick 食用。部分轉移建立新 Meal Object；全量轉移保留身份，單一 `meal.edibleMassGrams` 與 Object `containedBy` 不設鏡像庫存；Object／Spatial／Perception 只對可合法進食的外露餐盤提供受控質量與接觸投影。Legacy `contents.food` 仍是不同 Resource 單位；並不包含 Core Default World、主動送餐、D2 或原料持續補給。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
 
