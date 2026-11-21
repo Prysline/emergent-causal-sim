@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+目前 runtime marker：`11.74.0-food-meal-serving`。
+
+Current Meal Serving & Physical Transfer v1：`SimFood` 是 fully edible Meal grams 的唯一 mass owner，原子分裝使用 `meal.edibleMassGrams`；`Object.containedBy` 指向明確 `objectContainment / objectStorage / canEatFrom` 的普通可攜餐盤，Object Handling 統一以該 grams 的唯讀 kg projection 負責 cargo capacity／carried load，不另建 `handling.massKg`。Spatial `eatFrom` 及 Object point visibility 對已合法觀察的外露餐盤內 Meal 提供受控接觸；其他 contained cargo 保持 hidden。Engine `eat` 利用既有 Action / pickup / movement / nearby placement / per-tick `eatingMeal`，Serving Event 引用原 Meal 與 Cooking Event；legacy `contents.food`、Resource serving、D2、Core Default World 不變。Own markers：Food `food-v2-meal-serving`、Object Handling `object-handling-v3-meal-mass-projection`、Perception Visual Availability `perception-visual-availability-v4-exposed-meal`、World Authoring `world-authoring-v24`；Cooking／Resources generation 不假升版。詳見 [`food-meal-serving.md`](food-meal-serving.md)。
 
 Current Food autonomous Ingredient acquisition：Cooking 的觀察與容量決策允許完整 Ingredient 位於任一真正 `supportsObjects` Furniture 表面（首例 kitchen-counter），而非必先放在爐具。原有 `cookMeal` Action 固定實際來源 `sourceId` 和合法鍋具 `potId`，透過通用 Object pickup／containHeldObject 真正跨位置裝鍋；來源變動或預約失效不能繼續。單一 World Event pickupIngredient → loadPot → complete 形成因果引用。F0 Meal 仍在爐面，World Authoring v23 與 Serving／D2 不變。
 
