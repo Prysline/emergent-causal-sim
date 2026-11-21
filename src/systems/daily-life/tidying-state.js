@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld,A=window.SimWorldAuthoring;
   if(!W?.registerInitialStateInitializer)throw new Error('systems/daily-life/tidying-state.js requires world.js initial-state pipeline.');
-  if(!['world-authoring-v20','world-authoring-v21','world-authoring-v22','world-authoring-v23'].includes(A?.VERSION))throw new Error('Tidying requires World Authoring v20, v21, v22 or v23.');
+  if(!['world-authoring-v20','world-authoring-v21','world-authoring-v22','world-authoring-v23','world-authoring-v24'].includes(A?.VERSION))throw new Error('Tidying requires World Authoring v20 through v24.');
   const VERSION='tidying-put-away-v1';
   const clone=value=>JSON.parse(JSON.stringify(value));
   function project(st,{authoring}={}){
