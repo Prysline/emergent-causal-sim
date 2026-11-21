@@ -25,7 +25,7 @@ const observer={kind:'human',physical,position:{x:2,y:4,z:0},posture:{kind:'stan
 const target={kind:'human',physical:C.defaultPhysicalProfile('human'),position:{x:4,y:4,z:0},posture:{kind:'standing'}};
 
 assert.equal(P.VISUAL_LOS_VERSION,'perception-visual-los-v2');
-assert.equal(P.VISUAL_SIGHT_SAMPLES_VERSION,'perception-visual-sight-samples-v1');
+assert.equal(P.VISUAL_SIGHT_SAMPLES_VERSION,'perception-visual-sight-samples-v2-locomotion-posture-guard');
 
 const first=P.derivePhysicalSightSamples(observer);
 assert.deepEqual(first,{
@@ -47,7 +47,16 @@ assert.equal(sittingSamples.posture,'sitting');
 assert.ok(sittingSamples.poseEnvelope.height<first.poseEnvelope.height,'posture-specific PoseEnvelope must remain visible in sight-sample evidence');
 assert.deepEqual(sittingSamples.observerOrigin,first.observerOrigin,'P1 must not invent an eye-height or planar posture offset');
 
-assert.throws(()=>P.derivePhysicalSightSamples({...observer,posture:{kind:'kneeling'}}),/do not support posture kneeling/,'unsupported PoseEnvelope must fail instead of silently falling back to standing');
+for(const posture of ['kneeling','prone']){
+  const moving={...observer,posture:{kind:posture}};
+  assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion(moving),true,posture+' has no static sight pose');
+  assert.throws(()=>P.derivePhysicalSightSamples(moving),new RegExp('do not support posture '+posture),'strict API must still fail');
+}
+assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion(observer),false,'standing remains supported');
+assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion({...observer,physical:null,posture:{kind:'kneeling'}}),false,'missing Physical must not be hidden');
+assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion({...observer,kind:'unknown',posture:{kind:'kneeling'}}),false,'unknown species must not be hidden');
+assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion({...observer,posture:{kind:'unknown'}}),false,'unknown posture must not be hidden');
+assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion({...observer,physical:{...physical,bodyGeometry:{...physical.bodyGeometry,height:0}}}),false,'invalid geometry must not be hidden');
 assert.throws(()=>P.derivePhysicalSightSamples({...observer,physical:null}),/without a canonical PoseEnvelope/);
 assert.throws(()=>P.derivePhysicalSightSamples({...observer,position:null}),/canonical Agent position/);
 assert.throws(()=>P.derivePhysicalSightSamples({...observer,position:{x:2,y:4,z:.5}}),/integer z/);

@@ -438,14 +438,14 @@
         const known=a.knownObjectStorageAssignmentIds?.includes(assignment?.id);
         const observed=choice.observed;
         const canPick=object&&['free','supported'].includes(SP.objectLocationState(state,object.id))&&!holderOf(object.id)&&O.canHoldObject(state,a,object);
-        const currentEvidence=canPick&&window.SimPerception?.classifyObjectPointVisualAvailability?.(state,a,object);
+        const currentEvidence=canPick&&!window.SimPerception?.lacksVisualPoseEnvelopeForSupportedLocomotion?.(a)&&window.SimPerception?.classifyObjectPointVisualAvailability?.(state,a,object);
         const available=canPick&&dest?.objectContainment===true&&known&&a.kind==='human'&&!a.held&&observed?.observedTick===state.tick&&observed?.target?.id===object.id&&observed.visualAvailable===true&&currentEvidence?.visualAvailable===true&&Number.isFinite(targetTraversalCost(a,{kind:'object',id:object.id},'pickup'))&&Number.isFinite(targetTraversalCost(a,{kind:'furniture',id:dest.id},'default'));
         action=available?{...base,phase:'toObject',targetObject:object.id,destinationId:dest.id,storageAssignmentId:assignment.id,observedTick:state.tick}:null;
         break;
       }
       case'cookMeal':{
         const context=choice.ingredientId&&choice.stationId?C.eligible(state,choice.ingredientId,choice.stationId,{potId:choice.potId}):null;
-        const P=window.SimPerception,ingredientObservation=context&&P?.classifyObjectPointVisualAvailability?.(state,a,context.ingredient),potObservation=context&&P?.classifyObjectPointVisualAvailability?.(state,a,context.pot);
+        const P=window.SimPerception,missingVisualPose=P?.lacksVisualPoseEnvelopeForSupportedLocomotion?.(a)===true,ingredientObservation=context&&!missingVisualPose&&P?.classifyObjectPointVisualAvailability?.(state,a,context.ingredient),potObservation=context&&!missingVisualPose&&P?.classifyObjectPointVisualAvailability?.(state,a,context.pot);
         const evidence=choice.observed,stationTarget={kind:'furniture',id:choice.stationId};
         const available=a.kind==='human'&&!a.offMap&&!a.held&&context?.location==='exposed'
           &&Number.isFinite(targetTraversalCost(a,{kind:'object',id:context.ingredient.id},'pickup'))
