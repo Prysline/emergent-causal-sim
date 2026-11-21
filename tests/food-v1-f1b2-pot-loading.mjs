@@ -7,14 +7,14 @@ const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthorin
 const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCooking;
 const O=globalThis.SimObjectHandling,R=globalThis.SimResources,SP=globalThis.SimSpatial;
 const P=globalThis.SimPerception,V=globalThis.SimValidator;
-assert.equal(C.VERSION,'food-cooking-f1b2-pot-loading');
+assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v1-f0');
 
 const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 doc.entities.objects.potA={
-  id:'potA',name:'料理鍋',icon:'🍲',portable:true,cookingPot:true,
+  id:'potA',name:'料理鍋',icon:'🍲',portable:true,cookingEligible:true,
   objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.6},
   handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
   position:{x:3,y:4,z:0},supportId:'stoveA'

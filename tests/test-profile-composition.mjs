@@ -34,6 +34,7 @@ const engineCore=runtimeProfilePaths([
 assert.ok(engineCore.includes('src/food-contract.js'),'Engine test profiles must include canonical Food contract independent from v20 Authoring');
 assert.ok(engineCore.indexOf('src/food-contract.js')<engineCore.indexOf('src/engine.js'),'Food contract must load before Engine in every test profile');
 assert.ok(engineCore.indexOf('src/food-ingredient-contract.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Cooking contract must load only after Ingredient contract in every Engine profile');
+assert.ok(engineCore.indexOf('src/food-cookware-eligibility.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Pure cookware eligibility must load before Cooking contract');
 assert.ok(engineCore.indexOf('src/food-cooking-contract.js')<engineCore.indexOf('src/engine.js'),'Cooking contract must load before Engine in every test profile');
 assert.ok(engineCore.indexOf('src/systems/object-handling.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Cooking must load after canonical Object Handling owner');
 assert.ok(engineCore.indexOf('src/spatial/finalize.js')<engineCore.indexOf('src/food-cooking-contract.js'),'Cooking must load after Spatial finalization in slim profiles');
@@ -66,6 +67,8 @@ assert.ok(validationManifestProfile.includes('src/food-ingredient-contract.js'),
 assert.ok(validationManifestProfile.includes('src/validation/rules/food-ingredient.js'),'Validation profiles must include Ingredient layer');
 assert.ok(validationManifestProfile.indexOf('src/food-ingredient-contract.js')<validationManifestProfile.indexOf('src/validation/rules/food-ingredient.js'),'Ingredient contract must load before own validator');
 assert.ok(validationManifestProfile.indexOf('src/validation/rules/food-ingredient.js')<validationManifestProfile.indexOf('src/validation/manifest.js'),'Ingredient validator must register before manifest finalizes');
+assert.ok(validationManifestProfile.includes('src/validation/rules/food-cookware.js'),'Validation manifest profiles must include the cookware owner layer');
+assert.ok(validationManifestProfile.indexOf('src/validation/rules/food-cookware.js')<validationManifestProfile.indexOf('src/validation/manifest.js'),'Cookware validator must register before manifest finalizes');
 assert.ok(validationManifestProfile.includes('src/validation/rules/agent-carry.js'),'validation-manifest runtime profiles must include the Agent Carry validator dependency');
 assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-routine.js'),'validation-manifest runtime profiles must include the Daily Life Routine validator dependency');
 assert.ok(validationManifestProfile.includes('src/validation/rules/daily-life-learned-habit.js'),'validation-manifest runtime profiles must include the Learned Habit validator dependency');
