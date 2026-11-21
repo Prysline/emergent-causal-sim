@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,C=window.SimFoodCooking,P=window.SimPerception,SP=window.SimSpatial;
-  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v1-cookware-eligibility'||!P?.classifyObjectPointVisualAvailability||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
+  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition'||!P?.classifyObjectPointVisualAvailability||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
   function candidate(st,a,ingredient,station,pot){
     const context=C.eligible(st,ingredient.id,station.id,{potId:pot.id});
     if(!context||context.location!=='exposed')return null;
@@ -16,8 +16,8 @@
     if(![target,pickup,receive].every(result=>Number.isFinite(result?.traversalCost)))return null;
     const score=Math.max(0,24+Math.min(80,Number(a.needs?.hunger)||0)*.65-Math.min(18,target.traversalCost*1.8));
     return {id:'cookMeal',ingredientId:ingredient.id,stationId:station.id,potId:pot.id,
-      observed:{ingredientId:ingredient.id,potId:pot.id,observedTick:st.tick},
-      score,why:['已觀察到料理材料、合法容器與可到達的料理設備','拿取完整食材、放入指定容器並在完成時轉換為餐點'],
+      observed:{ingredientId:ingredient.id,potId:pot.id,sourceId:context.sourceId,observedTick:st.tick},
+      score,why:['已觀察到完整食材、合法容器與可到達的料理設備','從合法支撐表面拿取食材、搬至指定容器並完成單批料理'],
       decisionContributors:[
         {kind:'observation',key:'ingredientVisualAvailability',role:'evidence',objectId:ingredient.id,observedTick:st.tick},
         {kind:'observation',key:'cookwareVisualAvailability',role:'evidence',objectId:pot.id,observedTick:st.tick},

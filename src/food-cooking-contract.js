@@ -2,7 +2,7 @@
   // One deliberately bounded recipe; no generic recipe engine or second Food inventory.
   const I=window.SimIngredient,F=window.SimFood,O=window.SimObjectHandling,SP=window.SimSpatial,K=window.SimFoodCookwareEligibility;
   if(I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v1-f0'||!O?.objectStorageStatus||!SP?.objectPosition||K?.VERSION!=='food-cookware-eligibility-v1')throw new Error('Cooking requires Ingredient v1 and the canonical Meal F0 contract.');
-  const VERSION='food-cooking-v1-cookware-eligibility',RECIPE_ID='ingredient-A-equimass',REQUIRED_TICKS=4;
+  const VERSION='food-cooking-v2-autonomous-ingredient-acquisition',RECIPE_ID='ingredient-A-equimass',REQUIRED_TICKS=4;
   function onStationFootprint(station,position){
     return !!position&&station?.footprint?.some(p=>p.x===position.x&&p.y===position.y&&(p.z||0)===(position.z||0));
   }
@@ -12,15 +12,16 @@
       &&!item.containedBy&&!!item.position&&!Object.values(st.agents||{}).some(agent=>agent.held===item.id))
       .sort((a,b)=>a.id.localeCompare(b.id));
   }
-  // The Ingredient is either exposed on the stove, carried by this Action's actor,
-  // or physically inside the same supported pot. This is not a second cargo ledger.
+  // A whole Ingredient is either exposed on a real supporting Furniture surface,
+  // carried by this Action's actor, or physically inside the pinned pot. No cargo mirror.
   function contextForPot(st,ingredient,station,pot,actorId){
     if(!onStationFootprint(station,pot.position))return null;
     const storage=O.objectStorageStatus(st,pot);
     if(!storage.withinCapacity)return null;
     const holder=SP.holderOf(st,ingredient.id),inPot=ingredient.containedBy===pot.id;
-    const exposed=!holder&&!ingredient.containedBy&&ingredient.supportId===station.id
-      &&onStationFootprint(station,ingredient.position);
+    const source=ingredient.supportId&&st?.furniture?.[ingredient.supportId];
+    const exposed=!holder&&!ingredient.containedBy&&source?.supportsObjects===true
+      &&onStationFootprint(source,ingredient.position);
     const carried=holder?.id===actorId&&!!actorId&&!ingredient.containedBy&&!ingredient.supportId;
     if(!exposed&&!carried&&!inPot)return null;
     if(inPot){
@@ -29,7 +30,7 @@
       if(storage.count!==0||!O.objectStorageLegality(st,pot.id,ingredient.id))return null;
     }
     return {ingredient,station,pot,location:inPot?'loaded':carried?'carried':'exposed',
-      inputMassGrams:I.massGrams(ingredient)};
+      sourceId:exposed?source.id:null,inputMassGrams:I.massGrams(ingredient)};
   }
   // Explicit potId prevents silently switching to a second physical container.
   function eligible(st,ingredientId,stationId,{actorId=null,potId=null}={}){

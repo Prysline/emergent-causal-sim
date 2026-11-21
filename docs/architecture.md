@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.72.0-food-cookware-eligibility`。
+目前 runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
+
+Current Food autonomous Ingredient acquisition：Cooking 的觀察與容量決策允許完整 Ingredient 位於任一真正 `supportsObjects` Furniture 表面（首例 kitchen-counter），而非必先放在爐具。原有 `cookMeal` Action 固定實際來源 `sourceId` 和合法鍋具 `potId`，透過通用 Object pickup／containHeldObject 真正跨位置裝鍋；來源變動或預約失效不能繼續。單一 World Event pickupIngredient → loadPot → complete 形成因果引用。F0 Meal 仍在爐面，World Authoring v23 與 Serving／D2 不變。
 
 Current Cookware Eligibility v1：`SimFoodCookwareEligibility` 是 `Object.cookingEligible` 明示布林能力的唯一查詢與非法輸入判斷；World Authoring v23 overlay 與 Validator layer 共用它，舊 `cookingPot` fail explicitly。`SimFoodCooking` 仍只負責單批完整 Type A Ingredient、現有 `cookingStation` 與普通 Object 容器的組合判斷，容量由 canonical Object Handling 得出；Decision 逐一檢查所有合法容器，依 Agent Perception／Spatial／reservations 選出可執行組合。既有 Engine `cookMeal` Action 從 `buildAction` 起固定 `potId`，每 tick／完成只重驗這一實體，絕不換鍋或寫入平行 cargo／Meal 真相；`loadPot` → `complete` World Event 引用關係維持不變。Own markers：Cooking `food-cooking-v1-cookware-eligibility`、World Authoring v23、新 eligibility `food-cookware-eligibility-v1`；其他 subsystem 不假升。詳見 [`food-cookware-eligibility.md`](food-cookware-eligibility.md)。
 

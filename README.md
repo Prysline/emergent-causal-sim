@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.72.0-food-cookware-eligibility`。
+目前 runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
+
+Food autonomous Ingredient acquisition v1：居民依當下視覺、實際支撐表面和 Spatial 可達性，可在 kitchen-counter 等合法 Furniture 上自主取得完整 Type A Ingredient，搬到指定的合法料理鍋中，逐 tick 完成原有單批 D1 料理；原始 sourceId 與 potId 固定、重驗，pickupIngredient → loadPot → complete 保留唯一 World Event 因果鏈。Meal 仍在爐面交由既有 F0 eat 消費，尚未做盛餐、D2、外部 Ingredient 補給或核心住宅整合。詳見 [`docs/food-autonomous-ingredient-acquisition.md`](docs/food-autonomous-ingredient-acquisition.md)。
 
 Cookware Eligibility v1：普通 Object 以明示的 `cookingEligible` 暫定功能資格取代 `cookingPot` 物件種類判斷。Cooking 先對單批真實 Ingredient、既有 `cookingStation` 與所有可用容器完成容量／可視／接觸／預約檢查，確定性選定 `potId` 後從 Action 建立到每 tick、真實裝鍋和完成均禁止換鍋。World Authoring v23／runtime validator 共用資格錯誤契約；單一 `containedBy`、`loadPot → complete` Event 因果鏈不變。未實作 D2、多料理方式、盛餐、外出供料或預設住宅。詳見 [`docs/food-cookware-eligibility.md`](docs/food-cookware-eligibility.md)。
 
