@@ -1,6 +1,6 @@
 # Food／Cooking — Autonomous Ingredient Acquisition v1
 
-Status: [Draft PR #247](https://github.com/Prysline/emergent-causal-sim/pull/247), exact-head CI pending. NOT merged into main.
+Implementation source: [PR #247](https://github.com/Prysline/emergent-causal-sim/pull/247). For live merge and CI status, check the PR and canonical current release marker; do not treat historical PR checkpoints as current runtime truth.
 
 ## Minimal lifecycle and canonical owners
 - One complete Type A Ingredient exists only as `state.objects[ingredientId]` with its physical grams derived from `Object.handling.massKg`; no Food-only inventory. Cooking uses existing bounded `ingredient-A-equimass` D1 recipe and existing `gas-stove` station plus `cookingEligible` pot.
@@ -17,4 +17,4 @@ Status: [Draft PR #247](https://github.com/Prysline/emergent-causal-sim/pull/247
 ## Explicit exclusions / related ownership
 - [Food Workstream Record](https://app.notion.com/p/41fb4185273f8124ad59c3e6c43da474); [Food Domain authority](https://app.notion.com/p/41db4185273f81bebb06d7b802b4a21e).
 - Core Default World remains separate [PR #246](https://github.com/Prysline/emergent-causal-sim/pull/246) (A/B non-canonical geometry); Meal Serving / Physical Transfer, D2 batch planning, Ingredient supply and legacy Resource food migration are not implemented here.
-- No World Authoring/Editor/Furniture generation change or default fixture rewrite; no Current TODO priority change, merge, release tag, branch deletion or manual deploy.
+- No World Authoring/Editor/Furniture generation change or default fixture rewrite; no Current TODO priority change. This implementation does not authorize a release tag, branch deletion, or manual deploy.
