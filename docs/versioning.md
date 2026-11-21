@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.75.0-food-meal-serving`。
+目前 overall runtime marker：`11.76.0-core-default-world-b`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -61,7 +61,7 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v24`
+- World Authoring：`world-authoring-v25`
 - Food Meal / Serving：`food-v2-meal-serving`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v14-kitchen`
@@ -69,6 +69,8 @@ Current relevant markers：
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.76.0-core-default-world-b`：Core Default World 正式預設場景由最後一層 World Authoring v25 投影為 16×10 公共／私人分區 B 住宅（不是 WORLD 001），含合法臥室門、餐桌、休息、料理鍋／原料配置與 Source port。`plateA/B` 是唯一正式普通 Object 可攜 Serving Plates，使用 Food v2 Meal mass／Object containment；舊 Resource 餐盤僅保留在舊世代基準與隔離回歸，改名為 `legacyResourcePlateA/B`，不得與新版同時出現在正式場景。其他 Resource 模型不因此自動完成 migration；World Authoring v24 的 Food 契約未改。
 
 `11.75.0-food-meal-serving`：在既有 `eat` Action 中新增 opt-in Meal plate partial serving 路線。完全可食 Meal 依 canonical `edibleMassGrams` 原子拆分並以原本 `Object.containedBy` 位於合法外露可攜餐盤；實際 `Agent.held` 搬運、Spatial nearby placement、Perception/Interaction 和每 tick 食用維持各自 owner，Serving Event 與 Cooking completion / intake 构成單一因果鏈。Object cargo kg 只從 Food grams 投影；legacy Resource `contents.food` 的 amount / `foodStock` / transfer 不轉換，其他 contained Objects 不外露。Own markers：Food `food-v2-meal-serving`、Object Handling `object-handling-v3-meal-mass-projection`、Perception Visual Availability `perception-visual-availability-v4-exposed-meal`、World Authoring `world-authoring-v24`；Cooking／Ingredient／Resources、Physical／Locomotion 沿用既有自有 marker。CI: 保留 repo workflow architecture 的三個既有 workflow，不修改由 Core PR #246 單一 owner 持有的共用 Node workflow；既有 Browser matrix 的 `food-meal-serving` case 透過 `extra_test` 執行 `tests/food-meal-serving.mjs`，並執行真實 Browser Serving QA。Serving Merge Gate 仍要求完整 exact-head canonical Node suite 和 Browser suite 各自通過。詳見 [Meal Serving v1](food-meal-serving.md)。
 
