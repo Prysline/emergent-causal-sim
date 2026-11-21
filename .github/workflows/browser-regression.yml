@@ -29,7 +29,7 @@ jobs:
         include:
           - suite: food-meal-serving
             test: tests/browser-food-meal-serving-qa.mjs
-            extra_test: ''
+            extra_test: tests/food-meal-serving.mjs
             artifact: artifacts/browser-food-meal-serving-qa
           - suite: social-response
             test: tests/browser-social-response-qa.mjs
