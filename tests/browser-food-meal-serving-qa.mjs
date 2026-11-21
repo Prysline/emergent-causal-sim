@@ -92,6 +92,14 @@ const execution=await page.evaluate(()=>{
   Object.assign(actor.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
   actor.action=null;actor.activeIntent=null;
   actor.position={...SP.bestInteractionPositionResult(st,actor,{kind:'object',id:source.id},'eatFrom').position};
+  const plate=st.objects.servingQaPlate,P=window.SimPerception;
+  const facings=['north','northEast','east','southEast','south','southWest','west','northWest'];
+  const plateObserved=facings.some(face=>{
+    actor.facing=face;
+    return P.classifyObjectPointVisualAvailability(st,actor,plate).visualAvailable===true
+      || SP.isAtInteraction(st,actor,{kind:'object',id:plate.id},'pickup');
+  });
+  if(!plateObserved)return {failure:'no current visual/contact evidence for serving plate'};
   const action=E.buildAction(actor,{id:'eat'});
   if(!action)return {failure:'eat action unavailable'};
   actor.action=action;E.ensureIntentForAction?.(st,actor);
