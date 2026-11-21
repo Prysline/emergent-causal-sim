@@ -300,3 +300,125 @@ for (const name of ['A', 'B']) {
       agentActions: Object.fromEntries(Object.values(st.agents).map(a => [a.id, a.action?.kind || null])),
     }));
 }
+
+
+// Core Default World x Food v2 integration, using the current production
+// Cooking decision consumer and real Engine action lifecycle. The Action is
+// explicitly selected by this test, not falsely described as a Deliberation
+// outcome. The previous 36-tick probes separately exercise Deliberation.
+const Cooking = globalThis.SimFoodCooking;
+const Food = globalThis.SimFood;
+assert.equal(Cooking.VERSION, 'food-cooking-v2-autonomous-ingredient-acquisition');
+const facings = ['north', 'northEast', 'east', 'southEast', 'south',
+  'southWest', 'west', 'northWest'];
+for (const name of ['A', 'B']) {
+  const doc = controlledCandidate(name);
+  // Keep normal geometry and the canonical supported Ingredient, but omit the
+  // unrelated pre-cooked Meal so downstream intake has unambiguous provenance.
+  delete doc.entities.objects.readyMealF0;
+  const [counterX, counterY] = PLANS[name].furniture.counterA;
+  doc.residents.zhen.initial.placement = {
+    mode: 'exact', node: p(counterX, counterY + 1),
+  };
+  doc.residents.zhen.initial.facing = 'north';
+  const authoring = A.validateAuthoring(doc);
+  assert.equal(authoring.ok, true, name + ' food integration authoring: ' +
+    JSON.stringify(authoring.errors));
+  const initial = I.analyzeInitialPlacements(doc);
+  assert.equal(initial.ok, true, name + ' food integration placement: ' +
+    JSON.stringify(initial.hardErrors));
+  assert.deepEqual(initial.diagnostics, []);
+
+  currentControlledDoc = doc;
+  E.reset(20261125);
+  const st = E.getState(), agent = st.agents.zhen;
+  for (const other of Object.values(st.agents)) {
+    if (other.id !== agent.id) other.offMap = true;
+  }
+  Object.assign(agent.needs, {
+    hunger: 55, thirst: 0, fatigue: 0, sleepNeed: 0, social: 0,
+    stimulation: 0, relaxation: 0,
+  });
+  agent.action = null;
+  agent.activeIntent = null;
+
+  const ingredient = st.objects.ingredientA1;
+  assert.equal(ingredient.supportId, 'counterA');
+  assert.equal(st.objects.potA.supportId, 'stoveA');
+  assert.equal(Cooking.eligible(st, ingredient.id, 'stoveA')?.sourceId, 'counterA');
+  let choice = null;
+  for (const facing of facings) {
+    agent.facing = facing;
+    choice = E.cookingDecisionOption(st, agent);
+    if (choice) break;
+  }
+  assert.equal(choice?.id, 'cookMeal',
+    name + ': no observable autonomous Cooking opportunity at the actual counter');
+  assert.equal(choice.observed.sourceId, 'counterA');
+  assert.ok(choice.decisionContributors.some(c => c.kind === 'observation'),
+    name + ': Cooking must cite perception evidence');
+
+  const action = E.buildAction(agent, choice);
+  assert.equal(action?.kind, 'cookMeal');
+  assert.equal(action?.sourceId, 'counterA');
+  assert.equal(action?.potId, 'potA');
+  agent.action = action;
+  E.ensureIntentForAction?.(st, agent);
+  let completed = false;
+  for (let tick = 0; tick < 140; tick++) {
+    E.tick();
+    if (st.events.some(e => e.data?.action === 'cookMeal' &&
+      e.data.phase === 'complete')) {
+      completed = true;
+      break;
+    }
+  }
+  assert.equal(completed, true, name + ': real Cooking Action did not complete');
+  const phases = {};
+  for (const phase of ['pickupIngredient', 'loadPot', 'complete']) {
+    const matching = st.events.filter(e => e.data?.action === 'cookMeal' &&
+      e.data.phase === phase);
+    assert.equal(matching.length, 1, name + ': expected one ' + phase + ' event');
+    phases[phase] = matching[0];
+    assert.equal(st.causes[matching[0].id], matching[0],
+      name + ': all Cooking events must be canonical');
+  }
+  assert.equal(phases.pickupIngredient.data.sourceId, 'counterA');
+  assert.deepEqual(phases.loadPot.causeIds, [phases.pickupIngredient.id]);
+  assert.deepEqual(phases.complete.causeIds, [phases.loadPot.id]);
+  assert.equal(st.objects.ingredientA1, undefined,
+    name + ': original Ingredient must be retired once');
+  const cooked = st.objects[phases.complete.data.mealId];
+  assert.ok(Food.validMeal(cooked), name + ': missing produced F0 Meal');
+  assert.equal(cooked.producedByEventId, phases.complete.id);
+  assert.equal(cooked.supportId, 'stoveA',
+    name + ': no teleportation of cooked Meal to the table');
+  assert.equal(phases.complete.data.inputMassGrams,
+    phases.complete.data.mealMassGrams +
+    phases.complete.data.processOutflowMassGrams);
+  assert.equal(V.validateState(st).issueCount, 0,
+    name + ': validator rejected cooked state');
+
+  // Same F0 eat consumer must accept the cooked Meal at its actual location.
+  const eatAction = E.buildAction(agent, { id: 'eat' });
+  assert.equal(eatAction?.kind, 'eat', name + ': cooked F0 Meal is not edible');
+  agent.action = eatAction;
+  E.ensureIntentForAction?.(st, agent);
+  let intake = null;
+  for (let tick = 0; tick < 40; tick++) {
+    E.tick();
+    intake = st.events.find(e => e.data?.action === 'eat' &&
+      e.data.foodKind === 'meal' && e.data.phase === 'intake');
+    if (intake) break;
+  }
+  assert.ok(intake, name + ': existing F0 eat did not consume cooked Meal');
+  assert.equal(st.causes[intake.id], intake);
+  assert.equal(V.validateState(st).issueCount, 0,
+    name + ': validator rejected post-intake state');
+  console.log('Core Default World x Food v2 integration ' + name + ': ' +
+    JSON.stringify({
+      sourceId: phases.pickupIngredient.data.sourceId,
+      eventIds: ['pickupIngredient', 'loadPot', 'complete'].map(p => phases[p].id),
+      mealId: cooked.id, intakeEventId: intake.id, ticks: st.tick,
+    }));
+}
