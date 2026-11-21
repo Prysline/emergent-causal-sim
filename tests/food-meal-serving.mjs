@@ -16,6 +16,7 @@ function fixture({cooking=false}={}){
   const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
   // Exercise the production B serving plate; narrow the physical capacity
   // only for this independent capacity regression fixture.
+  delete doc.entities.objects.plateB;
   doc.entities.objects.plateA.objectStorage.maxMassKg=.12;
   if(cooking){
     delete doc.entities.objects.readyMealF0;

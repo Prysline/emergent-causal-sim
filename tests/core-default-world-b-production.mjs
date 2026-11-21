@@ -72,6 +72,7 @@ assert.equal(V.validateState(W.createInitialStateFromAuthoring(doc,20261121)).is
 // Real production B Engine: a visibly reachable plate triggers the existing
 // eat Action -> physical serve -> nearby placement -> incremental intake.
 const servingDoc=A.cloneAuthoring(doc);
+delete servingDoc.entities.objects.plateB;
 servingDoc.entities.objects.readyMealF0.meal.edibleMassGrams=600;
 assert.equal(A.validateAuthoring(servingDoc).ok,true);
 E.configureResetStateSource('canonical-b-serving-integration',
