@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -10,13 +11,13 @@ assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
-assert.equal(A.VERSION,'world-authoring-v24','current Cooking authoring schema is the explicitly advanced v23');
+assert.equal(A.VERSION,'world-authoring-v25','current Cooking authoring schema is the explicitly advanced v23');
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
 assert.equal(D.getDefinition('kitchen-counter').supportsObjects,true);
 
-const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 doc.furniture.counterA={id:'counterA',definitionId:'kitchen-counter',origin:{x:3,y:5,z:0},orientation:'south'};
 doc.entities.objects.potA={
