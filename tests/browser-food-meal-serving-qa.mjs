@@ -75,6 +75,49 @@ assert.match(updated.text,/70 g/,'Inspector must reread the current canonical gr
 assert.equal(updated.mass,70);
 assert.ok(Math.abs(updated.load-.07)<1e-9);
 assert.deepEqual(updated.issues,[]);
+
+// Browser-executed production Engine tick path (not a mocked helper or UI projection).
+const execution=await page.evaluate(()=>{
+  const E=window.SimEngine,SP=window.SimSpatial,F=window.SimFood,V=window.SimValidator;
+  E.reset(20261126);
+  const st=E.getState(),actor=st.agents.zhen,source=st.objects.readyMealF0;
+  st.objects.servingQaPlate={
+    id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
+    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
+    handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
+    position:{x:6,y:3,z:0},supportId:'diningTable',
+    interactions:{eatFrom:{mode:'reach'},pickup:{mode:'supportReach'}}
+  };
+  for(const a of Object.values(st.agents))if(a.id!==actor.id)a.offMap=true;
+  Object.assign(actor.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
+  actor.action=null;actor.activeIntent=null;
+  actor.position={...SP.bestInteractionPositionResult(st,actor,{kind:'object',id:source.id},'eatFrom').position};
+  const action=E.buildAction(actor,{id:'eat'});
+  if(!action)return {failure:'eat action unavailable'};
+  actor.action=action;E.ensureIntentForAction?.(st,actor);
+  const phases=[];
+  for(let i=0;i<130;i++){
+    E.tick();
+    phases.push(actor.action?.phase||'done');
+    if(!actor.action)break;
+  }
+  const serve=st.events.find(e=>e.data?.foodKind==='meal'&&e.data?.phase==='serveMeal');
+  const takes=st.events.filter(e=>e.data?.foodKind==='meal'&&e.data?.phase==='intake');
+  return {
+    serving:serve?.data||null,phases:[...new Set(phases)],sumIntake:takes.reduce((sum,e)=>sum+e.data.intakeGrams,0),
+    remaining:F.remainingGrams(st.objects.readyMealF0),held:actor.held,
+    plateLocation:SP.objectLocationState(st,'servingQaPlate'),
+    action:actor.action?.phase||null,validator:V.validateState(st).issues.map(x=>x.code),
+    reasons:st.events.filter(e=>e.data?.action==='abort').slice(0,3).map(e=>e.data.reason)
+  };
+});
+assert.equal(execution.serving?.servedGrams,120,JSON.stringify(execution));
+assert.equal(execution.sumIntake,120,JSON.stringify(execution));
+assert.equal(execution.remaining,180,JSON.stringify(execution));
+assert.equal(execution.held,null,JSON.stringify(execution));
+assert.equal(execution.action,null,JSON.stringify(execution));
+assert.ok(execution.phases.includes('toMealDining')&&execution.phases.includes('eatingMeal'),JSON.stringify(execution));
+assert.deepEqual(execution.validator,[]);
 assert.deepEqual(pageErrors,[],'Browser must not report uncaught errors');
 await browser.close();
 console.log('Browser Food Meal Serving v1 canonical Inspector and map projection QA: ok');
