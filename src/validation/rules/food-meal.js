@@ -6,10 +6,12 @@
     for(const [id,object] of Object.entries(st?.objects||{})){
       if(!F.hasMeal(object))continue;
       if(object.resourceContainer===true||object.contents!==undefined)add('food_meal_double_inventory','Meal cannot also use Resource contents.',{objectId:id});
-      if(!F.validMeal(object))add('food_meal_invalid','Meal must have valid remaining whole grams, serving weight, exposed placement and eatFrom affordance.',{objectId:id});
+      if(!F.validMeal(object))add('food_meal_invalid','Meal must have valid grams, unique placement and eatFrom affordance.',{objectId:id});
+      else if(object.containedBy&&!F.servingPlateForMeal(st,object))
+        add('food_meal_plate_invalid','Contained Meal requires an explicitly exposed ordinary Object plate.',{objectId:id,plateId:object.containedBy});
     }
     for(const agent of Object.values(st?.agents||{})){
-      const action=agent.action;if(action?.kind!=='eat'||!['toMeal','eatingMeal'].includes(action.phase))continue;
+      const action=agent.action;if(action?.kind!=='eat'||!['toMeal','eatingMeal','toMealDish','takeMealDish','toMealServe','serveMeal','toMealDining','placeMealDish'].includes(action.phase))continue;
       if(!action.foodSource||!Number.isSafeInteger(action.targetMassGrams)||action.targetMassGrams<0||!Number.isSafeInteger(action.consumedMassGrams)||action.consumedMassGrams<0||action.consumedMassGrams>action.targetMassGrams){
         add('food_meal_action_invalid','Meal Action requires one target and bounded Action-local realized intake.',{agentId:agent.id});
       }
