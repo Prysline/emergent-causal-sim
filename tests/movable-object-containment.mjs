@@ -6,8 +6,8 @@ loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial,O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimValidator;
-assert.equal(A.VERSION,'world-authoring-v23');
-assert.equal(O.VERSION,'object-handling-v2-movable-containment');
+assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(O.VERSION,'object-handling-v3-meal-mass-projection');
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 const basket=authored.entities.objects.basket;
