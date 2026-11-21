@@ -349,9 +349,23 @@ await page.waitForFunction(({agentId})=>document.querySelector(`#map [data-entit
 await page.screenshot({path:`${outDir}/mobile-map-posture-overlap.png`,fullPage:true});
 
 const mobileMapStateBeforeSelection=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-const mobileAgentBox=await page.locator(`#map [data-entity="agent:${mobileMapFixture.agentId}"]`).boundingBox();
-assert.ok(mobileAgentBox,'mobile agent marker must have browser geometry');
-await page.mouse.click(mobileAgentBox.x+mobileAgentBox.width/2,mobileAgentBox.y+mobileAgentBox.height/2);
+// Find a genuinely hit-testable point on the Agent's map marker. A 16-column
+// house makes each mobile tile narrower; the furniture's separate handle can
+// overlap the marker center without hiding the Agent's actual click target.
+const mobileAgentHit=await page.evaluate(({agentId})=>{
+  const marker=document.querySelector(`#map [data-entity="agent:${agentId}"]`);
+  if(!marker)return null;
+  const b=marker.getBoundingClientRect();
+  for(const fy of [.5,.3,.7,.12,.88])for(const fx of [.5,.3,.7,.12,.88]){
+    const x=b.left+b.width*fx,y=b.top+b.height*fy;
+    if(x<0||y<0||x>=innerWidth||y>=innerHeight)continue;
+    const hit=document.elementFromPoint(x,y);
+    if(hit===marker||marker.contains(hit))return {x,y};
+  }
+  return null;
+},mobileMapFixture);
+assert.ok(mobileAgentHit,'mobile Agent marker must retain a real clickable point even beside furniture');
+await page.mouse.click(mobileAgentHit.x,mobileAgentHit.y);
 await page.waitForFunction(({agentId})=>{const s=window.SimUI.getInspectorSelection?.();return s?.type==='agent'&&s.id===agentId;},mobileMapFixture);
 assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileMapStateBeforeSelection,'mobile agent selection must not mutate simulation state');
 

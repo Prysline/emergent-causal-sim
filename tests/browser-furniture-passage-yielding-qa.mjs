@@ -43,11 +43,12 @@ assert.equal(moved.ok,true,moved.reason||'runtime Furniture placement must succe
 assert.deepEqual(moved.origin,{x:9,y:5,z:0});
 assert.equal(moved.after.old.includes('chairNW'),false);
 assert.equal(moved.after.next.includes('chairNW'),true);
-await page.click('#step');
-await page.waitForFunction(()=>window.SimEngine.getState().tick>=1);
+// Repaint the current immutable placement truth without an unrelated
+// autonomous tick moving other furniture or actors in this UI-only check.
+await page.evaluate(()=>window.SimUI.setCurrentZ(window.SimUI.getCurrentZ()));
 const rendered=await page.evaluate(()=>({
-  old:!!document.querySelector('.sim-tile[data-tile="4,2"] .furniture-footprint[data-entity="furniture:chairNW"]'),
-  next:!!document.querySelector('.sim-tile[data-tile="3,2"] .furniture-footprint[data-entity="furniture:chairNW"]')
+  old:!!document.querySelector('.sim-tile[data-tile="10,5"] .furniture-footprint[data-entity="furniture:chairNW"]'),
+  next:!!document.querySelector('.sim-tile[data-tile="9,5"] .furniture-footprint[data-entity="furniture:chairNW"]')
 }));
 assert.equal(rendered.old,false,'runtime Map must not leave Furniture rendering at old placement');
 assert.equal(rendered.next,true,'runtime Map must project Furniture at new canonical placement');
