@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-f1b2-pot-loading')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v1-cookware-eligibility')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
   const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Engine requires Character Traits contract.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6,CARRY_RECOVERY_RETRY_TICKS=2;
@@ -444,7 +444,7 @@
         break;
       }
       case'cookMeal':{
-        const context=choice.ingredientId&&choice.stationId?C.eligible(state,choice.ingredientId,choice.stationId):null;
+        const context=choice.ingredientId&&choice.stationId?C.eligible(state,choice.ingredientId,choice.stationId,{potId:choice.potId}):null;
         const P=window.SimPerception,ingredientObservation=context&&P?.classifyObjectPointVisualAvailability?.(state,a,context.ingredient),potObservation=context&&P?.classifyObjectPointVisualAvailability?.(state,a,context.pot);
         const evidence=choice.observed,stationTarget={kind:'furniture',id:choice.stationId};
         const available=a.kind==='human'&&!a.offMap&&!a.held&&context?.location==='exposed'
@@ -454,6 +454,7 @@
           &&ingredientObservation?.visualAvailable===true&&potObservation?.visualAvailable===true
           &&(!reservationOwner('object:'+context.ingredient.id)||reservationOwner('object:'+context.ingredient.id).id===a.id)
           &&(!reservationOwner('object:'+context.pot.id)||reservationOwner('object:'+context.pot.id).id===a.id)
+          &&(!reservationOwner('furniture:'+context.station.id)||reservationOwner('furniture:'+context.station.id).id===a.id)
           &&Number.isFinite(targetTraversalCost(a,stationTarget,'default'));
         action=available?{...base,phase:'toStation',ingredientId:context.ingredient.id,stationId:context.station.id,potId:context.pot.id,recipeId:C.RECIPE_ID,progressTicks:0,loadEventId:null}:null;
         break;
@@ -663,7 +664,7 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
     abortAction(a,'未知的收納階段');
   }
   function stepCookMeal(a,p){
-    const context=C.eligible(state,p.ingredientId,p.stationId,{actorId:a.id});
+    const context=C.eligible(state,p.ingredientId,p.stationId,{actorId:a.id,potId:p.potId});
     if(!context||context.pot.id!==p.potId){
       abortAction(a,'料理所需食材、鍋具或爐具已失效',{dropHeld:a.held===p.ingredientId});return;
     }

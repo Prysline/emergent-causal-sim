@@ -2,9 +2,11 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.71.0-food-v1-f1b2-pot-loading`。
+目前 runtime marker：`11.72.0-food-cookware-eligibility`。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
+
+Cookware Eligibility v1：普通 Object 以明示的 `cookingEligible` 暫定功能資格取代 `cookingPot` 物件種類判斷。Cooking 先對單批真實 Ingredient、既有 `cookingStation` 與所有可用容器完成容量／可視／接觸／預約檢查，確定性選定 `potId` 後從 Action 建立到每 tick、真實裝鍋和完成均禁止換鍋。World Authoring v23／runtime validator 共用資格錯誤契約；單一 `containedBy`、`loadPot → complete` Event 因果鏈不變。未實作 D2、多料理方式、盛餐、外出供料或預設住宅。詳見 [`docs/food-cookware-eligibility.md`](docs/food-cookware-eligibility.md)。
 
 Food v1 Slice F1-B2：Cook Action 使用既有 Object pickup 與 `containHeldObject`，把可觀察、完整的 Ingredient 真正放進有界的可搬運鍋具 Object；內含物僅用 `containedBy` 保存，物理負重由既有 Object Handling 派生。鍋具裝入事件是料理完成質量轉換的因果前驅。完成時仍由 F0 Meal 出現在同一瓦斯爐合法表面，沒有假設 Meal 已可被鍋具搬走。詳細見 [`docs/food-v1-f1b2-pot-loading.md`](docs/food-v1-f1b2-pot-loading.md)。
 

@@ -1,23 +1,26 @@
 (() => {
   const E=window.SimEngine,C=window.SimFoodCooking,P=window.SimPerception,SP=window.SimSpatial;
-  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-f1b2-pot-loading'||!P?.classifyObjectPointVisualAvailability||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
-  function candidate(st,a,ingredient,station){
-    const context=C.eligible(st,ingredient.id,station.id);
+  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v1-cookware-eligibility'||!P?.classifyObjectPointVisualAvailability||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
+  function candidate(st,a,ingredient,station,pot){
+    const context=C.eligible(st,ingredient.id,station.id,{potId:pot.id});
     if(!context||context.location!=='exposed')return null;
-    if(st.reservations?.['object:'+ingredient.id]&&st.reservations['object:'+ingredient.id]!==a.id)return null;
-    if(st.reservations?.['object:'+context.pot.id]&&st.reservations['object:'+context.pot.id]!==a.id)return null;
+    for(const key of ['object:'+ingredient.id,'object:'+pot.id,'furniture:'+station.id]){
+      if(st.reservations?.[key]&&st.reservations[key]!==a.id)return null;
+    }
     const visible=P.classifyObjectPointVisualAvailability(st,a,ingredient);
-    const potVisible=P.classifyObjectPointVisualAvailability(st,a,context.pot);
+    const potVisible=P.classifyObjectPointVisualAvailability(st,a,pot);
     if(visible?.visualAvailable!==true||potVisible?.visualAvailable!==true)return null;
     const target=SP.bestInteractionPositionResult(st,a,{kind:'furniture',id:station.id},'default');
-    if(!Number.isFinite(target?.traversalCost))return null;
+    const pickup=SP.bestInteractionPositionResult(st,a,{kind:'object',id:ingredient.id},'pickup');
+    const receive=SP.bestInteractionPositionResult(st,a,{kind:'object',id:pot.id},'receive');
+    if(![target,pickup,receive].every(result=>Number.isFinite(result?.traversalCost)))return null;
     const score=Math.max(0,24+Math.min(80,Number(a.needs?.hunger)||0)*.65-Math.min(18,target.traversalCost*1.8));
-    return {id:'cookMeal',ingredientId:ingredient.id,stationId:station.id,potId:context.pot.id,
-      observed:{ingredientId:ingredient.id,potId:context.pot.id,observedTick:st.tick},
-      score,why:['已觀察到料理材料、空鍋與可到達的瓦斯爐','拿取完整食材、放入真實鍋具並在完成時轉換為餐點'],
+    return {id:'cookMeal',ingredientId:ingredient.id,stationId:station.id,potId:pot.id,
+      observed:{ingredientId:ingredient.id,potId:pot.id,observedTick:st.tick},
+      score,why:['已觀察到料理材料、合法容器與可到達的料理設備','拿取完整食材、放入指定容器並在完成時轉換為餐點'],
       decisionContributors:[
         {kind:'observation',key:'ingredientVisualAvailability',role:'evidence',objectId:ingredient.id,observedTick:st.tick},
-        {kind:'observation',key:'cookingPotVisualAvailability',role:'evidence',objectId:context.pot.id,observedTick:st.tick},
+        {kind:'observation',key:'cookwareVisualAvailability',role:'evidence',objectId:pot.id,observedTick:st.tick},
         {kind:'need',key:'hunger',role:'motivation',value:Number(a.needs?.hunger)||0},
         {kind:'spatial',key:'cookingStationTraversalCost',role:'cost',value:target.traversalCost}
       ]};
@@ -28,10 +31,10 @@
     const ingredients=Object.values(st?.objects||{}).filter(o=>window.SimIngredient.hasIngredient(o))
       .sort((a,b)=>a.id.localeCompare(b.id));
     const options=[];
-    for(const station of stations)for(const ingredient of ingredients){
-      const pick=candidate(st,a,ingredient,station);if(pick)options.push(pick);
+    for(const station of stations)for(const ingredient of ingredients)for(const pot of C.potsOnStation(st,station.id)){
+      const pick=candidate(st,a,ingredient,station,pot);if(pick)options.push(pick);
     }
-    options.sort((a,b)=>b.score-a.score||a.ingredientId.localeCompare(b.ingredientId));
+    options.sort((a,b)=>b.score-a.score||a.stationId.localeCompare(b.stationId)||a.ingredientId.localeCompare(b.ingredientId)||a.potId.localeCompare(b.potId));
     return options[0]||null;
   }
   E.registerDecisionOptionProvider('food.cooking',decisionOptionFor,490);
