@@ -162,9 +162,12 @@ function eventAncestors(st,id,visited=new Set()){
 }
 {
   const {st,a,meal,plate}=setup(20261123);
-  const contact=SP.bestInteractionPositionResult(st,a,{kind:'object',id:meal.id},'eatFrom');
-  assert.ok(contact?.position);
-  a.position={...contact.position};
+  const mealContacts=SP.interactionGeometry(st,{kind:'object',id:meal.id},a,'eatFrom').positions;
+  const plateContacts=SP.interactionGeometry(st,{kind:'object',id:plate.id},a,'pickup').positions;
+  const common=mealContacts.find(x=>plateContacts.some(y=>SP.nodeSame(st,x,y)));
+  assert.ok(common,'fixture must put the actor at real shared contact with Meal and serving plate');
+  a.position={...common};
+  assert.equal(SP.isAtInteraction(st,a,{kind:'object',id:plate.id},'pickup'),true);
   const action=startEat(st,a);
   E.tick();
   assert.equal(action.phase,'toMealDish','real eat prepare must opt into physical plate serving');
