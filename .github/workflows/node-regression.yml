@@ -31,6 +31,7 @@ jobs:
       - run: node tests/food-v1-f1a-ingredient.mjs
       - run: node tests/food-v1-f1b-cooking.mjs
       - run: node tests/food-v1-f1b2-pot-loading.mjs
+      - run: node tests/food-cookware-eligibility.mjs
       - run: node tests/activity-concurrency-eating-social.mjs
       - run: node tests/activity-continuity-read-resume.mjs
       - run: node tests/mental-regulation-stimulation-relaxation.mjs
