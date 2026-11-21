@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.72.0-food-cookware-eligibility`。
+目前 overall runtime marker：`11.73.0-food-autonomous-ingredient-acquisition`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -64,10 +64,12 @@ Current relevant markers：
 - Food Meal F0：`food-v1-f0`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v14-kitchen`
-- Food Cooking：`food-cooking-v1-cookware-eligibility`
+- Food Cooking：`food-cooking-v2-autonomous-ingredient-acquisition`
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.73.0-food-autonomous-ingredient-acquisition`：Cooking 由僅限同爐面取料擴充為自主從合法 Furniture 支撐表面（首例廚房櫃台）觀察、前往、持有並放入指定鍋具。Action sourceId、potId 重驗，pickupIngredient → loadPot → complete Event 保留原料的單一物件位置、容量與質量真相。Cooking generation `food-cooking-v2-autonomous-ingredient-acquisition`；World Authoring v23、Ingredient、Meal F0、Object Handling／Spatial 自有 generation 未改。Core Default World、Serving、D2 與 Ingredient replenishment 仍獨立未完成。詳見 [Food autonomous Ingredient acquisition](food-autonomous-ingredient-acquisition.md)。
 
 `11.72.0-food-cookware-eligibility`：以與種類解耦的 `Object.cookingEligible` 暫定資格取代舊 `cookingPot`，World Authoring v23 和 runtime validator 共用單一純資格查詢，明確拒絕非法型別、舊標籤與 Resource-container 矛盾。第一版料理仍為 Type A 整顆 Ingredient／現有 `cookingStation`；決策依真正單批輸入枚舉容量與位置合法的所有容器，經 Perception／Spatial／reservation 過濾後確定性選擇可用組合。Action `potId` 自建立至每 tick、實際 `containedBy` 裝鍋及 completion 均固定並重驗，不偷換另一個容器；單一 `loadPot` → `complete` World Event、Object mass 與 Food Meal 真相不變。Cooking own generation → `food-cooking-v1-cookware-eligibility`、新 `food-cookware-eligibility-v1`、World Authoring → `world-authoring-v23`；Furniture、Object Handling、Ingredient、Meal、Spatial、Perception generations 不變。D2 批次規劃／Meal Serving／Core Default World 等未包含。詳見 [`food-cookware-eligibility.md`](food-cookware-eligibility.md)。
 
