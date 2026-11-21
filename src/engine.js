@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v1-cookware-eligibility')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
   const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Engine requires Character Traits contract.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6,CARRY_RECOVERY_RETRY_TICKS=2;
@@ -450,13 +450,13 @@
         const available=a.kind==='human'&&!a.offMap&&!a.held&&context?.location==='exposed'
           &&Number.isFinite(targetTraversalCost(a,{kind:'object',id:context.ingredient.id},'pickup'))
           &&Number.isFinite(targetTraversalCost(a,{kind:'object',id:context.pot.id},'receive'))
-          &&evidence?.observedTick===state.tick&&evidence?.ingredientId===context.ingredient.id&&evidence?.potId===context.pot.id
+          &&evidence?.observedTick===state.tick&&evidence?.ingredientId===context.ingredient.id&&evidence?.potId===context.pot.id&&evidence?.sourceId===context.sourceId
           &&ingredientObservation?.visualAvailable===true&&potObservation?.visualAvailable===true
           &&(!reservationOwner('object:'+context.ingredient.id)||reservationOwner('object:'+context.ingredient.id).id===a.id)
           &&(!reservationOwner('object:'+context.pot.id)||reservationOwner('object:'+context.pot.id).id===a.id)
           &&(!reservationOwner('furniture:'+context.station.id)||reservationOwner('furniture:'+context.station.id).id===a.id)
           &&Number.isFinite(targetTraversalCost(a,stationTarget,'default'));
-        action=available?{...base,phase:'toStation',ingredientId:context.ingredient.id,stationId:context.station.id,potId:context.pot.id,recipeId:C.RECIPE_ID,progressTicks:0,loadEventId:null}:null;
+        action=available?{...base,phase:'toStation',ingredientId:context.ingredient.id,stationId:context.station.id,potId:context.pot.id,sourceId:context.sourceId,recipeId:C.RECIPE_ID,progressTicks:0,pickupEventId:null,loadEventId:null}:null;
         break;
       }
       case'read':{const object=state.objects?.[choice.targetObject],target=object?{kind:'object',id:object.id}:null,valid=a.kind==='human'&&object?.affordances?.includes('read')&&Number.isFinite(targetTraversalCost(a,target,'read'));action=valid?{...base,phase:SP.isAtInteraction(state,a,target,'read')?'reading':'move',targetObject:object.id,feedbackUnits:0,feedbackGoal:6}:null;break;}
@@ -671,6 +671,9 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
     if(a.held&&a.held!==p.ingredientId){
       abortAction(a,'料理時不能同時搬運其他物件',{dropHeld:false});return;
     }
+    if(['toStation','toIngredient'].includes(p.phase)&&(context.location!=='exposed'||context.sourceId!==p.sourceId)){
+      abortAction(a,'料理材料的原始來源已改變',{dropHeld:false});return;
+    }
     if(p.phase==='toStation'){
       if(!reserve('object:'+p.ingredientId,a)||!reserve('object:'+p.potId,a)||!reserve('furniture:'+p.stationId,a)){
         p.wait=(p.wait||0)+1;
@@ -691,6 +694,11 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
       if(!holdObject(a,p.ingredientId)){
         abortAction(a,'無法拿取料理材料',{dropHeld:false});return;
       }
+      p.pickupEventId=addEvent(a.name+'從合法支撐表面取得完整料理食材。','normal',[],{
+        actor:a.id,action:'cookMeal',phase:'pickupIngredient',ingredientId:p.ingredientId,
+        sourceId:p.sourceId,potId:p.potId,stationId:p.stationId,
+        entities:['object:'+p.ingredientId,'furniture:'+p.sourceId,'object:'+p.potId,'furniture:'+p.stationId]
+      });
       p.phase='toPot';return;
     }
     if(p.phase==='toPot'){
@@ -701,7 +709,7 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
       if(!containHeldObject(a,p.potId)){
         abortAction(a,'鍋具無法合法收納料理材料',{dropHeld:true});return;
       }
-      p.loadEventId=addEvent(a.name+'將完整食材放入料理鍋。','normal',[],{
+      p.loadEventId=addEvent(a.name+'將完整食材放入料理鍋。','normal',[p.pickupEventId].filter(Boolean),{
         actor:a.id,action:'cookMeal',phase:'loadPot',ingredientId:p.ingredientId,
         potId:p.potId,stationId:p.stationId,unit:'g',inputMassGrams:context.inputMassGrams,
         entities:['object:'+p.ingredientId,'object:'+p.potId,'furniture:'+p.stationId]
