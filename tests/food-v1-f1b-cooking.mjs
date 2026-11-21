@@ -45,6 +45,24 @@ function setup(seed=20261120){
   a.action=null;a.activeIntent=null;
   return {st,a,input:st.objects.ingredientA1};
 }
+// Real decision and tick regression for legal crawling postures without canonical sight samples.
+for(const posture of ['kneeling','prone']){
+  const fixture=setup(20261120),actor=fixture.a,world=fixture.st,ingredient=fixture.input;
+  const standingOption=E.cookingDecisionOption(world,actor);
+  assert.equal(standingOption?.id,'cookMeal');
+  actor.posture={kind:posture,slotId:null,furnitureId:null};
+  assert.equal(P.lacksVisualPoseEnvelopeForSupportedLocomotion(actor),true);
+  assert.throws(()=>P.classifyObjectPointVisualAvailability(world,actor,ingredient),new RegExp('do not support posture '+posture));
+  assert.equal(E.cookingDecisionOption(world,actor),null,'no Cooking option without visual evidence');
+  assert.equal(E.buildAction(actor,standingOption),null,'direct Action cannot bypass posture guard');
+  const beforeObjects=JSON.stringify(world.objects),beforeTick=world.tick;
+  E.tick();
+  assert.equal(world.tick,beforeTick+1,'real Engine tick continues for '+posture);
+  assert.ok(!world.thoughts[actor.id]?.options?.some(x=>x.id==='cookMeal'));
+  assert.equal(JSON.stringify(world.objects),beforeObjects,'no World Object mutation');
+  assert.equal(world.events.filter(e=>e.data?.action==='cookMeal').length,0,'no fabricated Cooking World Event');
+  assert.equal(V.validateState(world).issueCount,0);
+}
 let {st,a,input}=setup();
 assert.equal(C.eligible(st,input.id,'stoveA')?.inputMassGrams,300);
 assert.equal(C.eligible(st,input.id,'stoveA')?.location,'exposed');

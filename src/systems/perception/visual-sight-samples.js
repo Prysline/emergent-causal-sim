@@ -1,10 +1,11 @@
 (() => {
-  const A=window.SimWorldAuthoring,Physical=window.SimPhysical,P=window.SimPerception;
+  const A=window.SimWorldAuthoring,Physical=window.SimPhysical,P=window.SimPerception,C=window.SimEmbodimentCapabilities;
   if(!A?.CELL_SIZE_METERS)throw new Error('systems/perception/visual-sight-samples.js requires canonical World Authoring geometry scale.');
   if(!Physical?.getPoseEnvelope)throw new Error('systems/perception/visual-sight-samples.js requires systems/physical.js.');
+  if(!C?.modeFromPosture||!C?.poseProfileForKind||!C?.DEFAULT_PHYSICAL_PROFILES)throw new Error('Physical-derived sight samples require canonical Embodiment posture profiles.');
   if(!P?.VISUAL_LOS_VERSION)throw new Error('systems/perception/visual-sight-samples.js requires visual-los.js.');
 
-  const VERSION='perception-visual-sight-samples-v1';
+  const VERSION='perception-visual-sight-samples-v2-locomotion-posture-guard';
   const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
 
   function deepFreeze(value){
@@ -20,6 +21,15 @@
       throw new Error('Physical-derived sight samples require canonical Agent position with finite x / y and integer z.');
     }
     return {x:Number(position.x),y:Number(position.y)};
+  }
+
+  // Consumer preflight only: supported locomotion posture without canonical static sight pose.
+  // Unknown kinds, unsupported modes and malformed geometry still reach strict Perception checks.
+  function lacksVisualPoseEnvelopeForSupportedLocomotion(agent){
+    const posture=agent?.posture?.kind,mode=C.modeFromPosture(posture),physical=agent?.physical;
+    if(!mode||!C.DEFAULT_PHYSICAL_PROFILES[agent?.kind]||
+      physical?.locomotionCapabilities?.[mode]!==true||!physical?.locomotionProfiles?.[mode])return false;
+    return C.poseProfileForKind(agent.kind,posture)===null;
   }
 
   function derivePhysicalSightSamples(agent){
@@ -42,6 +52,7 @@
   if(P.VISUAL_SIGHT_SAMPLES_VERSION)throw new Error('Physical-derived visual sight samples are already registered.');
   Object.assign(P,{
     VISUAL_SIGHT_SAMPLES_VERSION:VERSION,
-    derivePhysicalSightSamples
+    derivePhysicalSightSamples,
+    lacksVisualPoseEnvelopeForSupportedLocomotion
   });
 })();
