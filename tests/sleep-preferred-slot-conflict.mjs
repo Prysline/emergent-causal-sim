@@ -165,6 +165,27 @@ assert.equal(st.events.some(e=>/ignored|rejected|intentionalIgnore/i.test(String
 // G: occupancy wait is one private wait decision, then re-enters Deliberation; higher-priority emergency may interrupt it.
 E.reset(44009);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;cat.offMap=true;
 nearSlot(st,requester,'bed:left');placeAtSlot(st,human,'bed:left');st.furniture.bed.slots.find(x=>x.id==='bed:right').canSleep=false;armSleep(st,requester);
+// The formal B world has no legacy Resource Food. Make the existing physical
+// Meal actually observable and reachable for this emergency-preemption case;
+// emergency hunger alone must not fabricate awareness of distant food.
+const nearbyMeal=st.objects.readyMealF0;
+assert.ok(nearbyMeal?.meal?.edibleMassGrams>0,'emergency fixture requires the canonical physical Meal Object');
+assert.equal(Object.values(st.objects).some(o=>(o.contents?.food||0)>0),false,'emergency fixture must not restore legacy Resource Food');
+delete nearbyMeal.supportId;
+nearbyMeal.interactions={...nearbyMeal.interactions,eatFrom:{mode:'reach'}};
+const actorNode=SP.nodeForAgent(st,requester);
+const mealPositions=[
+  {x:actorNode.x,y:actorNode.y},
+  {x:actorNode.x+1,y:actorNode.y},{x:actorNode.x-1,y:actorNode.y},
+  {x:actorNode.x,y:actorNode.y+1},{x:actorNode.x,y:actorNode.y-1}
+];
+let mealReachable=false;
+for(const candidate of mealPositions){
+  if(!SP.walkable(st,candidate))continue;
+  nearbyMeal.position={x:candidate.x,y:candidate.y,z:actorNode.z??0};
+  if(E.canSatisfyHunger(requester)){mealReachable=true;break;}
+}
+assert.equal(mealReachable,true,'emergency Meal must be genuinely observable and reachable using current Physical Food and Spatial contracts');
 requester.action.phase='conflictWait';requester.action.preferredConflictSlotId='bed:left';requester.action.conflictWaitSource='sleepSlotOccupancy';requester.action.conflictWaitStartedTick=0;requester.action.conflictWaitUntilTick=1;requester.needs.hunger=99;
 E.tick();
 assert.notEqual(requester.activeIntent?.kind,'sleep','emergency hunger must be able to preempt occupancy wait');
