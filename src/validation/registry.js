@@ -1,6 +1,5 @@
 (() => {
-  const SP=window.SimSpatial,S=window.SimObjectStorageVolume,I=window.SimIngredient;if(!SP)return;
-  if(S?.VERSION!=='object-storage-volume-v1'||I?.VERSION!=='food-ingredient-v1')throw new Error('Validator requires canonical storage and Ingredient contracts.');
+  const SP=window.SimSpatial,I=window.SimIngredient;if(!SP)return;
   const T=window.SimCharacterTraits;if(!T?.validateTraits)throw new Error('Validator requires Character Traits contract.');
 
   function validateBaseState(st){
@@ -27,7 +26,7 @@
 
     for(const [id,source] of Object.entries(st.offMapIngredientSources||{})){
       if(!source||source.id!==id||st.exits?.[source.exitId]?.kind!=='offMap'
-        ||!Object.prototype.hasOwnProperty.call(I.TYPES,source.ingredientTypeId)
+        ||!Object.prototype.hasOwnProperty.call(I?.TYPES||{},source.ingredientTypeId)
         ||!Number.isSafeInteger(source.availableUnits)||source.availableUnits<0
         ||!Number.isSafeInteger(source.workTicksPerUnit)||source.workTicksPerUnit<1
         ||!Number.isSafeInteger(source.nextSerial)||source.nextSerial<1)
@@ -80,7 +79,7 @@
           if(!source||source.exitId!==a.action.exitId)add('physical_supply_source_invalid','外出實體食材行動沒有合法供應來源。',{agentId:a.id});
           if(a.offMap!==['work','return'].includes(a.action.phase))add('physical_supply_offmap_phase_invalid','場景外角色與取得階段不一致。',{agentId:a.id});
           if(!Array.isArray(a.action.acquiredIds)||new Set(a.action.acquiredIds).size!==a.action.acquiredIds.length
-            ||a.action.acquiredIds.some(id=>!I.validIngredient(st.objects[id])||st.objects[id].containedBy!==a.action.carrierId))
+            ||a.action.acquiredIds.some(id=>!I?.validIngredient?.(st.objects[id])||st.objects[id].containedBy!==a.action.carrierId))
             add('physical_supply_cargo_invalid','已取得的食材必須是籃子中的獨立合法 Object。',{agentId:a.id});
         }
         const mustHold=['toExit','exit','work','return','toSource','loadCarrier','toDestination','deposit'].includes(a.action.phase);
