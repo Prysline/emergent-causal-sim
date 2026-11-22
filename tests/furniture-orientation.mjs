@@ -203,20 +203,20 @@ assert.throws(
     position:local(5,2),supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:local(5,3),edge:'east'}]
   };
-  doc.entities.objects.basket.position=local(5,2);
+  doc.entities.objects.legacyResourceBasket.position=local(5,2);
   const sourceBefore=clone(doc.entities.sources.tap);
   const result=M.rotateFurniture(doc,{furnitureId:'diningTable',orientation:'east'});
   assert.equal(result.ok,true,result.issues.map(issue=>issue.code).join(','));
   const rotated=result.candidate;
   assert.deepEqual(rotated.furniture.diningTable.origin,doc.furniture.diningTable.origin);
-  assert.deepEqual(rotated.entities.objects.mealTray.position,local(5,3));
+  assert.deepEqual(rotated.entities.objects.legacyResourceMealTray.position,local(5,3));
   assert.deepEqual(rotated.entities.objects.legacyResourcePlateB.position,local(6,2));
   assert.deepEqual(rotated.entities.objects.syntheticPort.position,local(5,3));
   assert.deepEqual(rotated.entities.objects.syntheticPort.interactionPorts[0].position,local(6,3));
   assert.equal(rotated.entities.objects.syntheticPort.interactionPorts[0].edge,'north');
-  assert.deepEqual(rotated.entities.objects.basket.position,local(5,2),'same-cell unrelated entity must not follow');
+  assert.deepEqual(rotated.entities.objects.legacyResourceBasket.position,local(5,2),'same-cell unrelated entity must not follow');
   assert.deepEqual(rotated.entities.sources.tap,sourceBefore,'current Source authored world facts must remain unchanged');
-  assert.deepEqual(doc.entities.objects.mealTray.position,local(5,2),'rotation must not mutate source authoring');
+  assert.deepEqual(doc.entities.objects.legacyResourceMealTray.position,local(5,2),'rotation must not mutate source authoring');
 }
 
 // Slot-bound Resident keeps stable references while the resolver moves the slot.

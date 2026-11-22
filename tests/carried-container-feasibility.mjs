@@ -35,7 +35,7 @@ assert.equal(SP.ROUTE_SEMANTICS_VERSION,ROUTE_VERSION);
 const expectedHandling={
   legacyResourcePlateA:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},
   legacyResourcePlateB:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1},
-  basket:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2},
+  legacyResourceBasket:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2},
   waterBucket:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1},
   cupA:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},
   cupB:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1},
@@ -45,7 +45,7 @@ for(const [id,handling] of Object.entries(expectedHandling)){const actual=A.DEFA
 
 {
   const invalid=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
-  delete invalid.entities.objects.basket.handling;
+  delete invalid.entities.objects.legacyResourceBasket.handling;
   const report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_object_handling_missing'));
@@ -63,10 +63,10 @@ assert.equal(noHeldWalk.clearanceWidth,bodyWalk.clearanceWidth);
 assert.equal(noHeldWalk.clearanceHeight,bodyWalk.clearanceHeight);
 assert.equal(noHeldWalk.clearanceLength,bodyWalk.clearanceLength);
 
-human.held='basket';
+human.held='legacyResourceBasket';
 const basketWalk=P.getEffectiveTraversalEnvelope(st,human,'walk');
 assert.equal(basketWalk.clearanceWidth,.55);
-assert.equal(basketWalk.carriedObjectId,'basket');
+assert.equal(basketWalk.carriedObjectId,'legacyResourceBasket');
 assert.equal(O.availableSupportHands(st,human),0);
 assert.equal(P.locomotionModeHandsFeasible(st,human,'walk'),true);
 assert.equal(P.locomotionModeHandsFeasible(st,human,'kneelCrawl'),false);
@@ -85,12 +85,12 @@ assert.equal(R.effectiveCarryLoad(st,human),0,'ordinary Object carry must not fa
 assert.equal(O.availableSupportHands(st,human),1,'one-hand ordinary Object must leave one support hand');
 
 {
-  const bucket=st.objects.waterBucket,basket=st.objects.basket;
+  const bucket=st.objects.waterBucket,legacyResourceBasket=st.objects.legacyResourceBasket;
   bucket.contents={water:0};const emptyBucketLoad=R.containerLoad(st,bucket);
   bucket.contents={water:100};const fullBucketLoad=R.containerLoad(st,bucket);
   assert.ok(fullBucketLoad>emptyBucketLoad,'contents must increase carried load');
-  basket.contents={food:10};const lightBasketLoad=R.containerLoad(st,basket),lightEnvelope=P.getEffectiveTraversalEnvelope(st,{...human,held:'basket'},'walk');
-  basket.contents={food:40};const heavyBasketLoad=R.containerLoad(st,basket),heavyEnvelope=P.getEffectiveTraversalEnvelope(st,{...human,held:'basket'},'walk');
+  legacyResourceBasket.contents={food:10};const lightBasketLoad=R.containerLoad(st,legacyResourceBasket),lightEnvelope=P.getEffectiveTraversalEnvelope(st,{...human,held:'legacyResourceBasket'},'walk');
+  legacyResourceBasket.contents={food:40};const heavyBasketLoad=R.containerLoad(st,legacyResourceBasket),heavyEnvelope=P.getEffectiveTraversalEnvelope(st,{...human,held:'legacyResourceBasket'},'walk');
   assert.ok(heavyBasketLoad>lightBasketLoad,'more contents must increase load');
   assert.deepEqual(
     [heavyEnvelope.clearanceWidth,heavyEnvelope.clearanceHeight,heavyEnvelope.clearanceLength],
@@ -119,10 +119,10 @@ const direct=SP.planRoute(st,human,goal,{mode:'walk',objective:'pathDistance'});
 assert.equal(direct.pathDistance,4);
 assert.ok(direct.path.every(node=>node.y===3),'body-only Human should use the direct 0.50m corridor');
 
-human.held='basket';
+human.held='legacyResourceBasket';
 const basketRoute=SP.planRoute(st,human,goal,{mode:'walk',objective:'pathDistance'});
 assert.equal(basketRoute.pathDistance,6);
-assert.ok(basketRoute.path.some(node=>node.y===4),'0.55m carried basket must force the open detour');
+assert.ok(basketRoute.path.some(node=>node.y===4),'0.55m carried legacyResourceBasket must force the open detour');
 
 human.held='cupA';
 const cupRoute=SP.planRoute(st,human,goal,{mode:'walk',objective:'pathDistance'});
@@ -137,10 +137,10 @@ human.held=null;
 let feasibility=SP.traversalFeasibility(st,human,first,second);
 assert.equal(feasibility.modes.kneelCrawl.feasible,true,'no-held crawl must preserve baseline feasibility');
 
-human.held='basket';
+human.held='legacyResourceBasket';
 feasibility=SP.traversalFeasibility(st,human,first,second);
 assert.equal(feasibility.modes.kneelCrawl.feasible,false);
-assert.ok(feasibility.modes.kneelCrawl.failedAxes.includes('hands'),'two-hand basket crawl failure must identify hand demand');
+assert.ok(feasibility.modes.kneelCrawl.failedAxes.includes('hands'),'two-hand legacyResourceBasket crawl failure must identify hand demand');
 
 human.held='cupA';
 feasibility=SP.traversalFeasibility(st,human,first,second);
@@ -148,8 +148,8 @@ assert.equal(feasibility.modes.kneelCrawl.feasible,true,'one-hand cup leaves one
 
 human.held=null;
 assert.ok(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGap:.61},st).some(candidate=>candidate.kind==='climbUp'));
-human.held='basket';
-assert.equal(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGap:.61},st).length,0,'two-hand basket must filter the climb-only maneuver');
+human.held='legacyResourceBasket';
+assert.equal(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGap:.61},st).length,0,'two-hand legacyResourceBasket must filter the climb-only maneuver');
 human.held='cupA';
 assert.ok(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGap:.61},st).some(candidate=>candidate.kind==='climbUp'),'one-hand cup must keep climb feasible');
 

@@ -5,7 +5,7 @@
   }
   if(!M?.moveObject)throw new Error('SimEditorAuthoringMutations must load before editor-container-source-authoring.js.');
 
-  const VERSION='editor-container-source-authoring-v2';
+  const VERSION='editor-container-source-authoring-v3';
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
   const issue=(code,message,data={})=>({code,message,...data});
@@ -18,22 +18,6 @@
   });
 
   const CONTAINER_PRESETS=Object.freeze({
-    'ready-food':Object.freeze({
-      id:'ready-food',label:'現成食物（Debug）',icon:'🍲',instanceIdBase:'mealTray',
-      authored:Object.freeze({resourceContainer:true,name:'現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}})
-    }),
-    plate:Object.freeze({
-      id:'plate',label:'餐盤',icon:'🍽️',instanceIdBase:'plate',
-      authored:Object.freeze({resourceContainer:true,name:'餐盤',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:openRetention(.10,.48,.16,.70,.24,.95)},servingDish:true,canEatFrom:true,interactions:{eatFrom:{mode:'reach'}}})
-    }),
-    'food-pantry':Object.freeze({
-      id:'food-pantry',label:'食物櫃',icon:'🗄️',instanceIdBase:'foodPantry',floorOnly:true,
-      authored:Object.freeze({resourceContainer:true,name:'食物櫃',icon:'🗄️',roles:['foodReserve','externalSupplyDestination'],capacity:200,emptyLoad:8,preferredResource:'food',contents:{food:140},portable:false,access:1})
-    }),
-    basket:Object.freeze({
-      id:'basket',label:'搬運籃',icon:'🧺',instanceIdBase:'basket',
-      authored:Object.freeze({resourceContainer:true,name:'搬運籃',icon:'🧺',roles:['logisticsContainer'],capacity:55,emptyLoad:.8,contents:{},portable:true,handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,containment:'open',contentRetention:openRetention(.24,.78,.24,.82,.36,1.25)},transportResources:['food'],interactions:{pickup:{mode:'occupy'},receive:{mode:'reach'},deposit:{mode:'reach'}}})
-    }),
     'water-bucket':Object.freeze({
       id:'water-bucket',label:'水桶',icon:'💧',instanceIdBase:'waterBucket',
       authored:Object.freeze({resourceContainer:true,name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}})

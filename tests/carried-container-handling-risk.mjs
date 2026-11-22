@@ -61,9 +61,9 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
 
 E.reset(13800);
 {
-  const st=E.getState(),basket=st.objects.basket,cup=st.objects.cupA,bottle=st.objects.alcoholBottle,plate=st.objects.legacyResourcePlateA;
-  basket.contents={};
-  assert.equal(R.handlingRiskForContainer(st,basket,highExposure).contentsLoss,0,'empty basket may carry burden but cannot lose nonexistent contents');
+  const st=E.getState(),legacyResourceBasket=st.objects.legacyResourceBasket,cup=st.objects.cupA,bottle=st.objects.alcoholBottle,plate=st.objects.legacyResourcePlateA;
+  legacyResourceBasket.contents={};
+  assert.equal(R.handlingRiskForContainer(st,legacyResourceBasket,highExposure).contentsLoss,0,'empty legacyResourceBasket may carry burden but cannot lose nonexistent contents');
 
   cup.contents={water:35};
   const band=cup.handling.contentRetention.tilt,span=band.highRiskExposure-band.lowRiskExposure;

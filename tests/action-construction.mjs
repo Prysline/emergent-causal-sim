@@ -68,7 +68,7 @@ st.objects.cupB.contents.water=Math.max(8,st.objects.cupB.contents.water||0);
 assert.equal(E.buildAction(cat,{id:'drinkWater',targetObject:'cupB'})?.targetObject,'cupB','explicit drink targetObject must survive construction');
 
 // Logistics fields also use the same factory rather than a separate core-only schema.
-const restockChoice={id:'restockContainer',job:{destinationId:'mealTray',sourceId:'foodPantry',sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:'carryBasket'}};
+const restockChoice={id:'restockContainer',job:{destinationId:'legacyResourceMealTray',sourceId:'legacyResourceFoodPantry',sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:'carryBasket'}};
 const restock=E.buildAction(human,restockChoice);
 assert.equal(E.actionKind(restock),'restockContainer');
 assert.equal(restock.destinationId,restockChoice.job.destinationId);

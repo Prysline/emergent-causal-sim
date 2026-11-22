@@ -26,8 +26,8 @@ const PLANS = {
       catbed: [7, 7, 'pet-bed-small'],
     },
     objects: {
-      bookA: [7, 3], mealTray: [7, 3], legacyResourcePlateA: [7, 3],
-      legacyResourcePlateB: [8, 4], foodPantry: [2, 4], basket: [3, 4],
+      bookA: [7, 3], legacyResourceMealTray: [7, 3], legacyResourcePlateA: [7, 3],
+      legacyResourcePlateB: [8, 4], legacyResourceFoodPantry: [2, 4], legacyResourceBasket: [3, 4],
       waterBucket: [5, 3], cupA: [8, 3], cupB: [8, 4],
       alcoholBottle: [7, 4], readyMealF0: [7, 3],
     },
@@ -46,8 +46,8 @@ const PLANS = {
       catbed: [7, 7, 'pet-bed-small'],
     },
     objects: {
-      bookA: [11, 5], mealTray: [11, 5], legacyResourcePlateA: [11, 5],
-      legacyResourcePlateB: [12, 6], foodPantry: [14, 2], basket: [14, 3],
+      bookA: [11, 5], legacyResourceMealTray: [11, 5], legacyResourcePlateA: [11, 5],
+      legacyResourcePlateB: [12, 6], legacyResourceFoodPantry: [14, 2], legacyResourceBasket: [14, 3],
       waterBucket: [10, 3], cupA: [12, 5], cupB: [12, 6],
       alcoholBottle: [11, 6], readyMealF0: [11, 5],
     },

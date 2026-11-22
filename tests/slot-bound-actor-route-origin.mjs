@@ -14,6 +14,7 @@ const files=[
 loadRuntimeProfile(files);
 
 const E=globalThis.SimEngine,W=globalThis.SimWorld,SP=globalThis.SimSpatial;
+// Frozen user-reported historical fixture retains its original Resource IDs; do not rewrite provenance.
 const reportedWorld=JSON.parse(fs.readFileSync(new URL('./fixtures/slot-bound-actor-route-origin.world.json',import.meta.url),'utf8'));
 E.configureResetStateSource('reported-slot-bound-actor-route-origin',seed=>W.createInitialStateFromAuthoring(reportedWorld,seed));
 

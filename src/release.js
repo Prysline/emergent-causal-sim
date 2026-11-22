@@ -1,7 +1,7 @@
 (() => {
   const W=window.SimWorld;
   if(!W?.registerInitialStateInitializer)throw new Error('release.js requires world.js initial-state pipeline.');
-  const VERSION='11.76.1-logistics-carrier-drop-lifecycle';
+  const VERSION='11.77.0-food-legacy-default-isolation';
 
   W.VERSION=VERSION;
   W.registerInitialStateInitializer('release.version',(st)=>{

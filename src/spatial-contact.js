@@ -15,7 +15,7 @@
     // defines reach for the affordances currently exercised by the simulation.
     // Pickup geometry is support-derived by Spatial and is intentionally not
     // authored or injected by object type here.
-    mergeInteractions(objects.mealTray,{
+    mergeInteractions(objects.legacyResourceMealTray,{
       serve:{mode:'reach'},
       eatFrom:{mode:'reach'},
       deposit:{mode:'reach'},

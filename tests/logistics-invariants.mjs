@@ -32,43 +32,43 @@ function isolateHuman(st,id='zhen'){
   return st.agents[id];
 }
 
-function placeAtCarrier(a,basket){
-  a.position={...basket.position};
+function placeAtCarrier(a,legacyResourceBasket){
+  a.position={...legacyResourceBasket.position};
   a.posture={kind:'kneeling',slotId:null,furnitureId:null};
 }
 
 function startIndoorFoodRestock(st,a){
-  const tray=st.objects.mealTray;
-  const pantry=st.objects.foodPantry;
-  const basket=st.objects.basket;
+  const tray=st.objects.legacyResourceMealTray;
+  const pantry=st.objects.legacyResourceFoodPantry;
+  const legacyResourceBasket=st.objects.legacyResourceBasket;
   tray.contents.food=0;
-  basket.contents={};
-  basket.position={x:3,y:2};
-  delete basket.supportId;
-  placeAtCarrier(a,basket);
+  legacyResourceBasket.contents={};
+  legacyResourceBasket.position={x:3,y:2};
+  delete legacyResourceBasket.supportId;
+  placeAtCarrier(a,legacyResourceBasket);
   a.action={
     kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,
     sourceId:pantry.id,sourceKind:'object',resource:'food',
-    strategy:'logisticsContainer',carrierId:basket.id,
+    strategy:'logisticsContainer',carrierId:legacyResourceBasket.id,
     started:st.tick,wait:0
   };
-  return {tray,pantry,basket};
+  return {tray,pantry,legacyResourceBasket};
 }
 
 E.reset(20260911);
 {
   const st=E.getState();
   const a=isolateHuman(st);
-  const {tray,pantry,basket}=startIndoorFoodRestock(st,a);
-  const totalBefore=foodOf(tray)+foodOf(pantry)+foodOf(basket);
+  const {tray,pantry,legacyResourceBasket}=startIndoorFoodRestock(st,a);
+  const totalBefore=foodOf(tray)+foodOf(pantry)+foodOf(legacyResourceBasket);
 
   for(let i=0;i<45&&a.action;i++)E.tick();
 
   assert.equal(a.action,null,'室內物流補貨應完成');
-  approx(foodOf(tray)+foodOf(pantry)+foodOf(basket),totalBefore,'pantry → basket → mealTray 必須守恆');
-  assert.equal(foodOf(basket),0,'卸貨後物流容器應為空');
+  approx(foodOf(tray)+foodOf(pantry)+foodOf(legacyResourceBasket),totalBefore,'pantry → legacyResourceBasket → legacyResourceMealTray 必須守恆');
+  assert.equal(foodOf(legacyResourceBasket),0,'卸貨後物流容器應為空');
   assert.equal(a.held,null,'完成後 Agent 不應繼續持有物流容器');
-  assertCanonicalReleasedPlacement(st,a,basket,'indoor logistics conservation');
+  assertCanonicalReleasedPlacement(st,a,legacyResourceBasket,'indoor logistics conservation');
   assert.ok(!Object.values(st.reservations).includes(a.id),'完成後不得殘留 Agent reservation');
   noIssues('indoor logistics conservation');
 }
@@ -80,22 +80,22 @@ E.reset(20260911);
   const actor=st.agents.zhou;
   st.agents.orange.offMap=true;
   owner.offMap=true;
-  const tray=st.objects.mealTray;
-  const pantry=st.objects.foodPantry;
-  const basket=st.objects.basket;
+  const tray=st.objects.legacyResourceMealTray;
+  const pantry=st.objects.legacyResourceFoodPantry;
+  const legacyResourceBasket=st.objects.legacyResourceBasket;
   tray.contents.food=0;
-  basket.contents={};
-  st.reservations[`object:${basket.id}`]=owner.id;
+  legacyResourceBasket.contents={};
+  st.reservations[`object:${legacyResourceBasket.id}`]=owner.id;
   actor.action={
     kind:'restockContainer',phase:'toCarrier',destinationId:tray.id,
     sourceId:pantry.id,sourceKind:'object',resource:'food',
-    strategy:'logisticsContainer',carrierId:basket.id,
+    strategy:'logisticsContainer',carrierId:legacyResourceBasket.id,
     started:st.tick,wait:0
   };
 
   E.tick();
 
-  assert.equal(st.reservations[`object:${basket.id}`],owner.id,'既有物流容器 reservation 不得被覆寫');
+  assert.equal(st.reservations[`object:${legacyResourceBasket.id}`],owner.id,'既有物流容器 reservation 不得被覆寫');
   assert.equal(actor.held,null,'其他角色不得拿起已被預約的物流容器');
   assert.equal(actor.action?.phase,'toCarrier','其他角色應停留在等待物流容器的階段');
   noIssues('logistics reservation exclusivity');
@@ -105,21 +105,21 @@ E.reset(20260911);
 {
   const st=E.getState();
   const a=isolateHuman(st);
-  const {tray,pantry,basket}=startIndoorFoodRestock(st,a);
+  const {tray,pantry,legacyResourceBasket}=startIndoorFoodRestock(st,a);
 
-  for(let i=0;i<35&&foodOf(basket)<=0;i++)E.tick();
-  assert.ok(foodOf(basket)>0,'中斷測試前，資源必須已經實際裝進物流容器');
-  assert.equal(a.held,basket.id,'中斷測試前，角色必須正在持有物流容器');
+  for(let i=0;i<35&&foodOf(legacyResourceBasket)<=0;i++)E.tick();
+  assert.ok(foodOf(legacyResourceBasket)>0,'中斷測試前，資源必須已經實際裝進物流容器');
+  assert.equal(a.held,legacyResourceBasket.id,'中斷測試前，角色必須正在持有物流容器');
 
-  const conservedBeforeAbort=foodOf(pantry)+foodOf(basket)+foodOf(tray);
+  const conservedBeforeAbort=foodOf(pantry)+foodOf(legacyResourceBasket)+foodOf(tray);
   delete st.objects[tray.id];
   E.tick();
 
   assert.equal(a.action,null,'目標消失後物流行動應中止');
   assert.equal(a.held,null,'中止後不應殘留 held state');
-  assert.ok(foodOf(basket)>0,'中止後已裝載資源應留在物流容器內，不得消失');
-  approx(foodOf(pantry)+foodOf(basket),conservedBeforeAbort,'中止後 pantry + basket 的物資總量必須守恆');
-  assertCanonicalReleasedPlacement(st,a,basket,'logistics interruption cleanup');
+  assert.ok(foodOf(legacyResourceBasket)>0,'中止後已裝載資源應留在物流容器內，不得消失');
+  approx(foodOf(pantry)+foodOf(legacyResourceBasket),conservedBeforeAbort,'中止後 pantry + legacyResourceBasket 的物資總量必須守恆');
+  assertCanonicalReleasedPlacement(st,a,legacyResourceBasket,'logistics interruption cleanup');
   assert.ok(!Object.values(st.reservations).includes(a.id),'中止後不得殘留 Agent reservation');
   noIssues('logistics interruption cleanup');
 }
@@ -130,15 +130,15 @@ E.reset(20260911);
   const a=isolateHuman(st);
   const exit=SP.allExits(st).find(x=>SP.exitStructurallyAvailable(st,x));
   const dest=Object.values(st.objects).find(c=>SP.hasRole(c,'externalSupplyDestination'));
-  const basket=st.objects.basket;
-  basket.contents={};
-  basket.position={x:3,y:2};
-  delete basket.supportId;
-  placeAtCarrier(a,basket);
+  const legacyResourceBasket=st.objects.legacyResourceBasket;
+  legacyResourceBasket.contents={};
+  legacyResourceBasket.position={x:3,y:2};
+  delete legacyResourceBasket.supportId;
+  placeAtCarrier(a,legacyResourceBasket);
   const destinationBefore=foodOf(dest);
   a.action={
     kind:'externalSupply',phase:'toCarrier',exitId:exit.id,
-    destinationId:dest.id,resource:'food',carrierId:basket.id,
+    destinationId:dest.id,resource:'food',carrierId:legacyResourceBasket.id,
     workLeft:1,produced:0,started:st.tick,wait:0
   };
 
@@ -147,9 +147,9 @@ E.reset(20260911);
   assert.equal(a.action,null,'外出補給應完成');
   const delivered=foodOf(dest)-destinationBefore;
   approx(delivered,st.supply.totalProduced,'外部新增資源量必須等於實際入庫量');
-  assert.equal(foodOf(basket),0,'外出補給卸貨後物流容器應為空');
+  assert.equal(foodOf(legacyResourceBasket),0,'外出補給卸貨後物流容器應為空');
   assert.equal(a.held,null,'外出補給完成後不應殘留 held state');
-  assertCanonicalReleasedPlacement(st,a,basket,'external supply accounting');
+  assertCanonicalReleasedPlacement(st,a,legacyResourceBasket,'external supply accounting');
   assert.ok(!Object.values(st.reservations).includes(a.id),'外出補給完成後不得殘留 Agent reservation');
   noIssues('external supply accounting');
 }

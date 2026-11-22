@@ -164,15 +164,15 @@ try{
   // Real Logistics pickup -> completed-edge Container drop -> same-tick Action abort.
   for(const kind of ['restockContainer','externalSupply']){
     E.reset(kind==='restockContainer'?14107:14108);
-    const st=E.getState(),a=st.agents.zhen,carrier=st.objects.basket;
+    const st=E.getState(),a=st.agents.zhen,carrier=st.objects.legacyResourceBasket;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     carrier.position={...a.position};delete carrier.supportId;carrier.contents={food:11};
     carrier.handling.containment='sealed';
     const exit=SP.allExits(st).find(e=>SP.exitStructurallyAvailable(st,e));
     assert.ok(exit,'Logistics drop fixture requires a legal world exit');
     a.action=kind==='restockContainer'
-      ?{kind,phase:'toCarrier',destinationId:'mealTray',sourceId:'foodPantry',sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:carrier.id,started:st.tick,wait:0}
-      :{kind,phase:'toCarrier',exitId:exit.id,destinationId:'foodPantry',resource:'food',carrierId:carrier.id,workLeft:1,produced:0,started:st.tick,wait:0};
+      ?{kind,phase:'toCarrier',destinationId:'legacyResourceMealTray',sourceId:'legacyResourceFoodPantry',sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:carrier.id,started:st.tick,wait:0}
+      :{kind,phase:'toCarrier',exitId:exit.id,destinationId:'legacyResourceFoodPantry',resource:'food',carrierId:carrier.id,workLeft:1,produced:0,started:st.tick,wait:0};
     let drop=null;
     for(let i=0;i<45&&!drop;i++){
       E.tick();

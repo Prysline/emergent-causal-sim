@@ -43,7 +43,7 @@ const drink=SP.interactionGeometry(st,{kind:'object',id:'waterBucket'},a,'drinkF
 assert.equal(drink.mode,'reach');
 assert.ok(hasNode(st,drink.positions,floor(st,4,5)),'同一物件的 drinkFrom 可與 pickup 使用不同 geometry');
 
-const basketPickup=SP.interactionGeometry(st,{kind:'object',id:'basket'},a,'pickup');
+const basketPickup=SP.interactionGeometry(st,{kind:'object',id:'legacyResourceBasket'},a,'pickup');
 assert.equal(basketPickup.mode,'groundContact','legacy authored pickup mode must not own current pickup geometry');
 assert.equal(basketPickup.positions.length,1);
 assert.ok(hasNode(st,basketPickup.positions,floor(st,3,2)));
@@ -52,18 +52,18 @@ const tap=SP.interactionGeometry(st,{kind:'source',id:'tap'},a,'fill');
 assert.equal(tap.mode,'port');
 assert.equal(tap.positions.length,1);
 assert.ok(hasNode(st,tap.positions,floor(st,5,5)));
-const tray=SP.interactionGeometry(st,{kind:'object',id:'mealTray'},a,'serve');
+const tray=SP.interactionGeometry(st,{kind:'object',id:'legacyResourceMealTray'},a,'serve');
 assert.equal(tray.mode,'supportReach');
 for(const p of [floor(st,5,1),floor(st,6,1),floor(st,5,4),floor(st,6,4)])assert.ok(hasNode(st,tray.positions,p),'supportReach 應保留未被椅子佔用的北／南桌邊 floor contact');
 for(const p of [floor(st,4,2),floor(st,7,2),floor(st,4,3),floor(st,7,3)])assert.ok(!hasNode(st,tray.positions,p),'Human supportReach 不得把餐椅佔用格當成 floor contact');
 assert.ok(hasNode(st,tray.positions,table(st,5,2)),'supportReach 仍可包含合法 tabletop local contact node');
 
-const trayEat=SP.interactionGeometry(st,{kind:'object',id:'mealTray'},a,'eatFrom');
+const trayEat=SP.interactionGeometry(st,{kind:'object',id:'legacyResourceMealTray'},a,'eatFrom');
 assert.equal(trayEat.mode,'reach','直接吃現成食物必須依食物本身的位置，而不是整張桌子的 perimeter');
-assert.ok(hasNode(st,trayEat.positions,floor(st,5,1)),'mealTray 應保留實際可站的北側 floor contact');
-assert.ok(hasNode(st,trayEat.positions,table(st,5,2)),'mealTray reach 應保留物件所在 tabletop node');
+assert.ok(hasNode(st,trayEat.positions,floor(st,5,1)),'legacyResourceMealTray 應保留實際可站的北側 floor contact');
+assert.ok(hasNode(st,trayEat.positions,table(st,5,2)),'legacyResourceMealTray reach 應保留物件所在 tabletop node');
 assert.ok(!hasNode(st,trayEat.positions,floor(st,4,2)),'chairNW 佔用格不得被當成 Human floor contact');
-assert.ok(!hasNode(st,trayEat.positions,floor(st,7,2)),'站在餐桌另一側不得隔兩格直接吃 mealTray');
+assert.ok(!hasNode(st,trayEat.positions,floor(st,7,2)),'站在餐桌另一側不得隔兩格直接吃 legacyResourceMealTray');
 const plateEat=SP.interactionGeometry(st,{kind:'object',id:'legacyResourcePlateB'},a,'eatFrom');
 assert.equal(plateEat.mode,'reach','桌上的 serving dish 若直接進食，也必須接近該盤子的實際位置');
 assert.ok(hasNode(st,plateEat.positions,floor(st,6,4)),'legacyResourcePlateB 應允許未被椅子佔用的南側 floor contact');
@@ -80,7 +80,7 @@ assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'pickup'
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'drinkFrom').mode,'reach');
 delete st.objects.testCrate;
 
-const conflict=st.objects.basket;
+const conflict=st.objects.legacyResourceBasket;
 a.held=conflict.id;conflict.supportId='diningTable';
 let validation=V.validateState(st);
 assert.ok(validation.issues.some(issue=>issue.code==='held_object_support_conflict'),'holder + supportId must be explicitly invalid');
@@ -92,7 +92,7 @@ validation=V.validateState(st);
 assert.ok(validation.issues.some(issue=>issue.code==='supported_object_cell_mismatch'&&issue.entityId==='legacyResourcePlateA'),'supported Object position must belong to its canonical support Surface cells');
 legacyResourcePlateA.position=legacyResourcePlateAOld;
 
-const pantry=st.objects.foodPantry,old={...pantry.position},next={x:3,y:5};
+const pantry=st.objects.legacyResourceFoodPantry,old={...pantry.position},next={x:3,y:5};
 assert.equal(SP.walkable(st,old),false,'固定物件所在格應由實體動態阻擋');
 pantry.position={...next};
 assert.equal(SP.walkable(st,old),true,'固定物件移走後舊格不應留下 cached blocker');

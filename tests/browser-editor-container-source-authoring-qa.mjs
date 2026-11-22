@@ -12,9 +12,21 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorContainerSourceAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimEditorContainerSourceAuthoring.VERSION),'editor-container-source-authoring-v2');
+assert.equal(await page.evaluate(()=>window.SimEditorContainerSourceAuthoring.VERSION),'editor-container-source-authoring-v3');
 assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="white-cup"]').count(),1);
-assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="ready-food"]').count(),1);
+assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id^="legacy-resource-"]').count(),0,'retired Food Resource recipes must not appear in Editor');
+const retiredPresets=await page.evaluate(()=>{
+  const P=window.SimEditorContainerSourceAuthoring,A=window.SimWorldAuthoring;
+  const doc=window.SimWorldEditor.getDocument(),before=A.semanticFingerprint(doc);
+  const blocked=['legacy-resource-ready-food','legacy-resource-plate','legacy-resource-food-pantry','legacy-resource-basket'].map(id=>({id,visible:!!P.getContainerPreset(id),result:P.createContainerFromPreset(doc,{presetId:id,target:{x:11,y:5,z:0}})}));
+  return {blocked,unchanged:A.semanticFingerprint(doc)===before};
+});
+assert.equal(retiredPresets.unchanged,true,'retired Food create API must not mutate Editor World');
+for(const item of retiredPresets.blocked){
+  assert.equal(item.visible,false,'retired Food preset must not be exposed through public catalog API');
+  assert.equal(item.result.ok,false);
+  assert.equal(item.result.issues[0].code,'container_preset_unknown');
+}
 assert.equal(await page.locator('#sourcePresetCatalog [data-source-preset-id="tap"]').count(),1);
 assert.equal(await page.evaluate(()=>document.querySelector('[data-sidebar-section="add"]')?.contains(document.getElementById('containerPresetCatalog'))),true);
 assert.equal(await page.evaluate(()=>document.querySelector('[data-sidebar-section="add"]')?.contains(document.getElementById('sourcePresetCatalog'))),true);
@@ -36,13 +48,13 @@ assert.equal(snapshot.selected.type,'object');
 assert.match(snapshot.actionText,/移除物件/);
 assert.equal(snapshot.sceneCount,1);
 
-await page.click('#containerPresetCatalog [data-container-preset-id="ready-food"]');
+await page.click('#containerPresetCatalog [data-container-preset-id="white-cup"]');
 await page.click('[data-cell="11,5"]');
 await page.waitForSelector('[data-container-source-support="furniture"][data-support-id="diningTable"]');
 await page.click('[data-container-source-support="furniture"][data-support-id="diningTable"]');
-await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['mealTray-1']);
-snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
-assert.deepEqual(snapshot.contents,{food:68});
+await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['cupWhite-2']);
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().entities.objects['cupWhite-2']);
+assert.deepEqual(snapshot.contents,{},'new supported cup must not create Resource Food contents');
 assert.equal(snapshot.supportId,'diningTable');
 
 await page.click('#sourcePresetCatalog [data-source-preset-id="tap"]');
@@ -89,10 +101,10 @@ await page.click('[data-container-source-action="remove"]');
 await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.sources['tap-1']);
 assert.equal(await page.locator('[data-interaction-port-source-id="tap-1"]').count(),0);
 
-await page.click('[data-scene-type="object"][data-scene-id="mealTray-1"]');
+await page.click('[data-scene-type="object"][data-scene-id="cupWhite-2"]');
 await page.waitForSelector('[data-editor-action="delete-object"]');
 await page.click('[data-editor-action="delete-object"]');
-await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
+await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['cupWhite-2']);
 
 await page.screenshot({path:`${outDir}/container-source-authoring.png`,fullPage:true});
 assert.deepEqual(consoleErrors,[],'Container / Source authoring flow must not emit console errors');

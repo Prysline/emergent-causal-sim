@@ -57,7 +57,7 @@ assert.ok(Math.abs(obs.routePlan.traversalCost-1.1)<1e-9,'current spatial goal r
 assert.equal(obs.routePlan.travelTime,1,'current executable travel time is one tick for one walk edge');
 assert.equal(SP.formatNode(st,orange.position),'主室・餐桌桌面 (5, 2)');
 
-const tray=SP.objectObservation(st,'mealTray');
+const tray=SP.objectObservation(st,'legacyResourceMealTray');
 assert.equal(tray.surfaceId,'diningTable:surface','supported food 必須可觀測為桌面物件');
 assert.equal(tray.supportId,'diningTable');
 assert.equal(tray.position.x,5);

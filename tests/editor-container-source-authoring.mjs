@@ -22,12 +22,13 @@ const P=globalThis.SimEditorContainerSourceAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Container/source Editor consumes the current canonical World Authoring schema without owning its generation literal');
-assert.equal(P.VERSION,'editor-container-source-authoring-v2');
+assert.equal(P.VERSION,'editor-container-source-authoring-v3');
 assert.deepEqual(P.listContainerPresets().map(item=>item.id),[
-  'ready-food','plate','food-pantry','basket','water-bucket','white-cup','blue-cup','alcohol-bottle'
+  'water-bucket','white-cup','blue-cup','alcohol-bottle'
 ]);
 assert.deepEqual(P.listSourcePresets().map(item=>item.id),['tap']);
 assert.equal(P.getContainerPreset('missing'),null);
+for(const retired of ['legacy-resource-ready-food','legacy-resource-plate','legacy-resource-food-pantry','legacy-resource-basket'])assert.equal(P.getContainerPreset(retired),null,'retired Food Resource recipe must not be listed');
 assert.equal(P.getSourcePreset('missing'),null);
 
 let authored=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -37,6 +38,12 @@ let result=P.createContainerFromPreset(authored,{presetId:'missing',target:{x:2,
 assert.equal(result.ok,false);
 assert.equal(result.issues[0].code,'container_preset_unknown');
 assert.equal(A.semanticFingerprint(authored),originalFingerprint,'rejected create must not mutate input');
+for(const retired of ['legacy-resource-ready-food','legacy-resource-plate','legacy-resource-food-pantry','legacy-resource-basket']){
+  const rejected=P.createContainerFromPreset(authored,{presetId:retired,target:{x:5,y:2,z:0}});
+  assert.equal(rejected.ok,false,'retired Food preset must fail closed through Editor API');
+  assert.equal(rejected.issues[0].code,'container_preset_unknown');
+}
+assert.equal(A.semanticFingerprint(authored),originalFingerprint,'retired presets must not mutate authored World');
 
 result=P.createContainerFromPreset(authored,{presetId:'white-cup',target:{x:2,y:5,z:0}});
 assert.equal(result.ok,true);
@@ -47,20 +54,21 @@ assert.deepEqual(result.candidate.entities.objects[cupId].contents,{},'cup prese
 assert.equal(result.candidate.entities.objects[cupId].supportId,undefined);
 authored=result.candidate;
 
-result=P.createContainerFromPreset(authored,{presetId:'ready-food',target:{x:5,y:2,z:0}});
+result=P.createContainerFromPreset(authored,{presetId:'white-cup',target:{x:5,y:2,z:0}});
 assert.equal(result.ok,false,'supported placement must require an explicit support choice');
 assert.equal(result.issues[0].code,'support_choice_required');
 assert.ok(result.meta.candidates.some(item=>item.id==='diningTable'));
 
-result=P.createContainerFromPreset(authored,{presetId:'ready-food',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
+result=P.createContainerFromPreset(authored,{presetId:'white-cup',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
 assert.equal(result.ok,true);
-const readyFoodId=result.meta.newId;
-assert.equal(result.candidate.entities.objects[readyFoodId].supportId,'diningTable');
-assert.deepEqual(result.candidate.entities.objects[readyFoodId].contents,{food:68},'debug ready-food preset keeps its authored initial food');
+const supportedCupId=result.meta.newId;
+assert.equal(supportedCupId,'cupWhite-2');
+assert.equal(result.candidate.entities.objects[supportedCupId].supportId,'diningTable');
+assert.deepEqual(result.candidate.entities.objects[supportedCupId].contents,{},'supported cup must not create Food stock');
 authored=result.candidate;
 
-result=P.createContainerFromPreset(authored,{presetId:'food-pantry',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
-assert.equal(result.ok,false,'floor-only fixed storage must reject furniture support');
+result=P.createContainerFromPreset(authored,{presetId:'white-cup',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'missing'}});
+assert.equal(result.ok,false,'invalid Furniture support choice must be rejected');
 assert.equal(result.issues[0].code,'support_choice_invalid');
 
 result=P.createSourceFromPreset(authored,{presetId:'tap',target:{x:0,y:5,z:0}});
@@ -98,10 +106,10 @@ assert.equal(runtime.sources[tapId].resource,'water');
 assert.equal(runtime.sources[tapId].infinite,true);
 assert.deepEqual(runtime.sources[tapId].interactionPorts[0].position,{x:4,y:5});
 
-result=P.deleteContainer(authored,{containerId:readyFoodId});
+result=P.deleteContainer(authored,{containerId:supportedCupId});
 assert.equal(result.ok,true);
-assert.equal(result.candidate.entities.objects[readyFoodId],undefined);
-assert.deepEqual(result.meta.removedContents,{food:68},'removing a debug fixture removes its authored initial contents with the container');
+assert.equal(result.candidate.entities.objects[supportedCupId],undefined);
+assert.deepEqual(result.meta.removedContents,{},'removing ordinary Resource cup removes its owned empty contents');
 authored=result.candidate;
 
 result=P.deleteSource(authored,{sourceId:tapId});
