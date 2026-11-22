@@ -23,6 +23,7 @@
   };
   const host=document.getElementById('inspector');if(!host)return;
   let currentAgentId=null,mode='resident',residentTab='overview',scheduled=false;
+  UI.isInspectorDebugMode=()=>mode==='debug'&&currentAgentId===UI.getInspectorSelection?.()?.id;
 
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -233,7 +234,7 @@
   UI.registerStartupExtension('residentView.controls',()=>{
     document.addEventListener('click',event=>{
       const modeButton=event.target.closest?.('[data-v1140-mode]');
-      if(modeButton){mode=modeButton.dataset.v1140Mode==='debug'?'debug':'resident';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell)applyMode(shell);return;}
+      if(modeButton){const nextMode=modeButton.dataset.v1140Mode==='debug'?'debug':'resident',enteringDebug=mode!=='debug'&&nextMode==='debug';mode=nextMode;const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell)applyMode(shell);if(enteringDebug&&currentAgentId)UI.runInspectorDecorators();return;}
       const tabButton=event.target.closest?.('[data-v1140-tab]');
       if(tabButton){residentTab=tabButton.dataset.v1140Tab||'overview';const shell=host.querySelector(':scope > [data-v1140-resident-root]');if(shell&&currentAgentId)renderResident(shell,currentAgentId);return;}
     });
