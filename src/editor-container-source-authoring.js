@@ -23,7 +23,7 @@
       authored:Object.freeze({resourceContainer:true,name:'舊式資源現成食物',icon:'🍲',roles:['readyFood'],capacity:100,emptyLoad:2.5,preferredResource:'food',contents:{food:68},portable:false,canEatFrom:true,access:1,restock:{resource:'food',low:18,strategy:'logisticsContainer',sourceRole:'foodReserve'},interactions:{serve:{mode:'supportReach'},eatFrom:{mode:'reach'}}})
     }),
     'legacy-resource-plate':Object.freeze({
-      id:'legacy-resource-plate',label:'舊式資源餐盤',icon:'🍽️',instanceIdBase:'plate',
+      id:'legacy-resource-plate',label:'舊式資源餐盤',icon:'🍽️',instanceIdBase:'legacyResourcePlate',
       authored:Object.freeze({resourceContainer:true,name:'舊式資源餐盤',icon:'🍽️',roles:['servingDish'],capacity:12,emptyLoad:.35,contents:{},portable:true,handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,containment:'open',contentRetention:openRetention(.10,.48,.16,.70,.24,.95)},servingDish:true,canEatFrom:true,interactions:{eatFrom:{mode:'reach'}}})
     }),
     'legacy-resource-food-pantry':Object.freeze({
