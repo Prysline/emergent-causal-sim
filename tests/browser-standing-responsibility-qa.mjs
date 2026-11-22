@@ -13,6 +13,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorStandingResponsibilityAuthoring?.VERSION);
 assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.DEFAULT_WORLD_AUTHORING.authoringSchema===window.SimWorldAuthoring.VERSION),true,'Consumer must follow canonical current World Authoring generation');
+assert.deepEqual(await page.evaluate(()=>window.SimWorldAuthoring.DEFAULT_WORLD_AUTHORING.resourceResponsibilityAssignments),[],'canonical B must not author Legacy Food responsibilities');
 assert.equal(await page.evaluate(()=>window.SimEditorStandingResponsibilityAuthoring.VERSION),'editor-standing-responsibility-authoring-v1');
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 await page.waitForSelector('[data-standing-responsibility-editor]');
@@ -36,18 +37,11 @@ assert.deepEqual(editorSnapshot.assignmentIds,['responsibility:zhen:restock:wate
 assert.deepEqual(editorSnapshot.roundTripAssignmentIds,editorSnapshot.assignmentIds,'Editor authoring must survive canonical export → import without runtime-only truth');
 assert.match(editorSnapshot.editorText,/長期責任/);
 await page.screenshot({path:`${outDir}/editor-standing-responsibility.png`,fullPage:true});
+const preview=await page.evaluate(()=>window.SimEditorPreviewBridge.storePreview(window.SimWorldEditor.getDocument()));
+assert.equal(preview.ok,true,JSON.stringify(preview));
 
-await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
+await page.goto('http://127.0.0.1:4173/index.html?preview=editor',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimStandingResponsibility?.VERSION);
-const productionResponsibilities=await page.evaluate(()=>window.SimEngine.getState().resourceResponsibilityAssignments);
-assert.deepEqual(productionResponsibilities,[],'unmodified B world must not have a legacy Food responsibility');
-await page.evaluate(()=>{
-  const A=window.SimWorldAuthoring,W=window.SimWorld,E=window.SimEngine;
-  const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
-  doc.resourceResponsibilityAssignments=[{id:'responsibility:zhen:restock:water',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'water'}}];
-  E.configureResetStateSource('browser-standing-water-responsibility',seed=>W.createInitialStateFromAuthoring(doc,seed));
-});
-await page.click('#reset');
 const runtimeTruth=await page.evaluate(()=>{
   const state=window.SimEngine.getState();
   return {
