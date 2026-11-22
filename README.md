@@ -2,7 +2,7 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.78.0-object-storage-volume`。
+目前 runtime marker：`11.79.0-offmap-physical-ingredient-supply`。
 
 Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource Food 模型在 base authoring 保留 `legacyResource*` 身分供遷移與追溯，但正式 Editor 新增目錄已移除四個舊 Food presets；水／酒 Resource presets 仍可用。舊 Food amount-based production paths 待後續 R5 退役，不再接受功能擴張。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。R2 已建立普通搬運籃、固定食材櫃及物理體積容量；off-map 食材補給與完整自主供餐仍屬後續 R3／R4。
 
@@ -97,3 +97,4 @@ Object containment v1 建立 Object-side `containedBy: furnitureId` canonical re
 - Current floor Spatial Node 是 coarse `spaceId + surfaceId + x/y/z` identity；不保存 persistent sub-tile Agent position。
 
 `src/release.js` 是 overall current runtime marker 的唯一 production owner。Subsystem generation 只在自己的 contract 改變時前進。
+R3｜Off-map Physical Ingredient Supply：正式 B 世界具有有限的場景外 Type A 實體食材來源；明確規劃的 `externalSupply` physical Ingredient mode 沿用原有出口與攜帶普通籃子流程，逐件完成食材取得、物件身份、容量與因果事件。沒有自動刷新、沒有借用舊 Resource Food；自主補貨屬 R4。參見 `docs/food-offmap-physical-ingredient-supply.md`。

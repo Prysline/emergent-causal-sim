@@ -12,7 +12,7 @@ const SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const p=(x,y)=>({x,y,z:0});
 const doc=A.DEFAULT_WORLD_AUTHORING;
 const objects=doc.entities.objects;
-assert.equal(A.VERSION,'world-authoring-v27');
+assert.equal(A.VERSION,'world-authoring-v28');
 assert.equal(doc.authoringSchema,A.VERSION);
 assert.equal(doc.map.width,16);
 assert.equal(doc.map.height,10);
