@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.77.0-food-legacy-default-isolation`。
 
-Current B Food / Legacy Resource isolation：正式 `DEFAULT_WORLD_AUTHORING` 由 World Authoring v26 單一組裝層移除舊 `legacyResourcePlateA/B`、`legacyResourceMealTray`、`legacyResourceFoodPantry`、`legacyResourceBasket` 與 Food `resourceResponsibilityAssignments`，保留普通 `readyMealF0` Meal、`ingredientA1` 及 `plateA/B`。既有 amount-based `foodStock` / `restockContainer` / `externalSupply` 僅供獨立 Legacy Resource 場景；B 無 Food Resource destination/carrier，因而不會產生原本的食物 Resource 補貨行動。Presentation 分別投影 Ingredient 件數與 Meal 公克數，不混算 Resource 單位。Editor 的舊 Food presets 明示 Legacy 身分。尚未引入實體食材供貨或 volumetric objectStorage。
+Current B Food / Legacy Resource isolation：正式 `DEFAULT_WORLD_AUTHORING` 由 World Authoring v26 單一組裝層移除舊 `legacyResourcePlateA/B`、`legacyResourceMealTray`、`legacyResourceFoodPantry`、`legacyResourceBasket` 與 Food `resourceResponsibilityAssignments`，保留普通 `readyMealF0` Meal、`ingredientA1` 及 `plateA/B`。既有 amount-based `foodStock` / `restockContainer` / `externalSupply` 僅供獨立 Legacy Resource 場景；B 無 Food Resource destination/carrier，因而不會產生原本的食物 Resource 補貨行動。Presentation 分別投影 Ingredient 件數與 Meal 公克數，不混算 Resource 單位。Editor 已移除四個舊 Resource Food 建立 presets（tooling v3）；水／酒等其他 Resource 建立能力不變。尚未引入實體食材供貨或 volumetric objectStorage。
 
 Current Logistics carrier drop integration：Engine 在 completed movement edge 的 `containerDrop` canonical consequence 後，對仍依賴該 carrier 的 `restockContainer` / `externalSupply` 即時呼叫原有 `abortAction`、清理 reservations，並由 existing afterTick Intent reconciliation 收束 actionBound Intent；`abort` Event 引用原 `containerDrop` Event。Spatial nearby intentional release、Resources handling risk / accidental drop placement、其他 Action 與 Runtime Hook 排序不變。
 
