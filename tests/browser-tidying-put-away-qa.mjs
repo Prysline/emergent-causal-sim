@@ -37,11 +37,12 @@ const result=await page.evaluate(()=>{
     if(agent.id!=='zhen')agent.offMap=true;
   }
   const option=E.tidyingDecisionOption(st,st.agents.zhen);
-  assert.equal(option?.id,'putAwayObject','B fixture must make the assigned book visible and interaction-reachable before autonomous UI steps');
+  const optionId=option?.id||null;
   const step=document.getElementById('step');
   for(let i=0;i<200&&st.objects.bookA.containedBy!=='bookshelfA';i++)step.click();
-  return {containedBy:st.objects.bookA.containedBy,held:st.agents.zhen.held,events:st.events.filter(e=>e.data?.action==='putAwayObject').map(e=>e.data),tick:st.tick};
+  return {optionId,containedBy:st.objects.bookA.containedBy,held:st.agents.zhen.held,events:st.events.filter(e=>e.data?.action==='putAwayObject').map(e=>e.data),tick:st.tick};
 });
+assert.equal(result.optionId,'putAwayObject','B fixture must make the assigned book visible and interaction-reachable before autonomous UI steps');
 assert.equal(result.containedBy,'bookshelfA','Real Preview UI step lifecycle must autonomously put away book');
 assert.equal(result.held,null);
 assert.ok(result.events.some(e=>e.storageAssignmentId==='storage:bookA'));
