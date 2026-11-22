@@ -16,7 +16,7 @@ assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.DEFAULT_WORLD_AUTH
 assert.equal(await page.evaluate(()=>window.SimEditorStandingResponsibilityAuthoring.VERSION),'editor-standing-responsibility-authoring-v1');
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 await page.waitForSelector('[data-standing-responsibility-editor]');
-assert.equal(await page.locator('[data-standing-responsibility-resource="food"]').isChecked(),false,'B default must not claim obsolete Resource Food responsibility');
+assert.equal(await page.locator('[data-standing-responsibility-resource="food"]').count(),0,'B default has no Resource Food restock policy to assign');
 assert.equal(await page.locator('[data-standing-responsibility-resource="water"]').isChecked(),false);
 await page.locator('[data-standing-responsibility-resource="water"]').check();
 await page.waitForFunction(()=>window.SimWorldEditor.getDocument().resourceResponsibilityAssignments.some(item=>item.id==='responsibility:zhen:restock:water'));

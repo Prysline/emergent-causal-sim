@@ -285,7 +285,7 @@ if(entityFixtures.container.resource)assert.ok(entity.readableText.includes(awai
 assert.ok(!entity.readableText.includes(`Object・${entityFixtures.container.id}`));assert.ok(!entity.readableText.includes('空重'));
 const containerState=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
 await page.click('[data-v1141-entity-mode="debug"]');entity=await entitySnapshot();
-assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Object・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));assert.ok(entity.debugText.includes('補給閉環'));
+assert.equal(entity.activeMode,'debug');assert.ok(entity.debugText.includes(`Object・${entityFixtures.container.id}`));assert.ok(entity.debugText.includes('空重'));assert.ok(!entity.debugText.includes('補給閉環')&&!entity.debugText.includes('Legacy Resource 補給'),'B water container must not invent a Food Resource supply projection');
 assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),containerState,'Resource-container Object readable/debug switch must be state-inert');
 
 await selectEntity('source',entityFixtures.source.id);entity=await entitySnapshot();
