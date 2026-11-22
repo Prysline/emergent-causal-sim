@@ -92,7 +92,7 @@ const pipelineDiningSurface=st.furniture?.diningTable?.spatial?.surfaces?.find(s
 assert.ok(pipelineDiningSurface,'Furniture Definition resolution must provide canonical runtime Surface traversal geometry');
 assert.equal(st.agents?.zhen?.position?.surfaceId,'floor','Spatial finalizer must normalize persistent agent surface identity');
 assert.ok(st.agents?.zhen?.position?.spaceId,'Spatial finalizer must normalize persistent agent room-space identity');
-assert.equal(st.objects?.mealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
+assert.equal(st.objects?.legacyResourceMealTray?.interactions?.serve?.mode,'reach','Contact initializer must install supported-object interaction definitions');
 assert.ok(pipelineDiningSurface.cells.every(cell=>cell.contents&&typeof cell.contents==='object'),'Surface environment initializer must install per-cell contents on canonical derived Surface cells');
 
 const again=W.createInitialState(20260911);

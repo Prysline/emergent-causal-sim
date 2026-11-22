@@ -38,8 +38,8 @@ const st=E.getState(),a=st.agents.zhen;
 st.agents.orange.offMap=true;
 
 const cases=[
-  [{kind:'object',id:'mealTray'},'serve'],
-  [{kind:'object',id:'mealTray'},'eatFrom'],
+  [{kind:'object',id:'legacyResourceMealTray'},'serve'],
+  [{kind:'object',id:'legacyResourceMealTray'},'eatFrom'],
   [{kind:'object',id:'legacyResourcePlateB'},'eatFrom']
 ];
 

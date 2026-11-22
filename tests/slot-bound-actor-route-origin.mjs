@@ -32,10 +32,10 @@ function quiet(a,{hunger=8,thirst=8,fatigue=8,sleepNeed=8,social=8,groomingNeed=
 }
 const eventBy=(st,pred)=>st.events.find(pred);
 
-// Reported reproduction: Seed 20260911, orange resting in pet-bed-small-1 while mealTray has food.
+// Reported reproduction: Seed 20260911, orange resting in pet-bed-small-1 while legacyResourceMealTray has food.
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,tray=st.objects.mealTray;
+  const st=E.getState(),cat=st.agents.orange,tray=st.objects.legacyResourceMealTray;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   const slot=bindToSlot(st,cat,'pet-bed-small-1:bed','lying');
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
@@ -44,8 +44,8 @@ E.reset(20260911);
   const egress=SP.slotEgressNodes(st,slot,cat,'walk');
   assert.ok(egress.length>0,'reported pet bed must expose at least one legal egress');
 
-  const result=SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'mealTray'},'eatFrom');
-  assert.ok(result&&Number.isFinite(result.traversalCost),'slot-bound Cat must rank the reachable mealTray through a legal egress');
+  const result=SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'legacyResourceMealTray'},'eatFrom');
+  assert.ok(result&&Number.isFinite(result.traversalCost),'slot-bound Cat must rank the reachable legacyResourceMealTray through a legal egress');
 
   const route=SP.planRoute(st,cat,result.position,{mode:'auto',objective:'traversalCost'});
   assert.ok(Number.isFinite(route.traversalCost)&&route.path.length>0,'slot-bound planRoute must be finite when an egress reaches the goal');
@@ -56,7 +56,7 @@ E.reset(20260911);
   const expectedEgress=SP.bestSlotEgressNode(st,slot,cat,result.position,{mode:'auto',objective:'traversalCost'});
   assert.ok(expectedEgress,'target-aware egress winner must exist');
 
-  cat.action={kind:'eat',phase:'toDirectFood',foodSource:'mealTray',container:null,slotId:null,started:st.tick,wait:0};
+  cat.action={kind:'eat',phase:'toDirectFood',foodSource:'legacyResourceMealTray',container:null,slotId:null,started:st.tick,wait:0};
   E.tick();
   assert.equal(cat.posture.slotId,null,'eat execution must leave the pet-bed Slot');
   assert.equal(cat.posture.kind,'standing');
@@ -64,13 +64,13 @@ E.reset(20260911);
 
   const beforeFood=tray.contents.food;
   for(let i=0;i<50&&tray.contents.food===beforeFood;i++)E.tick();
-  assert.ok(tray.contents.food<beforeFood,'reported Cat must eventually reach mealTray and consume food');
+  assert.ok(tray.contents.food<beforeFood,'reported Cat must eventually reach legacyResourceMealTray and consume food');
 }
 
 // Full chooser/Intent parity: the reported state must not cycle eat -> null -> eat while a valid route exists.
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,tray=st.objects.mealTray;
+  const st=E.getState(),cat=st.agents.orange,tray=st.objects.legacyResourceMealTray;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   bindToSlot(st,cat,'pet-bed-small-1:bed','lying');
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
@@ -88,7 +88,7 @@ E.reset(20260911);
   const st=E.getState(),cat=st.agents.orange,slot=bindToSlot(st,st.agents.orange,'pet-bed-small-1:bed','lying');
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
-  st.objects.mealTray.contents.food=68;
+  st.objects.legacyResourceMealTray.contents.food=68;
   const exits=SP.slotEgressNodes(st,slot,cat,'walk');
   assert.ok(exits.length>0,'negative fixture must begin with legal egress nodes');
   exits.forEach((node,i)=>{
@@ -98,7 +98,7 @@ E.reset(20260911);
     st.agents[blocker.id]=blocker;
   });
   assert.deepEqual(SP.routeOriginsForAgent(st,cat,'walk'),[]);
-  assert.equal(SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'mealTray'},'eatFrom'),null);
+  assert.equal(SP.bestInteractionPositionResult(st,cat,{kind:'object',id:'legacyResourceMealTray'},'eatFrom'),null);
   assert.equal(E.canSatisfyHunger(cat),false,'global food existence must not count as an executable hunger plan without any egress');
   assert.equal(E.buildAction(cat,{id:'eat'}),null,'Action factory must reject the same impossible hunger plan');
   assert.equal(E.candidateIntents(st,cat).some(c=>c.intentKind==='satisfyHunger'),false,'Intent deliberation must use the same hunger feasibility');
@@ -233,16 +233,16 @@ E.reset(20260911);
 // instead of silently finishing and allowing the same unmet need to look like a successful completion.
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,tray=st.objects.mealTray;
+  const st=E.getState(),cat=st.agents.orange,tray=st.objects.legacyResourceMealTray;
   st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;
   quiet(cat,{hunger:95,thirst:5,fatigue:5,sleepNeed:5,social:5,groomingNeed:0});
   tray.contents.food=68;
-  cat.action={kind:'eat',phase:'eatingDirect',foodSource:'mealTray',container:null,slotId:null,started:st.tick,wait:0};
-  st.reservations['object:mealTray']=cat.id;
+  cat.action={kind:'eat',phase:'eatingDirect',foodSource:'legacyResourceMealTray',container:null,slotId:null,started:st.tick,wait:0};
+  st.reservations['object:legacyResourceMealTray']=cat.id;
   tray.contents.food=0;
   E.tick();
   assert.equal(cat.action,null,'lost direct-food source must terminate the stale eat action');
-  assert.equal(st.reservations['object:mealTray'],undefined,'lost direct-food source must release its reservation');
+  assert.equal(st.reservations['object:legacyResourceMealTray'],undefined,'lost direct-food source must release its reservation');
   assert.ok(eventBy(st,e=>e.data?.actor==='orange'&&e.data?.action==='abort'&&e.data?.actionKind==='eat'),'lost direct-food source must emit an explicit eat abort event');
 }
 

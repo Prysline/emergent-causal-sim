@@ -14,7 +14,7 @@ await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorContainerSourceAuthoring?.VERSION);
 assert.equal(await page.evaluate(()=>window.SimEditorContainerSourceAuthoring.VERSION),'editor-container-source-authoring-v2');
 assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="white-cup"]').count(),1);
-assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="ready-food"]').count(),1);
+assert.equal(await page.locator('#containerPresetCatalog [data-container-preset-id="legacy-resource-ready-food"]').count(),1);
 assert.equal(await page.locator('#sourcePresetCatalog [data-source-preset-id="tap"]').count(),1);
 assert.equal(await page.evaluate(()=>document.querySelector('[data-sidebar-section="add"]')?.contains(document.getElementById('containerPresetCatalog'))),true);
 assert.equal(await page.evaluate(()=>document.querySelector('[data-sidebar-section="add"]')?.contains(document.getElementById('sourcePresetCatalog'))),true);
@@ -36,12 +36,12 @@ assert.equal(snapshot.selected.type,'object');
 assert.match(snapshot.actionText,/移除物件/);
 assert.equal(snapshot.sceneCount,1);
 
-await page.click('#containerPresetCatalog [data-container-preset-id="ready-food"]');
+await page.click('#containerPresetCatalog [data-container-preset-id="legacy-resource-ready-food"]');
 await page.click('[data-cell="11,5"]');
 await page.waitForSelector('[data-container-source-support="furniture"][data-support-id="diningTable"]');
 await page.click('[data-container-source-support="furniture"][data-support-id="diningTable"]');
-await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['mealTray-1']);
-snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
+await page.waitForFunction(()=>!!window.SimWorldEditor.getDocument().entities?.objects?.['legacyResourceMealTray-1']);
+snapshot=await page.evaluate(()=>window.SimWorldEditor.getDocument().entities.objects['legacyResourceMealTray-1']);
 assert.deepEqual(snapshot.contents,{food:68});
 assert.equal(snapshot.supportId,'diningTable');
 
@@ -89,10 +89,10 @@ await page.click('[data-container-source-action="remove"]');
 await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.sources['tap-1']);
 assert.equal(await page.locator('[data-interaction-port-source-id="tap-1"]').count(),0);
 
-await page.click('[data-scene-type="object"][data-scene-id="mealTray-1"]');
+await page.click('[data-scene-type="object"][data-scene-id="legacyResourceMealTray-1"]');
 await page.waitForSelector('[data-editor-action="delete-object"]');
 await page.click('[data-editor-action="delete-object"]');
-await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['mealTray-1']);
+await page.waitForFunction(()=>!window.SimWorldEditor.getDocument().entities.objects['legacyResourceMealTray-1']);
 
 await page.screenshot({path:`${outDir}/container-source-authoring.png`,fullPage:true});
 assert.deepEqual(consoleErrors,[],'Container / Source authoring flow must not emit console errors');

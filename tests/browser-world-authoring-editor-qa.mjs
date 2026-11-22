@@ -66,7 +66,7 @@ assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snap
 
 // The Editor must initially load the one canonical production B scene.
 const canonicalBDefault=snapshot.document;
-assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v25');
+assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v26');
 assert.equal(canonicalBDefault.map.width,16);
 assert.equal(canonicalBDefault.map.height,10);
 assert.equal(canonicalBDefault.doors.bedroomDoor.boundary.id,'h:6,5');
@@ -351,7 +351,7 @@ assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furnit
 assert.equal(Object.prototype.hasOwnProperty.call(clickPlacement.document.furniture.chairNW,'slots'),false,'canonical World v6 instance must not persist derived slots');
 assert.deepEqual(clickPlacement.resolvedChair.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(clickPlacement.resolvedChair.slots[0].position,{x:3,y:4,z:0});
-assert.deepEqual(clickPlacement.document.entities.objects.mealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
+assert.deepEqual(clickPlacement.document.entities.objects.legacyResourceMealTray.position,{x:5,y:2,z:0},'moving unrelated chair must not affect diningTable followers');
 
 await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 await page.click('[data-tool="floor"]');
@@ -388,7 +388,7 @@ assert.equal(snapshot.fingerprint,clickPlacement.fingerprint,'click placement an
 assert.deepEqual(snapshot.document.furniture.chairNW.origin,{x:3,y:4,z:0});
 assert.deepEqual(snapshot.resolvedChair.footprint,[{x:3,y:4,z:0}]);
 assert.deepEqual(snapshot.resolvedChair.slots[0].position,{x:3,y:4,z:0});
-assert.deepEqual(snapshot.document.entities.objects.mealTray.position,{x:5,y:2,z:0},'dragging unrelated chair must not affect diningTable followers');
+assert.deepEqual(snapshot.document.entities.objects.legacyResourceMealTray.position,{x:5,y:2,z:0},'dragging unrelated chair must not affect diningTable followers');
 
 const beforeTablePreview=await page.evaluate(()=>window.SimWorldEditor.semanticFingerprint());
 const tableSource=page.locator('[data-entity-type="furniture"][data-entity-id="diningTable"]').first();
@@ -450,26 +450,26 @@ assert.deepEqual(snapshot.document.furniture['chair-basic-1'],{id:'chair-basic-1
 assert.equal(snapshot.resolved.slots[0].id,'chair-basic-1:seat');
 assert.equal(snapshot.session.pendingOperation,null,'successful one-shot duplicate must clear pendingOperation');
 
-await page.click('[data-scene-type="object"][data-scene-id="basket"]');
+await page.click('[data-scene-type="object"][data-scene-id="legacyResourceBasket"]');
 await page.click('[data-editor-action="move-object"]');
 await page.click('[data-cell="5,2"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),actions:document.querySelector('#selectionActions')?.textContent||''}));
 assert.equal(snapshot.session.pendingOperation.kind,'resolve-object-support');
-assert.deepEqual(snapshot.document.entities.objects.basket.position,{x:3,y:2,z:0},'ambiguous support target must reject atomically before explicit choice');
+assert.deepEqual(snapshot.document.entities.objects.legacyResourceBasket.position,{x:3,y:2,z:0},'ambiguous support target must reject atomically before explicit choice');
 assert.match(snapshot.actions,/地面/);
 assert.match(snapshot.actions,/餐桌/);
 await page.click('[data-editor-action="resolve-support"][data-support-kind="floor"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.deepEqual(snapshot.document.entities.objects.basket.position,{x:5,y:2,z:0});
-assert.equal(snapshot.document.entities.objects.basket.supportId,undefined);
+assert.deepEqual(snapshot.document.entities.objects.legacyResourceBasket.position,{x:5,y:2,z:0});
+assert.equal(snapshot.document.entities.objects.legacyResourceBasket.supportId,undefined);
 
-await page.click('[data-scene-type="object"][data-scene-id="basket"]');
+await page.click('[data-scene-type="object"][data-scene-id="legacyResourceBasket"]');
 await page.click('[data-editor-action="move-object"]');
 await page.click('[data-cell="6,2"]');
 await page.click('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument()}));
-assert.deepEqual(snapshot.document.entities.objects.basket.position,{x:6,y:2,z:0});
-assert.equal(snapshot.document.entities.objects.basket.supportId,'diningTable');
+assert.deepEqual(snapshot.document.entities.objects.legacyResourceBasket.position,{x:6,y:2,z:0});
+assert.equal(snapshot.document.entities.objects.legacyResourceBasket.supportId,'diningTable');
 
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 let residentReachability=await page.evaluate(()=>document.querySelector('#selectionSummary')?.textContent||'');
@@ -520,7 +520,7 @@ await page.click('[data-editor-action="delete-furniture"]');
 snapshot=await page.evaluate(()=>({session:window.SimWorldEditor.getSession(),document:window.SimWorldEditor.getDocument(),actions:document.querySelector('#selectionActions')?.textContent||''}));
 assert.ok(snapshot.document.furniture.diningTable,'referenced Furniture delete must be rejected');
 assert.ok(snapshot.session.operationIssues.some(issue=>issue.code==='furniture_delete_blocked'));
-assert.match(snapshot.actions,/mealTray/);
+assert.match(snapshot.actions,/legacyResourceMealTray/);
 assert.match(snapshot.actions,/supportId/);
 
 await page.click('[data-entity-type="resident"][data-entity-id="orange"]');
@@ -649,7 +649,7 @@ let runtimePreview=await page.evaluate(()=>{
     bannerText:document.querySelector('#editorPreviewBanner')?.textContent||'',
     chair:state.furniture.chairNW.footprint,
     sofa:{orientation:active.authoring.furniture.sofa.orientation,footprint:state.furniture.sofa.footprint},
-    basket:{position:{x:state.objects.basket.position.x,y:state.objects.basket.position.y},supportId:state.objects.basket.supportId||null,spaceId:state.objects.basket.position.spaceId||null,surfaceId:state.objects.basket.position.surfaceId||null},
+    legacyResourceBasket:{position:{x:state.objects.legacyResourceBasket.position.x,y:state.objects.legacyResourceBasket.position.y},supportId:state.objects.legacyResourceBasket.supportId||null,spaceId:state.objects.legacyResourceBasket.position.spaceId||null,surfaceId:state.objects.legacyResourceBasket.position.surfaceId||null},
     zhen:{x:state.agents.zhen.position.x,y:state.agents.zhen.position.y,z:window.SimSpatial.zOf(state.agents.zhen.position)},
     orange:{x:state.agents.orange.position.x,y:state.agents.orange.position.y,z:window.SimSpatial.zOf(state.agents.orange.position)},
     zLevels:[...(state.map.zLevels||[])],
@@ -669,10 +669,10 @@ assert.match(runtimePreview.bannerText,/編輯器預覽/);
 assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'Simulator preview must use the Editor furniture position');
 assert.equal(runtimePreview.sofa.orientation,'east','Preview handoff must retain canonical Furniture orientation');
 assert.deepEqual(runtimePreview.sofa.footprint,[{x:9,y:3},{x:9,y:2}],'Preview runtime must compile the same south-canonical rotated geometry');
-assert.deepEqual(runtimePreview.basket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
-assert.equal(runtimePreview.basket.supportId,'diningTable');
-assert.equal(runtimePreview.basket.surfaceId,'diningTable:surface','runtime may enrich the canonical supported-object position with derived surface identity');
-assert.ok(runtimePreview.basket.spaceId,'runtime may enrich the canonical object position with derived room/space identity');
+assert.deepEqual(runtimePreview.legacyResourceBasket.position,{x:6,y:2},'Simulator preview must use the Editor object position');
+assert.equal(runtimePreview.legacyResourceBasket.supportId,'diningTable');
+assert.equal(runtimePreview.legacyResourceBasket.surfaceId,'diningTable:surface','runtime may enrich the canonical supported-object position with derived surface identity');
+assert.ok(runtimePreview.legacyResourceBasket.spaceId,'runtime may enrich the canonical object position with derived room/space identity');
 assert.deepEqual(runtimePreview.zhen,{x:8,y:4,z:0},'Simulator preview must use the Editor z=0 resident position');
 assert.deepEqual(runtimePreview.orange,{x:2,y:2,z:1},'Simulator preview must preserve the Editor non-zero resident position');
 assert.deepEqual(runtimePreview.zLevels,[0,1]);
@@ -710,7 +710,7 @@ await page.click('#reset');
 await page.waitForTimeout(30);
 runtimePreview=await page.evaluate(()=>({
   chair:window.SimEngine.getState().furniture.chairNW.footprint,
-  basket:{x:window.SimEngine.getState().objects.basket.position.x,y:window.SimEngine.getState().objects.basket.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().objects.basket.position)},
+  legacyResourceBasket:{x:window.SimEngine.getState().objects.legacyResourceBasket.position.x,y:window.SimEngine.getState().objects.legacyResourceBasket.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().objects.legacyResourceBasket.position)},
   zhen:{x:window.SimEngine.getState().agents.zhen.position.x,y:window.SimEngine.getState().agents.zhen.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().agents.zhen.position)},
   orange:{x:window.SimEngine.getState().agents.orange.position.x,y:window.SimEngine.getState().agents.orange.position.y,z:window.SimSpatial.zOf(window.SimEngine.getState().agents.orange.position)},
   zLevels:[...(window.SimEngine.getState().map.zLevels||[])],
@@ -718,7 +718,7 @@ runtimePreview=await page.evaluate(()=>({
 }));
 assert.equal(runtimePreview.previewMode,true);
 assert.deepEqual(runtimePreview.chair,[{x:3,y:4}],'preview Reset must rebuild the same authoring snapshot');
-assert.deepEqual(runtimePreview.basket,{x:6,y:2,z:0});
+assert.deepEqual(runtimePreview.legacyResourceBasket,{x:6,y:2,z:0});
 assert.deepEqual(runtimePreview.zhen,{x:8,y:4,z:0});
 assert.deepEqual(runtimePreview.orange,{x:2,y:2,z:1});
 assert.deepEqual(runtimePreview.zLevels,[0,1]);
