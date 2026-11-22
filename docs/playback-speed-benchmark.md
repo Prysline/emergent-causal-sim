@@ -25,17 +25,23 @@ node tests/browser-autoplay-speed-benchmark.mjs --ticks=100 --selection=none
 node tests/browser-autoplay-speed-benchmark.mjs --ticks=720 --intervals=700,350 --selection=none --timeout-ms=3600000
 ```
 
-These longer runs may be expensive; no CI throughput guarantee is implied. Use matching hardware and browser environments for comparisons. The dedicated benchmark workflow is **not** a required Merge Gate check; the existing Node and Browser regression workflows are unchanged.
+These longer runs may be expensive; no CI throughput guarantee is implied. Use matching hardware and browser environments for comparisons. The Benchmark runs as an **opt-in, non-gating job** within the existing Browser regression workflow. The original 20 Browser matrix cases and canonical Node regression remain intact.
 
-## GitHub Actions (independent, non-gating)
+## GitHub Actions (opt-in Browser workflow job)
 
-The separate `.github/workflows/playback-speed-benchmark.yml` runs for pull requests that change the benchmark workflow, script, or this document. The PR profile runs the default 10 full ticks for each of `700,350,175,87.5` ms, with and without the Agent Inspector. It does not enforce any performance target. The runner uses Node.js 22, Playwright 1.55.0, Chromium, and the same local HTTP server as the existing Browser regression.
+The canonical `.github/workflows/browser-regression.yml` retains its existing 20-case Browser matrix and also provides an isolated, **non-gating** `playback-benchmark` job. The benchmark runs automatically only for pull requests whose source branch begins `chore/playback-speed-benchmark-`, including PR #251. Regular PRs do not run this additional job.
 
-Open the **Playback Speed Benchmark (non-gating)** workflow run under GitHub Actions, and download the `playback-speed-benchmark-<run-id>-<attempt>` artifact. It contains `result.json` when the benchmark completes and `ci.log` even if the benchmark fails.
+It measures the default 10 full ticks for each of `700,350,175,87.5` ms, with and without the Agent Inspector. This is a measurement, not a pass/fail threshold for target speed. The runner uses Node.js 22, Playwright 1.55.0, Chromium and the existing local HTTP server. Its `continue-on-error` setting means a Benchmark failure cannot replace the canonical Node/Browser Merge Gate; inspect its own job logs and artifact rather than inferring success from the workflow summary alone.
 
-After this workflow exists on the repository's **default branch**, use **Actions → Playback Speed Benchmark → Run workflow** for the optional 100- or 720-tick profiles. Select the tick count, comma-separated nominal intervals, and Inspector selection. GitHub only permits `workflow_dispatch` to be manually triggered when the workflow file is present on the default branch; before merge, PR-triggered 10-tick measurement is the available entry point.
+Open the **Browser regression** workflow run under GitHub Actions, select the **Opt-in full-render autoplay measurement (non-gating)** job and download the `browser-playback-speed-benchmark-<run-id>-<attempt>` artifact. It contains `result.json` when measurement completes and `ci.log` even if the measurement fails.
+
+Once these changes are on the repository's default branch, choose **Actions → Browser regression → Run workflow**, enable `playback_benchmark` and select `ticks` (`10`, `100`, `720`), `intervals`, and `selection`. Before merge, the PR-specific branch trigger is the way to run the benchmark on this head.
 
 These figures describe GitHub-hosted runner throughput, not player device performance or a guarantee of visibly painted frames.
+
+## Inspector cost boundary
+
+When an Agent is displayed in readable **Resident** mode, heavy current-derived Intent / Sleep conflict Debug diagnostics are deferred. Switching to **Debug** immediately refreshes them against the current canonical state and keeps them updated each tick while Debug is visible. No extra World / Agent-private state cache or gameplay decision is introduced. This optimization targets invisible Debug work; Debug mode itself may still be expensive. Compare the same seed, case order and runner conditions when assessing before/after playback speed.
 
 ## Output and interpretation
 
