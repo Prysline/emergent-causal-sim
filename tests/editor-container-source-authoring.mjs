@@ -24,7 +24,7 @@ const clone=value=>JSON.parse(JSON.stringify(value));
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Container/source Editor consumes the current canonical World Authoring schema without owning its generation literal');
 assert.equal(P.VERSION,'editor-container-source-authoring-v2');
 assert.deepEqual(P.listContainerPresets().map(item=>item.id),[
-  'ready-food','plate','food-pantry','basket','water-bucket','white-cup','blue-cup','alcohol-bottle'
+  'legacy-resource-ready-food','legacy-resource-plate','legacy-resource-food-pantry','legacy-resource-basket','water-bucket','white-cup','blue-cup','alcohol-bottle'
 ]);
 assert.deepEqual(P.listSourcePresets().map(item=>item.id),['tap']);
 assert.equal(P.getContainerPreset('missing'),null);
@@ -47,19 +47,19 @@ assert.deepEqual(result.candidate.entities.objects[cupId].contents,{},'cup prese
 assert.equal(result.candidate.entities.objects[cupId].supportId,undefined);
 authored=result.candidate;
 
-result=P.createContainerFromPreset(authored,{presetId:'ready-food',target:{x:5,y:2,z:0}});
+result=P.createContainerFromPreset(authored,{presetId:'legacy-resource-ready-food',target:{x:5,y:2,z:0}});
 assert.equal(result.ok,false,'supported placement must require an explicit support choice');
 assert.equal(result.issues[0].code,'support_choice_required');
 assert.ok(result.meta.candidates.some(item=>item.id==='diningTable'));
 
-result=P.createContainerFromPreset(authored,{presetId:'ready-food',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
+result=P.createContainerFromPreset(authored,{presetId:'legacy-resource-ready-food',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
 assert.equal(result.ok,true);
 const readyFoodId=result.meta.newId;
 assert.equal(result.candidate.entities.objects[readyFoodId].supportId,'diningTable');
 assert.deepEqual(result.candidate.entities.objects[readyFoodId].contents,{food:68},'debug ready-food preset keeps its authored initial food');
 authored=result.candidate;
 
-result=P.createContainerFromPreset(authored,{presetId:'food-pantry',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
+result=P.createContainerFromPreset(authored,{presetId:'legacy-resource-food-pantry',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
 assert.equal(result.ok,false,'floor-only fixed storage must reject furniture support');
 assert.equal(result.issues[0].code,'support_choice_invalid');
 

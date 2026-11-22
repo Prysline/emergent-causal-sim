@@ -81,7 +81,7 @@ assert.deepEqual(layeredRuntime.structures.stairA,{id:'stairA',kind:'stair',lowe
 }
 {
   const invalid=clone(A.DEFAULT_WORLD_AUTHORING);
-  invalid.entities.objects.basket.position={x:3,y:2,z:9};
+  invalid.entities.objects.legacyResourceBasket.position={x:3,y:2,z:9};
   report=A.validateAuthoring(invalid);
   assert.equal(report.ok,false);
   assert.ok(report.errors.some(issue=>issue.code==='authoring_position_layer_missing'));

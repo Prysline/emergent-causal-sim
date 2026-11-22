@@ -46,7 +46,7 @@ function startMeal(a){
   return p;
 }
 
-assert.equal(A.VERSION,'world-authoring-v25');
+assert.equal(A.VERSION,'world-authoring-v26');
 assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(F.INTAKE_GRAMS_PER_TICK,50);
 assert.equal(F.HUNGER_RELIEF_PER_GRAM,.08);
