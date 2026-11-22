@@ -174,8 +174,9 @@ assert.equal(Object.values(st.objects).some(o=>(o.contents?.food||0)>0),false,'e
 delete nearbyMeal.supportId;
 nearbyMeal.interactions={...nearbyMeal.interactions,eatFrom:{mode:'reach'}};
 const actorNode=SP.nodeForAgent(st,requester);
+// Visual bearing is undefined at identical observer/target positions.
+// Probe only distinct neighboring floor nodes; never mask that invariant.
 const mealPositions=[
-  {x:actorNode.x,y:actorNode.y},
   {x:actorNode.x+1,y:actorNode.y},{x:actorNode.x-1,y:actorNode.y},
   {x:actorNode.x,y:actorNode.y+1},{x:actorNode.x,y:actorNode.y-1}
 ];
