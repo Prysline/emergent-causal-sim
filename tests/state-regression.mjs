@@ -28,9 +28,9 @@ E.reset(20260911);
   assert.equal(st.exits.frontExit.kind,'offMap');
   assert.deepEqual(st.exits.frontExit.access,{x:1,y:6});
   assert.equal(st.objects.waterBucket.portable,true);assert.equal(st.objects.waterBucket.interactions.pickup.mode,'occupy');assert.equal(st.objects.waterBucket.interactions.drinkFrom.mode,'reach');
-  assert.ok(st.objects.mealTray.restock&&st.objects.waterBucket.restock,'補充需求應存在 World policy，而不是寫死在 Engine');
-  assert.equal(st.objects.mealTray.restock.strategy,'logisticsContainer','固體資源搬運應走真正物流容器');
-  const basket=st.objects.basket;assert.ok(basket&&SP.hasRole(basket,'logisticsContainer'));assert.equal(basket.portable,true);assert.ok(basket.transportResources.includes('food'));assert.ok(basket.capacity>0);
+  assert.ok(st.objects.legacyResourceMealTray.restock&&st.objects.waterBucket.restock,'補充需求應存在 World policy，而不是寫死在 Engine');
+  assert.equal(st.objects.legacyResourceMealTray.restock.strategy,'logisticsContainer','固體資源搬運應走真正物流容器');
+  const legacyResourceBasket=st.objects.legacyResourceBasket;assert.ok(legacyResourceBasket&&SP.hasRole(legacyResourceBasket,'logisticsContainer'));assert.equal(legacyResourceBasket.portable,true);assert.ok(legacyResourceBasket.transportResources.includes('food'));assert.ok(legacyResourceBasket.capacity>0);
   for(const a of Object.values(st.agents)){assert.equal(Object.prototype.hasOwnProperty.call(a,'carrying'),false,'Agent 不應再保存抽象 carrying truth');assert.ok(Number.isFinite(a.needs.sleepNeed),'Agent 應保存獨立 sleepNeed');}
   assert.ok(st.sources.tap.interactions.fill&&st.sources.tap.interactionPorts.length);
   const before=JSON.stringify(st),validation=V.validateState(st),after=JSON.stringify(st);assert.equal(validation.issueCount,0);assert.equal(after,before,'Validator 必須是純函式，不得寫回 simulation state');
@@ -45,9 +45,9 @@ E.reset(20260911);
 }
 
 function oneStepContainerLoadCase({water=null,basketFood=null}){
-  E.reset(12345);const st=E.getState(),a=st.agents.zhen,bucket=st.objects.waterBucket,basket=st.objects.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;a.position={x:2,y:5};a.metrics.exertionToday=0;a.held=null;
+  E.reset(12345);const st=E.getState(),a=st.agents.zhen,bucket=st.objects.waterBucket,legacyResourceBasket=st.objects.legacyResourceBasket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;a.position={x:2,y:5};a.metrics.exertionToday=0;a.held=null;
   if(water!==null){bucket.contents={water};bucket.position={...a.position};a.held=bucket.id;}
-  if(basketFood!==null){basket.contents={food:basketFood};basket.position={...a.position};a.held=basket.id;}
+  if(basketFood!==null){legacyResourceBasket.contents={food:basketFood};legacyResourceBasket.position={...a.position};a.held=legacyResourceBasket.id;}
   a.action={kind:'wander',phase:'move',targetTile:{x:3,y:5},started:st.tick,wait:0};E.tick();return {exertion:a.metrics.exertionToday,load:a.metrics.lastExertion?.load||0};
 }
 {
@@ -91,12 +91,12 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.objects.mealTray.contents.food;a.needs.hunger=60;a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood'),sit=st.events.find(e=>e.data?.action==='sitForMeal'),stand=st.events.find(e=>e.data?.action==='standForMeal');assert.ok(serve);assert.ok(sit,'reachable dining chairs must result in seated meal consumption');assert.equal(stand,undefined,'standing fallback must not replace a reachable seat');assert.ok(st.objects.mealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
+  const st=E.getState(),a=st.agents.zhen;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;const trayBefore=st.objects.legacyResourceMealTray.contents.food;a.needs.hunger=60;a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};for(let i=0;i<45&&a.action;i++)E.tick();assert.equal(a.action,null);const serve=st.events.find(e=>e.data?.action==='serveFood'),sit=st.events.find(e=>e.data?.action==='sitForMeal'),stand=st.events.find(e=>e.data?.action==='standForMeal');assert.ok(serve);assert.ok(sit,'reachable dining chairs must result in seated meal consumption');assert.equal(stand,undefined,'standing fallback must not replace a reachable seat');assert.ok(st.objects.legacyResourceMealTray.contents.food<trayBefore);assert.equal(a.held,null);assert.ok(serve.data.entities.includes(`agent:${a.id}`));noIssues('serving meal');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),cat=st.agents.orange,plate=st.objects.legacyResourcePlateA;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.objects.mealTray.contents.food=0;plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};const before=plate.contents.food;for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null);}assert.ok((plate.contents.food||0)<before);noIssues('cat eats plate');
+  const st=E.getState(),cat=st.agents.orange,plate=st.objects.legacyResourcePlateA;st.agents.zhen.offMap=true;st.agents.zhou.offMap=true;st.objects.legacyResourceMealTray.contents.food=0;plate.contents={food:8};plate.position={x:3,y:6};delete plate.supportId;cat.position={x:2,y:6};cat.needs.hunger=80;cat.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};const before=plate.contents.food;for(let i=0;i<8&&cat.action;i++){E.tick();assert.equal(cat.held,null);}assert.ok((plate.contents.food||0)<before);noIssues('cat eats plate');
 }
 
 E.reset(20260911);
@@ -106,19 +106,19 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,tray=st.objects.mealTray,pantry=st.objects.foodPantry,basket=st.objects.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;tray.contents.food=0;basket.contents={};basket.position={x:3,y:2};a.held=basket.id;const pantryBefore=pantry.contents.food;let heldBasket=false,loadedBasket=false;
-  a.action={kind:'restockContainer',phase:'toSource',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
-  for(let i=0;i<45&&a.action;i++){E.tick();if(a.held===basket.id)heldBasket=true;if((basket.contents.food||0)>0)loadedBasket=true;noIssues(`logistics restock ${i}`);}
-  assert.equal(a.action,null,'室內補貨流程應完成');assert.equal(heldBasket,true,'角色必須真的持有物流籃');assert.equal(loadedBasket,true,'食物必須先實際存在物流籃中');assert.ok((tray.contents.food||0)>0);assert.ok(pantry.contents.food<pantryBefore);assert.equal(basket.contents.food||0,0,'卸貨後物流籃應為空');assert.equal(a.held,null);assertCanonicalReleasedPlacement(st,a,basket,'physical logistics restock');assert.ok(st.events.some(e=>e.data?.action==='restockContainer'&&e.data?.carrier===basket.id&&e.data?.entities?.includes(`object:${basket.id}`)));noIssues('physical logistics restock');
+  const st=E.getState(),a=st.agents.zhen,tray=st.objects.legacyResourceMealTray,pantry=st.objects.legacyResourceFoodPantry,legacyResourceBasket=st.objects.legacyResourceBasket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;tray.contents.food=0;legacyResourceBasket.contents={};legacyResourceBasket.position={x:3,y:2};a.held=legacyResourceBasket.id;const pantryBefore=pantry.contents.food;let heldBasket=false,loadedBasket=false;
+  a.action={kind:'restockContainer',phase:'toSource',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:legacyResourceBasket.id,started:st.tick,wait:0};
+  for(let i=0;i<45&&a.action;i++){E.tick();if(a.held===legacyResourceBasket.id)heldBasket=true;if((legacyResourceBasket.contents.food||0)>0)loadedBasket=true;noIssues(`logistics restock ${i}`);}
+  assert.equal(a.action,null,'室內補貨流程應完成');assert.equal(heldBasket,true,'角色必須真的持有物流籃');assert.equal(loadedBasket,true,'食物必須先實際存在物流籃中');assert.ok((tray.contents.food||0)>0);assert.ok(pantry.contents.food<pantryBefore);assert.equal(legacyResourceBasket.contents.food||0,0,'卸貨後物流籃應為空');assert.equal(a.held,null);assertCanonicalReleasedPlacement(st,a,legacyResourceBasket,'physical logistics restock');assert.ok(st.events.some(e=>e.data?.action==='restockContainer'&&e.data?.carrier===legacyResourceBasket.id&&e.data?.entities?.includes(`object:${legacyResourceBasket.id}`)));noIssues('physical logistics restock');
 }
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,exit=SP.allExits(st).find(x=>SP.exitStructurallyAvailable(st,x)),dest=Object.values(st.objects).find(c=>SP.hasRole(c,'externalSupplyDestination')),basket=st.objects.basket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;basket.contents={};basket.position={x:3,y:2};a.held=basket.id;const before=dest.contents.food;let heldBeforeExit=false,returnedLoaded=false;
+  const st=E.getState(),a=st.agents.zhen,exit=SP.allExits(st).find(x=>SP.exitStructurallyAvailable(st,x)),dest=Object.values(st.objects).find(c=>SP.hasRole(c,'externalSupplyDestination')),legacyResourceBasket=st.objects.legacyResourceBasket;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;legacyResourceBasket.contents={};legacyResourceBasket.position={x:3,y:2};a.held=legacyResourceBasket.id;const before=dest.contents.food;let heldBeforeExit=false,returnedLoaded=false;
   assert.ok(exit&&exit.id==='frontExit','default world must expose the formal off-map Exit');
-  a.action={kind:'externalSupply',phase:'toExit',exitId:exit.id,destinationId:dest.id,resource:'food',carrierId:basket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
-  for(let i=0;i<55&&a.action;i++){E.tick();if(a.offMap)heldBeforeExit ||= a.held===basket.id;if(st.events.some(e=>e.data?.action==='supplyReturn'&&e.data?.carrier===basket.id&&(basket.contents.food||0)>0))returnedLoaded=true;noIssues(`external supply ${i}`);}
-  assert.equal(a.action,null);assert.equal(heldBeforeExit,true,'角色必須帶著籃子才可離家補給');assert.equal(returnedLoaded,true,'外出取得的資源必須先存在籃子裡再入庫');assert.equal(E.supplyStatus().workerId,null);assert.ok(dest.contents.food>before);assert.equal(basket.contents.food||0,0);assert.equal(a.held,null);assertCanonicalReleasedPlacement(st,a,basket,'physical external supply');assert.equal(st.supply.workerId,undefined);assert.ok(st.events.some(e=>e.data?.action==='supplyExit'&&e.data?.carrier===basket.id));assert.ok(st.events.some(e=>e.data?.action==='supplyDeposit'&&e.data?.carrier===basket.id));noIssues('physical external supply');
+  a.action={kind:'externalSupply',phase:'toExit',exitId:exit.id,destinationId:dest.id,resource:'food',carrierId:legacyResourceBasket.id,workLeft:1,produced:0,started:st.tick,wait:0};assert.equal(E.supplyStatus().workerId,a.id,'worker 應由 active action 推導');
+  for(let i=0;i<55&&a.action;i++){E.tick();if(a.offMap)heldBeforeExit ||= a.held===legacyResourceBasket.id;if(st.events.some(e=>e.data?.action==='supplyReturn'&&e.data?.carrier===legacyResourceBasket.id&&(legacyResourceBasket.contents.food||0)>0))returnedLoaded=true;noIssues(`external supply ${i}`);}
+  assert.equal(a.action,null);assert.equal(heldBeforeExit,true,'角色必須帶著籃子才可離家補給');assert.equal(returnedLoaded,true,'外出取得的資源必須先存在籃子裡再入庫');assert.equal(E.supplyStatus().workerId,null);assert.ok(dest.contents.food>before);assert.equal(legacyResourceBasket.contents.food||0,0);assert.equal(a.held,null);assertCanonicalReleasedPlacement(st,a,legacyResourceBasket,'physical external supply');assert.equal(st.supply.workerId,undefined);assert.ok(st.events.some(e=>e.data?.action==='supplyExit'&&e.data?.carrier===legacyResourceBasket.id));assert.ok(st.events.some(e=>e.data?.action==='supplyDeposit'&&e.data?.carrier===legacyResourceBasket.id));noIssues('physical external supply');
 }
 
 E.reset(20260911);
@@ -133,7 +133,7 @@ E.reset(20260911);
 
 {
   const engine=fs.readFileSync(new URL('../src/engine.js',import.meta.url),'utf8');
-  for(const id of ['waterBucket','mealTray','foodPantry','alcoholBottle','frontDoor','frontExit',"targetAgent:'orange'"])assert.ok(!engine.includes(id),`Engine 不得綁定具體世界 entity ID：${id}`);
+  for(const id of ['waterBucket','legacyResourceMealTray','legacyResourceFoodPantry','alcoholBottle','frontDoor','frontExit',"targetAgent:'orange'"])assert.ok(!engine.includes(id),`Engine 不得綁定具體世界 entity ID：${id}`);
   assert.ok(!engine.includes('exitSlot'),'Engine external supply 不得保留 Furniture slot 出口欄位');
   assert.ok(!engine.includes('.canExit'),'Engine external supply 不得回頭讀 Furniture canExit compatibility');
   assert.ok(!engine.includes('supply.workerId'),'Engine 不得維護第二份 supply owner truth');
@@ -143,7 +143,7 @@ E.reset(20260911);
   const validator=fs.readFileSync(new URL('../src/validation/registry.js',import.meta.url),'utf8');
   assert.ok(!validator.includes('E.validateState='));assert.ok(!validator.includes('validationStatus='));assert.ok(!validator.includes('debug.validation'));
   const authoring=fs.readFileSync(new URL('../src/world-authoring.js',import.meta.url),'utf8');
-  assert.ok(!authoring.includes('carrying:null'),'Authoring package 不得初始化 Agent.carrying');assert.ok(authoring.includes("'logisticsContainer'"),'Canonical authoring 應定義物流容器 capability');assert.ok(!authoring.includes("id==='mealTray'"),'World initialization 不得以 entity ID skip list 決定 blocker');
+  assert.ok(!authoring.includes('carrying:null'),'Authoring package 不得初始化 Agent.carrying');assert.ok(authoring.includes("'logisticsContainer'"),'Canonical authoring 應定義物流容器 capability');assert.ok(!authoring.includes("id==='legacyResourceMealTray'"),'World initialization 不得以 entity ID skip list 決定 blocker');
   const world=fs.readFileSync(new URL('../src/world.js',import.meta.url),'utf8');
   for(const legacyOwner of ['FURNITURE_DEFS','OBJECT_START','AGENT_START'])assert.ok(!world.includes(legacyOwner),'world.js 不應繼續持有 '+legacyOwner+' canonical authoring truth');
   const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');

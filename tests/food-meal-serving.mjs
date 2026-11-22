@@ -9,7 +9,7 @@ const F=globalThis.SimFood,I=globalThis.SimIngredient,O=globalThis.SimObjectHand
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator;
 assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(O.VERSION,'object-handling-v3-meal-mass-projection');
-assert.equal(A.VERSION,'world-authoring-v25');
+assert.equal(A.VERSION,'world-authoring-v26');
 assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v1','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){
@@ -92,7 +92,7 @@ function eventAncestors(st,id,visited=new Set()){
   assert.equal(F.remainingGrams(meal)+F.remainingGrams(portion),250,'serving + eating conserve canonical mass');
   assert.deepEqual(issues(),[]);
   const originalContainer=portion.containedBy;
-  portion.containedBy='basket';
+  portion.containedBy='legacyResourceBasket';
   assert.equal(F.servingPlateForMeal(st,portion),null);
   assert.equal(P.classifyObjectPointVisualAvailability(st,st.agents.zhen,portion).visualAvailable,false);
   assert.equal(SP.interactionGeometry(st,{kind:'object',id:portion.id},st.agents.zhen,'eatFrom').positions.length,0);

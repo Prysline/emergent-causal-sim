@@ -4,7 +4,7 @@
 import vm from 'node:vm';
 import {readRepoFile} from './production-loader.mjs';
 
-export function legacyResourceWorld(currentAuthoring) {
+export function legacyResourceWorld(currentAuthoring,{includeMeal=true}={}) {
   const prior=globalThis.SimWorldAuthoring;
   if(prior!==currentAuthoring)throw new Error('Legacy fixture requires the active World Authoring owner.');
   let historic;
@@ -18,7 +18,7 @@ export function legacyResourceWorld(currentAuthoring) {
     globalThis.SimWorldAuthoring=prior;
   }
   historic.authoringSchema=currentAuthoring.VERSION;
-  if(currentAuthoring.DEFAULT_WORLD_AUTHORING.entities.objects.readyMealF0){
+  if(includeMeal&&currentAuthoring.DEFAULT_WORLD_AUTHORING.entities.objects.readyMealF0){
     const meal=currentAuthoring.cloneAuthoring(currentAuthoring.DEFAULT_WORLD_AUTHORING.entities.objects.readyMealF0);
     meal.position={x:5,y:2,z:0};
     historic.entities.objects.readyMealF0=meal;

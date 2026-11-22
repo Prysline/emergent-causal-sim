@@ -32,7 +32,7 @@ const humanPath=SP.astar(st,zhen.position,table(st,5,2),zhen.id);
 assert.ok(humanPath.length>=2,'人類仍應能爬上餐桌');
 assert.ok(SP.pathCost(st,zhen,table(st,5,2))>SP.pathCost(st,orange,table(st,5,2)),'人類爬桌成本應高於貓');
 
-const tray={kind:'object',id:'mealTray'};
+const tray={kind:'object',id:'legacyResourceMealTray'};
 orange.position={...floor(st,5,2)};
 assert.equal(SP.isAtInteraction(st,orange,tray,'eatFrom'),false,'橘子在同 XY 的桌下 floor 不能吃到桌面食物');
 orange.position={...floor(st,4,2)};
@@ -43,7 +43,7 @@ assert.equal(SP.isAtInteraction(st,orange,tray,'eatFrom'),true,'橘子上桌後�
 zhen.position={...floor(st,5,1)};
 assert.equal(SP.isAtInteraction(st,zhen,tray,'eatFrom'),true,'成人站在實際可容納身體的相鄰桌邊可直接接觸桌面食物');
 zhen.position={...floor(st,7,4)};
-assert.equal(SP.isAtInteraction(st,zhen,tray,'eatFrom'),false,'成人不能隔著整張桌子直接吃遠端 mealTray');
+assert.equal(SP.isAtInteraction(st,zhen,tray,'eatFrom'),false,'成人不能隔著整張桌子直接吃遠端 legacyResourceMealTray');
 
 const humanTrayGeometry=SP.interactionGeometry(st,tray,zhen,'eatFrom');
 assert.ok(humanTrayGeometry.positions.some(p=>SP.nodeSame(st,p,floor(st,5,1))),'human eatFrom 應保留合法相鄰 floor → tabletop contact');

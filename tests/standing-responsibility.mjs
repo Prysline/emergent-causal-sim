@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore,loadScriptsInThisContext} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -12,16 +13,18 @@ assert.equal(S.VERSION,'standing-responsibility-v1');
 assert.equal(W.STANDING_RESPONSIBILITY_SCHEMA_VERSION,S.VERSION);
 assert.equal(S.STANDING_RESPONSIBILITY_MAX_DECISION_DELTA,8);
 
-const defaultAssignment=A.DEFAULT_WORLD_AUTHORING.resourceResponsibilityAssignments.find(item=>item.id==='responsibility:zhen:restock:food');
+const legacyDoc=legacyResourceWorld(A);
+E.configureResetStateSource('legacy-restock-responsibility',seed=>W.createInitialStateFromAuthoring(legacyDoc,seed));
+const defaultAssignment=legacyDoc.resourceResponsibilityAssignments.find(item=>item.id==='responsibility:zhen:restock:food');
 assert.deepEqual(defaultAssignment,{id:'responsibility:zhen:restock:food',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'food'}});
 
-let initialized=W.createInitialStateFromAuthoring(A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),19001);
+let initialized=W.createInitialStateFromAuthoring(A.cloneAuthoring(legacyDoc),19001);
 assert.deepEqual(initialized.resourceResponsibilityAssignments,[defaultAssignment],'canonical World factory must preserve responsibility truth once');
 assert.deepEqual(initialized.agents.zhen.knownResponsibilityAssignmentIds,[defaultAssignment.id],'authored assignee must know own assignment on DAY 0');
 assert.deepEqual(initialized.agents.zhou.knownResponsibilityAssignmentIds,[],'non-assignee must not inherit World responsibility knowledge');
 assert.equal(Object.prototype.hasOwnProperty.call(initialized.agents.zhen,'resourceResponsibilityAssignments'),false,'Agent-private state must reference assignment IDs instead of copying canonical assignment truth');
 
-const zhen=initialized.agents.zhen,zhou=initialized.agents.zhou,restockOption={id:'restockContainer',score:40,job:{resource:'food',destinationId:'mealTray',urgency:18}};
+const zhen=initialized.agents.zhen,zhou=initialized.agents.zhou,restockOption={id:'restockContainer',score:40,job:{resource:'food',destinationId:'legacyResourceMealTray',urgency:18}};
 let contribution=S.decisionContributionForOption(initialized,zhen,restockOption);
 assert.equal(contribution.scoreDelta,8,'responsibility contribution must remain bounded');
 assert.equal(contribution.contributor.assignmentId,defaultAssignment.id,'responsibility evidence must trace to canonical assignment ID');
@@ -42,7 +45,7 @@ for(const agent of Object.values(st.agents))neutralize(agent);
 E.tick();
 assert.equal(st.thoughts.zhen.options.some(option=>option.id==='restockContainer'),false,'responsibility alone must not create restock option while resource is not low');
 
-E.reset(19003);st=E.getState();for(const agent of Object.values(st.agents))neutralize(agent);st.objects.mealTray.contents.food=0;
+E.reset(19003);st=E.getState();for(const agent of Object.values(st.agents))neutralize(agent);st.objects.legacyResourceMealTray.contents.food=0;
 E.tick();
 const responsibleOption=st.thoughts.zhen.options.find(option=>option.id==='restockContainer'&&option.job?.resource==='food');
 const nonResponsibleOption=st.thoughts.zhou.options.find(option=>option.id==='restockContainer'&&option.job?.resource==='food');
@@ -55,18 +58,18 @@ assert.equal(responsibilityContributors[0].assignmentId,defaultAssignment.id);
 assert.equal(nonResponsibleOption.decisionContributors.some(item=>item.kind==='standingResponsibility'),false,'non-responsible Agent must not receive responsibility contributor');
 assert.equal(responsibilityContributors.some(item=>item.kind==='routine'||item.kind==='obligation'),false,'responsibility evidence must not mirror Routine or Obligation evidence');
 
-E.reset(19004);st=E.getState();for(const agent of Object.values(st.agents))neutralize(agent);st.objects.mealTray.contents.food=0;st.agents.zhen.knownResponsibilityAssignmentIds=[];
+E.reset(19004);st=E.getState();for(const agent of Object.values(st.agents))neutralize(agent);st.objects.legacyResourceMealTray.contents.food=0;st.agents.zhen.knownResponsibilityAssignmentIds=[];
 E.tick();
 const worldOnly=st.thoughts.zhen.options.find(option=>option.id==='restockContainer'&&option.job?.resource==='food');
 assert.ok(worldOnly,'objective restock candidate must still exist');
 assert.equal(worldOnly.decisionContributors.some(item=>item.kind==='standingResponsibility'),false,'World assignment must not be read directly as Agent knowledge');
 
-E.reset(19005);st=E.getState();for(const agent of Object.values(st.agents))neutralize(agent);st.objects.mealTray.contents.food=0;
+E.reset(19005);st=E.getState();for(const agent of Object.values(st.agents))neutralize(agent);st.objects.legacyResourceMealTray.contents.food=0;
 const durableBefore=JSON.stringify(st.resourceResponsibilityAssignments),knownBefore=[...st.agents.zhen.knownResponsibilityAssignmentIds];
 let completed=false;
 for(let i=0;i<100&&!completed;i++){
   E.tick();
-  completed=st.events.some(event=>event.data?.actor==='zhen'&&event.data?.action==='restockContainer'&&event.data?.to==='mealTray');
+  completed=st.events.some(event=>event.data?.actor==='zhen'&&event.data?.action==='restockContainer'&&event.data?.to==='legacyResourceMealTray');
 }
 assert.equal(completed,true,'fixture must complete at least one responsible food restock');
 assert.equal(JSON.stringify(st.resourceResponsibilityAssignments),durableBefore,'restock completion must not delete durable World responsibility assignment');

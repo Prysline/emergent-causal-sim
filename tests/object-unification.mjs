@@ -25,7 +25,7 @@ assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v2-object-release');
 assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration','Agent Carry semantics/generation must remain independent from Object unification');
 assert.equal(Object.hasOwn(A.DEFAULT_WORLD_AUTHORING.entities,'containers'),false,'authoring must not retain a canonical containers collection');
 
-const expectedObjects=['bookA','mealTray','legacyResourcePlateA','legacyResourcePlateB','foodPantry','basket','waterBucket','cupA','cupB','alcoholBottle'];
+const expectedObjects=['bookA','legacyResourceMealTray','legacyResourcePlateA','legacyResourcePlateB','legacyResourceFoodPantry','legacyResourceBasket','waterBucket','cupA','cupB','alcoholBottle'];
 assert.deepEqual(Object.keys(A.DEFAULT_WORLD_AUTHORING.entities.objects).sort(),expectedObjects.sort());
 assert.equal(A.DEFAULT_WORLD_AUTHORING.entities.objects.bookA.resourceContainer,undefined);
 for(const id of expectedObjects.filter(id=>id!=='bookA')){

@@ -18,8 +18,8 @@ E.reset(20260911);
   assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
   assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v3-movable-containment');
 
-  const tray=st.objects.mealTray,legacyResourcePlateA=st.objects.legacyResourcePlateA,legacyResourcePlateB=st.objects.legacyResourcePlateB,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
-  for(const affordance of ['serve','eatFrom','deposit','receive'])assert.equal(tray.interactions[affordance]?.mode,'reach',`mealTray ${affordance} 必須使用物件局部 reach`);
+  const tray=st.objects.legacyResourceMealTray,legacyResourcePlateA=st.objects.legacyResourcePlateA,legacyResourcePlateB=st.objects.legacyResourcePlateB,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
+  for(const affordance of ['serve','eatFrom','deposit','receive'])assert.equal(tray.interactions[affordance]?.mode,'reach',`legacyResourceMealTray ${affordance} 必須使用物件局部 reach`);
   for(const plate of [legacyResourcePlateA,legacyResourcePlateB]){
     assert.equal(plate.interactions.pickup,undefined,`${plate.id} pickup 不得由 Contact object-type injection 持有`);
     assert.equal(plate.interactions.eatFrom?.mode,'reach',`${plate.id} eatFrom 必須保留物件局部 reach`);
@@ -57,10 +57,10 @@ E.reset(20260911);
 
   human.position={...floor(st,5,1)};
   for(const affordance of ['serve','deposit','receive']){
-    const g=SP.interactionGeometry(st,{kind:'object',id:'mealTray'},human,affordance);
+    const g=SP.interactionGeometry(st,{kind:'object',id:'legacyResourceMealTray'},human,affordance);
     assert.equal(g.mode,'reach');
-    assert.ok(hasNode(st,g.positions,floor(st,5,1)),`mealTray ${affordance} 應允許未被椅子占用的北側 contact`);
-    assert.ok(!hasNode(st,g.positions,floor(st,7,2)),`mealTray ${affordance} 不得把被餐椅占用的右側格當成人類站位`);
+    assert.ok(hasNode(st,g.positions,floor(st,5,1)),`legacyResourceMealTray ${affordance} 應允許未被椅子占用的北側 contact`);
+    assert.ok(!hasNode(st,g.positions,floor(st,7,2)),`legacyResourceMealTray ${affordance} 不得把被餐椅占用的右側格當成人類站位`);
   }
 
   const platePickup=SP.interactionGeometry(st,{kind:'object',id:'legacyResourcePlateB'},human,'pickup');
@@ -73,14 +73,14 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,tray=st.objects.mealTray;
+  const st=E.getState(),a=st.agents.zhen,tray=st.objects.legacyResourceMealTray;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   a.needs.hunger=60;
   const before=tray.contents.food;
   a.action={kind:'eat',phase:'prepare',started:st.tick,wait:0};
   for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`serving meal ${i}`);}
   assert.equal(a.action,null,'局部 pickup / serve contact 下用餐流程仍應完成');
-  assert.ok((tray.contents.food||0)<before,'盛盤流程應真的從 mealTray 取走食物');
+  assert.ok((tray.contents.food||0)<before,'盛盤流程應真的從 legacyResourceMealTray 取走食物');
   assert.ok(st.events.some(e=>e.data?.action==='serveFood'),'應留下 serveFood 事件');
 }
 
@@ -101,16 +101,16 @@ E.reset(20260911);
 
 E.reset(20260911);
 {
-  const st=E.getState(),a=st.agents.zhen,tray=st.objects.mealTray,pantry=st.objects.foodPantry,basket=st.objects.basket;
+  const st=E.getState(),a=st.agents.zhen,tray=st.objects.legacyResourceMealTray,pantry=st.objects.legacyResourceFoodPantry,legacyResourceBasket=st.objects.legacyResourceBasket;
   st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
-  tray.contents.food=0;basket.contents={};basket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};a.held=basket.id;
+  tray.contents.food=0;legacyResourceBasket.contents={};legacyResourceBasket.position={x:3,y:2,spaceId:'room1',surfaceId:'floor'};a.held=legacyResourceBasket.id;
   const before=pantry.contents.food;
-  a.action={kind:'restockContainer',phase:'toSource',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:basket.id,started:st.tick,wait:0};
-  for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`mealTray local deposit ${i}`);}
-  assert.equal(a.action,null,'mealTray local deposit / receive contact 下室內補貨仍應完成');
-  assert.ok((tray.contents.food||0)>0,'物流籃應把食物卸到 mealTray');
+  a.action={kind:'restockContainer',phase:'toSource',destinationId:tray.id,sourceId:pantry.id,sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:legacyResourceBasket.id,started:st.tick,wait:0};
+  for(let i=0;i<70&&a.action;i++){E.tick();noIssues(`legacyResourceMealTray local deposit ${i}`);}
+  assert.equal(a.action,null,'legacyResourceMealTray local deposit / receive contact 下室內補貨仍應完成');
+  assert.ok((tray.contents.food||0)>0,'物流籃應把食物卸到 legacyResourceMealTray');
   assert.ok((pantry.contents.food||0)<before,'食物櫃內容量應減少');
-  assert.equal(basket.contents.food||0,0,'卸貨後物流籃應為空');
+  assert.equal(legacyResourceBasket.contents.food||0,0,'卸貨後物流籃應為空');
 }
 
 console.log('supported object contact audit passed');

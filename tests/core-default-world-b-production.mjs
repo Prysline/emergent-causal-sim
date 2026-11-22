@@ -1,6 +1,7 @@
 // Canonical B house: direct production default, not the A/B test-only fixtures.
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -11,14 +12,14 @@ const SP=globalThis.SimSpatial,V=globalThis.SimValidator;
 const p=(x,y)=>({x,y,z:0});
 const doc=A.DEFAULT_WORLD_AUTHORING;
 const objects=doc.entities.objects;
-assert.equal(A.VERSION,'world-authoring-v25');
+assert.equal(A.VERSION,'world-authoring-v26');
 assert.equal(doc.authoringSchema,A.VERSION);
 assert.equal(doc.map.width,16);
 assert.equal(doc.map.height,10);
 assert.equal(Object.keys(doc.map.layers[0].cells).length,112);
 assert.equal(Object.keys(doc.map.layers[0].boundaries).length,54);
 assert.equal(Object.keys(doc.furniture).length,11);
-assert.equal(Object.keys(objects).length,13);
+assert.equal(Object.keys(objects).length,10);
 assert.equal(doc.doors.frontDoor.boundary.id,'h:4,9');
 assert.equal(doc.doors.bedroomDoor.boundary.id,'h:6,5');
 assert.equal(doc.doors.bedroomDoor.state,'open');
@@ -48,6 +49,17 @@ for(const id of ['plateA','plateB']){
 for(const legacyId of ['legacyResourcePlateA','legacyResourcePlateB'])
   assert.equal(objects[legacyId],undefined,'legacy Resource plates must not coexist in production');
 assert.equal(Object.values(objects).some(o=>o.resourceContainer===true&&o.servingDish===true),false);
+for(const id of ['legacyResourceMealTray','legacyResourceFoodPantry','legacyResourceBasket'])assert.equal(objects[id],undefined,'legacy Food Resource Object must be absent');
+assert.equal(Object.values(objects).some(o=>o.contents?.food>0||o.restock?.resource==='food'||(o.transportResources||[]).includes('food')),false,'B cannot own legacy Resource-food inventory or replenishment policy');
+assert.equal(doc.resourceResponsibilityAssignments.some(relation=>relation.scope?.resource==='food'),false,'B must not hold legacy Food restock responsibility');
+assert.equal(objects.readyMealF0.meal.edibleMassGrams,300);
+assert.equal(objects.ingredientA1.ingredient.typeId,'A');
+{
+  const pureLegacy=legacyResourceWorld(A,{includeMeal:false});
+  assert.equal(pureLegacy.entities.objects.readyMealF0,undefined,'pure Legacy fixture cannot include a physical Meal');
+  for(const id of ['legacyResourceMealTray','legacyResourceFoodPantry','legacyResourceBasket'])assert.ok(pureLegacy.entities.objects[id],id+' is retained in isolated Legacy fixture');
+  assert.equal(A.validateAuthoring(pureLegacy).ok,true);
+}
 assert.equal(A.validateAuthoring(doc).ok,true);
 const roundtrip=A.parseAuthoringJSON(A.serializeAuthoring(doc));
 assert.equal(A.semanticFingerprint(roundtrip),A.semanticFingerprint(doc));

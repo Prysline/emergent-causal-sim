@@ -89,22 +89,22 @@ assert.equal(C.VERSION,'embodiment-capabilities-v5');
     id:'syntheticPort',name:'Port follower',portable:true,handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:5,y:2,z:0},supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:{x:5,y:3,z:0}}]
   };
-  doc.entities.objects.basket.position={x:5,y:2,z:0};
-  const beforeBasket=clone(doc.entities.objects.basket.position);
+  doc.entities.objects.legacyResourceBasket.position={x:5,y:2,z:0};
+  const beforeBasket=clone(doc.entities.objects.legacyResourceBasket.position);
   const beforeSource=clone(doc.entities.sources.tap.position);
   const result=M.moveFurniture(doc,{furnitureId:'diningTable',target:{x:4,y:4,z:0}});
   assert.equal(result.ok,true,result.issues.map(x=>x.code).join(','));
   const moved=result.candidate;
   assert.deepEqual(moved.furniture.diningTable.origin,{x:4,y:4,z:0});
   assert.deepEqual(result.meta.preview.footprint,A.resolveFurnitureInstance(moved.furniture.diningTable).footprint,'move preview footprint must resolve from the same compact candidate');
-  assert.ok(result.meta.preview.followerPositions.some(item=>item.id==='mealTray'&&item.position.x===4&&item.position.y===4));
-  for(const id of ['mealTray','legacyResourcePlateA','legacyResourcePlateB','cupA','cupB','alcoholBottle','syntheticPort'])assert.equal(moved.entities.objects[id].supportId,'diningTable');
-  assert.deepEqual(moved.entities.objects.mealTray.position,{x:4,y:4,z:0});
+  assert.ok(result.meta.preview.followerPositions.some(item=>item.id==='legacyResourceMealTray'&&item.position.x===4&&item.position.y===4));
+  for(const id of ['legacyResourceMealTray','legacyResourcePlateA','legacyResourcePlateB','cupA','cupB','alcoholBottle','syntheticPort'])assert.equal(moved.entities.objects[id].supportId,'diningTable');
+  assert.deepEqual(moved.entities.objects.legacyResourceMealTray.position,{x:4,y:4,z:0});
   assert.deepEqual(moved.entities.objects.legacyResourcePlateB.position,{x:5,y:5,z:0});
   assert.deepEqual(moved.entities.objects.syntheticPort.interactionPorts[0].position,{x:4,y:5,z:0});
-  assert.deepEqual(moved.entities.objects.basket.position,beforeBasket,'same-cell unrelated container must not follow furniture');
+  assert.deepEqual(moved.entities.objects.legacyResourceBasket.position,beforeBasket,'same-cell unrelated container must not follow furniture');
   assert.deepEqual(moved.entities.sources.tap.position,beforeSource,'source must not follow furniture');
-  assert.deepEqual(doc.entities.objects.mealTray.position,{x:5,y:2,z:0},'source authoring must remain unchanged');
+  assert.deepEqual(doc.entities.objects.legacyResourceMealTray.position,{x:5,y:2,z:0},'source authoring must remain unchanged');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -147,8 +147,8 @@ assert.equal(C.VERSION,'embodiment-capabilities-v5');
   const result=M.duplicateFurniture(doc,{sourceId:'diningTable',target:{x:3,y:4,z:0}});
   assert.equal(result.ok,true);
   assert.equal(result.meta.newId,'dining-table-1');
-  assert.equal(result.candidate.entities.objects.mealTray.supportId,'diningTable','duplicate must not copy or retarget external supported objects');
-  assert.equal(result.candidate.entities.objects.mealTray.position.x,5);
+  assert.equal(result.candidate.entities.objects.legacyResourceMealTray.supportId,'diningTable','duplicate must not copy or retarget external supported objects');
+  assert.equal(result.candidate.entities.objects.legacyResourceMealTray.position.x,5);
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -159,16 +159,16 @@ assert.equal(C.VERSION,'embodiment-capabilities-v5');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  let result=M.moveObject(doc,{entityType:'object',entityId:'basket',target:{x:5,y:2,z:0}});
+  let result=M.moveObject(doc,{entityType:'object',entityId:'legacyResourceBasket',target:{x:5,y:2,z:0}});
   assert.equal(result.ok,false);
   assert.equal(result.issues[0].code,'support_choice_required');
   assert.deepEqual(result.meta.candidates.map(x=>x.id),['diningTable']);
-  result=M.moveObject(doc,{entityType:'object',entityId:'basket',target:{x:5,y:2,z:0},supportChoice:{kind:'floor'}});
+  result=M.moveObject(doc,{entityType:'object',entityId:'legacyResourceBasket',target:{x:5,y:2,z:0},supportChoice:{kind:'floor'}});
   assert.equal(result.ok,true);
-  assert.equal(result.candidate.entities.objects.basket.supportId,undefined);
-  result=M.moveObject(doc,{entityType:'object',entityId:'basket',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
+  assert.equal(result.candidate.entities.objects.legacyResourceBasket.supportId,undefined);
+  result=M.moveObject(doc,{entityType:'object',entityId:'legacyResourceBasket',target:{x:5,y:2,z:0},supportChoice:{kind:'furniture',furnitureId:'diningTable'}});
   assert.equal(result.ok,true);
-  assert.equal(result.candidate.entities.objects.basket.supportId,'diningTable');
+  assert.equal(result.candidate.entities.objects.legacyResourceBasket.supportId,'diningTable');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -176,7 +176,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v5');
   let result=M.deleteFurniture(doc,{furnitureId:'diningTable'});
   assert.equal(result.ok,false);
   assert.equal(result.issues[0].code,'furniture_delete_blocked');
-  assert.ok(result.meta.blockers.some(x=>x.ownerId==='mealTray'&&x.referenceKind==='supportId'));
+  assert.ok(result.meta.blockers.some(x=>x.ownerId==='legacyResourceMealTray'&&x.referenceKind==='supportId'));
   assert.equal(fp(doc),before,'failed delete must not mutate authoring');
   result=M.deleteFurniture(doc,{furnitureId:'chairNE'});
   assert.equal(result.ok,true);
