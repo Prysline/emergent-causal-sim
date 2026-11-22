@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.76.1-logistics-carrier-drop-lifecycle`。
+目前 overall runtime marker：`11.77.0-food-legacy-default-isolation`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -61,7 +61,7 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v25`
+- World Authoring：`world-authoring-v26`
 - Food Meal / Serving：`food-v2-meal-serving`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v14-kitchen`
@@ -69,6 +69,8 @@ Current relevant markers：
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.77.0-food-legacy-default-isolation`：正式 B 預設世界不再含 Legacy Resource Food meal tray、food pantry、basket 或其 food restock responsibility，保留 `readyMealF0`、Ingredient A、普通 Serving plates 及 Cooking。base authoring 舊 Resource Food models 與 Editor presets 明確標註 `legacyResource*`；Legacy Engine amount-based Resource 與歷史測試仍單獨存在。Presentation 分別顯示 Ingredient count／Meal grams，不再把 `foodStock()` 舊 Resource amount 當正式食物庫存。World Authoring v25 → v26；Object Handling／Resources／Cooking／Serving、Furniture、Intent／Spatial own generations 不變。本 Slice 不包含 volume-capacity、physical supply 或 autonomous supply chain。
 
 `11.76.1-logistics-carrier-drop-lifecycle`：修正原有 completed-edge `containerDrop` 與物流 Action 同 tick lifecycle 的整合缺口：合法掉落保持 canonical Object 位置、貨物與 `containerDrop` Event；當該物件是 `restockContainer` / `externalSupply` 必要 carrier 時，Engine 即刻執行既有 Action abort、reservation cleanup，產生引用 drop Event 的 abort Event，afterTick Intent reconciliation 沿用原順序。無變動 Resources handling-risk probability、World Authoring v25、Food、Object Handling、Intent schema 或 Runtime Hook ordering，自有 subsystem markers 不機械上升。固定 seed 200-tick B production regression 及強制掉落的真實 Logistics lifecycle regression 提供驗證。
 

@@ -5,7 +5,7 @@
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
   if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v2-meal-serving')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
-  const VERSION='world-authoring-v25',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v26',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
   function validateAuthoring(source){
@@ -67,12 +67,11 @@
       if(name!==undefined)doc.furniture[id].name=name;
     }
     const objects=doc.entities.objects;
-    // The legacy Resource plates are absent from the production default.
-    delete objects.legacyResourcePlateA;
-    delete objects.legacyResourcePlateB;
+    // The production B world contains only physical Ingredient / Meal food.
+    for(const id of ['legacyResourcePlateA','legacyResourcePlateB','legacyResourceMealTray','legacyResourceFoodPantry','legacyResourceBasket'])delete objects[id];
+    doc.resourceResponsibilityAssignments=(doc.resourceResponsibilityAssignments||[]).filter(relation=>relation.scope?.resource!=='food');
     const positions={
-      bookA:[11,5],mealTray:[11,5],foodPantry:[14,2],
-      basket:[14,3],waterBucket:[10,3],cupA:[12,5],
+      bookA:[11,5],waterBucket:[10,3],cupA:[12,5],
       cupB:[12,6],alcoholBottle:[11,6],readyMealF0:[11,5]
     };
     for(const [id,[x,y]] of Object.entries(positions))objects[id].position=p(x,y);

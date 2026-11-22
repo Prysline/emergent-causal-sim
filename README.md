@@ -2,11 +2,13 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.76.1-logistics-carrier-drop-lifecycle`。
+目前 runtime marker：`11.77.0-food-legacy-default-isolation`。
+
+Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource 模型在 base authoring 與 Editor presets 都使用明示 `legacyResource*` 身分；amount-based Resource 機制繼續留在獨立 Legacy 回歸情境。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。實體籃子、體積容量、off-map 食材補給與自主供餐屬後續 slices。
 
 Logistics carrier drop lifecycle：當實際 completed movement edge 產生合法 `containerDrop`，依賴該容器的 `restockContainer`／`externalSupply` 會在同一 tick 經既有 abort lifecycle 中止，並讓中止 World Event 引用掉落事件；實際掉落位置、剩餘內容物及已確定發生的事件不回滾。意外掉落機率與其他 Action 不因此改變。
 
-Core Default World B：正式預設住宅採用有實際隔間與臥室門的 16×10 公共／私人分區格局，配置可接觸的瓦斯爐、廚房櫃台、料理鍋及 Ingredient A；正式餐盤 `plateA`／`plateB` 均使用 Food v2 普通 Object 盛餐契約，舊 Resource 餐盤不出現在正式預設場景。舊 Resource 餐盤 ID／名稱已標為 `legacyResourcePlateA/B`，僅供舊機制的隔離 fixture 使用。此變更不是整體 Resource → Food migration。
+Core Default World B：正式預設住宅採用有實際隔間與臥室門的 16×10 公共／私人分區格局，配置可接觸的瓦斯爐、廚房櫃台、料理鍋及 Ingredient A；正式餐盤 `plateA`／`plateB` 均使用 Food v2 普通 Object 盛餐契約，舊 Resource 餐盤不出現在正式預設場景。舊 Resource 餐盤 `legacyResourcePlateA/B` 與其他 `legacyResource*` food containers 僅供獨立 Legacy 情境；正式 B 不再混用。完整物理供應鏈仍待後續 slices。
 
 Meal Serving & Physical Transfer v1：既有 `eat` Action 在可合法觀察到 Meal 與可用明確外露普通餐盤時，可依真實公克分裝、由 `Agent.held` 搬運並按 canonical nearby placement 放下，再由自己或其他居民以既有 `eatingMeal` 逐 tick 食用。部分轉移建立新 Meal Object；全量轉移保留身份，單一 `meal.edibleMassGrams` 與 Object `containedBy` 不設鏡像庫存；Object／Spatial／Perception 只對可合法進食的外露餐盤提供受控質量與接觸投影。Legacy `contents.food` 仍是不同 Resource 單位；並不包含 Core Default World、主動送餐、D2 或原料持續補給。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
 
