@@ -266,19 +266,19 @@
         "supportId": "diningTable",
         "resourceContainer": true
       },
-      "plateA": {
+      "legacyResourcePlateA": {
         "canEatFrom": true,
         "capacity": 12,
         "contents": {},
         "emptyLoad": 0.35,
         "icon": "🍽️",
-        "id": "plateA",
+        "id": "legacyResourcePlateA",
         "interactions": {
           "eatFrom": {
             "mode": "reach"
           }
         },
-        "name": "餐盤 A",
+        "name": "舊式資源餐盤 A",
         "portable": true,
         "position": {
           "x": 4,
@@ -315,19 +315,19 @@
         },
         "resourceContainer": true
       },
-      "plateB": {
+      "legacyResourcePlateB": {
         "canEatFrom": true,
         "capacity": 12,
         "contents": {},
         "emptyLoad": 0.35,
         "icon": "🍽️",
-        "id": "plateB",
+        "id": "legacyResourcePlateB",
         "interactions": {
           "eatFrom": {
             "mode": "reach"
           }
         },
-        "name": "餐盤 B",
+        "name": "舊式資源餐盤 B",
         "portable": true,
         "position": {
           "x": 5,

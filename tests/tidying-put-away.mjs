@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -11,7 +12,8 @@ assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v4-ex
 assert.equal(E.EMERGENCY_PREEMPTIBLE.has('putAwayObject'),true);
 
 function fixture(){
-  const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+  // Legacy position/line-of-sight regression must not borrow B's partition.
+  const doc=legacyResourceWorld(A);
   doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
   doc.objectStorageAssignments=[{id:'storage:bookA',objectId:'bookA',target:{kind:'furniture',id:'bookshelfA'},mode:'contain'}];
   doc.residents.zhen.initial.knownObjectStorageAssignmentIds=['storage:bookA'];

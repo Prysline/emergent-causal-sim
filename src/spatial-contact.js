@@ -22,9 +22,11 @@
       receive:{mode:'reach'}
     });
 
-    for(const id of ['plateA','plateB'])mergeInteractions(objects[id],{
-      eatFrom:{mode:'reach'}
-    });
+    for(const id of ['legacyResourcePlateA','legacyResourcePlateB']){
+      if(objects[id]?.resourceContainer===true)mergeInteractions(objects[id],{
+        eatFrom:{mode:'reach'}
+      });
+    }
 
     for(const id of ['cupA','cupB','alcoholBottle'])mergeInteractions(objects[id],{
       drinkFrom:{mode:'reach'},

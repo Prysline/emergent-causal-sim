@@ -15,11 +15,13 @@ const initial=await page.evaluate(()=>{
   const E=window.SimEngine,F=window.SimFood,st=E.getState();
   const source=st.objects.readyMealF0;
   if(!source)throw new Error('Browser baseline must include the existing Meal');
+  // Keep this explicit QA plate as the single selectable serving plate.
+  delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
     id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
     objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
-    position:{x:6,y:3,z:0},supportId:'diningTable',
+    position:{x:11,y:5,z:0},supportId:'diningTable',
     interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}
   };
   const served=F.serveMeal(st,source.id,'servingQaPlate',120,'servingQaPortion');
@@ -81,11 +83,13 @@ const execution=await page.evaluate(()=>{
   const E=window.SimEngine,SP=window.SimSpatial,F=window.SimFood,V=window.SimValidator;
   E.reset(20261126);
   const st=E.getState(),actor=st.agents.zhen,source=st.objects.readyMealF0;
+  // Keep this explicit QA plate as the single selectable serving plate.
+  delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
     id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
     objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
-    position:{x:6,y:3,z:0},supportId:'diningTable',
+    position:{x:11,y:5,z:0},supportId:'diningTable',
     interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}
   };
   for(const a of Object.values(st.agents))if(a.id!==actor.id)a.offMap=true;

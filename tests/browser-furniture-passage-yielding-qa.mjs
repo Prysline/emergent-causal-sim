@@ -24,29 +24,31 @@ const authored=await page.evaluate(()=>{
   return {dirty:window.SimWorldEditor.getSession().dirty,contract,roundTripContract:window.SimWorldAuthoring.resolveFurniturePassageYieldingContract(roundTrip.furniture.chairNW),text:document.querySelector('[data-furniture-passage-yielding-editor]')?.innerText||''};
 });
 assert.equal(authored.dirty,true);
-assert.deepEqual(authored.contract.parkedPlacement,{origin:{x:5,y:2,z:0},orientation:'east'},'Editor default must derive one fixed facing-forward parked placement from authored home');
+assert.deepEqual(authored.contract.parkedPlacement,{origin:{x:11,y:5,z:0},orientation:'east'},'Editor default must derive one fixed facing-forward parked placement from authored home');
 assert.deepEqual(authored.roundTripContract,authored.contract,'Passage Yielding authoring must survive canonical export/import');
 assert.match(authored.text,/固定 parked/);
 await page.screenshot({path:`${outDir}/editor-passage-yielding.png`,fullPage:true});
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimFurniturePassageYielding?.applyRuntimeFurniturePlacement&&window.SimUI?.isStarted?.());
+// Exercise the same explicit relocation transaction on free cells in B.
 const moved=await page.evaluate(()=>{
   const st=window.SimEngine.getState(),chair=st.furniture.chairNW;
-  chair.definitionId='chair-basic';chair.origin={x:4,y:2,z:0};chair.passageYielding={version:'furniture-passage-yielding-authoring-v1',homePlacement:{origin:{x:4,y:2,z:0},orientation:'east'},parkedPlacement:{origin:{x:3,y:2,z:0},orientation:'east'},source:'explicit'};
-  const before={old:[...(st.map.tiles['4,2']?.furnitureIds||[])],next:[...(st.map.tiles['3,2']?.furnitureIds||[])]};
+  chair.definitionId='chair-basic';chair.origin={x:10,y:5,z:0};chair.passageYielding={version:'furniture-passage-yielding-authoring-v1',homePlacement:{origin:{x:10,y:5,z:0},orientation:'east'},parkedPlacement:{origin:{x:9,y:5,z:0},orientation:'east'},source:'explicit'};
+  const before={old:[...(st.map.tiles['10,5']?.furnitureIds||[])],next:[...(st.map.tiles['9,5']?.furnitureIds||[])]};
   const result=window.SimFurniturePassageYielding.applyRuntimeFurniturePlacement(st,'chairNW',chair.passageYielding.parkedPlacement);
-  return {ok:result.ok,reason:result.reason||null,origin:st.furniture.chairNW.origin,displayAt:st.furniture.chairNW.displayAt,before,after:{old:[...(st.map.tiles['4,2']?.furnitureIds||[])],next:[...(st.map.tiles['3,2']?.furnitureIds||[])]}};
+  return {ok:result.ok,reason:result.reason||null,origin:st.furniture.chairNW.origin,displayAt:st.furniture.chairNW.displayAt,before,after:{old:[...(st.map.tiles['10,5']?.furnitureIds||[])],next:[...(st.map.tiles['9,5']?.furnitureIds||[])]}};
 });
 assert.equal(moved.ok,true,moved.reason||'runtime Furniture placement must succeed');
-assert.deepEqual(moved.origin,{x:3,y:2,z:0});
+assert.deepEqual(moved.origin,{x:9,y:5,z:0});
 assert.equal(moved.after.old.includes('chairNW'),false);
 assert.equal(moved.after.next.includes('chairNW'),true);
-await page.click('#step');
-await page.waitForFunction(()=>window.SimEngine.getState().tick>=1);
+// Repaint the current immutable placement truth without an unrelated
+// autonomous tick moving other furniture or actors in this UI-only check.
+await page.evaluate(()=>window.SimUI.setCurrentZ(window.SimUI.getCurrentZ()));
 const rendered=await page.evaluate(()=>({
-  old:!!document.querySelector('.sim-tile[data-tile="4,2"] .furniture-footprint[data-entity="furniture:chairNW"]'),
-  next:!!document.querySelector('.sim-tile[data-tile="3,2"] .furniture-footprint[data-entity="furniture:chairNW"]')
+  old:!!document.querySelector('.sim-tile[data-tile="10,5"] .furniture-footprint[data-entity="furniture:chairNW"]'),
+  next:!!document.querySelector('.sim-tile[data-tile="9,5"] .furniture-footprint[data-entity="furniture:chairNW"]')
 }));
 assert.equal(rendered.old,false,'runtime Map must not leave Furniture rendering at old placement');
 assert.equal(rendered.next,true,'runtime Map must project Furniture at new canonical placement');

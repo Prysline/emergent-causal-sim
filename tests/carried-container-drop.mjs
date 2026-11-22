@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {useLegacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+useLegacyResourceWorld(A,W,E);
 const APP_VERSION=globalThis.SimRelease.VERSION;
 const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -86,7 +88,7 @@ try{
 
   {
     E.reset(14102);
-    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.legacyResourcePlateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     for(const furniture of Object.values(st.furniture||{}))furniture.supportsObjects=false;
     const releaseNode=floor(st,2,6);
@@ -126,7 +128,7 @@ try{
 
   {
     E.reset(14104);
-    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.legacyResourcePlateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     plate.contents={food:6};delete plate.supportId;plate.position={...a.position};a.held=null;
     a.action={kind:'eat',phase:'eatingPlate',container:plate.id,started:st.tick,wait:0};
@@ -158,6 +160,39 @@ try{
     SP.planRoute(st,a,goal,{mode:'walk',objective:'weighted',weights:{dropRiskWeight:12}});
     const after=JSON.stringify({held:a.held,position:bottle.position,events:st.events,rngState:st.rngState});
     assert.equal(after,before,'planning-only containerDrop risk must not mutate held state, Container position, Events, or consequence RNG');
+  }
+  // Real Logistics pickup -> completed-edge Container drop -> same-tick Action abort.
+  for(const kind of ['restockContainer','externalSupply']){
+    E.reset(kind==='restockContainer'?14107:14108);
+    const st=E.getState(),a=st.agents.zhen,carrier=st.objects.basket;
+    for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+    carrier.position={...a.position};delete carrier.supportId;carrier.contents={food:11};
+    carrier.handling.containment='sealed';
+    const exit=SP.allExits(st).find(e=>SP.exitStructurallyAvailable(st,e));
+    assert.ok(exit,'Logistics drop fixture requires a legal world exit');
+    a.action=kind==='restockContainer'
+      ?{kind,phase:'toCarrier',destinationId:'mealTray',sourceId:'foodPantry',sourceKind:'object',resource:'food',strategy:'logisticsContainer',carrierId:carrier.id,started:st.tick,wait:0}
+      :{kind,phase:'toCarrier',exitId:exit.id,destinationId:'foodPantry',resource:'food',carrierId:carrier.id,workLeft:1,produced:0,started:st.tick,wait:0};
+    let drop=null;
+    for(let i=0;i<45&&!drop;i++){
+      E.tick();
+      drop=dropEventsFor(st,carrier.id)[0]||null;
+      const report=V.validateState(st);
+      assert.equal(report.issueCount,0,`${kind} tick ${st.tick}: ${report.issues.map(x=>x.code).join(', ')}`);
+    }
+    const pickupAction=kind==='restockContainer'?'takeLogisticsContainer':'takeSupplyCarrier';
+    const pickup=st.events.find(e=>e.data?.actor===a.id&&e.data?.action===pickupAction);
+    const abort=st.events.find(e=>e.data?.actor===a.id&&e.data?.action==='abort');
+    assert.ok(pickup&&drop&&abort,`${kind} must execute real pickup, movement containerDrop and Action abort`);
+    assert.ok(pickup.tick<drop.tick,`${kind} must pick up the carrier before the completed-edge drop`);
+    assert.equal(abort.tick,drop.tick,`${kind} must end the dependent Action in the drop tick`);
+    assert.ok(abort.causeIds.includes(drop.id),`${kind} abort World Event must cite the canonical drop Event`);
+    assert.equal(a.held,null,`${kind} must not keep a ghost held relation`);
+    assert.equal(a.action,null,`${kind} must not keep a dependent Action`);
+    assert.equal(a.activeIntent,null,`${kind} must reconcile the actionBound Active Intent`);
+    assert.equal(carrier.contents.food,11,`${kind} drop must preserve sealed cargo contents`);
+    assert.ok(SP.nodeSame(st,SP.objectNode(st,carrier.id),a.position),`${kind} must retain completed-edge placement`);
+    assert.ok(!Object.values(st.reservations).includes(a.id),`${kind} abort must clean Agent reservations`);
   }
 }finally{
   L.handlingExposureForEdge=originalExposure;

@@ -99,7 +99,7 @@ for(const text of Object.values(postureProjection.missing))assert.match(text,/å§
 const placeProjection=await page.evaluate(()=>{
   const E=window.SimEngine,SP=window.SimSpatial,UI=window.SimUI,st=E.getState(),a=st.agents.zhen;
   const original={position:structuredClone(a.position),posture:structuredClone(a.posture)};
-  a.position={...SP.normalizeNode(st,{x:5,y:2},'floor')};a.posture={kind:'standing',slotId:null,furnitureId:null};UI.setCurrentZ(UI.getCurrentZ());
+  a.position={...SP.normalizeNode(st,st.furniture.diningTable.footprint[0],'floor')};a.posture={kind:'standing',slotId:null,furnitureId:null};UI.setCurrentZ(UI.getCurrentZ());
   const standing=document.querySelector('.action-card.agent-zhen .action-location')?.textContent||'';
   const chair=SP.getSlot(st,'chairNE:seat');a.position={...chair.position};a.posture={kind:'sitting',slotId:chair.id,furnitureId:chair.furnitureId};UI.setCurrentZ(UI.getCurrentZ());
   const sitting=document.querySelector('.action-card.agent-zhen .action-location')?.textContent||'';
@@ -349,13 +349,30 @@ await page.waitForFunction(({agentId})=>document.querySelector(`#map [data-entit
 await page.screenshot({path:`${outDir}/mobile-map-posture-overlap.png`,fullPage:true});
 
 const mobileMapStateBeforeSelection=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
-const mobileAgentBox=await page.locator(`#map [data-entity="agent:${mobileMapFixture.agentId}"]`).boundingBox();
-assert.ok(mobileAgentBox,'mobile agent marker must have browser geometry');
-await page.mouse.click(mobileAgentBox.x+mobileAgentBox.width/2,mobileAgentBox.y+mobileAgentBox.height/2);
+// Find a genuinely hit-testable point on the Agent's map marker. A 16-column
+// house makes each mobile tile narrower; the furniture's separate handle can
+// overlap the marker center without hiding the Agent's actual click target.
+// A wider canonical house scrolls within its own map panel on mobile.
+await page.locator(`#map [data-entity="agent:${mobileMapFixture.agentId}"]`).scrollIntoViewIfNeeded();
+const mobileAgentHit=await page.evaluate(({agentId})=>{
+  const marker=document.querySelector(`#map [data-entity="agent:${agentId}"]`);
+  if(!marker)return null;
+  const b=marker.getBoundingClientRect();
+  for(const fy of [.5,.3,.7,.12,.88])for(const fx of [.5,.3,.7,.12,.88]){
+    const x=b.left+b.width*fx,y=b.top+b.height*fy;
+    if(x<0||y<0||x>=innerWidth||y>=innerHeight)continue;
+    const hit=document.elementFromPoint(x,y);
+    if(hit===marker||marker.contains(hit))return {x,y};
+  }
+  return null;
+},mobileMapFixture);
+assert.ok(mobileAgentHit,'mobile Agent marker must retain a real clickable point even beside furniture');
+await page.mouse.click(mobileAgentHit.x,mobileAgentHit.y);
 await page.waitForFunction(({agentId})=>{const s=window.SimUI.getInspectorSelection?.();return s?.type==='agent'&&s.id===agentId;},mobileMapFixture);
 assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),mobileMapStateBeforeSelection,'mobile agent selection must not mutate simulation state');
 
 await page.click('.mobile-nav [data-tab="map"]');
+await page.locator(`#map .spatial-furniture-handle[data-furniture-id="${mobileMapFixture.furnitureId}"]`).scrollIntoViewIfNeeded();
 const furnitureHit=await page.evaluate(({furnitureId})=>{
   const handle=document.querySelector(`#map .spatial-furniture-handle[data-furniture-id="${furnitureId}"]`);if(!handle)return null;
   const r=handle.getBoundingClientRect(),points=[[r.left+2,r.top+2],[r.right-2,r.top+2],[r.left+2,r.bottom-2],[r.right-2,r.bottom-2]];

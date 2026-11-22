@@ -1,15 +1,16 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial,O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimValidator;
-assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(A.VERSION,'world-authoring-v25');
 assert.equal(O.VERSION,'object-handling-v3-meal-mass-projection');
 
-const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+const authored=legacyResourceWorld(A);
 const basket=authored.entities.objects.basket;
 basket.objectContainment=true;
 basket.objectStorage={maxItems:2,maxMassKg:3};
@@ -28,7 +29,7 @@ function invalid(mutate,code){
 }
 invalid(doc=>{doc.entities.objects.cargoA.containedBy='basket';},'authoring_contained_object_position_conflict');
 invalid(doc=>{doc.entities.objects.cargoA.containedBy='missing';delete doc.entities.objects.cargoA.position;},'authoring_object_container_missing');
-invalid(doc=>{doc.entities.objects.cargoA.containedBy='plateA';delete doc.entities.objects.cargoA.position;},'authoring_object_container_capability_missing');
+invalid(doc=>{doc.entities.objects.cargoA.containedBy='legacyResourcePlateA';delete doc.entities.objects.cargoA.position;},'authoring_object_container_capability_missing');
 invalid(doc=>{doc.entities.objects.basket.containedBy='basket';delete doc.entities.objects.basket.position;},'authoring_object_container_self');
 invalid(doc=>{doc.entities.objects.cargoA.containedBy='basket';delete doc.entities.objects.cargoA.position;delete doc.entities.objects.cargoA.handling.massKg;},'authoring_object_cargo_mass_invalid');
 invalid(doc=>{doc.entities.objects.cargoA.containedBy='basket';doc.entities.objects.cargoB.containedBy='basket';doc.entities.objects.cargoC.containedBy='basket';for(const id of ['cargoA','cargoB','cargoC'])delete doc.entities.objects[id].position;},'authoring_object_storage_capacity_exceeded');

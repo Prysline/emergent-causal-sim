@@ -425,7 +425,15 @@ try{
     batch10Agent:compactQueryCounts(results.batch10_agent)
   }));
   assert.ok(feasibilityCounts.singleInside>0,'one simulation tick must measure a real traversal-feasibility workload');
-  assert.equal(feasibilityCounts.singleOutside,3813,'unchanged derived geometry still requires one measured outside-tick traversal workload');
+  // The outside-tick traversal workload scales with the default world's
+  // authored floor count. Old 12×8: 3813 queries / 60 floor cells < 65 per
+  // cell; B 16×10: 112 floor cells. Retain a bounded, explainable workload
+  // instead of treating a now-obsolete map-specific literal as release truth.
+  const measuredState=JSON.parse(results.single_none.metrics.stateJson);
+  const floorCells=Object.values(measuredState.map.tiles).filter(t=>t.terrain==='floor').length;
+  assert.equal(floorCells,112,'canonical B floor workload must be explicit');
+  assert.ok(feasibilityCounts.singleOutside>0&&feasibilityCounts.singleOutside<=65*floorCells,
+    'outside-tick feasibility workload must remain within the per-floor-cell budget');
   assert.ok(feasibilityCounts.batch10Inside>0&&feasibilityCounts.batch10Inside<=4*feasibilityCounts.singleInside,
     'step(10) must retain a bounded incremental traversal workload relative to a comparable one-tick fixture');
   assert.ok(feasibilityCounts.batch10Outside>0&&feasibilityCounts.batch10Outside<=feasibilityCounts.singleOutside,

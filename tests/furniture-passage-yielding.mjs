@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -16,7 +17,7 @@ assert.equal(SP.PASSAGE_YIELDING_VERSION,'furniture-passage-yielding-v1');
 
 const clone=value=>JSON.parse(JSON.stringify(value));
 function corridorAuthoring(){
-  const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+  const authored=legacyResourceWorld(A);
   for(const id of ['chairNE','chairSW','chairSE'])delete authored.furniture[id];
   authored.furniture.chairNW={id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:4,z:0},orientation:'north',name:'讓路椅',passageYielding:true};
   authored.residents.zhen.initial.placement={mode:'exact',node:{x:4,y:5,z:0}};
@@ -50,14 +51,14 @@ E.configureResetStateSource('furniture-passage-yielding-fixture',seed=>runtime(c
   chair.origin={x:8,y:6,z:0};
   assert.deepEqual(contract.parkedPlacement,{origin:{x:4,y:3,z:0},orientation:'north'},'resolved parked reference must not drift with later current placement mutation');
 
-  const explicit=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);explicit.furniture.chairNW.passageYielding=true;explicit.furniture.chairNW.parkedPlacement={origin:{x:5,y:2,z:0},orientation:'east'};
+  const explicit=legacyResourceWorld(A);explicit.furniture.chairNW.passageYielding=true;explicit.furniture.chairNW.parkedPlacement={origin:{x:5,y:2,z:0},orientation:'east'};
   assert.deepEqual(A.resolveFurniturePassageYieldingContract(A.canonicalizeAuthoring(explicit).furniture.chairNW).parkedPlacement,{origin:{x:5,y:2,z:0},orientation:'east'});
   for(const [placement,code] of [
     [{origin:{x:6,y:2,z:0},orientation:'east'},'authoring_furniture_parked_displacement_invalid'],
     [{origin:{x:4,y:2,z:1},orientation:'east'},'authoring_furniture_parked_displacement_invalid'],
     [{origin:{x:5,y:2,z:0},orientation:'north'},'authoring_furniture_parked_rotation_unsupported']
   ]){
-    const bad=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);bad.furniture.chairNW.passageYielding=true;bad.furniture.chairNW.parkedPlacement=placement;const report=A.validateAuthoring(bad);
+    const bad=legacyResourceWorld(A);bad.furniture.chairNW.passageYielding=true;bad.furniture.chairNW.parkedPlacement=placement;const report=A.validateAuthoring(bad);
     assert.equal(report.ok,false);assert.ok(report.errors.some(issue=>issue.code===code),code);
   }
 }
@@ -113,7 +114,7 @@ E.configureResetStateSource('furniture-passage-yielding-fixture',seed=>runtime(c
 }
 
 {
-  const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);authored.furniture.visualCabinet={id:'visualCabinet',definitionId:'cabinet-tall',origin:{x:3,y:4,z:0},orientation:'south'};const st=W.createInitialStateFromAuthoring(A.canonicalizeAuthoring(authored),26017),cabinet=st.furniture.visualCabinet;
+  const authored=legacyResourceWorld(A);authored.furniture.visualCabinet={id:'visualCabinet',definitionId:'cabinet-tall',origin:{x:3,y:4,z:0},orientation:'south'};const st=W.createInitialStateFromAuthoring(A.canonicalizeAuthoring(authored),26017),cabinet=st.furniture.visualCabinet;
   const projection=P.projectRuntimeVisualOpacity(st,0);assert.ok(projection.some(item=>item.source?.furnitureId==='visualCabinet'));
   const withoutSelf=P.projectRuntimeVisualOpacity(st,0,{excludeFurnitureId:'visualCabinet'});assert.equal(withoutSelf.some(item=>item.source?.furnitureId==='visualCabinet'),false,'target-specific visibility must exclude target Furniture self-occlusion only');
   const oldRect=projection.find(item=>item.source?.furnitureId==='visualCabinet').geometry;

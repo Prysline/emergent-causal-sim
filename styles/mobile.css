@@ -53,11 +53,18 @@
   .world-badges::-webkit-scrollbar{display:none}
   .world-badges span,.world-badges button{flex:0 0 auto;padding:3px 7px;font-size:10px}
 
+  /* More columns must not shrink the Agent target beneath the Furniture
+     secondary handle. Scroll this panel rather than the whole document. */
+  .view-panel[data-view="map"] > .panel-body{
+    overflow-x:auto;
+    overscroll-behavior-inline:contain;
+    -webkit-overflow-scrolling:touch;
+  }
   .spatial-map{
     width:100%;
     max-width:none;
-    min-width:0;
-    aspect-ratio:12/8;
+    min-width:calc(var(--grid-w) * 32px);
+    aspect-ratio:var(--grid-w) / var(--grid-h);
     grid-template-columns:repeat(var(--grid-w),minmax(0,1fr));
     grid-template-rows:repeat(var(--grid-h),minmax(0,1fr));
     border-radius:10px;

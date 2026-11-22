@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {useLegacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion,V=globalThis.SimValidator;
+const legacyWorld=useLegacyResourceWorld(A,W,E);
 const APP_VERSION=globalThis.SimRelease.VERSION;
 const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const ROUTE_VERSION='11.38.0-carried-handling-risk';
@@ -24,7 +26,7 @@ assert.equal(E.DELIBERATION_SCHEMA_VERSION,DELIBERATION_VERSION);
 assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
 
 {
-  const authored=A.DEFAULT_WORLD_AUTHORING,cup=authored.entities.objects.cupA,bottle=authored.entities.objects.alcoholBottle,plate=authored.entities.objects.plateA;
+  const authored=legacyWorld,cup=authored.entities.objects.cupA,bottle=authored.entities.objects.alcoholBottle,plate=authored.entities.objects.legacyResourcePlateA;
   assert.equal(cup.handling.containment,'open');
   assert.deepEqual(Object.keys(cup.handling.contentRetention).sort(),['impact','oscillation','tilt']);
   assert.deepEqual(Object.keys(cup.handling.contentRetention.tilt).sort(),['highRiskExposure','lowRiskExposure']);
@@ -59,7 +61,7 @@ assert.equal(E.DECISION_EVIDENCE_SCHEMA_VERSION,DELIBERATION_VERSION);
 
 E.reset(13800);
 {
-  const st=E.getState(),basket=st.objects.basket,cup=st.objects.cupA,bottle=st.objects.alcoholBottle,plate=st.objects.plateA;
+  const st=E.getState(),basket=st.objects.basket,cup=st.objects.cupA,bottle=st.objects.alcoholBottle,plate=st.objects.legacyResourcePlateA;
   basket.contents={};
   assert.equal(R.handlingRiskForContainer(st,basket,highExposure).contentsLoss,0,'empty basket may carry burden but cannot lose nonexistent contents');
 

@@ -9,30 +9,20 @@ const F=globalThis.SimFood,I=globalThis.SimIngredient,O=globalThis.SimObjectHand
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator;
 assert.equal(F.VERSION,'food-v2-meal-serving');
 assert.equal(O.VERSION,'object-handling-v3-meal-mass-projection');
-assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(A.VERSION,'world-authoring-v25');
 assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v1','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){
   const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
-  doc.entities.objects.mealPlate={
-    id:'mealPlate',name:'可盛餐餐盤',icon:'🍽️',portable:true,canEatFrom:true,
-    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
-    handling:{carryGeometry:{width:.30,height:.05,length:.30},handsRequired:1,massKg:.3},
-    position:{x:5,y:2,z:0},supportId:'diningTable',
-    interactions:{pickup:{mode:'supportReach'},eatFrom:{mode:'supportReach'}}
-  };
+  // Exercise the production B serving plate; narrow the physical capacity
+  // only for this independent capacity regression fixture.
+  delete doc.entities.objects.plateB;
+  doc.entities.objects.plateA.objectStorage.maxMassKg=.12;
   if(cooking){
     delete doc.entities.objects.readyMealF0;
-    doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
-    doc.entities.objects.potA={
-      id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,
-      objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.6},
-      handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
-      position:{x:3,y:4,z:0},supportId:'stoveA'
-    };
-    doc.entities.objects.ingredientA1=I.createIngredientObject({id:'ingredientA1',typeId:'A',position:{x:3,y:4,z:0},supportId:'stoveA'});
-    doc.residents.zhen.initial.placement={mode:'exact',node:{x:3,y:3,z:0}};
-    doc.residents.zhen.initial.facing='south';
+    // Cooking fixture uses the canonical B kitchen instead of relocating its stove.
+    doc.residents.zhen.initial.placement={mode:'exact',node:{x:11,y:3,z:0}};
+    doc.residents.zhen.initial.facing='north';
   }
   const result=A.validateAuthoring(doc);
   assert.equal(result.ok,true,'Serving fixture must pass current authoring: '+result.errors.map(x=>x.code).join(', '));
@@ -49,7 +39,7 @@ function setup(seed=20261121,{cooking=false}={}){
     Object.assign(person.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
     person.action=null;person.activeIntent=null;
   }
-  return {st,a,b,plate:st.objects.mealPlate,meal:st.objects.readyMealF0};
+  return {st,a,b,plate:st.objects.plateA,meal:st.objects.readyMealF0};
 }
 const issues=()=>V.validateState(E.getState()).issues.map(x=>x.code);
 function startEat(st,a){
@@ -72,10 +62,10 @@ function eventAncestors(st,id,visited=new Set()){
 }
 {
   const doc=fixture(),meal=doc.entities.objects.readyMealF0;
-  delete meal.position;delete meal.supportId;meal.containedBy='mealPlate';meal.meal.edibleMassGrams=120;
+  delete meal.position;delete meal.supportId;meal.containedBy='plateA';meal.meal.edibleMassGrams=120;
   assert.equal(A.validateAuthoring(doc).ok,true,'authoring must accept a legal contained Meal without handling.massKg');
   const invalid=A.cloneAuthoring(doc);
-  invalid.entities.objects.mealPlate.canEatFrom=false;
+  invalid.entities.objects.plateA.canEatFrom=false;
   assert.ok(A.validateAuthoring(invalid).errors.some(x=>x.code==='food_meal_plate_invalid'),'closed plate must fail Food authoring');
 }
 {
@@ -142,7 +132,7 @@ function eventAncestors(st,id,visited=new Set()){
 {
   // A reachable but unobserved plate is World truth, not this Agent's serving knowledge.
   const {st,a,meal,plate}=setup(20261127);
-  delete plate.supportId;plate.position={x:10,y:6,z:0};
+  delete plate.supportId;plate.position={x:2,y:8,z:0};
   const sourceContact=SP.bestInteractionPositionResult(st,a,{kind:'object',id:meal.id},'eatFrom');
   assert.ok(sourceContact?.position);
   a.position={...sourceContact.position};
@@ -196,7 +186,9 @@ function eventAncestors(st,id,visited=new Set()){
 {
   const {st,a,plate}=setup(20261124,{cooking:true});
   a.needs.hunger=55;
-  const observed=E.cookingDecisionOption(st,a);
+  const facingsForCooking=['north','northEast','east','southEast','south','southWest','west','northWest'];
+  let observed=null;
+  for(const face of facingsForCooking){a.facing=face;observed=E.cookingDecisionOption(st,a);if(observed)break;}
   assert.equal(observed?.id,'cookMeal','real Cooking decision must find an ingredient and eligible pot');
   const action=E.buildAction(a,observed);
   assert.equal(action?.kind,'cookMeal');

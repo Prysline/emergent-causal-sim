@@ -64,13 +64,13 @@ assert.ok(hasNode(st,trayEat.positions,floor(st,5,1)),'mealTray 應保留實際�
 assert.ok(hasNode(st,trayEat.positions,table(st,5,2)),'mealTray reach 應保留物件所在 tabletop node');
 assert.ok(!hasNode(st,trayEat.positions,floor(st,4,2)),'chairNW 佔用格不得被當成 Human floor contact');
 assert.ok(!hasNode(st,trayEat.positions,floor(st,7,2)),'站在餐桌另一側不得隔兩格直接吃 mealTray');
-const plateEat=SP.interactionGeometry(st,{kind:'object',id:'plateB'},a,'eatFrom');
+const plateEat=SP.interactionGeometry(st,{kind:'object',id:'legacyResourcePlateB'},a,'eatFrom');
 assert.equal(plateEat.mode,'reach','桌上的 serving dish 若直接進食，也必須接近該盤子的實際位置');
-assert.ok(hasNode(st,plateEat.positions,floor(st,6,4)),'plateB 應允許未被椅子佔用的南側 floor contact');
+assert.ok(hasNode(st,plateEat.positions,floor(st,6,4)),'legacyResourcePlateB 應允許未被椅子佔用的南側 floor contact');
 assert.ok(!hasNode(st,plateEat.positions,floor(st,7,3)),'chairSE 佔用格不得被當成 Human floor contact');
-assert.ok(hasNode(st,plateEat.positions,table(st,6,3)),'plateB reach 應保留物件所在 tabletop node');
+assert.ok(hasNode(st,plateEat.positions,table(st,6,3)),'legacyResourcePlateB reach 應保留物件所在 tabletop node');
 
-const platePickup=SP.interactionGeometry(st,{kind:'object',id:'plateB'},a,'pickup');
+const platePickup=SP.interactionGeometry(st,{kind:'object',id:'legacyResourcePlateB'},a,'pickup');
 assert.equal(platePickup.mode,'surfaceContact');
 assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'supported pickup must derive contact from the object Surface cell');
 assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'supported pickup must not expand to the whole support Furniture perimeter');
@@ -86,11 +86,11 @@ let validation=V.validateState(st);
 assert.ok(validation.issues.some(issue=>issue.code==='held_object_support_conflict'),'holder + supportId must be explicitly invalid');
 a.held=null;delete conflict.supportId;
 
-const plateA=st.objects.plateA,plateAOld={...plateA.position};
-plateA.position={x:3,y:5,z:0};
+const legacyResourcePlateA=st.objects.legacyResourcePlateA,legacyResourcePlateAOld={...legacyResourcePlateA.position};
+legacyResourcePlateA.position={x:3,y:5,z:0};
 validation=V.validateState(st);
-assert.ok(validation.issues.some(issue=>issue.code==='supported_object_cell_mismatch'&&issue.entityId==='plateA'),'supported Object position must belong to its canonical support Surface cells');
-plateA.position=plateAOld;
+assert.ok(validation.issues.some(issue=>issue.code==='supported_object_cell_mismatch'&&issue.entityId==='legacyResourcePlateA'),'supported Object position must belong to its canonical support Surface cells');
+legacyResourcePlateA.position=legacyResourcePlateAOld;
 
 const pantry=st.objects.foodPantry,old={...pantry.position},next={x:3,y:5};
 assert.equal(SP.walkable(st,old),false,'固定物件所在格應由實體動態阻擋');

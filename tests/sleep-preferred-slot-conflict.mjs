@@ -20,7 +20,17 @@ const placeAtSlot=(st,a,slotId,{sleeping=false}={})=>{
 const nearSlot=(st,a,slotId)=>{
   const slot=SP.getSlot(st,slotId),node=SP.slotApproachNodes?.(st,slot,a,'walk')?.[0]||slot.position;a.offMap=false;a.position={...node};a.posture={kind:'standing',slotId:null,furnitureId:null};a.action=null;a.activeIntent=null;return slot;
 };
-const farFromPreferred=(a)=>{a.offMap=false;a.position={x:1,y:1,spaceId:'room1',surfaceId:'floor'};a.posture={kind:'standing',slotId:null,furnitureId:null};a.action=null;a.activeIntent=null;};
+// The requester's initial distance must be truly outside perception range in
+// the active authored house. B moves the bedroom into the north-west partition;
+// (1,1) is no longer an unseen starting position near its bed.
+const farFromPreferred=(st,a)=>{
+  a.offMap=false;
+  const remote={x:st.map.width-2,y:st.map.height-2};
+  if(!SP.walkable(st,remote))throw new Error('Sleep conflict far-observer fixture requires a legal floor node');
+  a.position=SP.normalizeNode(st,remote,'floor');
+  a.posture={kind:'standing',slotId:null,furnitureId:null};
+  a.action=null;a.activeIntent=null;
+};
 const armSleep=(st,a)=>{
   a.needs.sleepNeed=90;a.needs.hunger=12;a.needs.thirst=12;a.needs.fatigue=25;
   a.action=E.buildAction(a,{id:'sleep'});E.ensureIntentForAction(st,a);
@@ -162,7 +172,7 @@ assert.equal(requester.action?.kind,'eat');
 
 // H: canonical occupancy is not Agent knowledge. A reachable preferred Slot stays worth approaching until its occupant is actually observed.
 E.reset(20260911);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
-farFromPreferred(requester);placeAtSlot(st,cat,'bed:left',{sleeping:true});requester.needs.sleepNeed=90;requester.needs.hunger=12;requester.needs.thirst=12;requester.needs.fatigue=25;
+farFromPreferred(st,requester);placeAtSlot(st,cat,'bed:left',{sleeping:true});requester.needs.sleepNeed=90;requester.needs.hunger=12;requester.needs.thirst=12;requester.needs.fatigue=25;
 assert.equal(SP.sleepTargetExclusion(st,requester,'bed:left').reason,'occupied','canonical World legality must still reject the occupied preferred Slot');
 assert.ok(SP.sleepTargets(st,requester).some(x=>x.id==='bed:right'),'fixture must preserve a legal alternate while preferred occupancy is unobserved');
 assert.deepEqual(E.observeAgentContext(st,requester,cat),{observable:false,reason:'out-of-range'});
@@ -185,7 +195,7 @@ assert.equal(requester.conflictResolutionEvidence.at(-1).observation.targetId,ca
 
 // I: if the unseen occupant leaves during approach, Sleep returns to normal target selection with no fake conflict history.
 E.reset(20260911);st=E.getState();requester=st.agents.zhen;human=st.agents.zhou;cat=st.agents.orange;human.offMap=true;
-farFromPreferred(requester);placeAtSlot(st,cat,'bed:left',{sleeping:true});armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);assert.equal(requester.action.phase,'approachPreferred');
+farFromPreferred(st,requester);placeAtSlot(st,cat,'bed:left',{sleeping:true});armSleep(st,requester);SC.resolveSleepChoice(st,requester,requester.action);assert.equal(requester.action.phase,'approachPreferred');
 cat.offMap=true;cat.position=null;cat.posture={kind:'standing',slotId:null,furnitureId:null};cat.action=null;cat.activeIntent=null;
 E.tick();assert.equal(requester.action?.phase,'chooseSurface');assert.equal(requester.conflictResolutionEvidence.length,0);
 E.tick();assert.equal(requester.action?.sleepTarget?.id,'bed:left','normal Usage ranking should select the now-legal preferred Slot after unseen occupancy clears');assert.equal(requester.conflictResolutionEvidence.length,0,'occupant leaving before observation must not create conflict history');

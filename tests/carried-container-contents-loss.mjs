@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {useLegacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
+const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,R=globalThis.SimResources,SP=globalThis.SimSpatial,L=globalThis.SimLocomotion;
+useLegacyResourceWorld(A,W,E);
 const APP_VERSION=globalThis.SimRelease.VERSION;
 const RESOURCES_VERSION='11.68.0-movable-object-cargo';
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
@@ -90,7 +92,7 @@ try{
 
   {
     E.reset(13902);
-    const st=E.getState(),a=st.agents.zhen,plate=st.objects.plateA;
+    const st=E.getState(),a=st.agents.zhen,plate=st.objects.legacyResourcePlateA;
     for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
     const surface=st.furniture.diningTable.spatial.surfaces.find(x=>x.id==='diningTable:surface');
     const top=SP.normalizeNode(st,surface.cells[0],surface.id),start=floor(st,5,1),under=floor(st,top.x,top.y);

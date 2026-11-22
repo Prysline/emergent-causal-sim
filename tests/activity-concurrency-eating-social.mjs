@@ -1,16 +1,18 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {useLegacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 
-const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
+const E=globalThis.SimEngine,A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
+useLegacyResourceWorld(A,W,E);
 const noIssues=label=>{const result=V.validateState(E.getState());assert.equal(result.issueCount,0,`${label}: ${result.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const eventBy=predicate=>E.getState().events.find(predicate);
 
 function armEating({seed=15100,withRequester=false,responderSocial=90}={}){
   E.reset(seed);
-  const st=E.getState(),requester=st.agents.zhou,responder=st.agents.zhen,cat=st.agents.orange,plate=st.objects.plateA;
+  const st=E.getState(),requester=st.agents.zhou,responder=st.agents.zhen,cat=st.agents.orange,plate=st.objects.legacyResourcePlateA;
   cat.offMap=true;
   requester.offMap=false;responder.offMap=false;
   requester.position={x:5,y:5};responder.position={x:5,y:6};

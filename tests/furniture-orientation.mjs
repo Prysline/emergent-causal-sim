@@ -210,7 +210,7 @@ assert.throws(
   const rotated=result.candidate;
   assert.deepEqual(rotated.furniture.diningTable.origin,doc.furniture.diningTable.origin);
   assert.deepEqual(rotated.entities.objects.mealTray.position,local(5,3));
-  assert.deepEqual(rotated.entities.objects.plateB.position,local(6,2));
+  assert.deepEqual(rotated.entities.objects.legacyResourcePlateB.position,local(6,2));
   assert.deepEqual(rotated.entities.objects.syntheticPort.position,local(5,3));
   assert.deepEqual(rotated.entities.objects.syntheticPort.interactionPorts[0].position,local(6,3));
   assert.equal(rotated.entities.objects.syntheticPort.interactionPorts[0].edge,'north');

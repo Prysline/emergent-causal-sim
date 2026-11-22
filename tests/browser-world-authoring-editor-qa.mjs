@@ -1,5 +1,11 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
+
+globalThis.window=globalThis;
+loadProductionBefore('src/ui/core.js');
+const legacyEditorDocument=legacyResourceWorld(globalThis.SimWorldAuthoring);
 import { chromium } from 'playwright';
 
 const outDir='artifacts/browser-world-authoring-editor-qa';
@@ -38,7 +44,7 @@ let snapshot=await page.evaluate(()=>({
 assert.equal(snapshot.session.currentZ,0);
 assert.equal(snapshot.session.dirty,false);
 assert.equal(snapshot.session.validation.ok,true);
-assert.equal(snapshot.mapCells,96);
+assert.equal(snapshot.mapCells,160,'official B default must be visible in World Editor');
 assert.equal(snapshot.sceneItems,
   Object.keys(snapshot.document.furniture||{}).length+
   Object.keys(snapshot.document.entities?.objects||{}).length+
@@ -58,7 +64,22 @@ assert.equal(snapshot.runtimeGlobals.previewBridge,'object','D.1C Editor must ex
 for(const key of ['world','spatial','engine','validator'])assert.equal(snapshot.runtimeGlobals[key],'undefined',`Editor must not bootstrap runtime module: ${key}`);
 assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snapshot.docWidth}>${snapshot.width}`);
 
-const defaultDocument=snapshot.document;
+// The Editor must initially load the one canonical production B scene.
+const canonicalBDefault=snapshot.document;
+assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v25');
+assert.equal(canonicalBDefault.map.width,16);
+assert.equal(canonicalBDefault.map.height,10);
+assert.equal(canonicalBDefault.doors.bedroomDoor.boundary.id,'h:6,5');
+assert.ok(canonicalBDefault.entities.objects.plateA?.objectContainment);
+assert.ok(canonicalBDefault.entities.objects.plateB?.objectContainment);
+assert.equal(canonicalBDefault.entities.objects.legacyResourcePlateA,undefined);
+assert.equal(canonicalBDefault.entities.objects.legacyResourcePlateB,undefined);
+const bPreviewPreflight=await page.evaluate(()=>window.SimEditorPreviewBridge.preflight(window.SimWorldEditor.getDocument()));
+assert.equal(bPreviewPreflight.ok,true,'canonical B must pass browser Editor Preview preflight');
+// Remaining Editor interaction regressions deliberately exercise their original
+// old-house geometry in an isolated test-only document, not the default scene.
+const defaultDocument=legacyEditorDocument;
+await page.evaluate(doc=>window.SimWorldEditor.loadDocument(doc),defaultDocument);
 
 const localizedCopy=await page.evaluate(()=>({
   body:document.body.textContent||'',

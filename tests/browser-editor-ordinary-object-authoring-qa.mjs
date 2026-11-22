@@ -57,7 +57,7 @@ assert.equal((await page.evaluate(()=>window.SimWorldEditor.getSession())).dirty
 
 await page.click('#ordinaryObjectCatalog [data-object-template-id="readable-book"]');
 assert.match(await page.locator('#ordinaryObjectOperation').textContent(),/地圖/);
-await page.click('[data-cell="5,2"]');
+await page.click('[data-cell="11,5"]');
 await page.waitForSelector('[data-ordinary-support-kind="furniture"][data-ordinary-support-id="diningTable"]');
 assert.match(await page.locator('#ordinaryObjectOperation').textContent(),/地面|家具/,'support-bearing placement must require an explicit support choice');
 await page.click('[data-ordinary-support-kind="furniture"][data-ordinary-support-id="diningTable"]');
@@ -82,7 +82,7 @@ let snapshot=await page.evaluate(()=>{
   };
 });
 assert.equal(snapshot.object.supportId,'diningTable');
-assert.deepEqual(snapshot.object.position,{x:5,y:2,z:0});
+assert.deepEqual(snapshot.object.position,{x:11,y:5,z:0});
 assert.deepEqual(snapshot.roundTrip,snapshot.object,'export/import serialization must retain canonical ordinary object fields');
 assert.ok(snapshot.runtimeObject,'the same authored object must compile into Preview/runtime canonical state');
 assert.equal(snapshot.dirty,true);
@@ -105,7 +105,7 @@ assert.equal(snapshot.object.supportId,undefined,'floor placement must remove th
 assert.equal(snapshot.validation.ok,true);
 
 await page.click('[data-editor-action="move-object"]');
-await page.click('[data-cell="5,2"]');
+await page.click('[data-cell="11,5"]');
 await page.waitForSelector('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
 await page.click('[data-editor-action="resolve-support"][data-support-kind="furniture"][data-support-id="diningTable"]');
 await page.waitForFunction(()=>window.SimWorldEditor.getDocument().entities.objects['readable-book-1']?.supportId==='diningTable');

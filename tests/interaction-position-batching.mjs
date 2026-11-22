@@ -40,7 +40,7 @@ st.agents.orange.offMap=true;
 const cases=[
   [{kind:'object',id:'mealTray'},'serve'],
   [{kind:'object',id:'mealTray'},'eatFrom'],
-  [{kind:'object',id:'plateB'},'eatFrom']
+  [{kind:'object',id:'legacyResourcePlateB'},'eatFrom']
 ];
 
 let standaloneCalls=0,batchedCalls=0;

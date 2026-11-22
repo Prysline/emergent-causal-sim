@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -9,9 +10,9 @@ const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
 assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
-assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(A.VERSION,'world-authoring-v25');
 
-const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 function addPot(id,maxMassKg,qualified=true){
   doc.entities.objects[id]={

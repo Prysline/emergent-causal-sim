@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -11,7 +12,7 @@ assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v2-meal-serving');
 
-const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 doc.entities.objects.potA={
   id:'potA',name:'料理鍋',icon:'🍲',portable:true,cookingEligible:true,

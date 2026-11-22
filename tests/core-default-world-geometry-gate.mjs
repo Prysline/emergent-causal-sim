@@ -1,5 +1,6 @@
 // Core Default World Redesign A/B: independent, non-canonical geometry fixtures.
 import assert from 'node:assert/strict';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 import { loadProductionBefore } from './helpers/production-loader.mjs';
 
 globalThis.window = globalThis;
@@ -25,8 +26,8 @@ const PLANS = {
       catbed: [7, 7, 'pet-bed-small'],
     },
     objects: {
-      bookA: [7, 3], mealTray: [7, 3], plateA: [7, 3],
-      plateB: [8, 4], foodPantry: [2, 4], basket: [3, 4],
+      bookA: [7, 3], mealTray: [7, 3], legacyResourcePlateA: [7, 3],
+      legacyResourcePlateB: [8, 4], foodPantry: [2, 4], basket: [3, 4],
       waterBucket: [5, 3], cupA: [8, 3], cupB: [8, 4],
       alcoholBottle: [7, 4], readyMealF0: [7, 3],
     },
@@ -45,8 +46,8 @@ const PLANS = {
       catbed: [7, 7, 'pet-bed-small'],
     },
     objects: {
-      bookA: [11, 5], mealTray: [11, 5], plateA: [11, 5],
-      plateB: [12, 6], foodPantry: [14, 2], basket: [14, 3],
+      bookA: [11, 5], mealTray: [11, 5], legacyResourcePlateA: [11, 5],
+      legacyResourcePlateB: [12, 6], foodPantry: [14, 2], basket: [14, 3],
       waterBucket: [10, 3], cupA: [12, 5], cupB: [12, 6],
       alcoholBottle: [11, 6], readyMealF0: [11, 5],
     },
@@ -58,7 +59,7 @@ const PLANS = {
 function makeCandidate(name) {
   const plan = PLANS[name];
   const isPartitioned = name === 'B';
-  const doc = A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+  const doc = legacyResourceWorld(A);
   doc.id = 'core-default-world-geometry-' + name.toLowerCase();
   doc.label = 'Core Default World geometry candidate ' + name;
   const cells = {};

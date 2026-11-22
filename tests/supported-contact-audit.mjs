@@ -18,9 +18,9 @@ E.reset(20260911);
   assert.equal(SP.CONTACT_VERSION,'11.32.0-contact-slot-corner');
   assert.equal(SP.PICKUP_INTERACTION_VERSION,'pickup-interaction-v3-movable-containment');
 
-  const tray=st.objects.mealTray,plateA=st.objects.plateA,plateB=st.objects.plateB,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
+  const tray=st.objects.mealTray,legacyResourcePlateA=st.objects.legacyResourcePlateA,legacyResourcePlateB=st.objects.legacyResourcePlateB,cupA=st.objects.cupA,cupB=st.objects.cupB,bottle=st.objects.alcoholBottle;
   for(const affordance of ['serve','eatFrom','deposit','receive'])assert.equal(tray.interactions[affordance]?.mode,'reach',`mealTray ${affordance} 必須使用物件局部 reach`);
-  for(const plate of [plateA,plateB]){
+  for(const plate of [legacyResourcePlateA,legacyResourcePlateB]){
     assert.equal(plate.interactions.pickup,undefined,`${plate.id} pickup 不得由 Contact object-type injection 持有`);
     assert.equal(plate.interactions.eatFrom?.mode,'reach',`${plate.id} eatFrom 必須保留物件局部 reach`);
   }
@@ -45,8 +45,8 @@ E.reset(20260911);
   const chair=SP.getSlot(st,'chairNW:seat');
   human.position={...chair.position};
   human.posture={kind:'sitting',slotId:chair.id,furnitureId:chair.furnitureId};
-  assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'plateA'},'pickup'),true,'seated Slot may satisfy an already-valid Surface contact stance without creating chair reach authority');
-  assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'plateB'},'pickup'),false,'the same chair stance must not reach a different Surface cell across the table');
+  assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'legacyResourcePlateA'},'pickup'),true,'seated Slot may satisfy an already-valid Surface contact stance without creating chair reach authority');
+  assert.equal(SP.isAtInteraction(st,human,{kind:'object',id:'legacyResourcePlateB'},'pickup'),false,'the same chair stance must not reach a different Surface cell across the table');
   human.position={...floor(st,6,1)};
   human.posture={kind:'standing',slotId:null,furnitureId:null};
 
@@ -63,11 +63,11 @@ E.reset(20260911);
     assert.ok(!hasNode(st,g.positions,floor(st,7,2)),`mealTray ${affordance} 不得把被餐椅占用的右側格當成人類站位`);
   }
 
-  const platePickup=SP.interactionGeometry(st,{kind:'object',id:'plateB'},human,'pickup');
+  const platePickup=SP.interactionGeometry(st,{kind:'object',id:'legacyResourcePlateB'},human,'pickup');
   assert.equal(platePickup.mode,'surfaceContact');
-  assert.ok(!hasNode(st,platePickup.positions,floor(st,7,3)),'plateB pickup 不得把 chairSE 佔用格當成人類站位');
-  assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'plateB pickup 應允許下側相鄰桌邊');
-  assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'plateB pickup 不得從餐桌另一側遠取');
+  assert.ok(!hasNode(st,platePickup.positions,floor(st,7,3)),'legacyResourcePlateB pickup 不得把 chairSE 佔用格當成人類站位');
+  assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'legacyResourcePlateB pickup 應允許下側相鄰桌邊');
+  assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'legacyResourcePlateB pickup 不得從餐桌另一側遠取');
   noIssues('geometry contract');
 }
 

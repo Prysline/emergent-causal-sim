@@ -88,7 +88,7 @@ E.reset(20260911);
 // Human meal seating likewise treats seatApproach as an ephemeral navigation witness, not the unique arrival truth.
 E.reset(20260911);
 {
-  const st=E.getState(),human=st.agents.zhen,plate=st.objects.plateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;calm(human);
+  const st=E.getState(),human=st.agents.zhen,plate=st.objects.legacyResourcePlateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;calm(human);
   const {slot,current,stale}=distinctSlotApproaches(st,human,'chairNW:seat');
   delete plate.supportId;plate.position={...current};plate.contents={food:6};human.held=plate.id;
   human.position={...current};human.posture={kind:'standing',slotId:null,furnitureId:null};
@@ -130,7 +130,7 @@ E.reset(20260911);
 // Negative control: if every meal/rest Slot has no legal approach edge, standing to eat remains valid fallback.
 E.reset(20260911);
 {
-  const st=E.getState(),human=st.agents.zhen,plate=st.objects.plateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
+  const st=E.getState(),human=st.agents.zhen,plate=st.objects.legacyResourcePlateB;st.agents.zhou.offMap=true;st.agents.orange.offMap=true;
   for(const furniture of Object.values(st.furniture))for(const slot of furniture.slots||[])if(slot.mealSeat||slot.canRest)slot.approachEdges=[];
   delete plate.supportId;plate.position={...human.position};plate.contents={food:6};human.held=plate.id;
   human.action={kind:'eat',phase:'chooseSeat',container:plate.id,started:st.tick,wait:0};

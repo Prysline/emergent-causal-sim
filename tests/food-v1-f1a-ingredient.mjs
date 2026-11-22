@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
+import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -10,7 +11,7 @@ const O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimV
 const close=(a,b,message)=>assert.ok(Math.abs(a-b)<1e-10,message+': expected '+b+', got '+a);
 
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(A.VERSION,'world-authoring-v24');
+assert.equal(A.VERSION,'world-authoring-v25');
 assert.equal(F.VERSION,'food-v2-meal-serving','Meal owner must advance only for the approved serving contract');
 assert.ok(Object.isFrozen(I.TYPES)&&Object.isFrozen(I.TYPES.A),'Type defaults must be immutable');
 assert.deepEqual(Object.keys(I.TYPES),['A'],'F1-A only introduces the approved first abstract Type');
@@ -23,7 +24,7 @@ for(const input of [
   {id:'x',typeId:'A',position:{x:3,y:2},containedBy:'basket'},
 ])assert.throws(()=>I.createIngredientObject(input),'invalid Ingredient type/quantity/placement must fail explicitly');
 
-const base=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),objects=base.entities.objects;
+const base=legacyResourceWorld(A),objects=base.entities.objects;
 const first=I.createIngredientObject({id:'ingredientA1',typeId:'A',position:{x:3,y:2,z:0}});
 const second=I.createIngredientObject({id:'ingredientA2',typeId:'A',massGrams:400,densityKgPerM3:800,position:{x:3,y:2,z:0}});
 const third=I.createIngredientObject({id:'ingredientA3',typeId:'A',position:{x:3,y:2,z:0}});
@@ -44,7 +45,7 @@ basket.objectStorage={maxItems:2,maxMassKg:.8};
 assert.equal(A.validateAuthoring(base).ok,true);
 const roundTrip=A.parseAuthoringJSON(A.serializeAuthoring(base));
 assert.deepEqual(roundTrip.entities.objects.ingredientA2,second,'authoring round-trip preserves concrete mass and density');
-assert.equal(roundTrip.authoringSchema,'world-authoring-v24');
+assert.equal(roundTrip.authoringSchema,'world-authoring-v25');
 
 function authoredReject(mutate,code){
   const doc=A.cloneAuthoring(base);mutate(doc);
