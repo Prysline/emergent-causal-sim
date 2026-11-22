@@ -1,6 +1,7 @@
 (() => {
   // Ingredient mass lives ONLY in Object.handling.massKg. No second current Food quantity.
-  const VERSION='food-ingredient-v1';
+  const VERSION='food-ingredient-v1',S=window.SimObjectStorageVolume;
+  if(S?.VERSION!=='object-storage-volume-v1')throw new Error('Ingredient requires canonical physical-volume calculator.');
   const TYPES=Object.freeze({
     A:Object.freeze({id:'A',name:'食材 A',defaultMassGrams:300,defaultDensityKgPerM3:1000})
   });
@@ -35,7 +36,7 @@
   }
   function volumeCubicMeters(object){
     assertIngredient(object);
-    return object.handling.massKg/object.ingredient.densityKgPerM3;
+    return S.physicalVolumeCubicMeters(object);
   }
   function createIngredientObject({id,typeId,massGrams:overrideMassGrams,densityKgPerM3:overrideDensity,position,containedBy,supportId}={}){
     if(typeof id!=='string'||!id.trim())throw new Error('Ingredient Object requires a nonempty id.');

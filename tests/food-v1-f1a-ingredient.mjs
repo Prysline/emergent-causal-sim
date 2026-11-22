@@ -35,6 +35,8 @@ assert.equal(second.ingredient.densityKgPerM3,800);
 assert.equal(I.massGrams(first),300);assert.equal(I.massGrams(second),400);
 close(I.volumeCubicMeters(first),.0003,'derived first volume');
 close(I.volumeCubicMeters(second),.0005,'derived density override volume');
+close(I.volumeCubicMeters(first),globalThis.SimObjectStorageVolume.physicalVolumeCubicMeters(first),'Ingredient public query delegates to same canonical physical volume');
+close(I.volumeCubicMeters(second),globalThis.SimObjectStorageVolume.physicalVolumeCubicMeters(second),'density override uses same physical-volume owner');
 assert.equal(first.ingredient.massGrams,undefined,'no writable duplicate Ingredient grams');
 assert.equal(first.ingredient.massKg,undefined,'no writable duplicate Ingredient kilograms');
 assert.equal(first.massGrams,undefined,'no top-level duplicate Ingredient mass');
