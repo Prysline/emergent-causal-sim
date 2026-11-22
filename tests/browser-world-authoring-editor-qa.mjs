@@ -66,12 +66,15 @@ assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snap
 
 // The Editor must initially load the one canonical production B scene.
 const canonicalBDefault=snapshot.document;
-assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v26');
+assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v27');
 assert.equal(canonicalBDefault.map.width,16);
 assert.equal(canonicalBDefault.map.height,10);
 assert.equal(canonicalBDefault.doors.bedroomDoor.boundary.id,'h:6,5');
 assert.ok(canonicalBDefault.entities.objects.plateA?.objectContainment);
 assert.ok(canonicalBDefault.entities.objects.plateB?.objectContainment);
+assert.equal(canonicalBDefault.entities.objects.basketA?.resourceContainer,undefined);
+assert.equal(canonicalBDefault.entities.objects.basketA?.objectStorage?.capacityCubicMeters,.024);
+assert.equal(canonicalBDefault.furniture.pantryA?.definitionId,'cabinet-tall');
 assert.equal(canonicalBDefault.entities.objects.legacyResourcePlateA,undefined);
 assert.equal(canonicalBDefault.entities.objects.legacyResourcePlateB,undefined);
 const bPreviewPreflight=await page.evaluate(()=>window.SimEditorPreviewBridge.preflight(window.SimWorldEditor.getDocument()));

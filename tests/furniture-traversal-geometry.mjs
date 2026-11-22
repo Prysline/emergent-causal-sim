@@ -12,7 +12,7 @@ const D=globalThis.SimFurnitureDefinitions,E=globalThis.SimEngine,SP=globalThis.
 const local=(x,y,z=0)=>({x,y,z});
 const floor=(st,x,y)=>SP.normalizeNode(st,{x,y},'floor');
 
-assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
+assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
 
 const invalidLegacyDefinition={
   id:'invalid-legacy',

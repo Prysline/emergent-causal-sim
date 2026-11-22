@@ -23,6 +23,7 @@ for(const relativePath of scripts){
   assert.doesNotThrow(()=>readRepoFile(relativePath),'production source must exist: '+relativePath);
 }
 
+const storageVolumeIndex=indexOf('src/object-storage-volume.js');
 const furnitureDefinitionsIndex=indexOf('src/furniture-definitions.js');
 const horizontalGeometryIndex=indexOf('src/horizontal-geometry.js');
 const authoringIndex=indexOf('src/world-authoring.js');
@@ -58,7 +59,7 @@ const uiIndex=indexOf('src/ui/core.js');
 const labelsIndex=indexOf('src/ui/labels.js');
 const bootstrapIndex=indexOf('src/app/bootstrap.js');
 
-assert.ok(furnitureDefinitionsIndex<horizontalGeometryIndex&&horizontalGeometryIndex<authoringIndex,'pure horizontal geometry must load after Furniture geometry helpers and before world-authoring.js');
+assert.ok(storageVolumeIndex<furnitureDefinitionsIndex&&furnitureDefinitionsIndex<horizontalGeometryIndex&&horizontalGeometryIndex<authoringIndex,'pure horizontal geometry must load after Furniture geometry helpers and before world-authoring.js');
 const horizontalGeometrySource=readRepoFile('src/horizontal-geometry.js');
 assert.doesNotMatch(horizontalGeometrySource,/SimWorld|SimSpatial|SimEngine|SimLocomotion|SimCrowding|\.agents\b/,'shared horizontal geometry kernel must not depend on runtime mutable state or Agent state');
 assert.ok(authoringIndex<capabilityIndex&&capabilityIndex<initializerIndex&&initializerIndex<standingInitializerIndex&&standingInitializerIndex<worldIndex,'shared capabilities and Standing Responsibility authoring projection must load deterministically before world.js');
@@ -220,7 +221,7 @@ const C=globalThis.SimCrowding;
 const V=globalThis.SimValidator;
 const E=globalThis.SimEngine;
 
-assert.equal(FD.VERSION,'furniture-definitions-v14-kitchen');
+assert.equal(FD.VERSION,'furniture-definitions-v15-storage-volume');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'production composition must consume the canonical current World Authoring generation without duplicating its literal');
 assert.equal(A.FURNITURE_CATALOG_VERSION,FD.VERSION);
 assert.equal(EC.VERSION,'embodiment-capabilities-v5');
