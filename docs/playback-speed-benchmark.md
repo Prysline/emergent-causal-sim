@@ -27,21 +27,17 @@ node tests/browser-autoplay-speed-benchmark.mjs --ticks=720 --intervals=700,350 
 
 These longer runs may be expensive; no CI throughput guarantee is implied. Use matching hardware and browser environments for comparisons. The Benchmark runs as an **opt-in, non-gating job** within the existing Browser regression workflow. The original 20 Browser matrix cases and canonical Node regression remain intact.
 
-## GitHub Actions (opt-in Browser workflow job)
+## GitHub Actions (manual-only, non-gating)
 
-The canonical `.github/workflows/browser-regression.yml` retains its existing 20-case Browser matrix and also provides an isolated, **non-gating** `playback-benchmark` job. The benchmark runs automatically only for pull requests whose source branch begins `chore/playback-speed-benchmark-`, including PR #251. Regular PRs do not run this additional job.
+The canonical `.github/workflows/browser-regression.yml` keeps its existing 20 Browser matrix cases and the separate, non-gating `playback-benchmark` job. **No pull request, push, or routine system change automatically executes this potentially long benchmark**. A normal pull request still runs the existing Browser matrix and Node regression as before.
 
-It measures the default 10 full ticks for each of `700,350,175,87.5` ms, with and without the Agent Inspector. This is a measurement, not a pass/fail threshold for target speed. The runner uses Node.js 22, Playwright 1.55.0, Chromium and the existing local HTTP server. Its `continue-on-error` setting means a Benchmark failure cannot replace the canonical Node/Browser Merge Gate; inspect its own job logs and artifact rather than inferring success from the workflow summary alone.
+After the workflow configuration has been merged into the repository's **default branch**, go to **Actions → Browser regression → Run workflow**, select the branch/commit to measure, enable `playback_benchmark` and choose `ticks` (`10`, `100`, or `720`), `intervals` and `selection`. With `playback_benchmark=true`, **only the Benchmark job runs**; the regular 20 Browser matrix suites are skipped. Leave the option disabled to invoke only the normal Browser suites.
 
-Open the **Browser regression** workflow run under GitHub Actions, select the **Opt-in full-render autoplay measurement (non-gating)** job and download the `browser-playback-speed-benchmark-<run-id>-<attempt>` artifact. It contains `result.json` when measurement completes and `ci.log` even if the measurement fails.
+The benchmark measures complete ticks and per-tick full `render()` with no time skipping. Its usual 10-tick profile covers `700,350,175,87.5` ms intervals, both with and without Agent Inspector selection. The runner uses Node.js 22, Playwright 1.55.0, Chromium and the usual local HTTP server. `continue-on-error` means a measurement failure is not a mandatory Merge Gate failure; always inspect its own logs and artifacts.
 
-Once these changes are on the repository's default branch, choose **Actions → Browser regression → Run workflow**, enable `playback_benchmark` and select `ticks` (`10`, `100`, `720`), `intervals`, and `selection`. Before merge, the PR-specific branch trigger is the way to run the benchmark on this head.
+In the run, select the **Opt-in full-render autoplay measurement (non-gating)** job and download `browser-playback-speed-benchmark-<run-id>-<attempt>`. It contains `result.json` if measurement completes and `ci.log` even on failure. The initial Benchmark result from Draft PR #251 was gathered under an earlier PR-triggered exploratory configuration; that historical artifact remains valid evidence, but **the new manual-only CI routing cannot be exercised in GitHub Actions until its workflow is registered on `main`**.
 
-These figures describe GitHub-hosted runner throughput, not player device performance or a guarantee of visibly painted frames.
-
-## Inspector cost boundary
-
-When an Agent is displayed in readable **Resident** mode, heavy current-derived Intent / Sleep conflict Debug diagnostics are deferred. Switching to **Debug** immediately refreshes them against the current canonical state and keeps them updated each tick while Debug is visible. No extra World / Agent-private state cache or gameplay decision is introduced. This optimization targets invisible Debug work; Debug mode itself may still be expensive. Compare the same seed, case order and runner conditions when assessing before/after playback speed.
+The separate [Inspector optimization PR #253](https://github.com/Prysline/emergent-causal-sim/pull/253) handles deferred hidden Debug diagnostics; it is not part of this Benchmark tooling PR. Compare same seed, scenario, case order and runner conditions when evaluating before/after results. GitHub-hosted runner throughput does not establish player device performance or guarantee visible display paint.
 
 ## Output and interpretation
 
