@@ -9,20 +9,20 @@ const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCookin
 const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
-assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
-assert.equal(A.VERSION,'world-authoring-v26');
+assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
+assert.equal(A.VERSION,'world-authoring-v27');
 
 const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
-function addPot(id,maxMassKg,qualified=true){
+function addPot(id,capacityCubicMeters,qualified=true){
   doc.entities.objects[id]={
     id,name:'容器'+id,icon:'🍲',portable:true,cookingEligible:qualified,
-    objectContainment:true,objectStorage:{maxItems:1,maxMassKg},
+    objectContainment:true,objectStorage:{capacityCubicMeters},
     handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
     position:{x:3,y:4,z:0},supportId:'stoveA'
   };
 }
-addPot('potA',.2);addPot('potB',.6);addPot('potC',.6,false);
+addPot('potA',.0002);addPot('potB',.0006);addPot('potC',.0006,false);
 doc.entities.objects.ingredientA1=I.createIngredientObject({id:'ingredientA1',typeId:'A',position:{x:3,y:4,z:0},supportId:'stoveA'});
 delete doc.entities.objects.readyMealF0;
 doc.residents.zhen.initial.placement={mode:'exact',node:{x:3,y:3,z:0}};

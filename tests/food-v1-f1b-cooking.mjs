@@ -7,11 +7,11 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring;
 const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCooking;
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator,D=globalThis.SimFurnitureDefinitions;
-assert.equal(C.VERSION,'food-cooking-v2-autonomous-ingredient-acquisition');
+assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(F.VERSION,'food-v2-meal-serving');
-assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
-assert.equal(A.VERSION,'world-authoring-v26','current Cooking authoring schema is the explicitly advanced v23');
+assert.equal(F.VERSION,'food-v3-meal-volume');
+assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
+assert.equal(A.VERSION,'world-authoring-v27','current Cooking authoring schema is the explicitly advanced v23');
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
@@ -22,7 +22,7 @@ doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},
 doc.furniture.counterA={id:'counterA',definitionId:'kitchen-counter',origin:{x:3,y:5,z:0},orientation:'south'};
 doc.entities.objects.potA={
   id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,
-  objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.6},
+  objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
   handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
   position:{x:3,y:4,z:0},supportId:'stoveA'
 };

@@ -19,7 +19,7 @@ const initial=await page.evaluate(()=>{
   delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
     id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
-    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
+    objectContainment:true,objectStorage:{capacityCubicMeters:.00012},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:11,y:5,z:0},supportId:'diningTable',
     interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}
@@ -87,7 +87,7 @@ const execution=await page.evaluate(()=>{
   delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
     id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
-    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
+    objectContainment:true,objectStorage:{capacityCubicMeters:.00012},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:11,y:5,z:0},supportId:'diningTable',
     interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}

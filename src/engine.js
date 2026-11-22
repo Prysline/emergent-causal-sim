@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v3-object-storage-volume')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
   const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Engine requires Character Traits contract.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6,CARRY_RECOVERY_RETRY_TICKS=2;
