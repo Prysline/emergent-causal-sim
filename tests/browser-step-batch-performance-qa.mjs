@@ -38,12 +38,30 @@ await page.addInitScript(()=>{
   };
 });
 
+await page.route('**/src/validation/registry.js',async route=>{
+  const response=await route.fetch();
+  let body=await response.text();
+  const baseAnchor='let result=validateBaseState(st);';
+  const layerAnchor='const next=layer.handler(st,result);';
+  if(!body.includes(baseAnchor)||!body.includes(layerAnchor))throw new Error('validation attribution registry instrumentation anchor missing');
+  body=body.replace(baseAnchor,"const __vProbe=globalThis.__stepBatchValidationProbe;\n    let result=__vProbe?__vProbe.measure('base','validateBaseState',()=>validateBaseState(st)):validateBaseState(st);");
+  body=body.replace(layerAnchor,"const next=__vProbe?__vProbe.measure('layer',layer.id,()=>layer.handler(st,result)):layer.handler(st,result);");
+  await route.fulfill({response,body});
+});
+
 await page.route('**/src/ui/core.js',async route=>{
   const response=await route.fetch();
   let body=await response.text();
   const anchor="function stepOne(){E.tick();render();}";
   if(!body.includes(anchor))throw new Error('autoplay performance stepOne instrumentation anchor missing');
   body=body.replace(anchor,"function stepOne(){const __start=performance.now();try{E.tick();render();}finally{const __tick=E.getState()?.tick??null;globalThis.__stepBatchStepOneProbe?.(__start,performance.now(),__tick);if(globalThis.__stepBatchAutoplayTargetTick&&__tick>=globalThis.__stepBatchAutoplayTargetTick)queueMicrotask(()=>document.getElementById('play')?.click());}}");
+  const renderAnchor='function render(){const s=st(),validationSnapshot=validation();normalizeCurrentZ();';
+  const stageAnchor='renderLayerControl();renderBadges(validationSnapshot);renderMap();renderActions();renderTimeline();renderInspector(validationSnapshot);}';
+  if(!body.includes(renderAnchor)||!body.includes(stageAnchor))throw new Error('render attribution instrumentation anchor missing');
+  body=body.replace(renderAnchor,
+    "function __profileRenderStage(name,callback){const probe=globalThis.__stepBatchRenderProbe;return probe?probe.measure(name,callback):callback();}\n  function render(){const s=st(),validationSnapshot=__profileRenderStage('validation',validation);normalizeCurrentZ();");
+  body=body.replace(stageAnchor,
+    "__profileRenderStage('layerControl',renderLayerControl);__profileRenderStage('badges',()=>renderBadges(validationSnapshot));__profileRenderStage('map',renderMap);__profileRenderStage('actions',renderActions);__profileRenderStage('timeline',renderTimeline);__profileRenderStage('inspector',()=>renderInspector(validationSnapshot));}");
   await route.fulfill({response,body});
 });
 
@@ -90,10 +108,13 @@ async function installInstrumentation(){
     if(!E||!SP||!V)throw new Error('step batch perf instrumentation requires runtime globals');
     if(window.__stepBatchPerf)return;
 
-    let phase='outsideTick',activeTickOrdinal=null;
+    let phase='outsideTick',activeTickOrdinal=null,activeRenderStage=null,activeValidationStage=null;
     const data={
       ticks:[],
       queries:{},
+      queryAttribution:{},
+      renderStages:{},
+      validationStages:{},
       domWrites:{},
       longTasks:[],
       longTaskSupported:false,
@@ -118,7 +139,26 @@ async function installInstrumentation(){
         tick.totalMs+=duration;
         tick.maxMs=Math.max(tick.maxMs,duration);
       }
+      if(store===data.queries){
+        const origin=activeValidationStage?'validation/'+activeValidationStage:
+          activeRenderStage?'render/'+activeRenderStage:phase;
+        record(data.queryAttribution,name+'|'+origin,duration);
+      }
     }
+    function measureStage(store,name,callback,kind){
+      const previous=kind==='render'?activeRenderStage:activeValidationStage;
+      if(kind==='render')activeRenderStage=name;
+      else activeValidationStage=name;
+      const start=performance.now();
+      try{return callback();}
+      finally{
+        if(kind==='render')activeRenderStage=previous;
+        else activeValidationStage=previous;
+        record(store,name,performance.now()-start);
+      }
+    }
+    window.__stepBatchRenderProbe={measure:(name,callback)=>measureStage(data.renderStages,name,callback,'render')};
+    window.__stepBatchValidationProbe={measure:(kind,id,callback)=>measureStage(data.validationStages,kind+':'+id,callback,'validation')};
     function wrap(target,name,label){
       const original=target?.[name];
       if(typeof original!=='function')return;
@@ -193,6 +233,9 @@ async function installInstrumentation(){
       reset(){
         data.ticks.length=0;
         clearStore(data.queries);
+        clearStore(data.queryAttribution);
+        clearStore(data.renderStages);
+        clearStore(data.validationStages);
         clearStore(data.domWrites);
         data.longTasks.length=0;
         data.stepOne.length=0;
@@ -203,6 +246,9 @@ async function installInstrumentation(){
         return {
           ticks:data.ticks.map(x=>({...x})),
           queries:structuredClone(data.queries),
+          queryAttribution:structuredClone(data.queryAttribution),
+          renderStages:structuredClone(data.renderStages),
+          validationStages:structuredClone(data.validationStages),
           domWrites:structuredClone(data.domWrites),
           longTasks:data.longTasks.map(x=>({...x})),
           longTaskSupported:data.longTaskSupported,
@@ -385,6 +431,42 @@ try{
     'opening an Agent Inspector must remain simulation-state inert during one step'
   );
 
+  // These test-only timers identify cost ownership; nested Spatial timings are inclusive
+  // and must not be added to their enclosing Validation / Rendering stage totals.
+  for(const [caseId,result] of Object.entries(results)){
+    const metrics=result.metrics,renderCount=result.mode==='tenSingles'?10:1;
+    for(const name of ['validation','layerControl','badges','map','actions','timeline','inspector']){
+      assert.equal(metrics.renderStages?.[name]?.calls,renderCount,caseId+' must attribute each render stage exactly once');
+    }
+    assert.equal(metrics.validationStages?.['base:validateBaseState']?.calls,renderCount,
+      caseId+' must attribute each canonical base validation');
+    const layers=Object.entries(metrics.validationStages||{}).filter(([name])=>name.startsWith('layer:'));
+    assert.ok(layers.length>0&&layers.every(([,item])=>item.calls===renderCount),
+      caseId+' must attribute every registered validation layer for each full render');
+    for(const [name,item] of Object.entries(metrics.queries)){
+      const attributed=Object.entries(metrics.queryAttribution||{}).filter(([key])=>key.startsWith(name+'|'))
+        .reduce((n,[,entry])=>n+entry.calls,0);
+      assert.equal(attributed,item.calls,caseId+' must preserve query ownership counts for '+name);
+    }
+  }
+  const compactCosts=result=>({
+    render:Object.fromEntries(Object.entries(result.metrics.renderStages).map(([name,row])=>
+      [name,{calls:row.calls,totalMs:row.totalMs}])),
+    validationTop:Object.entries(result.metrics.validationStages)
+      .sort((a,b)=>b[1].totalMs-a[1].totalMs).slice(0,8)
+      .map(([name,row])=>({name,calls:row.calls,totalMs:row.totalMs})),
+    queryOriginsTop:Object.entries(result.metrics.queryAttribution)
+      .sort((a,b)=>b[1].totalMs-a[1].totalMs).slice(0,10)
+      .map(([name,row])=>({name,calls:row.calls,totalMs:row.totalMs}))
+  });
+  const attributionSummary={
+    tenSinglesNone:compactCosts(results.tenSingles_none),
+    tenSinglesAgent:compactCosts(results.tenSingles_agent),
+    batch10None:compactCosts(results.batch10_none),
+    batch10Agent:compactCosts(results.batch10_agent)
+  };
+  console.log('STEP_BATCH_COST_ATTRIBUTION '+JSON.stringify(attributionSummary));
+
   const queryPhaseCalls=(result,name,phase)=>result.metrics.queries?.[name]?.byPhase?.[phase]?.calls??0;
   assert.equal(queryPhaseCalls(results.single_none,'SimValidator.validateState','outsideTick'),1,'one no-selection render must validate exactly once');
   assert.equal(queryPhaseCalls(results.single_agent,'SimValidator.validateState','outsideTick'),1,'opening Agent Inspector must not add a second validation pass');
@@ -460,6 +542,8 @@ try{
 
   const report={
     generatedAt:new Date().toISOString(),
+    attributionMethod:'Test-only interceptors measure base/layer Validation and synchronous render stages. Spatial queries are attributed to the innermost active Validation stage or render stage; nested durations are inclusive and must not be added to parent totals. Browser frame opportunity is not actual screen presentation.',
+    attributionSummary,
     note:'Surface traversal still requires zero repeated traversalFeasibility work for the same directed edge within one Route search. The default Meal changes valid Action candidates; exact inside-tick query counts are diagnostics, not story-dependent release literals. The established route-query cost envelope is at most 26 inside the seeded 10-tick fixture, with Inspector/step-mode query parity and a bounded batched traversal/render workload. Aggregate traversalFeasibility/getPassageProfile counts remain logged for investigation and comparison after legitimate semantic changes. Existing responsiveness gates remain required and wall-clock remains secondary and runner-dependent.',
     cases:Object.fromEntries(Object.entries(results).map(([name,result])=>[name,reportCase(result)])),
     autoplay:Object.fromEntries(Object.entries(autoplayResults).map(([name,result])=>[name,{
