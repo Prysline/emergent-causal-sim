@@ -5,7 +5,7 @@
   }
   if(!M?.moveObject)throw new Error('SimEditorAuthoringMutations must load before editor-ordinary-object-authoring.js.');
 
-  const VERSION='editor-ordinary-object-authoring-v3';
+  const VERSION='editor-ordinary-object-authoring-v4';
   const clone=value=>A.cloneAuthoring(value);
   const samePosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
   const issue=(code,message,data={})=>({code,message,...data});
@@ -21,9 +21,18 @@
         name:'一本書',
         icon:'📖',
         portable:true,
-        handling:Object.freeze({carryGeometry:Object.freeze({width:.22,height:.04,length:.30}),handsRequired:1}),
+        handling:Object.freeze({carryGeometry:Object.freeze({width:.22,height:.04,length:.30}),handsRequired:1,massKg:.5}),
+        physicalVolumeCubicMeters:.00264,
         affordances:Object.freeze(['read']),
         interactions:Object.freeze({read:Object.freeze({mode:'supportReach'})})
+      })
+    }),
+    'physical-basket':Object.freeze({
+      id:'physical-basket',label:'搬運籃（普通物件）',icon:'🧺',instanceIdBase:'physical-basket',
+      authored:Object.freeze({
+        name:'搬運籃',icon:'🧺',portable:true,objectContainment:true,
+        objectStorage:Object.freeze({capacityCubicMeters:.024}),physicalVolumeCubicMeters:.004,
+        handling:Object.freeze({carryGeometry:Object.freeze({width:.55,height:.30,length:.40}),handsRequired:2,massKg:.8})
       })
     })
   });

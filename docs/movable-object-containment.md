@@ -1,5 +1,7 @@
 # Movable Object Containment v1 — canonical Object cargo
 
+> **Introduced-in historical contract.** The `maxItems/maxMassKg` capacity described below reflects v1 at merge time and is **not** current runtime semantics. R2 replaces it with physical volume for both portable Object and fixed Furniture; see [current Object Storage Volume R2](object-storage-volume.md).
+
 Status: merged into `main` by PR #240 (squash commit `1d26f8c935a9293751b40e849c31f07d088d6148`); authoritative runtime contract verified by PR exact-head and post-merge Node regressions.
 
 ## Ownership and schema

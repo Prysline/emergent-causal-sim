@@ -7,9 +7,9 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring;
 const F=globalThis.SimFood,I=globalThis.SimIngredient,O=globalThis.SimObjectHandling;
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator;
-assert.equal(F.VERSION,'food-v2-meal-serving');
-assert.equal(O.VERSION,'object-handling-v3-meal-mass-projection');
-assert.equal(A.VERSION,'world-authoring-v26');
+assert.equal(F.VERSION,'food-v3-meal-volume');
+assert.equal(O.VERSION,'object-handling-v4-storage-volume');
+assert.equal(A.VERSION,'world-authoring-v27');
 assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v1','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){
@@ -17,7 +17,7 @@ function fixture({cooking=false}={}){
   // Exercise the production B serving plate; narrow the physical capacity
   // only for this independent capacity regression fixture.
   delete doc.entities.objects.plateB;
-  doc.entities.objects.plateA.objectStorage.maxMassKg=.12;
+  doc.entities.objects.plateA.objectStorage.capacityCubicMeters=.00012;
   if(cooking){
     delete doc.entities.objects.readyMealF0;
     // Cooking fixture uses the canonical B kitchen instead of relocating its stove.
@@ -85,14 +85,16 @@ function eventAncestors(st,id,visited=new Set()){
   assert.equal(F.remainingGrams(meal),180);
   assert.equal(O.objectStorageStatus(st,plate).count,1);
   assert.equal(O.objectStorageStatus(st,plate).massKg,.12);
+  assert.ok(Math.abs(O.objectStorageStatus(st,plate).volumeCubicMeters-.00012)<1e-12);
   assert.equal(E.foodStock(),stock,'legacy Resource stock must not change after serving');
   assert.equal(F.serveMeal(st,meal.id,plate.id,20,'portion-B').served,false,'no second Meal in a one-item plate');
   assert.equal(F.consumeMeal(st,portion.id,50).actualIntakeGrams,50);
   assert.ok(Math.abs(O.objectStorageStatus(st,plate).massKg-.07)<1e-9,'cargo load follows consumed grams');
+  assert.ok(Math.abs(O.objectStorageStatus(st,plate).volumeCubicMeters-.00007)<1e-12,'occupied volume follows the same grams and density');
   assert.equal(F.remainingGrams(meal)+F.remainingGrams(portion),250,'serving + eating conserve canonical mass');
   assert.deepEqual(issues(),[]);
   const originalContainer=portion.containedBy;
-  portion.containedBy='legacyResourceBasket';
+  portion.containedBy='basketA';
   assert.equal(F.servingPlateForMeal(st,portion),null);
   assert.equal(P.classifyObjectPointVisualAvailability(st,st.agents.zhen,portion).visualAvailable,false);
   assert.equal(SP.interactionGeometry(st,{kind:'object',id:portion.id},st.agents.zhen,'eatFrom').positions.length,0);

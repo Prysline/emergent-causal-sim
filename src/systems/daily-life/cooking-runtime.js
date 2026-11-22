@@ -1,6 +1,6 @@
 (() => {
   const E=window.SimEngine,C=window.SimFoodCooking,P=window.SimPerception,SP=window.SimSpatial;
-  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition'||!P?.classifyObjectPointVisualAvailability||!P?.lacksVisualPoseEnvelopeForSupportedLocomotion||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
+  if(!E?.registerDecisionOptionProvider||C?.VERSION!=='food-cooking-v3-object-storage-volume'||!P?.classifyObjectPointVisualAvailability||!P?.lacksVisualPoseEnvelopeForSupportedLocomotion||!SP?.bestInteractionPositionResult)throw new Error('Cooking runtime requires canonical Engine, Food, Perception and Spatial contracts.');
   function candidate(st,a,ingredient,station,pot){
     const context=C.eligible(st,ingredient.id,station.id,{potId:pot.id});
     if(!context||context.location!=='exposed')return null;

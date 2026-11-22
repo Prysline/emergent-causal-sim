@@ -3,13 +3,13 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js']){
+for(const file of ['object-storage-volume.js','furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer,W=globalThis.SimWorld;
 const TEST_VERSION='world-authoring-fixture-version';
-assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
+assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
 assert.equal(A.VERSION,'world-authoring-v16');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
@@ -89,7 +89,7 @@ assert.equal(st.map.roomRevision,0);
 assert.equal(st.map.passageConstraints,undefined);
 
 const serialized=A.serializeAuthoring(authored);
-assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v14-kitchen"/);
+assert.match(serialized,/"furnitureCatalogVersion": "furniture-definitions-v15-storage-volume"/);
 assert.match(serialized,/"definitionId": "chair-basic"/);
 assert.ok(!serialized.includes('"restQuality"')&&!serialized.includes('"sleepQuality"')&&!serialized.includes('"mealSeat"'),'legacy activity fields must not serialize in v6');
 assert.ok(serialized.includes('"orientation": "north"'),'v6 Furniture Instances must serialize authored orientation');

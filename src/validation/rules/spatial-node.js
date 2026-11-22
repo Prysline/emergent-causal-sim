@@ -40,6 +40,7 @@
           if(entity.id===id)add('contained_object_self','Object cannot contain itself.',{entityId:entity.id});
           if(entity.objectContainment===true||entity.resourceContainer===true)add('contained_object_nested_unsupported','Movable containment v1 cannot hold nested/container Objects.',{entityId:entity.id});
           try{window.SimObjectHandling.cargoMassKg(entity);}catch(error){add('contained_object_mass_invalid',error.message,{entityId:entity.id});}
+          try{window.SimObjectStorageVolume.physicalVolumeCubicMeters(entity);}catch(error){add('contained_object_volume_invalid',error.message,{entityId:entity.id});}
         }
         continue;
       }
@@ -54,13 +55,22 @@
         }
       }
     }
+    for(const entity of Object.values(st?.objects||{})){
+      if(entity.physicalVolumeCubicMeters!==undefined
+        &&(!window.SimObjectStorageVolume.positive(entity.physicalVolumeCubicMeters)
+          ||entity.ingredient!==undefined||entity.meal!==undefined))
+        add('object_physical_volume_invalid','Object physical volume must be positive and cannot duplicate Ingredient/Meal density derivation.',{entityId:entity.id});
+      if(entity.objectStorage!==undefined&&entity.objectContainment!==true)
+        add('contained_object_storage_invalid','Object Storage requires explicit containment capability.',{containerId:entity.id});
+    }
     const handling=window.SimObjectHandling;
-    for(const container of Object.values(st?.objects||{})){
+    for(const container of [...Object.values(st?.objects||{}),...Object.values(st?.furniture||{})]){
       if(container.objectContainment!==true)continue;
       try{
-        if(!handling?.objectStorageStatus)throw new Error('Missing canonical Object storage resolver.');
+        if(!handling?.objectStorageStatus)throw new Error('Missing canonical Object Storage resolver.');
         const status=handling.objectStorageStatus(st,container);
-        if(!status.withinCapacity)add('contained_object_capacity_exceeded','Movable Object contents exceed maxItems or maxMassKg.',{containerId:container.id,count:status.count,massKg:status.massKg});
+        if(!status.withinCapacity)add('contained_object_capacity_exceeded','Object Storage physical volume exceeded.',{
+          containerId:container.id,volumeCubicMeters:status.volumeCubicMeters,capacityCubicMeters:status.capacityCubicMeters});
       }catch(error){add('contained_object_storage_invalid',error.message,{containerId:container.id});}
     }
     for(const f of Object.values(st?.furniture||{})){

@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v2-autonomous-ingredient-acquisition')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v3-object-storage-volume')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
   const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Engine requires Character Traits contract.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6,CARRY_RECOVERY_RETRY_TICKS=2;
@@ -115,10 +115,8 @@
   function containHeldObject(aOrId,targetId){
     const a=typeof aOrId==='string'?state.agents?.[aOrId]:aOrId,object=a?.held&&state.objects?.[a.held],target=SP.objectContainerTarget(state,targetId);
     if(!a||!object||!target||target.entity.objectContainment!==true)return false;
-    if(target.kind==='object'){
-      if(holderOf(target.id)||reservationOwner('object:'+target.id)?.id&&reservationOwner('object:'+target.id).id!==a.id)return false;
-      if(!O.objectStorageLegality(state,target.id,object.id))return false;
-    }
+    if(target.kind==='object'&&(holderOf(target.id)||reservationOwner('object:'+target.id)?.id&&reservationOwner('object:'+target.id).id!==a.id))return false;
+    if(!O.objectStorageLegality(state,target.id,object.id))return false;
     if(!SP.isAtInteraction?.(state,a,{kind:target.kind,id:target.id},target.kind==='object'?'receive':'default'))return false;
     delete object.position;delete object.supportId;object.containedBy=target.id;a.held=null;return true;
   }

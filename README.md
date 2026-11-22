@@ -2,9 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.77.0-food-legacy-default-isolation`。
+目前 runtime marker：`11.78.0-object-storage-volume`。
 
-Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource Food 模型在 base authoring 保留 `legacyResource*` 身分供遷移與追溯，但正式 Editor 新增目錄已移除四個舊 Food presets；水／酒 Resource presets 仍可用。舊 Food amount-based production paths 待後續 R5 退役，不再接受功能擴張。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。實體籃子、體積容量、off-map 食材補給與自主供餐屬後續 slices。
+Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource Food 模型在 base authoring 保留 `legacyResource*` 身分供遷移與追溯，但正式 Editor 新增目錄已移除四個舊 Food presets；水／酒 Resource presets 仍可用。舊 Food amount-based production paths 待後續 R5 退役，不再接受功能擴張。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。R2 已建立普通搬運籃、固定食材櫃及物理體積容量；off-map 食材補給與完整自主供餐仍屬後續 R3／R4。
 
 Logistics carrier drop lifecycle：當實際 completed movement edge 產生合法 `containerDrop`，依賴該容器的 `restockContainer`／`externalSupply` 會在同一 tick 經既有 abort lifecycle 中止，並讓中止 World Event 引用掉落事件；實際掉落位置、剩餘內容物及已確定發生的事件不回滾。意外掉落機率與其他 Action 不因此改變。
 
@@ -26,7 +26,9 @@ Food v1 Slice F1-B1：新增 kitchen gas-stove、kitchen-counter Furniture 與�
 
 Food v1 Slice F1-A：每份完整 Ingredient 是獨立 Object；Ingredient Type A 在建立時固定預設質量／有效密度，唯一實際物理質量放在 `handling.massKg`，公克與體積由 query-time 推導。沿用既有可搬運容器與 Engine 的放入、拿取、負重、Spatial；未加入 Cooking／Meal 盛盤、外出補給食材化或移除 `contents.food`。詳見 [`docs/food-v1-f1a-ingredient.md`](docs/food-v1-f1a-ingredient.md)。
 
-Movable Object Containment v1：普通 Object 繼續使用唯一 `containedBy` 關係，可指向明確 opt-in 的可攜 Object 容器；容器不保存第二份子物件清單。既有 Spatial、Object Handling、Engine、Resources、Inspector 共同消費此狀態，並以 `objectStorage.maxItems / maxMassKg` 和已確立的普通 Object `handling.massKg` 做有界承載／派生負重。Food／Meal 的質量適配、巢狀容器與散落物理維持後續 Gate。詳見 [`docs/movable-object-containment.md`](docs/movable-object-containment.md)。
+Object Storage Volume R2（current）：單一 `SimObjectStorageVolume` 從 Ingredient 質量／密度、Meal 可食公克／有效密度或一般 Object 的 `physicalVolumeCubicMeters` 派生物件物理體積；可搬普通籃子與固定 Furniture 共用 `objectStorage.capacityCubicMeters` 合法性，只由子物件 `containedBy` 追蹤存放。 `maxMassKg/maxItems` 不再是 Storage 容量 gate，質量仍派生供搬運；無 3D packing、巢狀容器或舊 Food Resource 擴張。詳見 [`docs/object-storage-volume.md`](docs/object-storage-volume.md)。
+
+Historical Movable Object Containment v1：普通 Object 繼續使用唯一 `containedBy` 關係，可指向明確 opt-in 的可攜 Object 容器；容器不保存第二份子物件清單。既有 Spatial、Object Handling、Engine、Resources、Inspector 共同消費此狀態，並以 `objectStorage.maxItems / maxMassKg` 和已確立的普通 Object `handling.massKg` 做有界承載／派生負重。Food／Meal 的質量適配、巢狀容器與散落物理維持後續 Gate。詳見 [`docs/movable-object-containment.md`](docs/movable-object-containment.md)。
 
 Food v1 Slice F0：ready-to-eat Meal Object 以公克為唯一剩餘可食庫存；既有 `eat` Action 每有效 tick 攝取最多 50g，按真實攝取量降低 Hunger（0.08/g），與 legacy `contents.food` Resource amount 嚴格分離。詳見 [`docs/food-v1-f0.md`](docs/food-v1-f0.md)。
 

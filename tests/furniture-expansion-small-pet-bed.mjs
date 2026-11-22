@@ -21,7 +21,7 @@ const compile=authoring=>{
   return st;
 };
 
-assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
+assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
 assert.equal(A.FURNITURE_CATALOG_VERSION,D.VERSION);
 
 const definition=D.getDefinition('pet-bed-small');

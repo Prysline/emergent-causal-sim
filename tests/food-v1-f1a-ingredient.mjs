@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import {loadProductionBefore} from './helpers/production-loader.mjs';
-import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
@@ -11,8 +10,8 @@ const O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimV
 const close=(a,b,message)=>assert.ok(Math.abs(a-b)<1e-10,message+': expected '+b+', got '+a);
 
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(A.VERSION,'world-authoring-v26');
-assert.equal(F.VERSION,'food-v2-meal-serving','Meal owner must advance only for the approved serving contract');
+assert.equal(A.VERSION,'world-authoring-v27');
+assert.equal(F.VERSION,'food-v3-meal-volume','Meal owner must advance only for the approved serving contract');
 assert.ok(Object.isFrozen(I.TYPES)&&Object.isFrozen(I.TYPES.A),'Type defaults must be immutable');
 assert.deepEqual(Object.keys(I.TYPES),['A'],'F1-A only introduces the approved first abstract Type');
 for(const input of [
@@ -21,10 +20,10 @@ for(const input of [
   {id:'x',typeId:'A',massGrams:3.5,position:{x:3,y:2}},
   {id:'x',typeId:'A',densityKgPerM3:0,position:{x:3,y:2}},
   {id:'x',typeId:'A',densityKgPerM3:Infinity,position:{x:3,y:2}},
-  {id:'x',typeId:'A',position:{x:3,y:2},containedBy:'legacyResourceBasket'},
+  {id:'x',typeId:'A',position:{x:3,y:2},containedBy:'basketA'},
 ])assert.throws(()=>I.createIngredientObject(input),'invalid Ingredient type/quantity/placement must fail explicitly');
 
-const base=legacyResourceWorld(A),objects=base.entities.objects;
+const base=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING),objects=base.entities.objects;
 const first=I.createIngredientObject({id:'ingredientA1',typeId:'A',position:{x:3,y:2,z:0}});
 const second=I.createIngredientObject({id:'ingredientA2',typeId:'A',massGrams:400,densityKgPerM3:800,position:{x:3,y:2,z:0}});
 const third=I.createIngredientObject({id:'ingredientA3',typeId:'A',position:{x:3,y:2,z:0}});
@@ -36,16 +35,17 @@ assert.equal(second.ingredient.densityKgPerM3,800);
 assert.equal(I.massGrams(first),300);assert.equal(I.massGrams(second),400);
 close(I.volumeCubicMeters(first),.0003,'derived first volume');
 close(I.volumeCubicMeters(second),.0005,'derived density override volume');
+close(I.volumeCubicMeters(first),globalThis.SimObjectStorageVolume.physicalVolumeCubicMeters(first),'Ingredient public query delegates to same canonical physical volume');
+close(I.volumeCubicMeters(second),globalThis.SimObjectStorageVolume.physicalVolumeCubicMeters(second),'density override uses same physical-volume owner');
 assert.equal(first.ingredient.massGrams,undefined,'no writable duplicate Ingredient grams');
 assert.equal(first.ingredient.massKg,undefined,'no writable duplicate Ingredient kilograms');
 assert.equal(first.massGrams,undefined,'no top-level duplicate Ingredient mass');
-const legacyResourceBasket=objects.legacyResourceBasket;
-legacyResourceBasket.objectContainment=true;
-legacyResourceBasket.objectStorage={maxItems:2,maxMassKg:.8};
+const basket=objects.basketA;
+basket.objectStorage={capacityCubicMeters:.0009};
 assert.equal(A.validateAuthoring(base).ok,true);
 const roundTrip=A.parseAuthoringJSON(A.serializeAuthoring(base));
 assert.deepEqual(roundTrip.entities.objects.ingredientA2,second,'authoring round-trip preserves concrete mass and density');
-assert.equal(roundTrip.authoringSchema,'world-authoring-v26');
+assert.equal(roundTrip.authoringSchema,'world-authoring-v27');
 
 function authoredReject(mutate,code){
   const doc=A.cloneAuthoring(base);mutate(doc);
@@ -59,41 +59,41 @@ authoredReject(d=>{d.entities.objects.ingredientA1.handling.massKg=0;},'food_ing
 authoredReject(d=>{d.entities.objects.ingredientA1.handling.massKg=.3005;},'food_ingredient_invalid');
 authoredReject(d=>{d.entities.objects.ingredientA1.contents={food:300};},'food_ingredient_invalid');
 authoredReject(d=>{d.entities.objects.ingredientA1.meal={edibleMassGrams:300,standardServingMassGrams:300};},'food_ingredient_invalid');
-authoredReject(d=>{d.entities.objects.legacyResourceBasket.objectStorage.maxMassKg=.5;for(const id of ['ingredientA1','ingredientA2']){d.entities.objects[id].containedBy='legacyResourceBasket';delete d.entities.objects[id].position;}},'authoring_object_storage_capacity_exceeded');
+authoredReject(d=>{d.entities.objects.basketA.objectStorage.capacityCubicMeters=.0005;for(const id of ['ingredientA1','ingredientA2']){d.entities.objects[id].containedBy='basketA';delete d.entities.objects[id].position;}},'authoring_object_storage_capacity_exceeded');
 
 E.configureResetStateSource('ingredient-f1a-fixture',seed=>W.createInitialStateFromAuthoring(roundTrip,seed));
 E.reset(20261120);
-const st=E.getState(),resident=st.agents.zhen,carrier=st.objects.legacyResourceBasket,initialLegacyStock=E.foodStock();
+const st=E.getState(),resident=st.agents.zhen,carrier=st.objects.basketA,initialLegacyStock=E.foodStock();
 for(const agent of Object.values(st.agents))if(agent.id!==resident.id)agent.offMap=true;
-const contact=SP.interactionGeometry(st,{kind:'object',id:'legacyResourceBasket'},resident,'receive');
+const contact=SP.interactionGeometry(st,{kind:'object',id:'basketA'},resident,'receive');
 assert.ok(contact.positions.length,'fixture must provide reachable generic receive geometry');
 resident.position={...contact.positions[0]};resident.posture={kind:'standing',slotId:null,furnitureId:null};
 function place(id){
   resident.held=id;delete st.objects[id].position;
-  assert.equal(E.containHeldObject(resident,'legacyResourceBasket'),true,'generic Engine contains Ingredient without Food-specific transfer');
-  assert.equal(resident.held,null);assert.equal(st.objects[id].containedBy,'legacyResourceBasket');
+  assert.equal(E.containHeldObject(resident,'basketA'),true,'generic Engine contains Ingredient without Food-specific transfer');
+  assert.equal(resident.held,null);assert.equal(st.objects[id].containedBy,'basketA');
   assert.equal(st.objects[id].position,undefined);
 }
 place('ingredientA1');place('ingredientA2');
-const cargo=O.objectStorageStatus(st,'legacyResourceBasket');
+const cargo=O.objectStorageStatus(st,'basketA');
 assert.equal(cargo.count,2);close(cargo.massKg,.7,'two concrete masses sum exactly once');
-close(R.containerLoad(st,'legacyResourceBasket'),1.5,'legacyResourceBasket emptyLoad plus derived Ingredient cargo');
-assert.equal(R.fillRatio(st,'legacyResourceBasket'),0,'resource inventory remains independent');
+close(R.containerLoad(st,'basketA'),0,'ordinary basket is not a Resource container');
+assert.equal(R.fillRatio(st,'basketA'),0,'resource inventory remains independent');
 assert.equal(E.foodStock(),initialLegacyStock,'Ingredient cannot add to legacy Resource stock');
 assert.equal(V.validateState(st).issueCount,0,'real production validator must accept legal stored Ingredients');
 resident.held='ingredientA3';delete st.objects.ingredientA3.position;
-assert.equal(E.containHeldObject(resident,'legacyResourceBasket'),false,'maxItems must block third unit');
+assert.equal(E.containHeldObject(resident,'basketA'),false,'physical volume must block third unit');
 st.objects.ingredientA3.position={x:3,y:2,z:0};resident.held=null;
-resident.held='legacyResourceBasket';
-for(const point of [{x:3,y:3,z:0},{x:2,y:3,z:0},{x:3,y:2,z:0}]){
+resident.held='basketA';
+for(const point of [{x:13,y:4,z:0},{x:12,y:4,z:0},{x:13,y:3,z:0}]){
   resident.position={...point};
   for(const id of ['ingredientA1','ingredientA2']){
-    assert.ok(SP.same(SP.objectPosition(st,id),point),'Ingredient follows carried legacyResourceBasket via canonical containedBy');
-    assert.ok(SP.nodeSame(st,SP.objectNode(st,id),SP.objectNode(st,'legacyResourceBasket')));
+    assert.ok(SP.same(SP.objectPosition(st,id),point),'Ingredient follows carried basketA via canonical containedBy');
+    assert.ok(SP.nodeSame(st,SP.objectNode(st,id),SP.objectNode(st,'basketA')));
   }
-  close(R.effectiveCarryLoad(st,resident),1.5,'held legacyResourceBasket weight includes ingredients');
+  close(R.effectiveCarryLoad(st,resident),1.5,'held basketA weight includes ingredients');
 }
-assert.ok(SP.releaseHeldObjectNearby(st,resident),'generic Object release should handle legacyResourceBasket');
+assert.ok(SP.releaseHeldObjectNearby(st,resident),'generic Object release should handle basketA');
 assert.equal(resident.held,null);
 const access=SP.interactionGeometry(st,{kind:'object',id:'ingredientA1'},resident,'pickup');
 assert.equal(access.mode,'objectContainerReach');
@@ -102,8 +102,8 @@ if(access.witnesses?.[0]?.requiredPosture)resident.posture={kind:access.witnesse
 assert.equal(E.takeContainedObject(resident,'ingredientA1'),true,'generic pickup recovers one canonical Ingredient Object');
 assert.equal(st.objects.ingredientA1.containedBy,undefined);
 assert.equal(resident.held,'ingredientA1');
-assert.equal(O.objectStorageStatus(st,'legacyResourceBasket').count,1);
-close(R.containerLoad(st,'legacyResourceBasket'),1.2,'remaining Ingredient mass remains in legacyResourceBasket');
+assert.equal(O.objectStorageStatus(st,'basketA').count,1);
+close(R.containerLoad(st,'basketA'),0,'ordinary basket has no parallel Resource contents');
 assert.equal(I.massGrams(st.objects.ingredientA1),300);
 const final=V.validateState(st);assert.equal(final.issueCount,0,final.issues.map(x=>x.code).join(', '));
 st.objects.ingredientA2.ingredient.densityKgPerM3=0;

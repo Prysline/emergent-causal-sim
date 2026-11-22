@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','editor-authoring-mutations.js','editor-ordinary-object-authoring.js']){
+for(const file of ['object-storage-volume.js','furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','editor-authoring-mutations.js','editor-ordinary-object-authoring.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -13,9 +13,9 @@ const O=globalThis.SimEditorOrdinaryObjectAuthoring;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Editor ordinary-object authoring consumes the current canonical World Authoring schema without owning its generation literal');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v14-kitchen');
-assert.equal(O.VERSION,'editor-ordinary-object-authoring-v3');
-assert.deepEqual(O.listTemplates().map(item=>item.id),['readable-book']);
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v15-storage-volume');
+assert.equal(O.VERSION,'editor-ordinary-object-authoring-v4');
+assert.deepEqual(O.listTemplates().map(item=>item.id),['readable-book','physical-basket']);
 assert.equal(O.getTemplate('missing-template'),null);
 
 let doc=clone(A.DEFAULT_WORLD_AUTHORING);
@@ -39,7 +39,8 @@ assert.deepEqual(result.candidate.entities.objects['readable-book-1'],{
   name:'一本書',
   icon:'📖',
   portable:true,
-  handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1},
+  handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1,massKg:.5},
+  physicalVolumeCubicMeters:.00264,
   affordances:['read'],
   interactions:{read:{mode:'supportReach'}},
   position:{x:5,y:2,z:0},

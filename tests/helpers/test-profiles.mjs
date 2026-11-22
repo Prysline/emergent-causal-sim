@@ -64,6 +64,7 @@ const RETIRED_SOURCES=Object.freeze({
 });
 
 const AUTHORING_PROFILE=Object.freeze([
+  'object-storage-volume.js',
   'furniture-definitions.js',
   'horizontal-geometry.js',
   'world-authoring.js',
@@ -119,6 +120,8 @@ function ensureAuthoringDependencies(paths){
   if(authoringIndex>=0&&!paths.includes('horizontal-geometry.js')){
     paths.splice(authoringIndex,0,'horizontal-geometry.js');
   }
+  const furnitureIndex=paths.indexOf('furniture-definitions.js');
+  if(furnitureIndex>=0&&!paths.includes('object-storage-volume.js'))paths.splice(furnitureIndex,0,'object-storage-volume.js');
   const initializerIndex=paths.indexOf('world-initializer.js');
   if(initializerIndex>=0&&!paths.includes('embodiment-capabilities.js'))paths.splice(initializerIndex,0,'embodiment-capabilities.js');
   return paths;

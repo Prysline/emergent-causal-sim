@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.77.0-food-legacy-default-isolation`。
+目前 overall runtime marker：`11.78.0-object-storage-volume`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -43,7 +43,8 @@ Current relevant markers：
 - Human Social Response：`11.67.0-human-social-meal-compatibility`
 - Animal Social Response：`11.66.0-animal-social-trait-response`
 - Interruption：`11.12.4-activity-continuity`
-- Object Handling：`object-handling-v3-meal-mass-projection`
+- Object Handling：`object-handling-v4-storage-volume`
+- Object Storage Volume：`object-storage-volume-v1`
 - Resources：`11.68.0-movable-object-cargo`
 - Physical `11.56.0-physical-object-handling`
 - Agent Carry：`11.46.0-sleep-carry-integration`
@@ -61,15 +62,18 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v26`
+- World Authoring：`world-authoring-v27`
 - World Editor Resource-container / Source presets：`editor-container-source-authoring-v3`
-- Food Meal / Serving：`food-v2-meal-serving`
+- World Editor Ordinary Object templates：`editor-ordinary-object-authoring-v4`
+- Food Meal / Serving：`food-v3-meal-volume`
 - Food Ingredient：`food-ingredient-v1`
-- Furniture Catalog：`furniture-definitions-v14-kitchen`
-- Food Cooking：`food-cooking-v2-autonomous-ingredient-acquisition`
+- Furniture Catalog：`furniture-definitions-v15-storage-volume`
+- Food Cooking：`food-cooking-v3-object-storage-volume`
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact
+
+`11.78.0-object-storage-volume`：R2 增加前置純計算 owner `SimObjectStorageVolume`，使用 Ingredient 質量／有效密度、Meal grams／有效密度與普通 Object 明確物理體積，將可搬容器與固定 Furniture 共同改用 `objectStorage.capacityCubicMeters`。`Object.containedBy` 唯一收納關係不變；質量只供搬運，`maxItems/maxMassKg` 不再限制 Storage，舊 schema 不做未經授權的靜默單位轉換。Cooking D1 保留單批、Serving 保留單份空餐盤邏輯。Core Default B 加普通 `basketA`、固定 `pantryA`，Editor ordinary templates 加物理籃；World Authoring v26→v27、Furniture v14→v15、Object Handling v3→v4、Food v2→v3、Cooking v2→v3、Editor ordinary v3→v4，Resources／Ingredient／Physical 及其他無語意變動的 owner 不升版。R3～R6 仍獨立未完成。完整契約見 [Object Storage Volume R2](object-storage-volume.md)。
 
 `11.77.0-food-legacy-default-isolation`：正式 B 預設世界不再含 Legacy Resource Food meal tray、food pantry、basket 或其 food restock responsibility，保留 `readyMealF0`、Ingredient A、普通 Serving plates 及 Cooking。base authoring 舊 Resource Food models 保留 `legacyResource*` 身分供追溯；Editor catalog 已移除四個舊 Food presets，水／酒及 Source presets 保留，公開建立 API 對舊 Food preset ID 明確拒絕。Legacy Engine amount-based Food paths 與歷史測試仍待 R5 遷移／退役，不再接受功能擴張。Presentation 分別顯示 Ingredient count／Meal grams，不再把 `foodStock()` 舊 Resource amount 當正式食物庫存。World Authoring v25 → v26；Editor Resource-container / Source authoring v2 → v3；Object Handling／Resources／Cooking／Serving、Furniture、Intent／Spatial own generations 不變。本 Slice 不包含 volume-capacity、physical supply 或 autonomous supply chain。
 

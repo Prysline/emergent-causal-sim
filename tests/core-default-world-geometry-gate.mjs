@@ -121,7 +121,7 @@ function makeCandidate(name) {
   const [counterX, counterY] = plan.furniture.counterA;
   doc.entities.objects.potA = {
     id: 'potA', name: '料理鍋', icon: '🍲', cookingEligible: true, portable: true,
-    objectContainment: true, objectStorage: { maxItems: 1, maxMassKg: 0.6 },
+    objectContainment: true, objectStorage: { capacityCubicMeters: 0.0006 },
     handling: {
       carryGeometry: { width: 0.35, height: 0.25, length: 0.35 },
       handsRequired: 1, massKg: 0.8,
@@ -275,7 +275,7 @@ E.configureResetStateSource('core-default-world-ab-controlled', seed =>
 // outcome. The previous 36-tick probes separately exercise Deliberation.
 const Cooking = globalThis.SimFoodCooking;
 const Food = globalThis.SimFood;
-assert.equal(Cooking.VERSION, 'food-cooking-v2-autonomous-ingredient-acquisition');
+assert.equal(Cooking.VERSION, 'food-cooking-v3-object-storage-volume');
 const facings = ['north', 'northEast', 'east', 'southEast', 'south',
   'southWest', 'west', 'northWest'];
 for (const name of ['A', 'B']) {

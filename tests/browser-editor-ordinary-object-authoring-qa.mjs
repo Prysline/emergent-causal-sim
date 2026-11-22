@@ -12,7 +12,7 @@ page.on('pageerror',error=>pageErrors.push(String(error)));
 
 await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimWorldEditor?.getSession&&window.SimEditorOrdinaryObjectAuthoring?.VERSION);
-assert.equal(await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.VERSION),'editor-ordinary-object-authoring-v3');
+assert.equal(await page.evaluate(()=>window.SimEditorOrdinaryObjectAuthoring.VERSION),'editor-ordinary-object-authoring-v4');
 
 const sidebarIa=await page.evaluate(()=>{
   const scene=document.querySelector('[data-sidebar-section="scene"]');
@@ -46,6 +46,7 @@ assert.equal(sidebarIa.addOwnsSceneList,false,'Add pane must not own current sce
 assert.equal(sidebarIa.addOwnsFurnitureCatalog,true,'Add pane must project the canonical Furniture Catalog');
 assert.equal(sidebarIa.addOwnsOrdinaryCatalog,true,'Add pane must project the ordinary-object template seam');
 assert.equal(await page.locator('#ordinaryObjectCatalog [data-object-template-id="readable-book"]').count(),1,'ordinary object palette must expose the readable-book template');
+assert.equal(await page.locator('#ordinaryObjectCatalog [data-object-template-id="physical-basket"]').count(),1,'physical ordinary basket must be an Editor template');
 
 await page.evaluate(()=>{
   const doc=window.SimWorldEditor.getDocument();
@@ -132,7 +133,7 @@ assert.equal(snapshot.validation.ok,true,'remove must leave the canonical author
 await page.evaluate(()=>{
   const doc=window.SimWorldEditor.getDocument();
   doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
-  doc.entities.objects.containedBook={id:'containedBook',name:'收納測試書',icon:'📘',portable:true,handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1},affordances:['read'],interactions:{read:{mode:'supportReach'}},containedBy:'bookshelfA'};
+  doc.entities.objects.containedBook={id:'containedBook',name:'收納測試書',icon:'📘',portable:true,handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1,massKg:.5},physicalVolumeCubicMeters:.00264,affordances:['read'],interactions:{read:{mode:'supportReach'}},containedBy:'bookshelfA'};
   window.SimWorldEditor.loadDocument(doc);
 });
 await page.waitForSelector('[data-scene-type="object"][data-scene-id="containedBook"]');

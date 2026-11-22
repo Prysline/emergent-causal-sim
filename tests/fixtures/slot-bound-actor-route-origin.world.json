@@ -608,7 +608,7 @@
       }
     }
   },
-  "furnitureCatalogVersion": "furniture-definitions-v14-kitchen",
+  "furnitureCatalogVersion": "furniture-definitions-v15-storage-volume",
   "id": "mvp-default-house",
   "label": "Current MVP Default World",
   "map": {

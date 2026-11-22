@@ -19,7 +19,7 @@ const initial=await page.evaluate(()=>{
   delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
     id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
-    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
+    objectContainment:true,objectStorage:{capacityCubicMeters:.00012},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:11,y:5,z:0},supportId:'diningTable',
     interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}
@@ -77,6 +77,10 @@ assert.match(updated.text,/70 g/,'Inspector must reread the current canonical gr
 assert.equal(updated.mass,70);
 assert.ok(Math.abs(updated.load-.07)<1e-9);
 assert.deepEqual(updated.issues,[]);
+await select('servingQaPlate');
+const capacityText=await page.evaluate(()=>document.querySelector('[data-v1141-entity-readable]')?.innerText||'');
+assert.match(capacityText,/收納容量/,'Inspector must project canonical physical storage volume');
+assert.match(capacityText,/0.12 L/,'Inspector must show derived plate capacity without a second inventory');
 
 // Browser-executed production Engine tick path (not a mocked helper or UI projection).
 const execution=await page.evaluate(()=>{
@@ -87,7 +91,7 @@ const execution=await page.evaluate(()=>{
   delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
     id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
-    objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.12},
+    objectContainment:true,objectStorage:{capacityCubicMeters:.00012},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:11,y:5,z:0},supportId:'diningTable',
     interactions:{eatFrom:{mode:'supportReach'},pickup:{mode:'supportReach'}}

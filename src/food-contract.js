@@ -1,6 +1,6 @@
 (() => {
   // Fully edible Meal mass is the sole quantity truth, including when served into a plate.
-  const VERSION='food-v2-meal-serving',INTAKE_GRAMS_PER_TICK=50,HUNGER_RELIEF_PER_GRAM=.08;
+  const VERSION='food-v3-meal-volume',INTAKE_GRAMS_PER_TICK=50,HUNGER_RELIEF_PER_GRAM=.08;
   const record=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
   const positiveGrams=value=>Number.isSafeInteger(value)&&value>0;
   const hasMeal=object=>!!object&&Object.prototype.hasOwnProperty.call(object,'meal');
@@ -9,16 +9,16 @@
     return !!plate&&plate.objectContainment===true&&plate.resourceContainer!==true
       &&plate.portable===true&&plate.canEatFrom===true&&plate.contents===undefined
       &&['reach','supportReach'].includes(plate.interactions?.eatFrom?.mode)
-      &&!!storage&&Number.isInteger(storage.maxItems)&&storage.maxItems>0
-      &&Number.isFinite(storage.maxMassKg)&&storage.maxMassKg>0;
+      &&!!storage&&window.SimObjectStorageVolume.positive(storage.capacityCubicMeters);
   }
   function validMeal(object){
     if(!hasMeal(object)||!record(object.meal))return false;
     const meal=object.meal,contained=object.containedBy!==undefined;
     return positiveGrams(meal.edibleMassGrams)&&positiveGrams(meal.standardServingMassGrams)
-      &&Object.keys(meal).every(key=>['edibleMassGrams','standardServingMassGrams'].includes(key))
+      &&window.SimObjectStorageVolume.positive(meal.densityKgPerM3)
+      &&Object.keys(meal).every(key=>['edibleMassGrams','standardServingMassGrams','densityKgPerM3'].includes(key))
       &&object.canEatFrom===true&&object.portable!==true&&object.resourceContainer!==true
-      &&object.objectContainment!==true&&object.contents===undefined&&object.handling?.massKg===undefined
+      &&object.objectContainment!==true&&object.contents===undefined&&object.handling?.massKg===undefined&&object.physicalVolumeCubicMeters===undefined
       &&['reach','supportReach'].includes(object.interactions?.eatFrom?.mode)
       &&(contained?(typeof object.containedBy==='string'&&!!object.containedBy
         &&object.position===undefined&&object.supportId===undefined):!!object.position);
@@ -53,11 +53,11 @@
     const O=window.SimObjectHandling;
     if(!O?.objectStorageStatus||!O?.cargoMassKg)throw new Error('Meal serving requires canonical Object storage.');
     const storage=O.objectStorageStatus(st,plate);
-    if(!storage.withinCapacity||storage.count>=storage.maxItems||storage.count!==0)
+    if(!storage.withinCapacity||storage.count!==0)
       return {served:false,reason:'plate-not-empty-or-capacity'};
-    const availableByMass=Math.max(0,Math.floor((storage.maxMassKg-storage.massKg)*1000+1e-8));
-    const actualGrams=Math.min(requestedGrams,source.meal.edibleMassGrams,availableByMass);
-    if(actualGrams<=0)return {served:false,reason:'plate-mass-capacity'};
+    const availableByVolume=Math.max(0,Math.floor(storage.freeVolumeCubicMeters*source.meal.densityKgPerM3*1000+1e-8));
+    const actualGrams=Math.min(requestedGrams,source.meal.edibleMassGrams,availableByVolume);
+    if(actualGrams<=0)return {served:false,reason:'plate-volume-capacity'};
     const full=actualGrams===source.meal.edibleMassGrams;
     if(!full&&(typeof newMealId!=='string'||!newMealId||st.objects[newMealId]))
       return {served:false,reason:'served-meal-id-conflict'};
