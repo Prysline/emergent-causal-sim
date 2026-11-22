@@ -63,6 +63,17 @@
     }
     return [...new Set(labels)];
   }
+  function storageCard(st,entity){
+    if(entity?.objectContainment!==true)return '';
+    const status=window.SimObjectHandling.objectStorageStatus(st,entity);
+    const liters=value=>(Math.round(value*1e6)/1000)+' L';
+    return factCard('收納容量',[
+      fact('已使用',liters(status.volumeCubicMeters)),
+      fact('總容量',liters(status.capacityCubicMeters)),
+      fact('尚可使用',liters(status.freeVolumeCubicMeters)),
+      fact('目前物件',status.count+' 件')
+    ]);
+  }
   function objectView(st,id){
     const o=st.objects?.[id];if(!o)return '';
     const p=SP.objectPosition(st,id),holder=SP.holderOf(st,id),container=o.containedBy&&(st.furniture?.[o.containedBy]||st.objects?.[o.containedBy]),support=o.supportId&&st.furniture?.[o.supportId];
@@ -84,7 +95,7 @@
     ]):'';
     const contained=o.objectContainment===true?Object.values(st.objects||{}).filter(item=>item.containedBy===id):[];
     const cargo=contained.length?chipsCard('收納物',contained.map(item=>entityChip('object',item.id,item.name,item.icon||'◻'))):'';
-    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${food}${cargo}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
+    return `${hero(o.icon||'◻',o.name||id,where)}${resource}${food}${storageCard(st,o)}${cargo}${chipsCard('可以怎麼使用',abilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${recentCard(st,'object',id)}`;
   }
   function sourceView(st,id){
     const o=st.sources?.[id];if(!o)return '';
@@ -103,7 +114,7 @@
     const supported=Object.values(st.objects||{}).filter(c=>c.supportId===id);
     const contained=Object.values(st.objects||{}).filter(c=>c.containedBy===id);
     const surface=surfaceContents(st,f);
-    return `${hero(f.icon||'▰',f.name,p?placeText(st,p):'位置不明')}${chipsCard('用途',capabilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${chipsCard('正在使用',users.map(a=>entityChip('agent',a.id,a.name,a.kind==='cat'?'🐈':'👤')),'目前沒有人正在使用。')}${supported.length?chipsCard('上面放著',supported.map(c=>entityChip('object',c.id,c.name,c.icon||'◻'))):''}${contained.length?chipsCard('收納物',contained.map(c=>entityChip('object',c.id,c.name,c.icon||'◻'))):''}${contentsEntries(surface).length?factCard('表面狀況',[fact('表面有',contentsText(surface))]):''}${recentCard(st,'furniture',id)}`;
+    return `${hero(f.icon||'▰',f.name,p?placeText(st,p):'位置不明')}${storageCard(st,f)}${chipsCard('用途',capabilities.map(x=>`<span class="tag">${esc(x)}</span>`),'目前沒有特別標示的用途。')}${chipsCard('正在使用',users.map(a=>entityChip('agent',a.id,a.name,a.kind==='cat'?'🐈':'👤')),'目前沒有人正在使用。')}${supported.length?chipsCard('上面放著',supported.map(c=>entityChip('object',c.id,c.name,c.icon||'◻'))):''}${contained.length?chipsCard('收納物',contained.map(c=>entityChip('object',c.id,c.name,c.icon||'◻'))):''}${contentsEntries(surface).length?factCard('表面狀況',[fact('表面有',contentsText(surface))]):''}${recentCard(st,'furniture',id)}`;
   }
   function tileView(st,id){
     const t=st.map?.tiles?.[id];if(!t)return '';

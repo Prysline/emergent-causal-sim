@@ -85,10 +85,12 @@ function eventAncestors(st,id,visited=new Set()){
   assert.equal(F.remainingGrams(meal),180);
   assert.equal(O.objectStorageStatus(st,plate).count,1);
   assert.equal(O.objectStorageStatus(st,plate).massKg,.12);
+  assert.ok(Math.abs(O.objectStorageStatus(st,plate).volumeCubicMeters-.00012)<1e-12);
   assert.equal(E.foodStock(),stock,'legacy Resource stock must not change after serving');
   assert.equal(F.serveMeal(st,meal.id,plate.id,20,'portion-B').served,false,'no second Meal in a one-item plate');
   assert.equal(F.consumeMeal(st,portion.id,50).actualIntakeGrams,50);
   assert.ok(Math.abs(O.objectStorageStatus(st,plate).massKg-.07)<1e-9,'cargo load follows consumed grams');
+  assert.ok(Math.abs(O.objectStorageStatus(st,plate).volumeCubicMeters-.00007)<1e-12,'occupied volume follows the same grams and density');
   assert.equal(F.remainingGrams(meal)+F.remainingGrams(portion),250,'serving + eating conserve canonical mass');
   assert.deepEqual(issues(),[]);
   const originalContainer=portion.containedBy;

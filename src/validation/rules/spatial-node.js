@@ -55,6 +55,14 @@
         }
       }
     }
+    for(const entity of Object.values(st?.objects||{})){
+      if(entity.physicalVolumeCubicMeters!==undefined
+        &&(!window.SimObjectStorageVolume.positive(entity.physicalVolumeCubicMeters)
+          ||entity.ingredient!==undefined||entity.meal!==undefined))
+        add('object_physical_volume_invalid','Object physical volume must be positive and cannot duplicate Ingredient/Meal density derivation.',{entityId:entity.id});
+      if(entity.objectStorage!==undefined&&entity.objectContainment!==true)
+        add('contained_object_storage_invalid','Object Storage requires explicit containment capability.',{containerId:entity.id});
+    }
     const handling=window.SimObjectHandling;
     for(const container of [...Object.values(st?.objects||{}),...Object.values(st?.furniture||{})]){
       if(container.objectContainment!==true)continue;

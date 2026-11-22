@@ -77,6 +77,10 @@ assert.match(updated.text,/70 g/,'Inspector must reread the current canonical gr
 assert.equal(updated.mass,70);
 assert.ok(Math.abs(updated.load-.07)<1e-9);
 assert.deepEqual(updated.issues,[]);
+await select('servingQaPlate');
+const capacityText=await page.evaluate(()=>document.querySelector('[data-v1141-entity-readable]')?.innerText||'');
+assert.match(capacityText,/收納容量/,'Inspector must project canonical physical storage volume');
+assert.match(capacityText,/0.12 L/,'Inspector must show derived plate capacity without a second inventory');
 
 // Browser-executed production Engine tick path (not a mocked helper or UI projection).
 const execution=await page.evaluate(()=>{

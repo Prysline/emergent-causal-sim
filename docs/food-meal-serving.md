@@ -1,5 +1,7 @@
 # Food｜Meal Serving & Physical Transfer v1 — Current Contract
 
+**Current R2 overlay:** the historical mass-based plate capacity below has been superseded by canonical `objectStorage.capacityCubicMeters`. Current Meal additionally requires `meal.densityKgPerM3`; `SimFood.serveMeal` bounds grams by available physical volume and keeps the original transfer/causality rules. Historical introduced-in markers below are preserved. See [Object Storage Volume R2](object-storage-volume.md).
+
 Workstream: [Meal Serving v1](https://app.notion.com/p/41fb4185273f815c8bc6f089b49172e9). 2026-11-21 A／A／A Design Gate: actual partial grams; reuse `eat` Action; allow an explicitly exposed plate to reveal/serve Meal. This version is bounded: fully edible F0 Meal, one serving transfer into an eligible ordinary Object plate, normal physical carry/placement, and `eatingMeal`. The default house is not changed by this slice.
 
 ## Canonical truth and quantity
