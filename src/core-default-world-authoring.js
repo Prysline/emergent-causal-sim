@@ -5,11 +5,32 @@
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
   if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v3-meal-volume')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
-  const VERSION='world-authoring-v27',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v28',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
+  function validateOffMapIngredientSources(source,errors){
+    const sources=source?.offMapIngredientSources;
+    if(sources===undefined)return;
+    if(!sources||typeof sources!=='object'||Array.isArray(sources)){
+      errors.push({code:'offmap_ingredient_sources_invalid',path:'offMapIngredientSources',message:'Sources must be a keyed object.'});
+      return;
+    }
+    for(const [key,entry] of Object.entries(sources)){
+      const path='offMapIngredientSources.'+key;
+      const valid=entry&&typeof entry==='object'&&!Array.isArray(entry)
+        &&entry.id===key&&typeof key==='string'&&key.length>0
+        &&Object.keys(entry).every(field=>['id','exitId','ingredientTypeId','availableUnits','workTicksPerUnit'].includes(field))
+        &&Object.keys(entry).length===5
+        &&source.exits?.[entry.exitId]?.kind==='offMap'
+        &&Object.prototype.hasOwnProperty.call(I.TYPES,entry.ingredientTypeId)
+        &&Number.isSafeInteger(entry.availableUnits)&&entry.availableUnits>=0
+        &&Number.isSafeInteger(entry.workTicksPerUnit)&&entry.workTicksPerUnit>0;
+      if(!valid)errors.push({code:'offmap_ingredient_source_invalid',path,message:'Physical supply needs an existing off-map exit, registered Ingredient type, finite nonnegative units and positive workTicksPerUnit.'});
+    }
+  }
   function validateAuthoring(source){
     const report=Base.validateAuthoring(baseDocument(source)),errors=[...report.errors];
+    validateOffMapIngredientSources(source,errors);
     if(source?.authoringSchema!==VERSION)
       errors.push({code:'authoring_schema_unsupported',path:'authoringSchema',message:'Expected '+VERSION});
     return {ok:errors.length===0,errors};
@@ -49,6 +70,7 @@
     };
     doc.exits={frontExit:{id:'frontExit',name:'大門外',kind:'offMap',
       boundary:{z:0,id:'h:4,9'},access:p(4,8)}};
+    doc.offMapIngredientSources={externalIngredientSupplyA:{id:'externalIngredientSupplyA',exitId:'frontExit',ingredientTypeId:'A',availableUnits:10,workTicksPerUnit:4}};
     const furniture={
       stoveA:[12,2,'gas-stove'],counterA:[11,2,'kitchen-counter'],
       diningTable:[11,5,'dining-table'],chairNW:[10,5,'chair-basic'],

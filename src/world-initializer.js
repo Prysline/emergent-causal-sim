@@ -568,7 +568,7 @@
   }
 
   function createInitialState(authoring,{seed=20260911,version,supplyTrigger=70}={}){
-    if(['world-authoring-v20','world-authoring-v21','world-authoring-v22','world-authoring-v23','world-authoring-v24','world-authoring-v25','world-authoring-v26','world-authoring-v27'].includes(A.VERSION))A.assertValidAuthoring(authoring);
+    if(['world-authoring-v20','world-authoring-v21','world-authoring-v22','world-authoring-v23','world-authoring-v24','world-authoring-v25','world-authoring-v26','world-authoring-v27','world-authoring-v28'].includes(A.VERSION))A.assertValidAuthoring(authoring);
     const n=(Number(seed)>>>0)||20260911,placementReport=assertInitialPlacements(authoring),zLevels=runtimeLayers(authoring).map(layer=>layer.z);
     const map={width:authoring.map.width,height:authoring.map.height,cellSizeMeters:authoring.map.cellSizeMeters,zLevels,tiles:buildTiles(authoring),boundaries:buildBoundaries(authoring),rooms:{},roomRevision:0};
     const lowLevel=authoring.compatibility?.passageConstraints;
@@ -580,6 +580,7 @@
       structures:buildStructures(authoring),furniture,doors:buildDoors(authoring),exits:buildExits(authoring),activityAreas:{},reservations:{},noiseEvents:[],endpointCauses:{},
       usageAssignments:clone(authoring.usageAssignments||[]),claimEligibility:clone(authoring.claimEligibility||[]),usageClaims:[],
       supply:{trigger:supplyTrigger,trips:0,totalProduced:0},
+      offMapIngredientSources:Object.fromEntries(Object.entries(authoring.offMapIngredientSources||{}).map(([id,source])=>[id,{...clone(source),nextSerial:1}])),
       objects:buildObjects(authoring),
       sources:buildSources(authoring),
       agents:buildResidents(authoring,placementReport.resolvedPlacements),
