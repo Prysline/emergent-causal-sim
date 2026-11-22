@@ -9,10 +9,10 @@ await page.goto('http://127.0.0.1:4173/editor.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEditorPreviewBridge?.storePreview&&Number(window.SimWorldAuthoring?.VERSION?.split('v').pop())>=19);
 const preview=await page.evaluate(()=>{
   const A=window.SimWorldAuthoring,doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
-  doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
+  // B already authors bookshelfA. Keep the canonical B furniture geometry.
   doc.objectStorageAssignments=[{id:'storage:bookA',objectId:'bookA',target:{kind:'furniture',id:'bookshelfA'},mode:'contain'}];
   doc.residents.zhen.initial.knownObjectStorageAssignmentIds=['storage:bookA'];
-  doc.residents.zhen.initial.placement={mode:'exact',node:{x:5,y:4,z:0}};
+  doc.residents.zhen.initial.placement={mode:'exact',node:{x:11,y:7,z:0}};
   doc.residents.zhen.initial.facing='north';
   const roundtrip=A.parseAuthoringJSON(A.serializeAuthoring(doc));
   const result=window.SimEditorPreviewBridge.storePreview(roundtrip);
@@ -32,7 +32,12 @@ assert.equal(initialized.canonical[0]?.id,'storage:bookA');
 assert.equal(initialized.location,'supported');
 const result=await page.evaluate(()=>{
   const E=window.SimEngine,st=E.getState();
-  for(const agent of Object.values(st.agents))Object.assign(agent.needs,{hunger:0,thirst:0,fatigue:0,sleepNeed:0,social:0,groomingNeed:0});
+  for(const agent of Object.values(st.agents)){
+    Object.assign(agent.needs,{hunger:0,thirst:0,fatigue:0,sleepNeed:0,social:0,groomingNeed:0});
+    if(agent.id!=='zhen')agent.offMap=true;
+  }
+  const option=E.tidyingDecisionOption(st,st.agents.zhen);
+  assert.equal(option?.id,'putAwayObject','B fixture must make the assigned book visible and interaction-reachable before autonomous UI steps');
   const step=document.getElementById('step');
   for(let i=0;i<200&&st.objects.bookA.containedBy!=='bookshelfA';i++)step.click();
   return {containedBy:st.objects.bookA.containedBy,held:st.agents.zhen.held,events:st.events.filter(e=>e.data?.action==='putAwayObject').map(e=>e.data),tick:st.tick};
