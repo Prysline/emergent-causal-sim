@@ -183,6 +183,11 @@ const mealPositions=[
 let mealReachable=false;
 for(const candidate of mealPositions){
   if(!SP.walkable(st,candidate))continue;
+  // Another on-map Agent sharing this cell would trigger zero-vector visual
+  // bearing during E.tick(), independently of the emergency under test.
+  if(Object.values(st.agents).some(other=>!other.offMap&&other.position&&
+    other.position.x===candidate.x&&other.position.y===candidate.y&&
+    (other.position.z??0)===(actorNode.z??0)))continue;
   nearbyMeal.position={x:candidate.x,y:candidate.y,z:actorNode.z??0};
   if(E.canSatisfyHunger(requester)){mealReachable=true;break;}
 }
