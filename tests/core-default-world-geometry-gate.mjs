@@ -275,7 +275,7 @@ E.configureResetStateSource('core-default-world-ab-controlled', seed =>
 // outcome. The previous 36-tick probes separately exercise Deliberation.
 const Cooking = globalThis.SimFoodCooking;
 const Food = globalThis.SimFood;
-assert.equal(Cooking.VERSION, 'food-cooking-v2-autonomous-ingredient-acquisition');
+assert.equal(Cooking.VERSION, 'food-cooking-v3-object-storage-volume');
 const facings = ['north', 'northEast', 'east', 'southEast', 'south',
   'southWest', 'west', 'northWest'];
 for (const name of ['A', 'B']) {
