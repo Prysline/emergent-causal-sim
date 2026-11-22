@@ -1,5 +1,6 @@
 (() => {
-  const D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry;
+  const D=window.SimFurnitureDefinitions,H=window.SimHorizontalGeometry,S=window.SimObjectStorageVolume;
+  if(S?.VERSION!=='object-storage-volume-v1')throw new Error('World Authoring requires canonical Object Storage Volume.');
   if(!D?.VERSION||!D?.getDefinition||!D?.listDefinitions||!D?.resolveInstance){
     throw new Error('SimFurnitureDefinitions must load before world-authoring.js.');
   }
@@ -440,10 +441,15 @@
         }
       }
       if(object.handling?.massKg!==undefined&&(!Number.isFinite(object.handling.massKg)||object.handling.massKg<=0))errors.push(authoringIssue('authoring_object_mass_invalid',`${basePath}.handling.massKg`,'Object handling.massKg must be positive and finite.'));
+      if(object.physicalVolumeCubicMeters!==undefined&&(!S.positive(object.physicalVolumeCubicMeters)||object.ingredient!==undefined||object.meal!==undefined))
+        errors.push(authoringIssue('authoring_object_physical_volume_invalid',basePath+'.physicalVolumeCubicMeters','Explicit physical volume is only valid for an ordinary Object.'));
+      if(object.containedBy!==undefined){
+        try{S.physicalVolumeCubicMeters(object);}catch(error){errors.push(authoringIssue('authoring_object_physical_volume_missing',basePath+'.containedBy',error.message));}
+      }
       if(object.objectContainment===true){
         const storage=object.objectStorage;
         if(object.portable!==true)errors.push(authoringIssue('authoring_object_container_not_portable',basePath+'.portable','Movable Object container must be portable.'));
-        if(!isRecord(storage)||!Number.isInteger(storage.maxItems)||storage.maxItems<=0||!Number.isFinite(storage.maxMassKg)||storage.maxMassKg<=0)errors.push(authoringIssue('authoring_object_storage_capacity_invalid',basePath+'.objectStorage','Movable Object container requires positive maxItems and maxMassKg.'));
+        try{S.storageOf(object);}catch(error){errors.push(authoringIssue('authoring_object_storage_capacity_invalid',basePath+'.objectStorage',error.message));}
         if(object.resourceContainer!==true&&(!Number.isFinite(object.handling?.massKg)||object.handling.massKg<=0))errors.push(authoringIssue('authoring_object_container_mass_invalid',basePath+'.handling.massKg','Non-Resource movable container requires positive own massKg.'));
       }else if(object.objectStorage!==undefined)errors.push(authoringIssue('authoring_object_storage_capability_missing',basePath+'.objectStorage','objectStorage requires objectContainment:true.'));
       if(object.resourceContainer===true){
@@ -473,14 +479,17 @@
         else if(object.position&&!((support.footprint||[]).some(p=>samePosition(p,object.position))))errors.push(authoringIssue('authoring_object_support_position_mismatch',`${basePath}.position`,`Object ${key} is positioned outside support ${object.supportId} footprint.`,{objectId:key,supportId:object.supportId}));
       }
     }
-    // Capacity derives from child-side containedBy references; no reverse contents mirror.
-    for(const [id,container] of Object.entries(objects)){
-      if(container?.objectContainment!==true)continue;
-      const storage=container.objectStorage;
-      if(!isRecord(storage)||!Number.isInteger(storage.maxItems)||storage.maxItems<=0||!Number.isFinite(storage.maxMassKg)||storage.maxMassKg<=0)continue;
-      const children=Object.values(objects).filter(child=>child?.containedBy===id);
-      const massKg=children.reduce((sum,child)=>sum+(authoredCargoMassKg(child)||0),0);
-      if(children.length>storage.maxItems||massKg>storage.maxMassKg+1e-9)errors.push(authoringIssue('authoring_object_storage_capacity_exceeded','entities.objects.'+id+'.objectStorage','Movable Object container authored contents exceed maxItems or maxMassKg.',{objectId:id,count:children.length,massKg}));
+    // Validate fixed Furniture and portable Object against one direct-child volume rule.
+    const allStorage=[...Object.entries(objects).filter(([,entity])=>entity?.objectContainment===true),
+      ...Object.entries(resolvedFurniture).filter(([,entity])=>entity?.objectContainment===true)];
+    for(const [id,container] of allStorage){
+      try{
+        const status=S.storageStatus({objects,furniture:resolvedFurniture},container);
+        if(!status.withinCapacity)errors.push(authoringIssue('authoring_object_storage_capacity_exceeded',
+          objects[id]?'entities.objects.'+id+'.objectStorage':'furniture.'+id,
+          'Object Storage physical volume exceeded.',{containerId:id,volumeCubicMeters:status.volumeCubicMeters,capacityCubicMeters:status.capacityCubicMeters}));
+      }catch(error){errors.push(authoringIssue('authoring_object_storage_capacity_invalid',
+        objects[id]?'entities.objects.'+id+'.objectStorage':'furniture.'+id,error.message));}
     }
     for(const key of Object.keys(objects))if(sourceEntries[key])errors.push(authoringIssue('authoring_object_id_collision',`entities.objects.${key}.id`,`Object id ${key} collides with another authored entity id.`,{id:key}));
 

@@ -1,5 +1,5 @@
 (() => {
-  const VERSION='furniture-definitions-v14-kitchen';
+  const VERSION='furniture-definitions-v15-storage-volume';
   const local=(x,y,z=0)=>({x,y,z});
   const clone=value=>JSON.parse(JSON.stringify(value));
   const isRecord=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -99,6 +99,8 @@
       name:'高櫃',
       icon:'▥',
       kind:'cabinet',
+      objectContainment:true,
+      objectStorage:{capacityCubicMeters:.12},
       orientationSemantics:'frame',
       footprint:[local(0,0)],
       displayOffset:local(0,0),
@@ -116,6 +118,7 @@
       kind:'bookshelf',
       orientationSemantics:'frame',
       objectContainment:true,
+      objectStorage:{capacityCubicMeters:.12},
       footprint:[local(0,0)],
       displayOffset:local(0,0),
       slots:[],
@@ -242,6 +245,8 @@
     if(typeof definition.name!=='string'||!definition.name)throw new Error('Furniture Definition '+key+' requires name.');
     if(typeof definition.kind!=='string'||!definition.kind)throw new Error('Furniture Definition '+key+' requires kind.');
     for(const capability of ['supportsObjects','objectContainment','cookingStation'])if(definition[capability]!==undefined&&typeof definition[capability]!=='boolean')throw new Error('Furniture Definition '+key+' '+capability+' must be boolean when provided.');
+    if(definition.objectContainment===true)window.SimObjectStorageVolume.storageOf(definition);
+    else if(definition.objectStorage!==undefined)throw new Error('Object Storage requires Furniture containment capability.');
     if(definition.orientationSemantics!==undefined&&!['facing','frame'].includes(definition.orientationSemantics))throw new Error('Furniture Definition '+key+' orientationSemantics must be facing / frame.');
     if(!Array.isArray(definition.footprint)||!definition.footprint.length)throw new Error('Furniture Definition '+key+' requires footprint.');
     definition.footprint.forEach((position,index)=>assertLocalPosition(position,key+'.footprint['+index+']'));
@@ -523,7 +528,7 @@
     };
     if(definition.supportsObjects===true)resolved.supportsObjects=true;
     if(definition.cookingStation===true)resolved.cookingStation=true;
-    if(definition.objectContainment===true)resolved.objectContainment=true;
+    if(definition.objectContainment===true){resolved.objectContainment=true;resolved.objectStorage=clone(definition.objectStorage);}
     if(definition.spatial){
       resolved.spatial={solids:definition.spatial.solids.map(solid=>({key:solid.key,layerZ:instance.origin.z,bounds:metricBoundsToWorld(definition,instance,solid.bounds)})),surfaces:[]};
       for(let index=0;index<definition.spatial.solids.length;index++){

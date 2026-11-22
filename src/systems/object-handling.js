@@ -1,5 +1,6 @@
 (() => {
-  const VERSION='object-handling-v3-meal-mass-projection';
+  const VERSION='object-handling-v4-storage-volume',S=window.SimObjectStorageVolume;
+  if(S?.VERSION!=='object-storage-volume-v1')throw new Error('Object Handling requires canonical Storage Volume.');
   const positive=value=>Number.isFinite(Number(value))&&Number(value)>0;
 
   function resolveObject(st,idOrObject){
@@ -22,23 +23,8 @@
     if(item.resourceContainer===true||item.objectContainment===true)throw new Error('Nested / Resource Object cargo is not supported in movable containment v1.');
     return mass;
   }
-  function objectStorageStatus(st,idOrObject){
-    const container=resolveObject(st,idOrObject),storage=container?.objectStorage;
-    if(container?.objectContainment!==true||container.portable!==true||!storage||!Number.isInteger(storage.maxItems)||storage.maxItems<=0||!Number.isFinite(storage.maxMassKg)||storage.maxMassKg<=0)throw new Error('Movable Object container '+String(container?.id||'?')+' requires positive maxItems and maxMassKg.');
-    const items=containedObjects(st,container.id);
-    const massKg=items.reduce((sum,item)=>sum+cargoMassKg(item),0);
-    return {items,count:items.length,massKg,maxItems:storage.maxItems,maxMassKg:storage.maxMassKg,withinCapacity:items.length<=storage.maxItems&&massKg<=storage.maxMassKg+1e-9};
-  }
-  function objectStorageLegality(st,containerId,childId){
-    const container=resolveObject(st,containerId),child=resolveObject(st,childId);
-    if(!container||!child||container.id===child.id||container.objectContainment!==true||container.portable!==true||child.resourceContainer===true||child.objectContainment===true)return false;
-    if(child.containedBy&&child.containedBy!==container.id)return false;
-    const status=objectStorageStatus(st,container);
-    if(!status.withinCapacity)return false;
-    const already=status.items.some(item=>item.id===child.id);
-    const mass=cargoMassKg(child);
-    return status.count+(already?0:1)<=status.maxItems&&status.massKg+(already?0:mass)<=status.maxMassKg+1e-9;
-  }
+  function objectStorageStatus(st,idOrObject){return S.storageStatus(st,idOrObject);}
+  function objectStorageLegality(st,containerId,childId){return S.storageLegality(st,containerId,childId);}
   function handCapacity(agent){
     const value=agent?.physical?.manipulation?.handCapacity;
     return Number.isInteger(value)&&value>=0?value:0;

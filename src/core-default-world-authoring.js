@@ -5,7 +5,7 @@
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
   if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v2-meal-serving')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
-  const VERSION='world-authoring-v26',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v27',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
   function validateAuthoring(source){
@@ -54,7 +54,7 @@
       diningTable:[11,5,'dining-table'],chairNW:[10,5,'chair-basic'],
       chairNE:[13,5,'chair-basic'],chairSW:[10,6,'chair-basic'],
       chairSE:[13,6,'chair-basic'],sofa:[3,6,'sofa-basic'],
-      bed:[3,2,'double-bed'],bookshelfA:[6,6,'bookshelf-basic'],
+      bed:[3,2,'double-bed'],bookshelfA:[6,6,'bookshelf-basic'],pantryA:[14,2,'cabinet-tall'],
       catbed:[7,7,'pet-bed-small']
     };
     const originalFurniture=doc.furniture,orientation={
@@ -75,9 +75,15 @@
       cupB:[12,6],alcoholBottle:[11,6],readyMealF0:[11,5]
     };
     for(const [id,[x,y]] of Object.entries(positions))objects[id].position=p(x,y);
+    objects.bookA.handling.massKg=.5;
+    objects.bookA.physicalVolumeCubicMeters=.00264;
+    objects.basketA={id:'basketA',name:'搬運籃',icon:'🧺',portable:true,objectContainment:true,
+      objectStorage:{capacityCubicMeters:.024},physicalVolumeCubicMeters:.004,
+      handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,massKg:.8},
+      position:p(13,3)};
     function servingPlate(id,name,x,y){
       return {id,name,icon:'🍽️',portable:true,canEatFrom:true,
-        objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.35},
+        objectContainment:true,objectStorage:{capacityCubicMeters:.00035},
         handling:{carryGeometry:{width:.30,height:.05,length:.30},
           handsRequired:1,massKg:.30},
         position:p(x,y),supportId:'diningTable',
@@ -87,7 +93,7 @@
     objects.plateB=servingPlate('plateB','餐盤 B',12,6);
     objects.potA={
       id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,
-      objectContainment:true,objectStorage:{maxItems:1,maxMassKg:.6},
+      objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
       handling:{carryGeometry:{width:.35,height:.25,length:.35},
         handsRequired:1,massKg:.8},
       position:p(12,2),supportId:'stoveA'
