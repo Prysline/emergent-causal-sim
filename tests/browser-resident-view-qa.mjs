@@ -421,6 +421,53 @@ await page.click('[data-v1140-tab="recent"]');const catRecent=await snapshot();c
 await page.click('[data-v1140-tab="memory"]');const catMemory=await snapshot();assert.ok(catMemory.residentText.includes('曾向老周發起親近互動，但當時沒有得到回應。'),`animal requester memory should use interaction semantics: ${catMemory.residentText}`);assert.ok(!catMemory.residentText.includes('故意忽略'),'animal memory must not invent intentional ignoring');assert.ok(!catMemory.residentText.includes('聊天邀請'),'animal memory must not be mislabeled as human chat');assert.equal(catMemory.validator.issueCount,0,`animal mobile validator: ${catMemory.validator.issues.map(x=>x.code).join(', ')}`);
 await page.screenshot({path:`${outDir}/mobile-animal-private-memory.png`,fullPage:true});
 
+// Inspector performance ownership: Resident hides derived Debug route queries; Debug refreshes them on demand.
+{
+  const diagPage=await browser.newPage({viewport:{width:1440,height:900}});
+  const diagErrors=[];
+  diagPage.on('pageerror',error=>diagErrors.push(String(error)));
+  diagPage.on('console',message=>{if(message.type()==='error')diagErrors.push(message.text());});
+  try{
+    await diagPage.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
+    await diagPage.waitForFunction(()=>window.SimUI?.isStarted?.()&&window.SimEngine?.getState?.());
+    await diagPage.locator('[data-entity="agent:zhen"]').first().click();
+    await diagPage.waitForFunction(()=>document.querySelector('[data-v1140-resident-root]')&&window.SimUI?.getInspectorSelection?.()?.id==='zhen');
+    await diagPage.evaluate(()=>{
+      const E=window.SimEngine,original=E.reconsiderationSnapshot;
+      if(typeof original!=='function')throw new Error('Expected canonical reconsiderationSnapshot');
+      window.__lazyInspectorProbe={count:0};
+      E.reconsiderationSnapshot=function(...args){
+        window.__lazyInspectorProbe.count++;
+        return original.apply(this,args);
+      };
+    });
+    assert.equal(await diagPage.evaluate(()=>window.SimUI.isInspectorDebugMode()),false);
+    const tick=await diagPage.evaluate(()=>window.SimEngine.getState().tick);
+    await diagPage.click('#step');
+    assert.equal(await diagPage.evaluate(()=>window.SimEngine.getState().tick),tick+1);
+    assert.equal(await diagPage.evaluate(()=>window.__lazyInspectorProbe.count),0,'Hidden Resident Debug queries must not recompute Intent candidates');
+    const beforeDebug=await diagPage.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+    await diagPage.click('[data-v1140-mode="debug"]');
+    await diagPage.waitForFunction(()=>window.SimUI.isInspectorDebugMode()&&document.querySelector('[data-v1121-intent][data-current-derived="true"]'));
+    const debugCalls=await diagPage.evaluate(()=>window.__lazyInspectorProbe.count);
+    assert.ok(debugCalls>0,'Opening Debug must refresh current-derived diagnostics');
+    assert.equal(await diagPage.evaluate(()=>JSON.stringify(window.SimEngine.getState())),beforeDebug,'Debug toggle must not mutate canonical state');
+    assert.equal(await diagPage.locator('[data-v1140-resident-root]').count(),1);
+    await diagPage.click('#step');
+    assert.ok(await diagPage.evaluate(()=>window.__lazyInspectorProbe.count)>debugCalls,'Visible Debug must continue refreshing each tick');
+    const afterDebugTick=await diagPage.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
+    await diagPage.click('[data-v1140-mode="resident"]');
+    assert.equal(await diagPage.evaluate(()=>JSON.stringify(window.SimEngine.getState())),afterDebugTick,'Returning to Resident must not mutate canonical state');
+    const residentCalls=await diagPage.evaluate(()=>window.__lazyInspectorProbe.count);
+    await diagPage.click('#step');
+    assert.equal(await diagPage.evaluate(()=>window.__lazyInspectorProbe.count),residentCalls,'Resident mode must stop hidden diagnostics');
+    assert.ok((await diagPage.locator('[data-v1140-resident-view]').innerText()).includes('阿真'));
+    assert.deepEqual(diagErrors,[],'Inspector mode switching must not introduce browser errors');
+  }finally{
+    await diagPage.close();
+  }
+}
+
 assert.deepEqual(pageErrors,[],`page errors: ${pageErrors.join(' | ')}`);assert.deepEqual(consoleErrors,[],`console errors: ${consoleErrors.join(' | ')}`);
 fs.writeFileSync(`${outDir}/result.json`,JSON.stringify({ok:true,desktop:{...desktop,residentText:undefined,debugText:undefined},debug:{...debug,residentText:undefined,debugText:undefined},memoryView:{...memoryView,residentText:undefined,debugText:undefined},recent:{...recent,residentText:undefined,debugText:undefined},mobile:{...mobile,residentText:undefined,debugText:undefined},mobileDebug:{...mobileDebug,residentText:undefined,debugText:undefined},mobileEntity:{...mobileEntity,readableText:undefined,debugText:undefined},semanticLayers,entityFixtures,catRecent:{...catRecent,residentText:undefined,debugText:undefined},catMemory:{...catMemory,residentText:undefined,debugText:undefined},pageErrors,consoleErrors},null,2));
 console.log('v11.50.1 browser readable entity QA: map posture + mobile overlap selection + readable/debug state-inert pass');
