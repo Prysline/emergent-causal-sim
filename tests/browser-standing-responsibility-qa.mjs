@@ -16,7 +16,7 @@ assert.equal(await page.evaluate(()=>window.SimWorldAuthoring.DEFAULT_WORLD_AUTH
 assert.equal(await page.evaluate(()=>window.SimEditorStandingResponsibilityAuthoring.VERSION),'editor-standing-responsibility-authoring-v1');
 await page.click('[data-scene-type="resident"][data-scene-id="zhen"]');
 await page.waitForSelector('[data-standing-responsibility-editor]');
-assert.equal(await page.locator('[data-standing-responsibility-resource="food"]').isChecked(),true,'default authored assignee must show food responsibility');
+assert.equal(await page.locator('[data-standing-responsibility-resource="food"]').isChecked(),false,'B default must not claim obsolete Resource Food responsibility');
 assert.equal(await page.locator('[data-standing-responsibility-resource="water"]').isChecked(),false);
 await page.locator('[data-standing-responsibility-resource="water"]').check();
 await page.waitForFunction(()=>window.SimWorldEditor.getDocument().resourceResponsibilityAssignments.some(item=>item.id==='responsibility:zhen:restock:water'));
@@ -32,13 +32,22 @@ const editorSnapshot=await page.evaluate(()=>{
   };
 });
 assert.equal(editorSnapshot.dirty,true,'responsibility authoring must mark Editor dirty');
-assert.deepEqual(editorSnapshot.assignmentIds,['responsibility:zhen:restock:food','responsibility:zhen:restock:water']);
+assert.deepEqual(editorSnapshot.assignmentIds,['responsibility:zhen:restock:water']);
 assert.deepEqual(editorSnapshot.roundTripAssignmentIds,editorSnapshot.assignmentIds,'Editor authoring must survive canonical export → import without runtime-only truth');
 assert.match(editorSnapshot.editorText,/長期責任/);
 await page.screenshot({path:`${outDir}/editor-standing-responsibility.png`,fullPage:true});
 
 await page.goto('http://127.0.0.1:4173/index.html',{waitUntil:'networkidle'});
 await page.waitForFunction(()=>window.SimEngine?.getState&&window.SimStandingResponsibility?.VERSION);
+const productionResponsibilities=await page.evaluate(()=>window.SimEngine.getState().resourceResponsibilityAssignments);
+assert.deepEqual(productionResponsibilities,[],'unmodified B world must not have a legacy Food responsibility');
+await page.evaluate(()=>{
+  const A=window.SimWorldAuthoring,W=window.SimWorld,E=window.SimEngine;
+  const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
+  doc.resourceResponsibilityAssignments=[{id:'responsibility:zhen:restock:water',principal:{kind:'agent',id:'zhen'},responsibility:'restock',scope:{resource:'water'}}];
+  E.configureResetStateSource('browser-standing-water-responsibility',seed=>W.createInitialStateFromAuthoring(doc,seed));
+});
+await page.click('#reset');
 const runtimeTruth=await page.evaluate(()=>{
   const state=window.SimEngine.getState();
   return {
@@ -47,18 +56,18 @@ const runtimeTruth=await page.evaluate(()=>{
     zhouKnown:[...(state.agents.zhou.knownResponsibilityAssignmentIds||[])].sort()
   };
 });
-assert.deepEqual(runtimeTruth.canonical,['responsibility:zhen:restock:food'],'production runtime must project canonical authored responsibility through the initial-state pipeline');
+assert.deepEqual(runtimeTruth.canonical,['responsibility:zhen:restock:water'],'isolated authoring fixture must project canonical water responsibility through the initial-state pipeline');
 assert.deepEqual(runtimeTruth.zhenKnown,runtimeTruth.canonical,'authored assignee must receive own canonical responsibility ref on DAY 0');
 assert.deepEqual(runtimeTruth.zhouKnown,[],'non-assignee must not inherit canonical World responsibility knowledge');
 await page.evaluate(()=>document.querySelector('[data-entity="agent:zhen"]')?.click());
 await page.waitForSelector('[data-standing-responsibility-resident]');
 const residentText=await page.locator('[data-standing-responsibility-resident]').innerText();
 assert.match(residentText,/長期責任/);
-assert.match(residentText,/補充 食物/,'Resident View must project only known durable responsibility');
+assert.match(residentText,/補充 水/,'Resident View must project only known durable responsibility');
 await page.click('[data-v1140-mode="debug"]');
 await page.waitForSelector('[data-standing-responsibility-debug]');
 const debugText=await page.locator('[data-standing-responsibility-debug]').innerText();
-assert.match(debugText,/responsibility:zhen:restock:food/);
+assert.match(debugText,/responsibility:zhen:restock:water/);
 assert.match(debugText,/canonical linked/,'Debug Inspector must expose known-ref → canonical linkage');
 await page.screenshot({path:`${outDir}/resident-debug-standing-responsibility.png`,fullPage:true});
 
