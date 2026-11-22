@@ -40,7 +40,7 @@ function until(predicate,max=180){
   for(let i=0;i<max;i++){E.tick();if(predicate())return;}
   assert.fail('production physical supply did not reach condition in '+max+' ticks');
 }
-function events(st,kind){return st.events.filter(e=>e.data.action===kind);}
+function events(st,kind){return st.events.filter(e=>e.data.action===kind).reverse();} // canonical events are newest-first; test causality oldest-first
 function valid(st,label){const issues=V.validateState(st).issues;assert.deepEqual(issues,[],label+': '+issues.map(x=>x.code).join(','));}
 {
   const {st,a,carrier,source}=setup(3);
