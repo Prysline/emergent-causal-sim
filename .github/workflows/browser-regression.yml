@@ -15,6 +15,29 @@ on:
       - '!.github/workflows/node-regression.yml'
       - '!.github/workflows/node-regression-github.yml'
   workflow_dispatch:
+    inputs:
+      playback_benchmark:
+        description: 'Run optional full-render autoplay benchmark'
+        type: boolean
+        required: false
+        default: false
+      ticks:
+        description: 'Number of complete ticks per measured case'
+        type: choice
+        required: true
+        default: '10'
+        options: ['10', '100', '720']
+      intervals:
+        description: 'Comma-separated autoplay intervals in milliseconds'
+        type: string
+        required: true
+        default: '700,350,175,87.5'
+      selection:
+        description: 'Inspector case selection'
+        type: choice
+        required: true
+        default: both
+        options: [both, none, agent]
 
 concurrency:
   group: browser-regression-${{ github.event.pull_request.number || github.ref }}
@@ -22,6 +45,7 @@ concurrency:
 
 jobs:
   browser-qa:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.playback_benchmark }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -127,3 +151,47 @@ jobs:
           name: browser-${{ matrix.suite }}
           path: ${{ matrix.artifact }}
           if-no-files-found: ignore
+
+  playback-benchmark:
+    name: Opt-in full-render autoplay measurement (non-gating)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.playback_benchmark }}
+    continue-on-error: true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      BENCHMARK_TICKS: ${{ github.event_name == 'workflow_dispatch' && inputs.ticks || '10' }}
+      BENCHMARK_INTERVALS: ${{ github.event_name == 'workflow_dispatch' && inputs.intervals || '700,350,175,87.5' }}
+      BENCHMARK_SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.selection || 'both' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - name: Validate benchmark syntax
+        run: node --check tests/browser-autoplay-speed-benchmark.mjs
+      - name: Start simulator HTTP server
+        run: |
+          python3 -m http.server 4173 >/tmp/emergent-causal-sim-http.log 2>&1 &
+          echo $! > /tmp/emergent-causal-sim-http.pid
+          sleep 2
+      - name: Measure complete tick and full render cadence
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/browser-autoplay-speed-benchmark
+          node tests/browser-autoplay-speed-benchmark.mjs \
+            --ticks="$BENCHMARK_TICKS" \
+            --intervals="$BENCHMARK_INTERVALS" \
+            --selection="$BENCHMARK_SELECTION" 2>&1 \
+            | tee artifacts/browser-autoplay-speed-benchmark/ci.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-playback-speed-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/browser-autoplay-speed-benchmark/
+          if-no-files-found: warn
+          retention-days: 14
