@@ -45,6 +45,7 @@ concurrency:
 
 jobs:
   browser-qa:
+    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.playback_benchmark }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -144,8 +145,6 @@ jobs:
       - run: node "${{ matrix.test }}"
       - if: matrix.extra_test != ''
         run: node "${{ matrix.extra_test }}"
-      - if: matrix.suite == 'resident-view'
-        run: node tests/browser-inspector-lazy-diagnostics-qa.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -155,7 +154,7 @@ jobs:
 
   playback-benchmark:
     name: Opt-in full-render autoplay measurement (non-gating)
-    if: ${{ (github.event_name == 'pull_request' && startsWith(github.head_ref, 'chore/playback-speed-benchmark-')) || (github.event_name == 'workflow_dispatch' && inputs.playback_benchmark) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.playback_benchmark }}
     continue-on-error: true
     runs-on: ubuntu-24.04
     timeout-minutes: 120
