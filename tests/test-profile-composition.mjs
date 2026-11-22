@@ -105,7 +105,7 @@ assert.throws(
   'runtime profiles must reject retired source names rather than silently alias them'
 );
 assert.deepEqual(TEST_PROFILE_CONTRACT.engineCore,[
-  'furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','systems/object-handling.js','spatial.js',
+  'object-storage-volume.js','furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','world.js','release.js','systems/object-handling.js','spatial.js',
   'spatial-traversal.js','spatial-candidate-selection.js','systems/resources.js','systems/agent-carry.js','systems/physical.js','spatial-surface-environment.js','spatial/finalize.js','food-contract.js','engine.js','validation/registry.js'
 ]);
 
