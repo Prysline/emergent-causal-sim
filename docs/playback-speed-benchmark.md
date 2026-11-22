@@ -25,7 +25,17 @@ node tests/browser-autoplay-speed-benchmark.mjs --ticks=100 --selection=none
 node tests/browser-autoplay-speed-benchmark.mjs --ticks=720 --intervals=700,350 --selection=none --timeout-ms=3600000
 ```
 
-These longer runs may be expensive; no CI throughput guarantee is implied. Use matching hardware and browser environments for comparisons. No new Merge Gate job is registered by this benchmark-only slice.
+These longer runs may be expensive; no CI throughput guarantee is implied. Use matching hardware and browser environments for comparisons. The dedicated benchmark workflow is **not** a required Merge Gate check; the existing Node and Browser regression workflows are unchanged.
+
+## GitHub Actions (independent, non-gating)
+
+The separate `.github/workflows/playback-speed-benchmark.yml` runs for pull requests that change the benchmark workflow, script, or this document. The PR profile runs the default 10 full ticks for each of `700,350,175,87.5` ms, with and without the Agent Inspector. It does not enforce any performance target. The runner uses Node.js 22, Playwright 1.55.0, Chromium, and the same local HTTP server as the existing Browser regression.
+
+Open the **Playback Speed Benchmark (non-gating)** workflow run under GitHub Actions, and download the `playback-speed-benchmark-<run-id>-<attempt>` artifact. It contains `result.json` when the benchmark completes and `ci.log` even if the benchmark fails.
+
+After this workflow exists on the repository's **default branch**, use **Actions → Playback Speed Benchmark → Run workflow** for the optional 100- or 720-tick profiles. Select the tick count, comma-separated nominal intervals, and Inspector selection. GitHub only permits `workflow_dispatch` to be manually triggered when the workflow file is present on the default branch; before merge, PR-triggered 10-tick measurement is the available entry point.
+
+These figures describe GitHub-hosted runner throughput, not player device performance or a guarantee of visibly painted frames.
 
 ## Output and interpretation
 
