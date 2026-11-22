@@ -14,6 +14,9 @@ assert.equal(E.EMERGENCY_PREEMPTIBLE.has('putAwayObject'),true);
 function fixture(){
   // Legacy position/line-of-sight regression must not borrow B's partition.
   const doc=legacyResourceWorld(A);
+  // Legacy geometry fixture keeps its original positions, but uses current ordinary Object physical properties.
+  doc.entities.objects.bookA.handling.massKg=.5;
+  doc.entities.objects.bookA.physicalVolumeCubicMeters=.00264;
   doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
   doc.objectStorageAssignments=[{id:'storage:bookA',objectId:'bookA',target:{kind:'furniture',id:'bookshelfA'},mode:'contain'}];
   doc.residents.zhen.initial.knownObjectStorageAssignmentIds=['storage:bookA'];
