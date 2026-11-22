@@ -115,10 +115,8 @@
   function containHeldObject(aOrId,targetId){
     const a=typeof aOrId==='string'?state.agents?.[aOrId]:aOrId,object=a?.held&&state.objects?.[a.held],target=SP.objectContainerTarget(state,targetId);
     if(!a||!object||!target||target.entity.objectContainment!==true)return false;
-    if(target.kind==='object'){
-      if(holderOf(target.id)||reservationOwner('object:'+target.id)?.id&&reservationOwner('object:'+target.id).id!==a.id)return false;
-      if(!O.objectStorageLegality(state,target.id,object.id))return false;
-    }
+    if(target.kind==='object'&&(holderOf(target.id)||reservationOwner('object:'+target.id)?.id&&reservationOwner('object:'+target.id).id!==a.id))return false;
+    if(!O.objectStorageLegality(state,target.id,object.id))return false;
     if(!SP.isAtInteraction?.(state,a,{kind:target.kind,id:target.id},target.kind==='object'?'receive':'default'))return false;
     delete object.position;delete object.supportId;object.containedBy=target.id;a.held=null;return true;
   }

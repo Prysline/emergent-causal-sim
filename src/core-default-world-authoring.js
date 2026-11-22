@@ -3,7 +3,7 @@
   // Earlier authoring layers own their schemas; the Core Default World B
   // projection owns only the assembled starting house and authored placements.
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
-  if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v2-meal-serving')
+  if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v3-meal-volume')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
   const VERSION='world-authoring-v27',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});

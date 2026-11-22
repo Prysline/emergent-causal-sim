@@ -1,6 +1,6 @@
 (() => {
   const Base=window.SimWorldAuthoring,F=window.SimFood;
-  if(Base?.VERSION!=='world-authoring-v19'||F?.VERSION!=='food-v2-meal-serving')throw new Error('Food F0 authoring requires World Authoring v19 and the canonical Food v1 F0 contract.');
+  if(Base?.VERSION!=='world-authoring-v19'||F?.VERSION!=='food-v3-meal-volume')throw new Error('Food F0 authoring requires World Authoring v19 and the canonical Food v1 F0 contract.');
   const VERSION='world-authoring-v20',clone=Base.cloneAuthoring;
   const hasMeal=F.hasMeal,validMeal=F.validMeal;
   function baseDocument(source){
@@ -33,7 +33,7 @@
   seed.entities.objects.readyMealF0={
     id:'readyMealF0',name:'現成餐點',icon:'🍛',canEatFrom:true,portable:false,
     position:{x:5,y:2,z:0},supportId:'diningTable',interactions:{eatFrom:{mode:'supportReach'}},
-    meal:{edibleMassGrams:300,standardServingMassGrams:300}
+    meal:{edibleMassGrams:300,standardServingMassGrams:300,densityKgPerM3:1000}
   };
   const DEFAULT_WORLD_AUTHORING=Object.freeze(canonicalizeAuthoring(seed));
   function serializeAuthoring(source){return JSON.stringify(canonicalizeAuthoring(source),null,2)+'\n';}
