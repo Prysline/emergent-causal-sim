@@ -4,7 +4,7 @@ import vm from 'node:vm';
 
 if(!globalThis.window)globalThis.window=globalThis;
 for(const file of [
-  'furniture-definitions.js',
+  'object-storage-volume.js','furniture-definitions.js',
   'horizontal-geometry.js',
   'world-authoring.js',
   'embodiment-capabilities.js',

@@ -9,6 +9,7 @@ import {
 } from './helpers/test-profiles.mjs';
 
 assert.deepEqual(authoringProfilePaths(),[
+  'src/object-storage-volume.js',
   'src/furniture-definitions.js',
   'src/horizontal-geometry.js',
   'src/world-authoring.js',
@@ -16,6 +17,7 @@ assert.deepEqual(authoringProfilePaths(),[
   'src/world-initializer.js'
 ]);
 assert.deepEqual(spatialCoreProfilePaths(),[
+  'src/object-storage-volume.js',
   'src/furniture-definitions.js',
   'src/horizontal-geometry.js',
   'src/world-authoring.js',

@@ -61,7 +61,7 @@ assert.equal(loaded.count,2);
 assert.ok(Math.abs(loaded.volumeCubicMeters-.019)<1e-12);
 assert.equal(loaded.capacityCubicMeters,.024);
 assert.equal(loaded.massKg,1.25);
-assert.equal(R.containerLoad(st,'basketA'),1.25,'Resource query must not manufacture emptyLoad for ordinary basket');
+assert.equal(R.containerLoad(st,'basketA'),0,'ordinary basket must not become a Resource container');
 assert.equal(R.fillRatio(st,'basketA'),0,'Resource ratio must remain independent of Object inventory');
 assert.equal(V.validateState(st).issueCount,0);
 a.held='cargoC';delete st.objects.cargoC.position;

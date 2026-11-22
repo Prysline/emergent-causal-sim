@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','editor-authoring-mutations.js']){
+for(const file of ['object-storage-volume.js','furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','editor-authoring-mutations.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 
@@ -12,7 +12,7 @@ const A=globalThis.SimWorldAuthoring;
 const M=globalThis.SimEditorAuthoringMutations;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
+assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
 
 const definition=D.getDefinition('cabinet-tall');
 assert.ok(definition,'Furniture Catalog must expose cabinet-tall');

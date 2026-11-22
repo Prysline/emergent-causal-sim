@@ -16,8 +16,8 @@ const compile=authoring=>{
 };
 
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Horizontal topology consumes the current canonical World Authoring schema without owning its generation literal');
-assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v14-kitchen');
-assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v14-kitchen');
+assert.equal(A.FURNITURE_CATALOG_VERSION,'furniture-definitions-v15-storage-volume');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.furnitureCatalogVersion,'furniture-definitions-v15-storage-volume');
 const resolvedTable=A.resolveFurnitureInstance(A.DEFAULT_WORLD_AUTHORING.furniture.diningTable);
 assert.equal(resolvedTable.spatial.solids.find(solid=>solid.key==='tabletop').bounds.z,.72);
 assert.equal(resolvedTable.spatial.surfaces.find(surface=>surface.id==='diningTable:surface')?.cells.length,4,'horizontal topology fixture must consume the canonical derived Surface collection');

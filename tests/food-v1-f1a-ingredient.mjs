@@ -75,7 +75,7 @@ function place(id){
 place('ingredientA1');place('ingredientA2');
 const cargo=O.objectStorageStatus(st,'basketA');
 assert.equal(cargo.count,2);close(cargo.massKg,.7,'two concrete masses sum exactly once');
-close(R.containerLoad(st,'basketA'),.7,'ordinary basket cargo mass is derived without Resource emptyLoad');
+close(R.containerLoad(st,'basketA'),0,'ordinary basket is not a Resource container');
 assert.equal(R.fillRatio(st,'basketA'),0,'resource inventory remains independent');
 assert.equal(E.foodStock(),initialLegacyStock,'Ingredient cannot add to legacy Resource stock');
 assert.equal(V.validateState(st).issueCount,0,'real production validator must accept legal stored Ingredients');
@@ -101,7 +101,7 @@ assert.equal(E.takeContainedObject(resident,'ingredientA1'),true,'generic pickup
 assert.equal(st.objects.ingredientA1.containedBy,undefined);
 assert.equal(resident.held,'ingredientA1');
 assert.equal(O.objectStorageStatus(st,'basketA').count,1);
-close(R.containerLoad(st,'basketA'),.4,'remaining Ingredient mass remains in basketA');
+close(R.containerLoad(st,'basketA'),0,'ordinary basket has no parallel Resource contents');
 assert.equal(I.massGrams(st.objects.ingredientA1),300);
 const final=V.validateState(st);assert.equal(final.issueCount,0,final.issues.map(x=>x.code).join(', '));
 st.objects.ingredientA2.ingredient.densityKgPerM3=0;

@@ -3,13 +3,13 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
 globalThis.window=globalThis;
-for(const file of ['furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','standing-responsibility-initializer.js']){
+for(const file of ['object-storage-volume.js','furniture-definitions.js','horizontal-geometry.js','world-authoring.js','embodiment-capabilities.js','world-initializer.js','standing-responsibility-initializer.js']){
   vm.runInThisContext(fs.readFileSync(new URL('../src/'+file,import.meta.url),'utf8'),{filename:file});
 }
 const D=globalThis.SimFurnitureDefinitions,A=globalThis.SimWorldAuthoring,I=globalThis.SimWorldInitializer;
 const clone=value=>JSON.parse(JSON.stringify(value));
 
-assert.equal(D.VERSION,'furniture-definitions-v14-kitchen');
+assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
 assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Editor contract must consume the canonical current World Authoring generation without duplicating its literal');
 assert.equal(A.validateAuthoring(A.DEFAULT_WORLD_AUTHORING).ok,true,'default canonical authoring must validate');
 
@@ -26,7 +26,7 @@ assert.equal(A.semanticFingerprint(imported),A.semanticFingerprint(layered),'exp
 assert.deepEqual(imported.compatibility,layered.compatibility);
 assert.deepEqual(imported.map.layers.map(layer=>layer.z),[0,1]);
 assert.equal(imported.authoringSchema,A.VERSION);
-assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v14-kitchen');
+assert.equal(imported.furnitureCatalogVersion,'furniture-definitions-v15-storage-volume');
 assert.deepEqual(imported.structures.stairA,layered.structures.stairA,'Structure facts must round-trip without derived route cost');
 assert.equal(Object.hasOwn(imported.structures.stairA,'upCost'),false);
 assert.deepEqual(imported.furniture.chairNW,{id:'chairNW',definitionId:'chair-basic',origin:{x:4,y:2,z:0},orientation:'east',name:'餐椅 A'});
