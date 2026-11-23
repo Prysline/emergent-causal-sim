@@ -38,6 +38,16 @@ assert.equal(E.MEMORY_DELIBERATION_SCHEMA_VERSION,'11.13.4-memory-deliberation-i
 assert.equal(E.MEMORY_DELIBERATION_MAX_DELTA,18);
 noIssues('reset');
 
+// Persistent mirrors remain invalid even though derived candidate traversal
+// no longer occurs during ordinary state validation.
+a.memoryUtilityDelta=2;
+assert.ok(V.validateState(st).issues.some(x=>x.code==='agent_memory_deliberation_mirror_forbidden'));
+delete a.memoryUtilityDelta;
+st.memoryDeliberation={};
+assert.ok(V.validateState(st).issues.some(x=>x.code==='global_memory_deliberation_registry_forbidden'));
+delete st.memoryDeliberation;
+noIssues('persistent memory boundary restored');
+
 // Ordinary Validator must inspect persistent truth only: its memory layer must
 // never ask Deliberation to recompute every social candidate and full route.
 const originalSocialEvaluation=E.currentSocialTargetEvaluations;
@@ -55,6 +65,7 @@ const mei=addHuman(st,'mei','小梅',{x:7,y:5});calm(mei,{social:30});
 let base=E.utilityForIntent(st,a,'socialize'),evals=E.targetEvaluations(st,a,'socialize',base);
 assert.equal(evals[0].targetAgent,'zhou','沒有 target memory 時，距離應保留最近目標傾向');
 const noMemoryZhou=evals.find(x=>x.targetAgent==='zhou');
+const evaluationFixtureBefore=JSON.stringify(st),evaluationRngBefore=st.rngState;
 
 // The same canonical computation entry must fail loudly for malformed derived
 // numbers, without treating the existing unreachable-route Infinity fallback
@@ -73,6 +84,8 @@ try{
   assert.equal(unavailable.traversalCost,Infinity);
   assert.equal(unavailable.travelTime,Infinity);
   assert.ok(Number.isFinite(unavailable.finalUtility)&&Number.isFinite(unavailable.targetPreference));
+  const explicitUnavailable=E.targetEvaluation(st,a,zhou,'socialize',base,{pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity});
+  assert.equal(explicitUnavailable.pathDistance,Infinity,'complete unreachable route sentinel stays legal');
   assert.equal(E.targetEvaluations(st,a,'socialize',base).length,0,'unreachable targets remain filtered from selectable candidates');
 }finally{SP.bestInteractionPositionResult=oldWinner;SP.bestInteractionPosition=oldFallback;}
 
@@ -91,7 +104,8 @@ assert.throws(
   error=>error.code==='memory_utility_delta_invalid',
   'invalid derived memory delta must fail at the production computation entry'
 );
-assert.equal(JSON.stringify(st),JSON.stringify(E.getState()),'synthetic invalid-evaluation cases must not change canonical state');
+assert.equal(JSON.stringify(st),evaluationFixtureBefore,'synthetic evaluation cases must not mutate canonical state');
+assert.equal(st.rngState,evaluationRngBefore,'synthetic evaluation cases must not consume RNG');
 a.episodicMemories=[
   memory(a,'neg:1',{tick:35,last:35,relevance:.9,congruence:-.85,actorId:'zhou'}),
   memory(a,'neg:2',{tick:36,last:36,relevance:.85,congruence:-.9,actorId:'zhou'}),
