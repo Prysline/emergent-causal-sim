@@ -43,6 +43,12 @@ The separate [Inspector optimization PR #253](https://github.com/Prysline/emerge
 
 The existing `tests/browser-step-batch-performance-qa.mjs` is the short, regular Browser regression for canonical state parity, per-layer Validation cost and Spatial query attribution. The Memory Deliberation Validation correction removes eager `E.currentSocialTargetEvaluations()` calls from the ordinary validation layer; numeric legality is checked at the canonical `E.targetEvaluation()` computation entry instead. The QA asserts zero social-route Spatial queries attributed to `validation/layer:memory-deliberation`, without hardcoding a fixed emergent Action path. Before/after wall-clock comparisons should use identical fixture/seed and are CI-runner estimates, not player-device speed guarantees. Inspector Debug remains a separate cost owner and is not optimized by this fix.
 
+## Resident Inspector hidden Debug cost boundary
+
+The default Agent Inspector opens in the player-readable **Resident** mode. Its hidden Debug pane is not a reason to compute current-derived social target routes: the `memory.deliberation` Inspector decorator now calls `E.currentSocialTargetEvaluations()` only when `UI.isInspectorDebugMode()` is true. Entering Debug performs the evaluation on demand; subsequent visible Debug renders refresh it for the current tick. Returning to Resident suppresses further probes without persisting a route cache or altering any canonical World, Agent-private, Deliberation, or RNG state.
+
+`tests/browser-memory-deliberation-qa.mjs` locks the absence of hidden Resident-mode route evaluations, Debug entry and per-tick refresh, switching back, state parity at mode entry, and existing social-target evidence on desktop/mobile. The optional `--selection=both` autoplay benchmark opens the readable Resident Inspector for its selected-Agent case; it does **not** activate Debug. Compare before/after with the same current-main source fixture and browser environment. The cost of actual Debug mode and Engine tick spikes remains separately measurable; no 2×/4×/8× guarantee is implied.
+
 ## Output and interpretation
 
 The script writes `artifacts/browser-autoplay-speed-benchmark/result.json` and prints one `AUTOPLAY_SPEED_CASE` summary per test case. Each report includes the target interval, configured multiplier relative to the current 700-ms baseline, achieved start-to-start multiplier, timing distributions for `E.tick()`, synchronous `render()`, complete callbacks, and browser frame opportunities, plus long-task telemetry where supported.
