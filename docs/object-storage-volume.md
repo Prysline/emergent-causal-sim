@@ -32,4 +32,4 @@ Ingredient can share the normal Object carrier and fixed pantry legality with or
 
 Real production regressions: `tests/movable-object-containment.mjs`, `tests/food-v1-f1a-ingredient.mjs`, `tests/food-cookware-eligibility.mjs`, `tests/food-v1-f1b2-pot-loading.mjs`, `tests/food-meal-serving.mjs`, `tests/browser-food-meal-serving-qa.mjs`, `tests/browser-world-authoring-editor-qa.mjs` and the existing exact-head Node/Browser suites. These cover legal/full/overflow, independent mass, movement/held-parent, real Engine contain/pickup, exposed Meal, Cooking and Editor/Inspector.
 
-R3 off-map physical supply, R4 autonomous closed-loop provision, R5 legacy Resource Food retirement and R6 final closeout remain separate uncompleted gates. Legacy Food may not receive new functionality.
+R3 off-map physical supply is implemented through the existing Action and reuses this R2 canonical volume / `containedBy` contract. R4 autonomous closed-loop provision, R5 legacy Resource Food retirement and R6 final closeout remain separate uncompleted gates. Legacy Food may not receive new functionality.

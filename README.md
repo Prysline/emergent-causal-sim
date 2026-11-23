@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.79.0-offmap-physical-ingredient-supply`。
 
-Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource Food 模型在 base authoring 保留 `legacyResource*` 身分供遷移與追溯，但正式 Editor 新增目錄已移除四個舊 Food presets；水／酒 Resource presets 仍可用。舊 Food amount-based production paths 待後續 R5 退役，不再接受功能擴張。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。R2 已建立普通搬運籃、固定食材櫃及物理體積容量；off-map 食材補給與完整自主供餐仍屬後續 R3／R4。
+Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource Food 模型在 base authoring 保留 `legacyResource*` 身分供遷移與追溯，但正式 Editor 新增目錄已移除四個舊 Food presets；水／酒 Resource presets 仍可用。舊 Food amount-based production paths 待後續 R5 退役，不再接受功能擴張。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。R2 已建立普通搬運籃、固定食材櫃及物理體積容量；R3 已加入有限場景外實體食材供應，居民自主取得食材與持續供餐仍屬後續 R4。
 
 Logistics carrier drop lifecycle：當實際 completed movement edge 產生合法 `containerDrop`，依賴該容器的 `restockContainer`／`externalSupply` 會在同一 tick 經既有 abort lifecycle 中止，並讓中止 World Event 引用掉落事件；實際掉落位置、剩餘內容物及已確定發生的事件不回滾。意外掉落機率與其他 Action 不因此改變。
 
