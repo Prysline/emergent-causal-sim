@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.79.0-offmap-physical-ingredient-supply`。
+目前 overall runtime marker：`11.79.1-physical-meal-seating`。
+
+## 11.79.1 Physical Meal seating correction
+
+Engine physical `eat` now settles Human into an available reachable Slot only with valid current `eatFrom` contact; it revalidates on the settlement tick and retains standing fallback. Real plate placement precedes seat selection. Spatial `supportReach/eatFrom` includes current-Slot Surface contact, not an independent Chair-to-Table mapping. Canonical `sitForMeal` / `standForMeal` events maintain ingestion ancestry. Food grams and unrelated subsystem markers remain unchanged.
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 

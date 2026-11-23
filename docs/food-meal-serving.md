@@ -28,6 +28,12 @@ An exposed serving plate is deliberately opt-in: ordinary `portable:true`, `obje
 - Carrying the plate is genuine `Agent.held` and has canonical carry geometry/load; placing it at the chosen meal-seat approach uses `releaseHeldObjectNearby` and real Surface/floor fallback, not a bespoke teleport/guaranteed table slot. Other residents may take or eat from a placed exposed plate through ordinary `eat`, without a new proactive delivery Intent.
 - Per effective `eatingMeal` tick at most 50 g are consumed and only that Agent's private Hunger is relieved by 0.08 per ingested gram. Social speaking continues to pause consumption, listening does not. Legacy Resource `eatingPlate` and `transferResource` are intentionally distinct.
 
+## Physical Meal seating contact correction (11.79.1)
+
+Physical Meal `toMeal` now chooses a reachable current Furniture Slot for a Human only when the projected seated stance can legally contact that Meal through canonical `eatFrom`. The Action reserves the Slot, travels to a legal approach and rechecks Slot availability, sitting fit and Meal contact at settlement before the existing `sitOn()` and a causal `sitForMeal` Event. A directly exposed Meal and an already-served plate reuse the same path. No legal seat means genuine `eatFrom` standing intake with `standForMeal`, not invented reach.
+
+`toMealDining` still carries and releases the real plate through `releaseHeldObjectNearby`; only its actual location can enable seated contact. The Spatial `supportReach/eatFrom` projection reuses current-Slot Surface contact and does not give Chairs an independent Table association or reach radius. Food grams / serving / legacy Resource Food and unaffected subsystem generations are unchanged. Fine-grained seat and placement preferences remain deferred.
+
 ## Existing canonical producers / semantic-equivalent inventory
 
 | Code path | Disposition |

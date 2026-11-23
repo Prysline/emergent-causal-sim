@@ -185,6 +185,42 @@ function eventAncestors(st,id,visited=new Set()){
   for(const intake of intakeEvents(st))assert.ok(eventAncestors(st,intake.id).has(event.id),'intake must cite serving ancestry');
   assert.deepEqual(issues(),[]);
 }
+
+{
+  const {st,a,meal}=setup(20261125);
+  delete st.objects.plateA; // No serving dish: exercise physical Meal's direct path.
+  const target={kind:'object',id:meal.id};
+  const contact=SP.bestInteractionPositionResult(st,a,target,'eatFrom');
+  assert.ok(contact?.position);
+  a.position={...contact.position};
+  const action=startEat(st,a);
+  E.tick();assert.equal(action.phase,'toMeal');
+  until(()=>intakeEvents(st).length>0,90);
+  const sit=st.events.find(e=>e.data?.action==='sitForMeal'&&e.data?.foodKind==='meal');
+  assert.ok(sit,'a reachable real dining chair must be used before physical Meal intake');
+  assert.equal(a.posture?.kind,'sitting');
+  assert.equal(a.posture?.slotId,sit.data.slot);
+  assert.ok(SP.isAtInteraction(st,a,target,'eatFrom'),'seated Agent must be at canonical food contact');
+  assert.ok(eventAncestors(st,intakeEvents(st)[0].id).has(sit.id),'intake must cite the seating World Event');
+  assert.equal(F.remainingGrams(meal),250);
+  assert.deepEqual(issues(),[]);
+}
+{
+  const {st,a,meal}=setup(20261126);
+  delete st.objects.plateA;
+  for(const furniture of Object.values(st.furniture))for(const slot of furniture.slots||[])
+    if(slot.mealSeat||slot.canRest)slot.approachEdges=[];
+  const target={kind:'object',id:meal.id},contact=SP.bestInteractionPositionResult(st,a,target,'eatFrom');
+  assert.ok(contact?.position);
+  a.position={...contact.position};
+  startEat(st,a);
+  until(()=>intakeEvents(st).length>0,90);
+  assert.equal(st.events.some(e=>e.data?.action==='sitForMeal'&&e.data?.foodKind==='meal'),false);
+  assert.ok(st.events.some(e=>e.data?.action==='standForMeal'&&e.data?.foodKind==='meal'));
+  assert.equal(a.posture?.kind,'standing');
+  assert.ok(SP.isAtInteraction(st,a,target,'eatFrom'));
+  assert.deepEqual(issues(),[]);
+}
 {
   const {st,a,plate}=setup(20261124,{cooking:true});
   a.needs.hunger=55;

@@ -134,6 +134,35 @@ assert.equal(execution.held,null,JSON.stringify(execution));
 assert.equal(execution.action,null,JSON.stringify(execution));
 assert.ok(execution.phases.includes('toMealDining')&&execution.phases.includes('eatingMeal'),JSON.stringify(execution));
 assert.deepEqual(execution.validator,[]);
+const seated=await page.evaluate(()=>{
+  const E=window.SimEngine,SP=window.SimSpatial;
+  E.reset(20261125);
+  const st=E.getState(),a=st.agents.zhen,meal=st.objects.readyMealF0;
+  delete st.objects.plateA;delete st.objects.plateB;
+  for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
+  Object.assign(a.needs,{hunger:80,thirst:0,fatigue:0,sleepNeed:0,social:0});
+  a.action=null;a.activeIntent=null;
+  const target={kind:'object',id:meal.id},approach=SP.bestInteractionPositionResult(st,a,target,'eatFrom');
+  if(!approach?.position)return {failure:'no direct Meal contact'};
+  a.position={...approach.position};
+  a.action=E.buildAction(a,{id:'eat'});E.ensureIntentForAction?.(st,a);
+  if(!a.action)return {failure:'no eat Action'};
+  let atIntake=null;
+  for(let i=0;i<110;i++){
+    E.tick();
+    const intake=st.events.find(e=>e.data?.phase==='intake'&&e.data?.foodKind==='meal'&&e.data.actor===a.id);
+    if(intake){
+      atIntake={kind:a.posture?.kind,slotId:a.posture?.slotId,contact:SP.isAtInteraction(st,a,target,'eatFrom')};
+      break;
+    }
+  }
+  const sit=st.events.find(e=>e.data?.action==='sitForMeal'&&e.data?.foodKind==='meal');
+  return {atIntake,sitSlot:sit?.data?.slot||null,issues:window.SimValidator.validateState(st).issues.map(x=>x.code)};
+});
+assert.equal(seated.atIntake?.kind,'sitting',JSON.stringify(seated));
+assert.equal(seated.atIntake?.slotId,seated.sitSlot,JSON.stringify(seated));
+assert.equal(seated.atIntake?.contact,true,JSON.stringify(seated));
+assert.deepEqual(seated.issues,[]);
 assert.deepEqual(pageErrors,[],'Browser must not report uncaught errors');
 await browser.close();
 console.log('Browser Food Meal Serving v1 canonical Inspector and map projection QA: ok');

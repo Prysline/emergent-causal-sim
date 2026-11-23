@@ -11,7 +11,7 @@
         add('food_meal_plate_invalid','Contained Meal requires an explicitly exposed ordinary Object plate.',{objectId:id,plateId:object.containedBy});
     }
     for(const agent of Object.values(st?.agents||{})){
-      const action=agent.action;if(action?.kind!=='eat'||!['toMeal','eatingMeal','toMealDish','takeMealDish','toMealServe','serveMeal','toMealDining','placeMealDish'].includes(action.phase))continue;
+      const action=agent.action;if(action?.kind!=='eat'||!['toMeal','toMealSeat','sitMeal','eatingMeal','toMealDish','takeMealDish','toMealServe','serveMeal','toMealDining','placeMealDish'].includes(action.phase))continue;
       if(!action.foodSource||!Number.isSafeInteger(action.targetMassGrams)||action.targetMassGrams<0||!Number.isSafeInteger(action.consumedMassGrams)||action.consumedMassGrams<0||action.consumedMassGrams>action.targetMassGrams){
         add('food_meal_action_invalid','Meal Action requires one target and bounded Action-local realized intake.',{agentId:agent.id});
       }
