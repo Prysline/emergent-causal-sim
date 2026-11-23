@@ -24,10 +24,26 @@ async function setupStory(){
     a.episodicMemories=[make('browser-neg-1',0),make('browser-neg-2',0),make('browser-neg-3',0)];
   });
   await page.click('#step');
+  await page.evaluate(()=>{
+    const E=window.SimEngine,original=E.currentSocialTargetEvaluations;
+    if(typeof original!=='function')throw new Error('missing Memory Deliberation evaluator');
+    window.__memoryInspectorRouteProbes=0;
+    E.currentSocialTargetEvaluations=(...args)=>{
+      window.__memoryInspectorRouteProbes++;
+      return original(...args);
+    };
+  });
   await page.evaluate(()=>document.querySelector('[data-entity="agent:zhen"]')?.click());
   await page.waitForSelector('[data-v1140-resident-root]');
+  assert.equal(await page.evaluate(()=>window.__memoryInspectorRouteProbes),0,
+    'Resident mode must not evaluate hidden Memory Deliberation social routes');
+  const beforeDebug=await page.evaluate(()=>JSON.stringify(window.SimEngine.getState()));
   await page.click('[data-v1140-mode="debug"]');
   await page.waitForSelector('[data-v1134-memory-deliberation]');
+  assert.equal(await page.evaluate(()=>window.__memoryInspectorRouteProbes),1,
+    'entering Debug must evaluate current social routes exactly once');
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.SimEngine.getState())),beforeDebug,
+    'entering Debug must not mutate canonical World or Agent-private state');
 }
 
 async function snapshot(){
@@ -75,6 +91,19 @@ assert.ok(desktop.inspectorText.includes('travel time'));
 assert.ok(desktop.docWidth<=desktop.width+1,`desktop overflow: ${desktop.docWidth}>${desktop.width}`);
 assert.ok(desktop.bodyWidth<=desktop.width+1,`desktop body overflow: ${desktop.bodyWidth}>${desktop.width}`);
 await page.screenshot({path:`${outDir}/desktop.png`,fullPage:true});
+const beforeDebugTick=await page.evaluate(()=>window.__memoryInspectorRouteProbes);
+await page.click('#step');
+assert.equal(await page.evaluate(()=>window.__memoryInspectorRouteProbes),beforeDebugTick+1,
+  'visible Debug must refresh its current-derived social routes on the next tick');
+await page.click('[data-v1140-mode="resident"]');
+const beforeResidentTick=await page.evaluate(()=>window.__memoryInspectorRouteProbes);
+await page.click('#step');
+assert.equal(await page.evaluate(()=>window.__memoryInspectorRouteProbes),beforeResidentTick,
+  'Resident mode must not evaluate routes while Debug is hidden after a tick');
+await page.click('[data-v1140-mode="debug"]');
+await page.waitForSelector('[data-v1134-memory-deliberation]');
+assert.equal(await page.evaluate(()=>window.__memoryInspectorRouteProbes),beforeResidentTick+1,
+  'returning to Debug must evaluate the current tick without stale hidden snapshots');
 
 await page.setViewportSize({width:390,height:844});
 await page.reload({waitUntil:'networkidle'});

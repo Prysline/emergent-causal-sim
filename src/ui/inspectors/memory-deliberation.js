@@ -13,7 +13,8 @@
     return `<div class="k">${esc(intentLabel(e.intentKind))} → ${esc(target?.name||e.targetAgent)}</div><div><b>${esc(signed(e.memoryUtilityDelta))} memory delta</b>・relationship ${esc(signed(e.relationshipTargetDelta))}・access penalty -${esc(e.accessPenalty)}・base ${esc(e.baseUtility)} → final ${esc(e.finalUtility)}<br><span class="hint">path distance ${esc(e.pathDistance)}・traversal cost ${esc(e.traversalCost)}・travel time ${esc(e.travelTime)} tick・target preference ${esc(e.targetPreference)}・association ${esc(e.association)}<br>${contributionText(st,e)}</span></div>`;
   }
   function decorateInspector({host,selected,state:st}){
-    if(!host||host.querySelector('[data-v1134-memory-deliberation]')||selected?.type!=='agent')return;
+    // Current-derived routes belong to visible Debug diagnostics, not the Resident view.
+    if(!host||selected?.type!=='agent'||UI.isInspectorDebugMode?.()!==true||host.querySelector('[data-v1134-memory-deliberation]'))return;
     const id=selected.id,a=st?.agents?.[id];if(!a)return;
     const evaluations=E.currentSocialTargetEvaluations?.(st,a)||[];
     const rows=evaluations.length?evaluations.map(e=>row(st,a,e)).join(''):'<div class="k">Target-aware candidates</div><div>目前沒有可評估的社交目標。</div>';
