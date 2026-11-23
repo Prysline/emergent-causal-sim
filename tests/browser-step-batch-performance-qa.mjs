@@ -443,6 +443,12 @@ try{
     const layers=Object.entries(metrics.validationStages||{}).filter(([name])=>name.startsWith('layer:'));
     assert.ok(layers.length>0&&layers.every(([,item])=>item.calls===renderCount),
       caseId+' must attribute every registered validation layer for each full render');
+    // The memory Validation layer has no legitimate reason to request full
+    // social routes; these queries belong to real Deliberation or Debug only.
+    for(const name of ['SP.planRoute','SP.pathDistances','SP.traversalFeasibility','SP.getPassageProfile']){
+      assert.equal(metrics.queryAttribution?.[name+'|validation/layer:memory-deliberation']?.calls??0,0,
+        caseId+' memory Validation must not recompute Spatial target routes: '+name);
+    }
     for(const [name,item] of Object.entries(metrics.queries)){
       const attributed=Object.entries(metrics.queryAttribution||{}).filter(([key])=>key.startsWith(name+'|'))
         .reduce((n,[,entry])=>n+entry.calls,0);
@@ -507,22 +513,12 @@ try{
     batch10Agent:compactQueryCounts(results.batch10_agent)
   }));
   assert.ok(feasibilityCounts.singleInside>0,'one simulation tick must measure a real traversal-feasibility workload');
-  // The outside-tick traversal workload scales with the default world's
-  // authored floor count. Old 12×8: 3813 queries / 60 floor cells < 65 per
-  // cell; B 16×10: 112 floor cells. Retain a bounded, explainable workload
-  // instead of treating a now-obsolete map-specific literal as release truth.
-  const measuredState=JSON.parse(results.single_none.metrics.stateJson);
-  const floorCells=Object.values(measuredState.map.tiles).filter(t=>t.terrain==='floor').length;
-  assert.equal(floorCells,112,'canonical B floor workload must be explicit');
-  assert.ok(feasibilityCounts.singleOutside>0&&feasibilityCounts.singleOutside<=65*floorCells,
-    'outside-tick feasibility workload must remain within the per-floor-cell budget');
+  // The former positive outside-tick traversal floor budget was caused by the
+  // eager Memory Validator route search. Zero is now a valid no-selection
+  // result, while UI interaction and Debug may still perform unrelated routes.
+  // Attribute canonical ownership above instead of requiring incidental work.
   assert.ok(feasibilityCounts.batch10Inside>0&&feasibilityCounts.batch10Inside<=4*feasibilityCounts.singleInside,
     'step(10) must retain a bounded incremental traversal workload relative to a comparable one-tick fixture');
-  // A one-tick and ten-tick render observe different legitimate World states;
-  // exact outside-tick query counts are not equal-state performance truth.
-  // Both must fit the same floor-normalized rendering budget instead.
-  assert.ok(feasibilityCounts.batch10Outside>0&&feasibilityCounts.batch10Outside<=65*floorCells,
-    'one batched render must stay within the same per-floor-cell geometry query budget');
   const batchedRouteQueries=queryPhaseCalls(results.batch10_none,'SP.planRoute','insideTick');
   assert.ok(batchedRouteQueries>0&&batchedRouteQueries<=26,
     'step(10) must stay within the established route-query cost envelope; exact emergent Action paths are not release literals');

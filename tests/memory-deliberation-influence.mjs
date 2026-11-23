@@ -14,7 +14,7 @@ const files=[
 ];
 loadRuntimeProfile(files);
 
-const E=globalThis.SimEngine,V=globalThis.SimValidator;
+const E=globalThis.SimEngine,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
 const noIssues=label=>{const v=V.validateState(E.getState());assert.equal(v.issueCount,0,`${label}: ${v.issues.map(x=>x.code+': '+x.message).join(' | ')}`);};
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 
@@ -38,12 +38,74 @@ assert.equal(E.MEMORY_DELIBERATION_SCHEMA_VERSION,'11.13.4-memory-deliberation-i
 assert.equal(E.MEMORY_DELIBERATION_MAX_DELTA,18);
 noIssues('reset');
 
+// Persistent mirrors remain invalid even though derived candidate traversal
+// no longer occurs during ordinary state validation.
+a.memoryUtilityDelta=2;
+assert.ok(V.validateState(st).issues.some(x=>x.code==='agent_memory_deliberation_mirror_forbidden'));
+delete a.memoryUtilityDelta;
+st.memoryDeliberation={};
+assert.ok(V.validateState(st).issues.some(x=>x.code==='global_memory_deliberation_registry_forbidden'));
+delete st.memoryDeliberation;
+noIssues('persistent memory boundary restored');
+
+// Ordinary Validator must inspect persistent truth only: its memory layer must
+// never ask Deliberation to recompute every social candidate and full route.
+const originalSocialEvaluation=E.currentSocialTargetEvaluations;
+const initialState=JSON.stringify(E.getState()),initialRng=E.getState().rngState;
+E.currentSocialTargetEvaluations=()=>{throw new Error('Validator replayed social target route evaluation');};
+try{
+  noIssues('validator skips social target evaluation');
+  assert.equal(JSON.stringify(E.getState()),initialState,'validation must not mutate canonical state');
+  assert.equal(E.getState().rngState,initialRng,'validation must not consume RNG');
+}finally{E.currentSocialTargetEvaluations=originalSocialEvaluation;}
+
 // Same world/needs/traits/position: negative target-related memories lower only that target's social utility.
 st.tick=40;a=st.agents.zhen;const zhou=st.agents.zhou;zhou.position={x:5,y:6};a.position={x:5,y:5};calm(a,{social:65});st.agents.orange.offMap=true;
 const mei=addHuman(st,'mei','小梅',{x:7,y:5});calm(mei,{social:30});
 let base=E.utilityForIntent(st,a,'socialize'),evals=E.targetEvaluations(st,a,'socialize',base);
 assert.equal(evals[0].targetAgent,'zhou','沒有 target memory 時，距離應保留最近目標傾向');
 const noMemoryZhou=evals.find(x=>x.targetAgent==='zhou');
+const evaluationFixtureBefore=JSON.stringify(st),evaluationRngBefore=st.rngState;
+
+// The same canonical computation entry must fail loudly for malformed derived
+// numbers, without treating the existing unreachable-route Infinity fallback
+// as a corrupt evaluation or reintroducing a persisted evaluation cache.
+assert.throws(
+  ()=>E.targetEvaluation(st,a,zhou,'socialize',base,{pathDistance:2,traversalCost:NaN,travelTime:2}),
+  error=>error.code==='memory_target_evaluation_invalid',
+  'invalid reachable route metrics must fail at the production evaluation entry'
+);
+const oldWinner=SP.bestInteractionPositionResult,oldFallback=SP.bestInteractionPosition;
+try{
+  SP.bestInteractionPositionResult=()=>null;
+  SP.bestInteractionPosition=()=>null;
+  const unavailable=E.targetEvaluation(st,a,zhou,'socialize',base);
+  assert.equal(unavailable.pathDistance,Infinity,'direct unreachable target must preserve Infinity fallback');
+  assert.equal(unavailable.traversalCost,Infinity);
+  assert.equal(unavailable.travelTime,Infinity);
+  assert.ok(Number.isFinite(unavailable.finalUtility)&&Number.isFinite(unavailable.targetPreference));
+  const explicitUnavailable=E.targetEvaluation(st,a,zhou,'socialize',base,{pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity});
+  assert.equal(explicitUnavailable.pathDistance,Infinity,'complete unreachable route sentinel stays legal');
+  assert.equal(E.targetEvaluations(st,a,'socialize',base).length,0,'unreachable targets remain filtered from selectable candidates');
+}finally{SP.bestInteractionPositionResult=oldWinner;SP.bestInteractionPosition=oldFallback;}
+
+const isolatedWindow={
+  SimWorld:{MEMORY_DELIBERATION_SCHEMA_VERSION:'11.13.4-memory-deliberation-influence',MEMORY_DELIBERATION_MAX_DELTA:Infinity},
+  SimEngine:{MEMORY_RETENTION_SCHEMA_VERSION:'test',registerRuntimeHook(){}},
+  SimSpatial:{}
+};
+vm.runInNewContext(fs.readFileSync(new URL('../src/systems/memory/deliberation.js',import.meta.url),'utf8'),{window:isolatedWindow});
+const malformedMemory=memory({id:'actor'},'bad-delta',{tick:0,relevance:1,congruence:1,actorId:'target'});
+assert.throws(
+  ()=>isolatedWindow.SimEngine.targetEvaluation(
+    {tick:0},{id:'actor',episodicMemories:[malformedMemory]},{id:'target'},'socialize',10,
+    {pathDistance:1,traversalCost:1,travelTime:1}
+  ),
+  error=>error.code==='memory_utility_delta_invalid',
+  'invalid derived memory delta must fail at the production computation entry'
+);
+assert.equal(JSON.stringify(st),evaluationFixtureBefore,'synthetic evaluation cases must not mutate canonical state');
+assert.equal(st.rngState,evaluationRngBefore,'synthetic evaluation cases must not consume RNG');
 a.episodicMemories=[
   memory(a,'neg:1',{tick:35,last:35,relevance:.9,congruence:-.85,actorId:'zhou'}),
   memory(a,'neg:2',{tick:36,last:36,relevance:.85,congruence:-.9,actorId:'zhou'}),

@@ -40,8 +40,17 @@
   function targetMemoryContributions(st,a,targetId){return (a?.episodicMemories||[]).filter(m=>memoryAssociatedWithTarget(m,targetId)).map(m=>memoryEvidence(st,a,m)).sort((x,y)=>Math.abs(y.evidence)-Math.abs(x.evidence)||y.lastObservedTick-x.lastObservedTick||String(x.memoryId).localeCompare(String(y.memoryId))).slice(0,TOP_MEMORIES);}
   function targetAssociation(st,a,targetId){const contributions=targetMemoryContributions(st,a,targetId),signedEvidence=contributions.reduce((sum,c)=>sum+c.evidence,0),association=Math.tanh(signedEvidence),memoryUtilityDelta=clamp(association*MAX_DELTA,-MAX_DELTA,MAX_DELTA);return {targetId,contributions,signedEvidence:round(signedEvidence,4),association:round(association,4),memoryUtilityDelta:round(memoryUtilityDelta)};}
   function targetEvaluation(st,a,target,intentKind,baseUtility,routeOverride=null){
-    const route=routeOverride||socialTargetRoute(st,a,target)||{pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity},assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);
-    return {...assoc,intentKind,targetAgent:target.id,pathDistance:round(route.pathDistance),traversalCost:round(route.traversalCost),travelTime:round(route.travelTime),relationshipTargetDelta,accessPenalty:round(accessPenalty),targetPreference:round(assoc.memoryUtilityDelta+relationshipTargetDelta-accessPenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};
+    const computedRoute=routeOverride||socialTargetRoute(st,a,target);
+    const route=computedRoute||{pathDistance:Infinity,traversalCost:Infinity,travelTime:Infinity},assoc=targetAssociation(st,a,target.id),relationshipTargetDelta=round(E.relationshipTargetDelta?.(a,target.id)||0),accessPenalty=Math.min(Math.max(0,route.traversalCost)*ACCESS_COST_WEIGHT,ACCESS_COST_CAP);
+    const evaluation={...assoc,intentKind,targetAgent:target.id,pathDistance:round(route.pathDistance),traversalCost:round(route.traversalCost),travelTime:round(route.travelTime),relationshipTargetDelta,accessPenalty:round(accessPenalty),targetPreference:round(assoc.memoryUtilityDelta+relationshipTargetDelta-accessPenalty),baseUtility:round(baseUtility),finalUtility:round(baseUtility+assoc.memoryUtilityDelta)};
+    const invalid=(code,field)=>{const error=new Error(`${code}: ${a?.id} -> ${target.id} has invalid ${field} (${evaluation[field]})`);error.code=code;throw error;};
+    if(!Number.isFinite(evaluation.memoryUtilityDelta)||Math.abs(evaluation.memoryUtilityDelta)>MAX_DELTA+.001)invalid('memory_utility_delta_invalid','memoryUtilityDelta');
+    for(const key of ['signedEvidence','association','relationshipTargetDelta','accessPenalty','targetPreference','baseUtility','finalUtility'])if(!Number.isFinite(evaluation[key]))invalid('memory_target_evaluation_invalid',key);
+    // A missing route (or a complete Infinity route sentinel) is a legitimate
+    // direct-evaluation fallback; a partially invalid reachable route is not.
+    const unreachable=!computedRoute||['pathDistance','traversalCost','travelTime'].every(key=>evaluation[key]===Infinity);
+    if(!unreachable)for(const key of ['pathDistance','traversalCost','travelTime'])if(!Number.isFinite(evaluation[key]))invalid('memory_target_evaluation_invalid',key);
+    return evaluation;
   }
   function targetEvaluations(st,a,intentKind,baseUtility){return eligibleTargets(st,a,intentKind).map(({target,route})=>targetEvaluation(st,a,target,intentKind,baseUtility,route)).sort((x,y)=>y.targetPreference-x.targetPreference||y.finalUtility-x.finalUtility||x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||String(x.targetAgent).localeCompare(String(y.targetAgent)));}
 
