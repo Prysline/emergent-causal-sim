@@ -310,6 +310,18 @@
   function chooseFoodSource(a,{readyOnly=false}={}){const source=edibleFoodContainers(a).filter(c=>!readyOnly||SP.hasRole(c,'readyFood')).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'eatFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d||(x.c.servingDish?0:1)-(y.c.servingDish?0:1));return source[0]?.c||null;}
   function servingDishes(a){return Object.values(state.objects).filter(c=>c.servingDish&&c.portable&&O.canHoldObject(state,a,c)&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)&&!Object.entries(c.contents||{}).some(([r,v])=>r!=='food'&&v>.05)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'pickup'),filled:(c.contents?.food||0)>.05})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>(y.filled?1:0)-(x.filled?1:0)||x.d-y.d).map(x=>x.c);}
   function mealSlots(a){return SP.allSlots(state).filter(s=>SP.slotAllows(s,a)&&SP.slotPoseFits?.(s,a,'sitting')&&SP.slotAvailable(state,s.id,a.id)&&(s.mealSeat||s.canRest)).map(s=>{const position=SP.bestSlotApproachNode?.(state,s,a,{mode:'walk',objective:'traversalCost'})||null;return position?{slot:s,position,d:routeBurden(a,position),penalty:s.mealSeat?0:8,noise:SP.noiseAt(state,s.position)}:null;}).filter(x=>x&&Number.isFinite(x.d)).sort((x,y)=>(x.penalty+x.d+x.noise*.15)-(y.penalty+y.d+y.noise*.15));}
+  function physicalMealSeatCanReach(a,slot,mealId){
+    const meal=state.objects[mealId];
+    if(!meal||!F.hasMeal(meal)||F.remainingGrams(meal)<=0)return false;
+    // Ephemeral observation of a candidate posture. Does not change occupancy.
+    const seated={...a,position:{...slot.position},posture:{kind:'sitting',slotId:slot.id,furnitureId:slot.furnitureId}};
+    return SP.isAtInteraction(state,seated,{kind:'object',id:mealId},'eatFrom');
+  }
+  function clearPhysicalMealSeat(a,p){
+    if(p.mealSeatId)releaseReservation('slot:'+p.mealSeatId,a);
+    delete p.mealSeatId;delete p.mealSeatApproach;
+    p.phase='toMeal';
+  }
   function resourceSources(resource,a,{excludeId=null}={}){const candidates=[];for(const s of Object.values(state.sources)){if(s.id!==excludeId&&s.resource===resource&&amountAt(s.id,resource)>0)candidates.push({id:s.id,kind:'source'});}for(const c of Object.values(state.objects)){if(c.id===excludeId||amountAt(c.id,resource)<=0)continue;const h=holderOf(c.id);if(h&&h.id!==a.id)continue;candidates.push({id:c.id,kind:'object'});}return candidates.map(t=>({t,d:targetTraversalCost(a,t,'fill')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.t||null;}
   function directDrinkContainers(resource,a){return Object.values(state.objects).filter(c=>c.canDrinkFrom&&amountAt(c.id,resource)>0&&(!holderOf(c.id)||holderOf(c.id)?.id===a.id)).map(c=>({c,d:targetTraversalCost(a,{kind:'object',id:c.id},'drinkFrom')})).filter(x=>Number.isFinite(x.d)).sort((x,y)=>x.d-y.d)[0]?.c||null;}
   function drinkVesselAccessCost(a,r,c,desperate=a.needs.thirst>=88){
@@ -616,7 +628,57 @@
     if(p.phase==='toMeal'){
       const meal=state.objects[p.foodSource],target={kind:'object',id:p.foodSource};
       if(!meal||!F.hasMeal(meal)||F.remainingGrams(meal)<=0||holderOf(meal.id)){abortAction(a,'準備食用的餐點已失效',{dropHeld:false});return;}
+      if(a.kind==='human'&&!p.mealSeatChecked){
+        p.mealSeatChecked=true;
+        if(a.posture?.slotId&&SP.isAtInteraction(state,a,target,'eatFrom')){p.phase='eatingMeal';return;}
+        for(const candidate of mealSlots(a)){
+          const slot=candidate.slot;
+          if(!physicalMealSeatCanReach(a,slot,meal.id)||!reserve('slot:'+slot.id,a))continue;
+          p.mealSeatId=slot.id;p.mealSeatApproach={...candidate.position};
+          p.phase='toMealSeat';return;
+        }
+      }
       if(!moveToInteraction(a,target,'前往食用'+meal.name,'eatFrom'))return;
+      if(a.kind==='human'&&a.posture?.kind==='standing'&&!p.mealStandEventId){
+        const e=addEvent(a.name+'在合法接觸位置站著吃'+meal.name+'。','normal',[p.mealStartEventId].filter(Boolean),{
+          actor:a.id,action:'standForMeal',foodKind:'meal',from:meal.id,container:p.container||null,position:positionRef(a.position)
+        });
+        p.mealStartEventId=e;p.mealStandEventId=e;
+      }
+      p.phase='eatingMeal';return;
+    }
+    if(p.phase==='toMealSeat'){
+      const slot=SP.getSlot(state,p.mealSeatId);
+      if(!slot||(slot.mealSeat!==true&&slot.canRest!==true)||!SP.slotAllows(slot,a)||
+         !SP.slotPoseFits?.(slot,a,'sitting')||!SP.slotAvailable(state,slot.id,a.id)||
+         !physicalMealSeatCanReach(a,slot,p.foodSource)||!reserve('slot:'+slot.id,a)){
+        clearPhysicalMealSeat(a,p);return;
+      }
+      if(atCurrentSlotApproach(a,slot)){p.phase='sitMeal';return;}
+      const valid=!!p.mealSeatApproach&&SP.slotApproachNodes?.(state,slot,a,'walk').some(node=>SP.nodeSame(state,node,p.mealSeatApproach));
+      if(!valid){
+        const next=SP.bestSlotApproachNode?.(state,slot,a,{mode:'walk',objective:'traversalCost'})||null;
+        if(!next){clearPhysicalMealSeat(a,p);return;}
+        p.mealSeatApproach={...next};
+      }
+      if(!moveToExact(a,p.mealSeatApproach,'前往可接觸餐點的座位'))return;
+      p.phase='sitMeal';return;
+    }
+    if(p.phase==='sitMeal'){
+      const slot=SP.getSlot(state,p.mealSeatId);
+      if(!slot||(slot.mealSeat!==true&&slot.canRest!==true)||!SP.slotAllows(slot,a)||
+         !SP.slotPoseFits?.(slot,a,'sitting')||!SP.slotAvailable(state,slot.id,a.id)||
+         !atCurrentSlotApproach(a,slot)||!physicalMealSeatCanReach(a,slot,p.foodSource)){
+        clearPhysicalMealSeat(a,p);return;
+      }
+      sitOn(a,slot);
+      const e=addEvent(a.name+'坐到'+(state.furniture[slot.furnitureId]?.name||'座位')+'準備食用餐點。','normal',
+        [p.mealStartEventId].filter(Boolean),{
+          actor:a.id,action:'sitForMeal',foodKind:'meal',from:p.foodSource,container:p.container||null,
+          slot:slot.id,position:positionRef(a.position)
+        });
+      p.mealStartEventId=e;
+      delete p.mealSeatId;delete p.mealSeatApproach;
       p.phase='eatingMeal';return;
     }
     if(p.phase==='eatingMeal'){
@@ -951,7 +1013,7 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
   function dayRollover(){if(state.minute<1440)return;state.minute-=1440;state.day++;for(const a of Object.values(state.agents))a.metrics.exertionToday=0;}
   function tick(){coreTickDepth++;try{state.tick++;state.minute+=2;dayRollover();decayNoise();needDrift();const A=agentCarryRuntime();for(const a of shuffle(Object.values(state.agents))){if(A?.isCarried?.(state,a))continue;if(a.offMap&&a.action?.kind!=='externalSupply')continue;if(!a.action){if(A?.relationForCarrier?.(state,a))continue;const c=choose(a);if(c)startAction(a,c);continue;}stepAction(a);}return state;}finally{coreTickDepth--;}}
 
-  function actionLabel(a){const extension=resolveActionLabel(a);if(extension)return extension;const p=a.action;if(!p)return'目前沒有進行中的行動';const motion=a.locomotion?.phase&&a.locomotion.phase!=='idle'?(a.locomotion.phase==='transition'?(a.locomotion.mode==='walk'?'・起身準備步行':`・切換為${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}姿勢`):`・${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}中`):'';const moveTarget=(p.spatialGoal?`・目標 (${p.spatialGoal.x},${p.spatialGoal.y})`:'')+motion;switch(p.kind){case'eat':{if(p.phase==='toMeal')return '吃東西・前往'+endpointName(p.foodSource)+moveTarget;if(p.phase==='eatingMeal')return '吃東西・'+endpointName(p.foodSource)+'・逐步進食中';const plate=p.container?endpointName(p.container):'餐盤';if(['toMealDish','takeMealDish'].includes(p.phase))return`吃東西・去拿盛餐餐盤${moveTarget}`;if(['toMealServe','serveMeal'].includes(p.phase))return`吃東西・將餐點盛入餐盤${moveTarget}`;if(['toMealDining','placeMealDish'].includes(p.phase))return`吃東西・端著餐點前往用餐位置${moveTarget}`;if(p.phase==='toDish'||p.phase==='takeDish')return`吃東西・去拿${plate}${moveTarget}`;if(p.phase==='toFood'||p.phase==='serve')return`吃東西・用${plate}盛食物${moveTarget}`;if(p.phase==='chooseSeat')return`吃東西・端著${plate}找座位`;if(p.phase==='toSeat'||p.phase==='sit')return`吃東西・端著${plate}前往座位${moveTarget}`;if(p.phase==='standEat')return`吃東西・準備站著吃`;if(p.phase==='eatingPlate')return`吃東西・${plate}・進食中`;if(p.phase==='toDirectFood')return`吃東西・前往${p.foodSource?endpointName(p.foodSource):'食物'}${moveTarget}`;if(p.phase==='claimDirect'||p.phase==='eatingDirect')return`吃東西・${p.foodSource?endpointName(p.foodSource):'食物'}・進食中`;return`吃東西${moveTarget}`;}case'drinkWater':case'drinkAlcohol':return `${ZH[p.kind]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':p.phase==='move'?'前往飲用來源':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';case'sleep':return p.phase==='sleeping'?`睡眠・${p.sleepTarget?targetLabel({kind:'slot',id:p.sleepTarget.id}):'睡眠位置'}・熟睡中`:p.sleepTarget?`睡眠・前往${targetLabel({kind:'slot',id:p.sleepTarget.id})}${moveTarget}`:'睡眠・尋找位置';case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;case'petAnimal':return`摸${state.agents[p.targetAgent]?.name||'動物'}${moveTarget}`;case'seekHuman':return`找人撒嬌${moveTarget}`;case'carryAgent':return p.phase==='recoveryBlocked'?`搬移${state.agents[p.targetAgent]?.name||'角色'}・安全放置受阻，持續抱持等待`:`搬移${state.agents[p.targetAgent]?.name||'角色'}・${p.recoveryMode?'安全 recovery・':''}${p.phase}${moveTarget}`;case'cleanFloor':return`清理地面${moveTarget}`;case'groom':return'舔毛清潔';case'wander':return`閒晃${moveTarget}`;case'restockContainer':return`補充資源・${endpointName(p.destinationId)}・${resourceName(p.resource)}・${p.carrierId?`${endpointName(p.carrierId)}・`:''}${p.phase}${moveTarget}`;case'externalSupply':return`${p.mode==='physicalIngredient'?'外出取得實體食材':'外出補給'}・${p.carrierId?endpointName(p.carrierId)+'・':''}${p.phase}${moveTarget}`;default:return ZH[p.kind]||p.kind;}}
+  function actionLabel(a){const extension=resolveActionLabel(a);if(extension)return extension;const p=a.action;if(!p)return'目前沒有進行中的行動';const motion=a.locomotion?.phase&&a.locomotion.phase!=='idle'?(a.locomotion.phase==='transition'?(a.locomotion.mode==='walk'?'・起身準備步行':`・切換為${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}姿勢`):`・${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}中`):'';const moveTarget=(p.spatialGoal?`・目標 (${p.spatialGoal.x},${p.spatialGoal.y})`:'')+motion;switch(p.kind){case'eat':{if(p.phase==='toMeal')return '吃東西・前往'+endpointName(p.foodSource)+moveTarget;if(p.phase==='eatingMeal')return '吃東西・'+endpointName(p.foodSource)+'・逐步進食中';if(p.phase==='toMealSeat')return '吃東西・前往可接觸餐點的座位'+moveTarget;if(p.phase==='sitMeal')return '吃東西・準備坐下用餐';const plate=p.container?endpointName(p.container):'餐盤';if(['toMealDish','takeMealDish'].includes(p.phase))return`吃東西・去拿盛餐餐盤${moveTarget}`;if(['toMealServe','serveMeal'].includes(p.phase))return`吃東西・將餐點盛入餐盤${moveTarget}`;if(['toMealDining','placeMealDish'].includes(p.phase))return`吃東西・端著餐點前往用餐位置${moveTarget}`;if(p.phase==='toDish'||p.phase==='takeDish')return`吃東西・去拿${plate}${moveTarget}`;if(p.phase==='toFood'||p.phase==='serve')return`吃東西・用${plate}盛食物${moveTarget}`;if(p.phase==='chooseSeat')return`吃東西・端著${plate}找座位`;if(p.phase==='toSeat'||p.phase==='sit')return`吃東西・端著${plate}前往座位${moveTarget}`;if(p.phase==='standEat')return`吃東西・準備站著吃`;if(p.phase==='eatingPlate')return`吃東西・${plate}・進食中`;if(p.phase==='toDirectFood')return`吃東西・前往${p.foodSource?endpointName(p.foodSource):'食物'}${moveTarget}`;if(p.phase==='claimDirect'||p.phase==='eatingDirect')return`吃東西・${p.foodSource?endpointName(p.foodSource):'食物'}・進食中`;return`吃東西${moveTarget}`;}case'drinkWater':case'drinkAlcohol':return `${ZH[p.kind]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':p.phase==='move'?'前往飲用來源':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';case'sleep':return p.phase==='sleeping'?`睡眠・${p.sleepTarget?targetLabel({kind:'slot',id:p.sleepTarget.id}):'睡眠位置'}・熟睡中`:p.sleepTarget?`睡眠・前往${targetLabel({kind:'slot',id:p.sleepTarget.id})}${moveTarget}`:'睡眠・尋找位置';case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;case'petAnimal':return`摸${state.agents[p.targetAgent]?.name||'動物'}${moveTarget}`;case'seekHuman':return`找人撒嬌${moveTarget}`;case'carryAgent':return p.phase==='recoveryBlocked'?`搬移${state.agents[p.targetAgent]?.name||'角色'}・安全放置受阻，持續抱持等待`:`搬移${state.agents[p.targetAgent]?.name||'角色'}・${p.recoveryMode?'安全 recovery・':''}${p.phase}${moveTarget}`;case'cleanFloor':return`清理地面${moveTarget}`;case'groom':return'舔毛清潔';case'wander':return`閒晃${moveTarget}`;case'restockContainer':return`補充資源・${endpointName(p.destinationId)}・${resourceName(p.resource)}・${p.carrierId?`${endpointName(p.carrierId)}・`:''}${p.phase}${moveTarget}`;case'externalSupply':return`${p.mode==='physicalIngredient'?'外出取得實體食材':'外出補給'}・${p.carrierId?endpointName(p.carrierId)+'・':''}${p.phase}${moveTarget}`;default:return ZH[p.kind]||p.kind;}}
   function phaseLabel(p){return p?.phase||'';}
   function getEntity(type,id){if(type==='agent')return state.agents[id];if(type==='object')return state.objects[id];if(type==='source')return state.sources[id];if(type==='furniture')return state.furniture[id];if(type==='room')return state.map.rooms[id];return null;}
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`,kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}

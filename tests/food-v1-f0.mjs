@@ -42,7 +42,8 @@ function startMeal(a){
   E.tick();
   assert.equal(a.action,p,'prepare must keep one Action identity');
   assert.equal(p.phase,'toMeal','legal observed Meal must take the new Food consumer path');
-  E.tick();assert.equal(p.phase,'eatingMeal');
+  for(let i=0;i<60&&a.action===p&&p.phase!=='eatingMeal';i++)E.tick();
+  assert.equal(p.phase,'eatingMeal','direct Meal consumption must reach eating after any legal seating');
   return p;
 }
 

@@ -4,7 +4,7 @@
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const PICKUP_INTERACTION_VERSION='pickup-interaction-v3-movable-containment';
-  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v1';
+  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v2-seated-slot-contact';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -740,7 +740,13 @@
         return {mode:'surfaceContact',positions,target,affordance,surfaceId:node.surfaceId};
       }
       const rule=entity.interactions?.[affordance]||entity.interactions?.default||null;
-      if(rule?.mode==='supportReach'&&entity.supportId)return {mode:'supportReach',positions:supportContactNodes(st,entity.supportId,agent),target,affordance,supportId:entity.supportId};
+      if(rule?.mode==='supportReach'&&entity.supportId){
+        // Only a real current seated Surface contact may extend Meal eatFrom.
+        // The Chair never owns a table mapping or a new reach radius.
+        const contact=affordance==='eatFrom'?currentSlotSurfaceContactNode(st,node,agent):null;
+        const positions=dedupeNodes(st,[...supportContactNodes(st,entity.supportId,agent),...(contact?[contact]:[])]);
+        return {mode:'supportReach',positions,target,affordance,supportId:entity.supportId};
+      }
       if(rule?.mode==='occupy')return {mode:'occupy',positions:nodeWalkable(st,node,agent)?[node]:[],target,affordance};
       if(node.surfaceId!==FLOOR){
         const local=surfaceLocalReachNodes(st,node,agent),cross=crossSurfaceContactNodes(st,node,agent,affordance);

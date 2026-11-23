@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.79.0-offmap-physical-ingredient-supply`。
+目前 runtime marker：`11.79.1-physical-meal-seating`。
+
+Physical Meal seating correction：Human 直接吃實體 Meal 或放下真正餐盤後，優先使用合法可達且具有當下 `eatFrom` 接觸的 Furniture Slot；經重驗才坐下並產生 `sitForMeal`。座位不可用時仍可在合法接觸位置站著吃，沒有第二套 Chair reach、Meal inventory 或舊 Resource Food 擴張。
 
 Food Legacy Default Isolation Slice 0：正式 B 住宅不再包含舊 Resource Food 的餐盤、meal tray、food pantry、logistics basket 或其補貨責任；保留普通 `readyMealF0`、Ingredient A、料理鍋與 Serving plates。歷史 Resource Food 模型在 base authoring 保留 `legacyResource*` 身分供遷移與追溯，但正式 Editor 新增目錄已移除四個舊 Food presets；水／酒 Resource presets 仍可用。舊 Food amount-based production paths 待後續 R5 退役，不再接受功能擴張。UI 分別投影 Ingredient 件數與 Meal 公克數，不再以舊 `contents.food` 單位宣稱正式食物庫存。R2 已建立普通搬運籃、固定食材櫃及物理體積容量；R3 已加入有限場景外實體食材供應，居民自主取得食材與持續供餐仍屬後續 R4。
 
