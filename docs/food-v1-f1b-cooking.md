@@ -1,6 +1,6 @@
 # Food v1 F1-B1 — Bounded Cooking Action and kitchen affordances
 
-Status: historical F1-B1 slice, merged in PR #242 (squash `c6a8940ce12b2466871aee26a1e2d2853034e687`). Its verified first production Cooking consumer did **not** model pot contents. The next F1-B2 candidate adds real pot containment; refer to [`food-v1-f1b2-pot-loading.md`](food-v1-f1b2-pot-loading.md) for the proposed current behavior. Other Food integration gaps remain open.
+Status: historical F1-B1 slice, merged in PR #242 (squash `c6a8940ce12b2466871aee26a1e2d2853034e687`). This slice did **not** model pot contents. Its successor F1-B2 merged in PR #243 and provides the current physical Ingredient-in-pot behavior; see [`food-v1-f1b2-pot-loading.md`](food-v1-f1b2-pot-loading.md). Other Food integration gaps remain open.
 
 ## Authoritative boundaries
 
@@ -14,8 +14,8 @@ Status: historical F1-B1 slice, merged in PR #242 (squash `c6a8940ce12b2466871ae
 
 ## Evidence and scope of claims
 
-`tests/food-v1-f1b-cooking.mjs` creates a real initial-state kitchen fixture using the stove, counter, pot and a 300 g Type A Ingredient. It verifies authoring and surface geometry, observation-gated Action eligibility, real tick progress, material conservation and event provenance, automatic existing F0 meal intake, and interruption / pot removal without duplication. Production Node / Browser regression is required before requesting merge.
+`tests/food-v1-f1b-cooking.mjs` creates a real initial-state kitchen fixture using the stove, counter, pot and a 300 g Type A Ingredient. It verifies authoring and surface geometry, observation-gated Action eligibility, real tick progress, material conservation and event provenance, automatic existing F0 meal intake, and interruption / pot removal without duplication. PR #242 exact-head Node and Browser regression completed successfully before merge. F1-B2 has its own independent regression evidence in the successor file.
 
-## Still intentionally deferred
+## F1-B1 historical limitations and successor status
 
-No default-world kitchen replenishment, no plate-side Meal portion transfer or automatic serving, no Ingredient material from `externalSupply`, no removal of legacy `contents.food`, no gas/fuel/temperature model, no Object contents inside the pot, no spilling, and no generalized recipes. In particular, a pot sitting on the stove is a checked physical cooking implement but food has **not** been modeled as physically contained inside it in this slice. The next slice must close this physical placement gap before claiming detailed cookware behavior. Ingredient A → Meal at the same stove is the deliberately bounded first production case. These siblings remain independently visible as pending future gates; current WORLD 001 ACTIVE priorities are unchanged.
+No default-world kitchen replenishment, no plate-side Meal portion transfer or automatic serving, no Ingredient material from `externalSupply`, no removal of legacy `contents.food`, no gas/fuel/temperature model, no Object contents inside the pot, no spilling, and no generalized recipes. In particular, a pot sitting on the stove is a checked physical cooking implement but food has **not** been modeled as physically contained inside it in this slice. Successor F1-B2 (PR #243) closed this bounded whole-Ingredient-in-pot placement gap; it did not implement Meal-in-pot or serving. Ingredient A → Meal at the same stove is the deliberately bounded first production case. These siblings remain independently visible as pending future gates; current WORLD 001 ACTIVE priorities are unchanged.

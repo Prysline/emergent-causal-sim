@@ -1,6 +1,6 @@
 # Food v1 Slice F1-A — Ingredient Object Foundation
 
-Status: PR candidate. This is an isolated Ingredient physical Object foundation, **not** Cooking / Serving / Food migration completion. Verified implementation truth remains GitHub code + exact-head regressions.
+Status: merged in PR #241 (squash `fd6f01cc2987801cbd6c64f0aebe099bf3de1252`). This historical F1-A slice established the Ingredient physical Object foundation; it did **not** complete Cooking, Serving, or Food migration. Cooking F1-B1 and physical pot loading F1-B2 subsequently merged in PR #242 and PR #243. Implemented truth remains current GitHub code and regression evidence.
 
 ## Contract ownership
 
@@ -19,9 +19,9 @@ The default world remains F0: `readyMealF0` exists, and legacy `contents.food` r
 
 `SimFood` Meal F0 generation remains `food-v1-f0`. New Ingredient generation is `food-ingredient-v1`. World Authoring advances to `world-authoring-v22`, with an overall version change for the new externally available Ingredient schema. Generic Object Handling, Resources, Physical, Spatial, Deliberation and existing Food F0 own generations remain unchanged.
 
-## Remaining dependencies
+## Successor status and remaining dependencies
 
-1. Cooking ingredient selection and completion-time atomic whole-object transformation into Meal, with yield / process outflow evidence and real Action consumer.
+1. Completed in successor PR #242 (Cooking F1-B1) and PR #243 (physical pot loading F1-B2): the existing Action selects a visible whole Ingredient, physically loads it into the pot, then completes the whole-object transformation into a Meal with recorded yield, process outflow and canonical World Event provenance. This does not retroactively expand F1-A scope.
 2. Meal portion transfer into resident-carried plate using the existing `serve` and `eat` lifecycle. Ingredient physical mass is handled; mutable Meal edible mass is a separate pending physical-mass integration Gate.
 3. Reuse existing `externalSupply` with explicit Ingredient Object generation/transport and bounded restock.
 4. Migrate existing food Resources (including default `contents.food`) to real Ingredient / Meal truth, remove legacy food units from production once downstream consumers and migration tests pass.
