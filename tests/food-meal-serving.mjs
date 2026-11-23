@@ -10,7 +10,7 @@ const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValida
 assert.equal(F.VERSION,'food-v3-meal-volume');
 assert.equal(O.VERSION,'object-handling-v4-storage-volume');
 assert.equal(A.VERSION,'world-authoring-v28');
-assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v1','production Spatial Traversal owns exposed plate contact');
+assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v2-seated-slot-contact','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){
   const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -204,6 +204,25 @@ function eventAncestors(st,id,visited=new Set()){
   assert.ok(eventAncestors(st,intakeEvents(st)[0].id).has(sit.id),'intake must cite the seating World Event');
   assert.equal(F.remainingGrams(meal),250);
   assert.deepEqual(issues(),[]);
+}
+{
+  const {st,a,b,meal}=setup(20261127);
+  delete st.objects.plateA;
+  const target={kind:'object',id:meal.id};
+  const approach=SP.bestInteractionPositionResult(st,a,target,'eatFrom');
+  assert.ok(approach?.position);
+  a.position={...approach.position};
+  const action=startEat(st,a);
+  E.tick();assert.equal(action.phase,'toMeal');
+  E.tick();assert.equal(action.phase,'toMealSeat','real Meal should have selected a reachable chair');
+  const slot=SP.getSlot(st,action.mealSeatId);
+  assert.ok(slot);
+  b.offMap=false;b.position={...slot.position};
+  b.posture={kind:'sitting',slotId:slot.id,furnitureId:slot.furnitureId};
+  E.tick();
+  assert.equal(action.phase,'toMeal','occupied selected Slot must cancel settle and return to legal Meal contact');
+  assert.equal(st.reservations['slot:'+slot.id],undefined,'lost Slot must release reservation');
+  assert.equal(st.events.some(e=>e.data?.action==='sitForMeal'&&e.data?.foodKind==='meal'),false);
 }
 {
   const {st,a,meal}=setup(20261126);

@@ -4,7 +4,7 @@
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const PICKUP_INTERACTION_VERSION='pickup-interaction-v3-movable-containment';
-  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v1';
+  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v2-seated-slot-contact';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;

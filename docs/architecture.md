@@ -4,7 +4,7 @@
 
 目前 runtime marker：`11.79.1-physical-meal-seating`。
 
-Physical Meal seating correction：現行 `eat` 只在可達 Slot 的真實坐姿 `eatFrom` 接觸成立時選座，settlement 時再次核對 Slot／姿勢／接觸並沿用 `sitOn` 與 canonical Event；站立備援仍須真實接觸。Serving 餐盤先真正放下，才判斷座位接觸；Spatial `supportReach/eatFrom` 僅重用已存在的 Surface contact witness，不建立 Chair→Table 或 Food 庫存第二真相。
+Physical Meal seating correction：現行 `eat` 只在可達 Slot 的真實坐姿 `eatFrom` 接觸成立時選座，settlement 時再次核對 Slot／姿勢／接觸並沿用 `sitOn` 與 canonical Event；站立備援仍須真實接觸。Serving 餐盤先真正放下，才判斷座位接觸；Spatial `supportReach/eatFrom` 僅重用已存在的 Surface contact witness（專用 generation `meal-plate-eat-from-v2-seated-slot-contact`），不建立 Chair→Table 或 Food 庫存第二真相。
 
 Current B Food / Legacy Resource isolation：正式 `DEFAULT_WORLD_AUTHORING` 由 World Authoring v26 單一組裝層移除舊 `legacyResourcePlateA/B`、`legacyResourceMealTray`、`legacyResourceFoodPantry`、`legacyResourceBasket` 與 Food `resourceResponsibilityAssignments`，保留普通 `readyMealF0` Meal、`ingredientA1` 及 `plateA/B`。既有 amount-based `foodStock` / `restockContainer` / `externalSupply` 僅供獨立 Legacy Resource 場景；B 無 Food Resource destination/carrier，因而不會產生原本的食物 Resource 補貨行動。Presentation 分別投影 Ingredient 件數與 Meal 公克數，不混算 Resource 單位。Editor 已移除四個舊 Resource Food 建立 presets（tooling v3）；水／酒等其他 Resource 建立能力不變。R2 已導入 canonical physical-volume Object Storage；R3 已在既有 `externalSupply` 加入實體食材供應模式及正式 B 場景有限場景外 Ingredient 來源，R4 自主供餐尚未實作。
 
