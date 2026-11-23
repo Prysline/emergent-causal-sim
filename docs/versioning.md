@@ -1,6 +1,6 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.78.0-object-storage-volume`。
+目前 overall runtime marker：`11.79.0-offmap-physical-ingredient-supply`。
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
@@ -62,7 +62,7 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v27`
+- World Authoring：`world-authoring-v28`
 - World Editor Resource-container / Source presets：`editor-container-source-authoring-v3`
 - World Editor Ordinary Object templates：`editor-ordinary-object-authoring-v4`
 - Food Meal / Serving：`food-v3-meal-volume`
@@ -158,3 +158,4 @@ Release bump 應核對：`src/release.js`、runtime / Presentation derived versi
 PR head 每次改變後，舊 head 的 CI 結果不得直接套用到新 head。
 
 Historical version narrative 保存於 `docs/archive/versioning-through-11.53.md`；Historical literal 不因新 current release 全域替換。
+`11.79.0-offmap-physical-ingredient-supply`：R3 明確的 physical-mode `externalSupply`、有限場景外 Ingredient 來源、逐件物件創建與來源扣減、普通 Object 籃子體積合法性以及 canonical World Event。World Authoring v28；Ingredient v1、Object Storage Volume v1、其他未受影響 subsystem generation 不假升。詳細契約：`docs/food-offmap-physical-ingredient-supply.md`。

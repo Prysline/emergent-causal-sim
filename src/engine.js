@@ -1,6 +1,7 @@
 (() => {
   const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v3-object-storage-volume')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
-  const T=window.SimCharacterTraits;if(!T?.value)throw new Error('Engine requires Character Traits contract.');
+  const T=window.SimCharacterTraits,I=window.SimIngredient,S=window.SimObjectStorageVolume;
+  if(!T?.value||I?.VERSION!=='food-ingredient-v1'||S?.VERSION!=='object-storage-volume-v1')throw new Error('Engine requires Character Traits, Ingredient and canonical Object Storage Volume contracts.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
   const DEFAULT_SEED=20260911,MAX_INTERACTION_WAIT=6,CARRY_RECOVERY_RETRY_TICKS=2;
   const CIRCADIAN_PATTERN_ZH={diurnal:'日行性',nocturnal:'夜行性',crepuscular:'晨昏性'};
@@ -486,7 +487,24 @@
       case'read':{const object=state.objects?.[choice.targetObject],target=object?{kind:'object',id:object.id}:null,valid=a.kind==='human'&&object?.affordances?.includes('read')&&Number.isFinite(targetTraversalCost(a,target,'read'));action=valid?{...base,phase:SP.isAtInteraction(state,a,target,'read')?'reading':'move',targetObject:object.id,feedbackUnits:0,feedbackGoal:6}:null;break;}
       case'wander':{const t=choice.targetTile||randomFloorTile(a);action={...base,phase:'move',targetTile:t?SP.clonePos(t):null,oneShot:true};break;}
       case'restockContainer':{const j=choice.job;if(j)action={...base,phase:j.strategy==='carryContainer'?'toContainer':'toCarrier',destinationId:j.destinationId,sourceId:j.sourceId,sourceKind:j.sourceKind,resource:j.resource,strategy:j.strategy,carrierId:j.carrierId||null};break;}
-      case'externalSupply':{const exit=choice.exitId?SP.getExit?.(state,choice.exitId):worldExitFor(a);if(exit&&choice.carrierId)action={...base,phase:'toCarrier',exitId:exit.id,destinationId:choice.destinationId,resource:choice.resource,carrierId:choice.carrierId,workLeft:Math.floor(rand(7,11)),produced:0};break;}
+      case'externalSupply':{
+        if(choice.mode==='physicalIngredient'){
+          if(choice.resource!==undefined||choice.destinationId!==undefined)throw new Error('Physical Ingredient Supply cannot use Resource cargo or Resource destination.');
+          if(choice.unitLimit!==undefined&&(!Number.isSafeInteger(choice.unitLimit)||choice.unitLimit<1))throw new Error('Physical Ingredient Supply unitLimit must be a positive integer.');
+          const source=state.offMapIngredientSources?.[choice.sourceId],exit=source&&SP.getExit?.(state,source.exitId),carrier=state.objects?.[choice.carrierId];
+          if(source&&source.availableUnits>0&&exit&&SP.exitStructurallyAvailable?.(state,exit)
+            &&carrier?.portable===true&&carrier.objectContainment===true&&carrier.resourceContainer!==true
+            &&O.canHoldObject(state,a,carrier)&&S.storageStatus(state,carrier.id).withinCapacity){
+            action={...base,mode:'physicalIngredient',phase:'toCarrier',sourceId:source.id,exitId:exit.id,
+              carrierId:carrier.id,unitLimit:choice.unitLimit??null,workLeft:source.workTicksPerUnit,
+              acquiredIds:[],lastAcquisitionEventId:null,exitEventId:null};
+          }
+          break;
+        }
+        if(choice.mode!==undefined)throw new Error('Unknown externalSupply mode: '+String(choice.mode));
+        const exit=choice.exitId?SP.getExit?.(state,choice.exitId):worldExitFor(a);
+        if(exit&&choice.carrierId)action={...base,phase:'toCarrier',exitId:exit.id,destinationId:choice.destinationId,resource:choice.resource,carrierId:choice.carrierId,workLeft:Math.floor(rand(7,11)),produced:0};break;
+      }
       case'carryAgent':{
         const A=agentCarryRuntime(),target=state.agents[choice.targetAgent],targetPlacement=normalizeCarryPlacement(choice.targetPlacement),existing=A?.relationForCarrier?.(state,a);
         if(!A||!target||!targetPlacement)break;
@@ -726,7 +744,93 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
     abortAction(a,'未知的閱讀階段',{dropHeld:false});
   }
   function stepWander(a,p){if(!p.targetTile){finishAction(a,{dropHeld:false});return;}if(moveToExact(a,p.targetTile,'閒晃'))finishAction(a,{dropHeld:false});}
-  function stepExternalSupply(a,p){const exit=SP.getExit?.(state,p.exitId),dest=state.objects[p.destinationId],carrier=state.objects[p.carrierId];if(!exit||!SP.exitStructurallyAvailable?.(state,exit)||!dest||!carrier||!logisticsContainerCanCarry(carrier,p.resource)){abortAction(a,'外出補給的出口、入庫點或物流容器已失效');return;}if(p.phase==='toCarrier'){if(!reserve(`object:${carrier.id}`,a)){p.wait=(p.wait||0)+1;if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等不到可用的物流容器');return;}p.wait=0;if(!moveToInteraction(a,{kind:'object',id:carrier.id},`去拿${carrier.name}準備外出`,'pickup'))return;p.phase='takeCarrier';return;}if(p.phase==='takeCarrier'){if(!holdObject(a,carrier.id)){abortAction(a,`沒能拿起${carrier.name}`);return;}releaseReservation(`object:${carrier.id}`,a);addEvent(`${a.name}拿起${carrier.name}，準備帶它外出補給。`,'normal',[],{actor:a.id,action:'takeSupplyCarrier',carrier:carrier.id,position:positionRef(a.position)});p.phase='toExit';return;}if(p.phase==='toExit'){if(a.held!==carrier.id){abortAction(a,`途中已經沒有拿著${carrier.name}`);return;}if(!moveToExact(a,exit.access,'拿著物流容器準備外出補給'))return;p.phase='exit';return;}if(p.phase==='exit'){if(a.held!==carrier.id){abortAction(a,`沒有帶著${carrier.name}，無法外出搬貨`);return;}a.offMap=true;standUp(a);addEvent(`${a.name}帶著${carrier.name}從出口外出補給${resourceName(p.resource)}。`,'normal',[],{actor:a.id,carrier:carrier.id,action:'supplyExit'});p.phase='work';return;}if(p.phase==='work'){if(a.needs.fatigue>88||a.needs.sleepNeed>96||a.needs.thirst>94||a.needs.hunger>94){a.offMap=false;a.position={...exit.access};abortAction(a,'身體狀況太差，提早帶著物流容器回家');return;}applyExertion(a,1.05,'外出補給工作',{thirstFactor:.33,hungerFactor:.10});p.workLeft--;if(p.workLeft<=0){const requested=rand(32,46),m=putResource(carrier.id,p.resource,requested);p.produced=m;a.offMap=false;a.position={...exit.access};p.phase='toDestination';addEvent(`${a.name}完成外出補給，${carrier.name}裡裝了 ${Math.round(m)} 單位${resourceName(p.resource)}，並帶回出口。`,'good',[],{actor:a.id,carrier:carrier.id,action:'supplyReturn',amount:m,resource:p.resource,load:containerLoad(carrier.id)});}return;}if(p.phase==='toDestination'){if(a.held!==carrier.id){abortAction(a,`回家途中已經沒有拿著${carrier.name}`);return;}if(!moveToInteraction(a,{kind:'object',id:dest.id},`把${carrier.name}帶到${dest.name}`,'deposit'))return;p.phase='deposit';return;}if(p.phase==='deposit'){if(a.held!==carrier.id||!actorCanTransfer(a,carrier.id,dest.id,'deposit')){abortAction(a,`${carrier.name}沒有在能入庫的位置`);return;}const m=transferResource(p.resource,carrier.id,dest.id,amountAt(carrier.id,p.resource));state.supply.trips++;state.supply.totalProduced+=m;addEvent(`${a.name}把${carrier.name}裡的 ${Math.round(m)} 單位${resourceName(p.resource)}放進${dest.name}。`,'good',[],{actor:a.id,carrier:carrier.id,action:'supplyDeposit',from:carrier.id,to:dest.id,amount:m,resource:p.resource});finishAction(a);return;}}
+
+  function stepPhysicalIngredientSupply(a,p){
+    const source=state.offMapIngredientSources?.[p.sourceId],exit=SP.getExit?.(state,p.exitId),carrier=state.objects?.[p.carrierId];
+    if(!source||source.id!==p.sourceId||source.exitId!==p.exitId||!exit||!carrier||carrier.portable!==true
+      ||carrier.objectContainment!==true||carrier.resourceContainer===true)
+      throw new Error('Physical Ingredient Supply lost its canonical source, exit or ordinary Object carrier.');
+    if(!['toCarrier','takeCarrier','toExit','exit','work','return'].includes(p.phase))
+      throw new Error('Unknown Physical Ingredient Supply phase: '+String(p.phase));
+    if(a.offMap!==['work','return'].includes(p.phase))
+      throw new Error('Physical Ingredient Supply off-map/phase mismatch.');
+    if(!a.offMap&&!SP.exitStructurallyAvailable?.(state,exit)){
+      abortAction(a,'外出食材供應出口暫時不可使用');return;
+    }
+    if(p.phase==='toCarrier'){
+      if(!reserve('object:'+carrier.id,a)){
+        p.wait=(p.wait||0)+1;
+        if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等待實體搬運容器逾時');
+        return;
+      }
+      p.wait=0;
+      if(!moveToInteraction(a,{kind:'object',id:carrier.id},'前往取得實體食材搬運籃','pickup'))return;
+      p.phase='takeCarrier';return;
+    }
+    if(p.phase==='takeCarrier'){
+      if(!holdObject(a,carrier.id)){abortAction(a,'無法合法拿起實體搬運籃');return;}
+      releaseReservation('object:'+carrier.id,a);
+      p.phase='toExit';
+      addEvent(a.name+'拿起'+carrier.name+'準備外出取得實體食材。','normal',[],{actor:a.id,action:'takeSupplyCarrier',carrier:carrier.id,mode:p.mode});
+      return;
+    }
+    if(a.held!==carrier.id)throw new Error('Physical Ingredient Supply lost its held ordinary carrier.');
+    if(p.phase==='toExit'){
+      if(!moveToExact(a,exit.access,'攜帶普通籃子前往場景出口'))return;
+      p.phase='exit';return;
+    }
+    if(p.phase==='exit'){
+      a.offMap=true;standUp(a);p.phase='work';
+      p.exitEventId=addEvent(a.name+'帶著'+carrier.name+'離開場景尋找實體食材。','normal',[],{
+        actor:a.id,action:'physicalIngredientSupplyExit',carrier:carrier.id,sourceId:source.id,exitId:exit.id});
+      return;
+    }
+    if(p.phase==='work'){
+      const needs=a.needs||{};
+      if(needs.fatigue>88||needs.sleepNeed>96||needs.thirst>94||needs.hunger>94
+        ||source.availableUnits===0||(p.unitLimit!==null&&p.acquiredIds.length>=p.unitLimit)){
+        p.phase='return';return;
+      }
+      if(!Number.isSafeInteger(source.availableUnits)||source.availableUnits<0
+        ||!Number.isSafeInteger(source.nextSerial)||source.nextSerial<1
+        ||!Number.isSafeInteger(source.workTicksPerUnit)||source.workTicksPerUnit<1)
+        throw new Error('Physical Ingredient Supply source state is corrupt.');
+      const id='ingredient:offmap:'+source.id+':'+source.nextSerial;
+      if(Object.prototype.hasOwnProperty.call(state.objects,id))throw new Error('Physical Ingredient Supply Object ID collision: '+id);
+      const candidate=I.createIngredientObject({id,typeId:source.ingredientTypeId,containedBy:carrier.id});
+      // Pure candidate view: canonical state changes only after the storage check passes.
+      const view={...state,objects:{...state.objects,[id]:candidate}};
+      if(!S.storageLegality(view,carrier.id,id)){p.phase='return';return;}
+      applyExertion(a,1.05,'場景外取得食材',{thirstFactor:.33,hungerFactor:.10});
+      p.workLeft--;
+      if(p.workLeft>0)return;
+      // An acquired unit has one Object, one stock decrement and one canonical Event.
+      // Advance before listener dispatch so an exception cannot duplicate an acquisition.
+      state.objects[id]=candidate;
+      source.availableUnits--;
+      source.nextSerial++;
+      p.acquiredIds.push(id);
+      p.workLeft=source.workTicksPerUnit;
+      if(source.availableUnits===0||(p.unitLimit!==null&&p.acquiredIds.length>=p.unitLimit))p.phase='return';
+      p.lastAcquisitionEventId=addEvent(a.name+'取得一件實體'+candidate.name+'，裝進'+carrier.name+'。','good',
+        [p.lastAcquisitionEventId||p.exitEventId].filter(Boolean),{
+          actor:a.id,action:'physicalIngredientAcquired',sourceId:source.id,ingredientId:id,
+          carrier:carrier.id,objectId:id,amountGrams:I.massGrams(candidate),
+          sourceRemainingUnits:source.availableUnits,entities:['object:'+id,'object:'+carrier.id]});
+      return;
+    }
+    // Reentry waits for the same exit to reopen; it cannot teleport a carried basket.
+    if(!SP.exitStructurallyAvailable?.(state,exit))return;
+    a.offMap=false;a.position={...exit.access};
+    const acquiredIds=[...p.acquiredIds],causeIds=[p.lastAcquisitionEventId||p.exitEventId].filter(Boolean);
+    finishAction(a); // canonical nearby release retains the sole containedBy relation
+    addEvent(a.name+'帶著'+carrier.name+'及'+acquiredIds.length+'件實體食材返回場景。','good',causeIds,{
+      actor:a.id,action:'physicalIngredientSupplyReturn',sourceId:source.id,exitId:exit.id,
+      carrier:carrier.id,ingredientIds:acquiredIds,entities:['object:'+carrier.id,...acquiredIds.map(id=>'object:'+id)],
+      position:positionRef(a.position)});
+  }
+
+  function stepExternalSupply(a,p){if(p.mode==='physicalIngredient'){stepPhysicalIngredientSupply(a,p);return;}if(p.mode!==undefined)throw new Error('Unknown externalSupply mode: '+String(p.mode));const exit=SP.getExit?.(state,p.exitId),dest=state.objects[p.destinationId],carrier=state.objects[p.carrierId];if(!exit||!SP.exitStructurallyAvailable?.(state,exit)||!dest||!carrier||!logisticsContainerCanCarry(carrier,p.resource)){abortAction(a,'外出補給的出口、入庫點或物流容器已失效');return;}if(p.phase==='toCarrier'){if(!reserve(`object:${carrier.id}`,a)){p.wait=(p.wait||0)+1;if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'等不到可用的物流容器');return;}p.wait=0;if(!moveToInteraction(a,{kind:'object',id:carrier.id},`去拿${carrier.name}準備外出`,'pickup'))return;p.phase='takeCarrier';return;}if(p.phase==='takeCarrier'){if(!holdObject(a,carrier.id)){abortAction(a,`沒能拿起${carrier.name}`);return;}releaseReservation(`object:${carrier.id}`,a);addEvent(`${a.name}拿起${carrier.name}，準備帶它外出補給。`,'normal',[],{actor:a.id,action:'takeSupplyCarrier',carrier:carrier.id,position:positionRef(a.position)});p.phase='toExit';return;}if(p.phase==='toExit'){if(a.held!==carrier.id){abortAction(a,`途中已經沒有拿著${carrier.name}`);return;}if(!moveToExact(a,exit.access,'拿著物流容器準備外出補給'))return;p.phase='exit';return;}if(p.phase==='exit'){if(a.held!==carrier.id){abortAction(a,`沒有帶著${carrier.name}，無法外出搬貨`);return;}a.offMap=true;standUp(a);addEvent(`${a.name}帶著${carrier.name}從出口外出補給${resourceName(p.resource)}。`,'normal',[],{actor:a.id,carrier:carrier.id,action:'supplyExit'});p.phase='work';return;}if(p.phase==='work'){if(a.needs.fatigue>88||a.needs.sleepNeed>96||a.needs.thirst>94||a.needs.hunger>94){a.offMap=false;a.position={...exit.access};abortAction(a,'身體狀況太差，提早帶著物流容器回家');return;}applyExertion(a,1.05,'外出補給工作',{thirstFactor:.33,hungerFactor:.10});p.workLeft--;if(p.workLeft<=0){const requested=rand(32,46),m=putResource(carrier.id,p.resource,requested);p.produced=m;a.offMap=false;a.position={...exit.access};p.phase='toDestination';addEvent(`${a.name}完成外出補給，${carrier.name}裡裝了 ${Math.round(m)} 單位${resourceName(p.resource)}，並帶回出口。`,'good',[],{actor:a.id,carrier:carrier.id,action:'supplyReturn',amount:m,resource:p.resource,load:containerLoad(carrier.id)});}return;}if(p.phase==='toDestination'){if(a.held!==carrier.id){abortAction(a,`回家途中已經沒有拿著${carrier.name}`);return;}if(!moveToInteraction(a,{kind:'object',id:dest.id},`把${carrier.name}帶到${dest.name}`,'deposit'))return;p.phase='deposit';return;}if(p.phase==='deposit'){if(a.held!==carrier.id||!actorCanTransfer(a,carrier.id,dest.id,'deposit')){abortAction(a,`${carrier.name}沒有在能入庫的位置`);return;}const m=transferResource(p.resource,carrier.id,dest.id,amountAt(carrier.id,p.resource));state.supply.trips++;state.supply.totalProduced+=m;addEvent(`${a.name}把${carrier.name}裡的 ${Math.round(m)} 單位${resourceName(p.resource)}放進${dest.name}。`,'good',[],{actor:a.id,carrier:carrier.id,action:'supplyDeposit',from:carrier.id,to:dest.id,amount:m,resource:p.resource});finishAction(a);return;}}
 
   function stepPutAwayObject(a,p){
     const assignment=state.objectStorageAssignments?.find(item=>item.id===p.storageAssignmentId);
@@ -847,7 +951,7 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
   function dayRollover(){if(state.minute<1440)return;state.minute-=1440;state.day++;for(const a of Object.values(state.agents))a.metrics.exertionToday=0;}
   function tick(){coreTickDepth++;try{state.tick++;state.minute+=2;dayRollover();decayNoise();needDrift();const A=agentCarryRuntime();for(const a of shuffle(Object.values(state.agents))){if(A?.isCarried?.(state,a))continue;if(a.offMap&&a.action?.kind!=='externalSupply')continue;if(!a.action){if(A?.relationForCarrier?.(state,a))continue;const c=choose(a);if(c)startAction(a,c);continue;}stepAction(a);}return state;}finally{coreTickDepth--;}}
 
-  function actionLabel(a){const extension=resolveActionLabel(a);if(extension)return extension;const p=a.action;if(!p)return'目前沒有進行中的行動';const motion=a.locomotion?.phase&&a.locomotion.phase!=='idle'?(a.locomotion.phase==='transition'?(a.locomotion.mode==='walk'?'・起身準備步行':`・切換為${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}姿勢`):`・${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}中`):'';const moveTarget=(p.spatialGoal?`・目標 (${p.spatialGoal.x},${p.spatialGoal.y})`:'')+motion;switch(p.kind){case'eat':{if(p.phase==='toMeal')return '吃東西・前往'+endpointName(p.foodSource)+moveTarget;if(p.phase==='eatingMeal')return '吃東西・'+endpointName(p.foodSource)+'・逐步進食中';const plate=p.container?endpointName(p.container):'餐盤';if(['toMealDish','takeMealDish'].includes(p.phase))return`吃東西・去拿盛餐餐盤${moveTarget}`;if(['toMealServe','serveMeal'].includes(p.phase))return`吃東西・將餐點盛入餐盤${moveTarget}`;if(['toMealDining','placeMealDish'].includes(p.phase))return`吃東西・端著餐點前往用餐位置${moveTarget}`;if(p.phase==='toDish'||p.phase==='takeDish')return`吃東西・去拿${plate}${moveTarget}`;if(p.phase==='toFood'||p.phase==='serve')return`吃東西・用${plate}盛食物${moveTarget}`;if(p.phase==='chooseSeat')return`吃東西・端著${plate}找座位`;if(p.phase==='toSeat'||p.phase==='sit')return`吃東西・端著${plate}前往座位${moveTarget}`;if(p.phase==='standEat')return`吃東西・準備站著吃`;if(p.phase==='eatingPlate')return`吃東西・${plate}・進食中`;if(p.phase==='toDirectFood')return`吃東西・前往${p.foodSource?endpointName(p.foodSource):'食物'}${moveTarget}`;if(p.phase==='claimDirect'||p.phase==='eatingDirect')return`吃東西・${p.foodSource?endpointName(p.foodSource):'食物'}・進食中`;return`吃東西${moveTarget}`;}case'drinkWater':case'drinkAlcohol':return `${ZH[p.kind]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':p.phase==='move'?'前往飲用來源':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';case'sleep':return p.phase==='sleeping'?`睡眠・${p.sleepTarget?targetLabel({kind:'slot',id:p.sleepTarget.id}):'睡眠位置'}・熟睡中`:p.sleepTarget?`睡眠・前往${targetLabel({kind:'slot',id:p.sleepTarget.id})}${moveTarget}`:'睡眠・尋找位置';case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;case'petAnimal':return`摸${state.agents[p.targetAgent]?.name||'動物'}${moveTarget}`;case'seekHuman':return`找人撒嬌${moveTarget}`;case'carryAgent':return p.phase==='recoveryBlocked'?`搬移${state.agents[p.targetAgent]?.name||'角色'}・安全放置受阻，持續抱持等待`:`搬移${state.agents[p.targetAgent]?.name||'角色'}・${p.recoveryMode?'安全 recovery・':''}${p.phase}${moveTarget}`;case'cleanFloor':return`清理地面${moveTarget}`;case'groom':return'舔毛清潔';case'wander':return`閒晃${moveTarget}`;case'restockContainer':return`補充資源・${endpointName(p.destinationId)}・${resourceName(p.resource)}・${p.carrierId?`${endpointName(p.carrierId)}・`:''}${p.phase}${moveTarget}`;case'externalSupply':return`外出補給・${p.carrierId?endpointName(p.carrierId)+'・':''}${p.phase}${moveTarget}`;default:return ZH[p.kind]||p.kind;}}
+  function actionLabel(a){const extension=resolveActionLabel(a);if(extension)return extension;const p=a.action;if(!p)return'目前沒有進行中的行動';const motion=a.locomotion?.phase&&a.locomotion.phase!=='idle'?(a.locomotion.phase==='transition'?(a.locomotion.mode==='walk'?'・起身準備步行':`・切換為${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}姿勢`):`・${locomotionRuntime()?.modeLabel?.(a.locomotion.mode)||a.locomotion.mode}中`):'';const moveTarget=(p.spatialGoal?`・目標 (${p.spatialGoal.x},${p.spatialGoal.y})`:'')+motion;switch(p.kind){case'eat':{if(p.phase==='toMeal')return '吃東西・前往'+endpointName(p.foodSource)+moveTarget;if(p.phase==='eatingMeal')return '吃東西・'+endpointName(p.foodSource)+'・逐步進食中';const plate=p.container?endpointName(p.container):'餐盤';if(['toMealDish','takeMealDish'].includes(p.phase))return`吃東西・去拿盛餐餐盤${moveTarget}`;if(['toMealServe','serveMeal'].includes(p.phase))return`吃東西・將餐點盛入餐盤${moveTarget}`;if(['toMealDining','placeMealDish'].includes(p.phase))return`吃東西・端著餐點前往用餐位置${moveTarget}`;if(p.phase==='toDish'||p.phase==='takeDish')return`吃東西・去拿${plate}${moveTarget}`;if(p.phase==='toFood'||p.phase==='serve')return`吃東西・用${plate}盛食物${moveTarget}`;if(p.phase==='chooseSeat')return`吃東西・端著${plate}找座位`;if(p.phase==='toSeat'||p.phase==='sit')return`吃東西・端著${plate}前往座位${moveTarget}`;if(p.phase==='standEat')return`吃東西・準備站著吃`;if(p.phase==='eatingPlate')return`吃東西・${plate}・進食中`;if(p.phase==='toDirectFood')return`吃東西・前往${p.foodSource?endpointName(p.foodSource):'食物'}${moveTarget}`;if(p.phase==='claimDirect'||p.phase==='eatingDirect')return`吃東西・${p.foodSource?endpointName(p.foodSource):'食物'}・進食中`;return`吃東西${moveTarget}`;}case'drinkWater':case'drinkAlcohol':return `${ZH[p.kind]}・${p.phase==='toVessel'?'去拿容器':p.phase==='toSource'?'前往來源':p.phase==='fill'?'裝取中':p.phase==='drink'?'飲用中':p.phase==='move'?'前往飲用來源':'準備中'}${p.container?`・${endpointName(p.container)}`:''}${moveTarget}`;case'rest':return p.phase==='resting'?`休息・${a.posture.kind==='sitting'?'坐著':a.posture.kind==='lying'?'躺／蜷著':'站著'}`:p.restTarget?`休息・前往${p.restTarget.kind==='slot'?targetLabel({kind:'slot',id:p.restTarget.id}):'休息位置'}`:'休息・尋找位置';case'sleep':return p.phase==='sleeping'?`睡眠・${p.sleepTarget?targetLabel({kind:'slot',id:p.sleepTarget.id}):'睡眠位置'}・熟睡中`:p.sleepTarget?`睡眠・前往${targetLabel({kind:'slot',id:p.sleepTarget.id})}${moveTarget}`:'睡眠・尋找位置';case'talk':return`找人聊天・${state.agents[p.targetAgent]?.name||''}${moveTarget}`;case'petAnimal':return`摸${state.agents[p.targetAgent]?.name||'動物'}${moveTarget}`;case'seekHuman':return`找人撒嬌${moveTarget}`;case'carryAgent':return p.phase==='recoveryBlocked'?`搬移${state.agents[p.targetAgent]?.name||'角色'}・安全放置受阻，持續抱持等待`:`搬移${state.agents[p.targetAgent]?.name||'角色'}・${p.recoveryMode?'安全 recovery・':''}${p.phase}${moveTarget}`;case'cleanFloor':return`清理地面${moveTarget}`;case'groom':return'舔毛清潔';case'wander':return`閒晃${moveTarget}`;case'restockContainer':return`補充資源・${endpointName(p.destinationId)}・${resourceName(p.resource)}・${p.carrierId?`${endpointName(p.carrierId)}・`:''}${p.phase}${moveTarget}`;case'externalSupply':return`${p.mode==='physicalIngredient'?'外出取得實體食材':'外出補給'}・${p.carrierId?endpointName(p.carrierId)+'・':''}${p.phase}${moveTarget}`;default:return ZH[p.kind]||p.kind;}}
   function phaseLabel(p){return p?.phase||'';}
   function getEntity(type,id){if(type==='agent')return state.agents[id];if(type==='object')return state.objects[id];if(type==='source')return state.sources[id];if(type==='furniture')return state.furniture[id];if(type==='room')return state.map.rooms[id];return null;}
   function causeTree(id,depth=0,seen=new Set()){if(!id||seen.has(id)||depth>8)return'';seen.add(id);const e=state.causes[id];if(!e)return'';const line=`${'  '.repeat(depth)}${e.time} ${e.text}`,kids=(e.causeIds||[]).map(c=>causeTree(c,depth+1,seen)).filter(Boolean);return [line,...kids].join('\n');}
