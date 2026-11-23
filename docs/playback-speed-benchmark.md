@@ -39,6 +39,10 @@ In the run, select the **Opt-in full-render autoplay measurement (non-gating)** 
 
 The separate [Inspector optimization PR #253](https://github.com/Prysline/emergent-causal-sim/pull/253) handles deferred hidden Debug diagnostics; it is not part of this Benchmark tooling PR. Compare same seed, scenario, case order and runner conditions when evaluating before/after results. GitHub-hosted runner throughput does not establish player device performance or guarantee visible display paint.
 
+## Validator cost-boundary comparison (short workload)
+
+The existing `tests/browser-step-batch-performance-qa.mjs` is the short, regular Browser regression for canonical state parity, per-layer Validation cost and Spatial query attribution. The Memory Deliberation Validation correction removes eager `E.currentSocialTargetEvaluations()` calls from the ordinary validation layer; numeric legality is checked at the canonical `E.targetEvaluation()` computation entry instead. The QA asserts zero social-route Spatial queries attributed to `validation/layer:memory-deliberation`, without hardcoding a fixed emergent Action path. Before/after wall-clock comparisons should use identical fixture/seed and are CI-runner estimates, not player-device speed guarantees. Inspector Debug remains a separate cost owner and is not optimized by this fix.
+
 ## Output and interpretation
 
 The script writes `artifacts/browser-autoplay-speed-benchmark/result.json` and prints one `AUTOPLAY_SPEED_CASE` summary per test case. Each report includes the target interval, configured multiplier relative to the current 700-ms baseline, achieved start-to-start multiplier, timing distributions for `E.tick()`, synchronous `render()`, complete callbacks, and browser frame opportunities, plus long-task telemetry where supported.

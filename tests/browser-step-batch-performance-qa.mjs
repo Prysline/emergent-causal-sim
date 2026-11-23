@@ -443,6 +443,12 @@ try{
     const layers=Object.entries(metrics.validationStages||{}).filter(([name])=>name.startsWith('layer:'));
     assert.ok(layers.length>0&&layers.every(([,item])=>item.calls===renderCount),
       caseId+' must attribute every registered validation layer for each full render');
+    // The memory Validation layer has no legitimate reason to request full
+    // social routes; these queries belong to real Deliberation or Debug only.
+    for(const name of ['SP.planRoute','SP.pathDistances','SP.traversalFeasibility','SP.getPassageProfile']){
+      assert.equal(metrics.queryAttribution?.[name+'|validation/layer:memory-deliberation']?.calls??0,0,
+        caseId+' memory Validation must not recompute Spatial target routes: '+name);
+    }
     for(const [name,item] of Object.entries(metrics.queries)){
       const attributed=Object.entries(metrics.queryAttribution||{}).filter(([key])=>key.startsWith(name+'|'))
         .reduce((n,[,entry])=>n+entry.calls,0);

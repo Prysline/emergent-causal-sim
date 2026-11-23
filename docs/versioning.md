@@ -4,6 +4,10 @@
 
 `src/release.js` 是 **current overall runtime version 的唯一 canonical production owner**。`state.version`、`SimWorld.VERSION`、`SimRelease.VERSION` 與 Presentation projection 只能引用這個 owner；一般 subsystem regression 不得複製 current overall literal 當 authority。
 
+## Memory Deliberation Validation cost boundary (no marker change)
+
+The scoped performance correction removes eager social-target route evaluation from routine `SimValidator.validateState()`. Derived numeric validation moves to the existing canonical `E.targetEvaluation()` computation entry; invalid computed values fail explicitly under `memory_utility_delta_invalid` / `memory_target_evaluation_invalid`, while a legitimately unreachable target retains the full `Infinity` route fallback and selectable candidates still filter it. No persistent evaluation truth, route formula, decision order, RNG usage, hook order, canonical state shape, or normal gameplay semantics change. This is an enforcement-location / cost-boundary correction, not a new Memory, Spatial, Deliberation, or Presentation generation; current overall and subsystem markers remain as in `src/release.js` and their owners.
+
 ## Overall vs subsystem generation
 
 使用者可觀察 simulation semantics、truth boundary、runtime ordering 或跨 subsystem canonical contract 改變時，評估 overall marker。純文件整理、測試重構、CI optimization、無語意 refactor 不機械 bump。
