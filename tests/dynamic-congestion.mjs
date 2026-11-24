@@ -190,29 +190,36 @@ function assertSlotParity(st,slot,a,label){
   assert.equal(assertSlotParity(st,slot,mover,'both approaches unreachable'),null);
 }
 
-// Real default-world Slot-bound origin, current occupancy and carried envelope.
+// Controlled runtime geometry for multi-source Slot egress. The authored
+// default home need not expose two human bed exits; this is a query fixture.
 {
-  E.reset(20260911);
-  const st=E.getState(),a=st.agents.zhen;
-  for(const other of Object.values(st.agents))if(other.id!==a.id)other.offMap=true;
-  const origin=SP.allSlots(st).find(slot=>slot.canSleep&&SP.slotAllows(slot,a)&&SP.slotPoseFits(slot,a,'lying')&&SP.slotEgressNodes(st,slot,a,'walk').length>=2);
-  assert.ok(origin,'default-world fixture needs multiple legal egress origins');
-  a.position={...origin.position};a.posture={kind:'lying',slotId:origin.id,furnitureId:origin.furnitureId};
-  const exits=SP.routeOriginsForAgent(st,a,'walk');
-  assert.ok(exits.length>=2);
-  const target=SP.allSlots(st).find(slot=>slot.id!==origin.id&&SP.slotApproachNodes(st,slot,a,'walk').length>=2&&legacySlotApproach(st,slot,a));
-  assert.ok(target,'fixture needs another reachable multi-approach Slot');
-  assertSlotParity(st,target,a,'slot-bound multi-source origins');
-  const other=st.agents.zhou;other.offMap=false;other.position={...exits[0]};other.posture={kind:'standing',slotId:null,furnitureId:null};
-  assertSlotParity(st,target,a,'changed egress occupancy');
-  other.offMap=true;
-  a.posture={kind:'standing',slotId:null,furnitureId:null};a.position={...exits[0]};
+  const {st,mover:a,other}=resetFixture({knownWidth:false});
   const basket=st.objects.basketA;
   assert.ok(basket,'default fixture needs a carry envelope');
+  st.map.boundaries={};st.doors={};st.objects={};st.sources={};st.structures={};
+  for(const tile of Object.values(st.map.tiles))tile.walkable=false;
+  for(const [x,y] of [[1,1],[3,1],[1,2],[2,2],[3,2],[1,3],[3,3]]){
+    const tile=st.map.tiles[`${x},${y}`];tile.terrain='floor';tile.walkable=true;
+  }
+  const origin={id:'routeFixture:origin',position:{x:2,y:1},approachEdges:['east','west']};
+  const target={id:'routeFixture:target',position:{x:2,y:3},approachEdges:['east','west']};
+  st.furniture.routeFixture={id:'routeFixture',slots:[origin,target],spatial:{solids:[],surfaces:[]}};
+  other.offMap=true;
+  a.position={...origin.position};a.posture={kind:'lying',slotId:origin.id,furnitureId:'routeFixture'};
+  const exits=SP.routeOriginsForAgent(st,a,'walk');
+  assert.equal(exits.length,2,'controlled origin must expose two legal egress nodes');
+  assert.equal(SP.slotApproachNodes(st,target,a,'walk').length,2);
+  assert.ok(assertSlotParity(st,target,a,'slot-bound multi-source origins'));
+  other.offMap=false;other.position={...exits[0]};other.posture={kind:'standing',slotId:null,furnitureId:null};
+  assert.equal(SP.routeOriginsForAgent(st,a,'walk').length,1,'occupied egress must be excluded');
+  assert.ok(assertSlotParity(st,target,a,'changed egress occupancy'));
+  other.offMap=true;
+  a.posture={kind:'standing',slotId:null,furnitureId:null};a.position={...exits[0]};
+  st.objects[basket.id]=basket;
   a.held=basket.id;delete basket.position;delete basket.supportId;delete basket.containedBy;
   assertSlotParity(st,target,a,'current carried Object envelope');
-  a.held=null;
-  assertSlotParity(st,target,a,'released carry envelope must be queried fresh');
+  a.held=null;basket.position={...a.position};
+  assert.ok(assertSlotParity(st,target,a,'released carry envelope must be queried fresh'));
 }
 
 function measureTargetRouteWork(agentId,kind,selector=SP.bestSlotApproachNode){
