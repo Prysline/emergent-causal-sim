@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.79.1-physical-meal-seating`。
+目前 runtime marker：`11.80.0-food-r4a1-generic-logistics`。
+
+R4-A1 Generic Physical Ingredient Logistics：正式 B 世界保留 `basketA` 兩手大籃（24 L、0.8 kg），另有 `basketSmallA` 單手小籃（18 L、0.6 kg）；`carryGeometry`、容器 capacity 和籃體 `physicalVolumeCubicMeters` 各自保持單一來源。既有 R3 `externalSupply` 可指定任一合法普通 Object carrier。新明確規劃的 `transferContainedObjects` Engine Action，只有在自身持籃且剩一手、已合法接觸檢視來源／目的地、容量和預約重驗通過時，才逐件原子改寫同一 `containedBy` 並產生 canonical World Event；雙手持籃必須先依 canonical placement 放下，才以既有取物／搬運／contain lifecycle 入櫃。遠距 World facts 不構成 Agent knowledge。此 Slice 不含自主補貨決策、固定櫃取料至指定料理檯面及 Cooking 整合（R4-A2）、R4-B/C、R5 或 R6。詳見 `docs/food-r4a1-generic-logistics.md`。
 
 Physical Meal seating correction：Human 直接吃實體 Meal 或放下真正餐盤後，優先使用合法可達且具有當下 `eatFrom` 接觸的 Furniture Slot；經重驗才坐下並產生 `sitForMeal`。座位不可用時仍可在合法接觸位置站著吃，沒有第二套 Chair reach、Meal inventory 或舊 Resource Food 擴張。
 
