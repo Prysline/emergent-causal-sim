@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.80.0-food-r4a1-generic-logistics`。
+目前 overall runtime marker：`11.80.1-post-pickup-posture-recovery`。
+
+## 11.80.1 Floor pickup posture recovery
+
+Successful Human ground pickup at legal kneeling/prone contact schedules one Action-local, one-shot recovery on the next Engine tick. The current canonical Spatial Floor walk envelope includes carried Object geometry and must fit before the existing Locomotion walk-mode transition consumes its actual tick; if it cannot fit, the original Action continues without an illegal stand. Supported/Contained pickup, low-clearance traversal and ordinary Action completion remain unchanged. This is an Engine behavior correction; no Spatial/Locomotion/Physical generation is mechanically bumped, no independent posture state or world event owner is introduced.
 
 ## 11.80.0 R4-A1 generic physical container logistics
 
