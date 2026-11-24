@@ -173,6 +173,22 @@ function remoteChoice(st,a){
   assert.equal(E.buildAction(a,option),null);
   manipulation.handCapacity=old;valid(st);
 }
+// Cost boundary: even with a previously viable known source/support, no
+// eligible cookware means no speculative Spatial route search for this provider.
+{
+  const {st,a}=reset();const option=localChoice(st,a);
+  const pot=st.objects[option.potId];pot.cookingEligible=false;
+  const originals={planRoute:SP.planRoute,bestInteractionPositionResult:SP.bestInteractionPositionResult,bestCandidateNodeResult:SP.bestCandidateNodeResult};
+  const calls={planRoute:0,bestInteractionPositionResult:0,bestCandidateNodeResult:0};
+  try{
+    for(const key of Object.keys(originals))SP[key]=function(...args){calls[key]++;return originals[key].apply(this,args);};
+    assert.equal(choiceFor(st,a),null,'no eligible cookware, no pantry plan');
+    assert.deepEqual(calls,{planRoute:0,bestInteractionPositionResult:0,bestCandidateNodeResult:0},'impossible Cooking must not search routes');
+  }finally{
+    Object.assign(SP,originals);pot.cookingEligible=true;
+  }
+  assert.deepEqual(choiceFor(st,a),option,'fresh decision must recover with cookware restored');valid(st);
+}
 // Actual R3 acquisition -> R4-A1 transfer -> R4-A2 Cooking. No fabricated ingredient or transfer event.
 {
   const {st,a}=reset({empty:true});

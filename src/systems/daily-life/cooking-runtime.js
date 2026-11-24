@@ -49,6 +49,11 @@
   }
   function supportCost(st,a,f){
     const contacts=SP.supportContactNodes(st,f.id,a);
+    // An accessible current route origin at a legal support contact has zero
+    // movement cost. No other candidate can improve a nonnegative cost.
+    const here=SP.nodeForAgent(st,a);
+    if(!a.posture?.slotId&&here&&contacts.some(node=>SP.nodeSame(st,node,here))
+      &&SP.routeOriginsForAgent(st,a,'walk').some(node=>SP.nodeSame(st,node,here)))return 0;
     return SP.bestCandidateNodeResult(st,a,contacts,{mode:window.SimLocomotion?'auto':'walk'})?.objectiveCost??Infinity;
   }
   // Pure eligibility projection of an already locally inspected child, not a World mutation.
@@ -70,29 +75,37 @@
     if(st!==E.getState())return null; // contact inspection is bound to the live Engine state
     const furniture=Object.values(st.furniture||{}).sort((x,y)=>x.id.localeCompare(y.id));
     const storage=furniture.filter(f=>f.objectContainment===true&&available(st,a,'furniture:'+f.id)&&furnitureKnown(st,a,f))
-      .map(f=>({f,contact:E.inspectContainedObjects(a,f.id),cost:SP.bestInteractionPositionResult(st,a,{kind:'furniture',id:f.id},'default')?.traversalCost??Infinity}))
-      .filter(x=>Number.isFinite(x.cost));
+      .map(f=>({f,contact:E.inspectContainedObjects(a,f.id)}));
     if(!storage.length)return null;
-    const supports=furniture.filter(f=>f.supportsObjects===true&&f.cookingStation!==true&&available(st,a,'furniture:'+f.id)&&furnitureKnown(st,a,f))
-      .map(f=>({f,cost:supportCost(st,a,f)})).filter(x=>Number.isFinite(x.cost));
+    const supports=furniture.filter(f=>f.supportsObjects===true&&f.cookingStation!==true&&available(st,a,'furniture:'+f.id)&&furnitureKnown(st,a,f));
     if(!supports.length)return null;
+    // Query-local lazy costs only: never search routes for an impossible cookware/
+    // source/support combination, and never keep results across decisions or ticks.
+    const sourceCosts=new Map(),supportCosts=new Map();
+    function costOnce(map,id,query){if(!map.has(id))map.set(id,query());return map.get(id);}
     const options=[];
     for(const station of furniture.filter(f=>f.cookingStation===true&&available(st,a,'furniture:'+f.id))){
-      const target=SP.bestInteractionPositionResult(st,a,{kind:'furniture',id:station.id},'default');
-      if(!Number.isFinite(target?.traversalCost))continue;
+      let target;
       for(const pot of C.potsOnStation(st,station.id)){
         const status=O.objectStorageStatus(st,pot);
         if(!available(st,a,'object:'+pot.id)||!status.withinCapacity||status.count!==0)continue;
         const pos=SP.objectPosition(st,pot.id);
         if(!pos||(pos.x===a.position.x&&pos.y===a.position.y)||P.classifyObjectPointVisualAvailability(st,a,pot)?.visualAvailable!==true)continue;
+        target??=SP.bestInteractionPositionResult(st,a,{kind:'furniture',id:station.id},'default')||{traversalCost:Infinity};
+        if(!Number.isFinite(target.traversalCost))continue;
         if(!Number.isFinite(SP.bestInteractionPositionResult(st,a,{kind:'object',id:pot.id},'receive')?.traversalCost))continue;
-        for(const source of storage)for(const prep of supports){
+        for(const source of storage)for(const prepFurniture of supports){
+          const prep={f:prepFurniture};
           if(source.f.id===prep.f.id)continue;
           // Only a real local inspection may use child identity. Remote selection is an
           // uncertain search for food, independent of the hidden inventory.
           if(source.contact&&!source.contact.objectIds.some(id=>stagingIngredientEligible(st,a,st.objects[id],source.f.id,station.id,pot.id,prep.f.id)))continue;
+          const sourceCost=costOnce(sourceCosts,source.f.id,()=>SP.bestInteractionPositionResult(st,a,{kind:'furniture',id:source.f.id},'default')?.traversalCost??Infinity);
+          if(!Number.isFinite(sourceCost))continue;
+          const prepCost=costOnce(supportCosts,prep.f.id,()=>supportCost(st,a,prep.f));
+          if(!Number.isFinite(prepCost))continue;
           const distance=SP.manhattan(station.displayAt,prep.f.displayAt);
-          const score=Math.max(0,24+Math.min(80,Number(a.needs?.hunger)||0)*.65-Math.min(18,(source.cost+prep.cost+target.traversalCost)*1.8)-(source.contact?0:4));
+          const score=Math.max(0,24+Math.min(80,Number(a.needs?.hunger)||0)*.65-Math.min(18,(sourceCost+prepCost+target.traversalCost)*1.8)-(source.contact?0:4));
           options.push({id:'cookMeal',storageSourceId:source.f.id,sourceId:prep.f.id,stationId:station.id,potId:pot.id,
             observed:{storageSourceId:source.f.id,sourceId:prep.f.id,potId:pot.id,observedTick:st.tick,storageContact:!!source.contact},
             score,prepDistance:distance,why:['已接觸或觀察到可到達的固定收納處及料理設備','到場檢視後才決定是否取出可料理食材'],
@@ -100,7 +113,7 @@
               {kind:'observation',key:'storageAvailability',role:'evidence',sourceId:source.f.id,observedTick:st.tick},
               {kind:'observation',key:'cookwareVisualAvailability',role:'evidence',objectId:pot.id,observedTick:st.tick},
               {kind:'need',key:'hunger',role:'motivation',value:Number(a.needs?.hunger)||0},
-              {kind:'spatial',key:'storageTraversalCost',role:'cost',value:source.cost}
+              {kind:'spatial',key:'storageTraversalCost',role:'cost',value:sourceCost}
             ]});
         }
       }
