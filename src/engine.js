@@ -555,6 +555,12 @@
         break;
       }
       case'cookMeal':{
+        if(choice.storageSourceId!=null){
+          const plan=window.SimEngine?.validatePantryCookingChoice?.(state,a,choice);
+          action=plan?{...base,phase:'toStorage',storageSourceId:plan.storageSourceId,sourceId:plan.sourceId,
+            stationId:plan.stationId,potId:plan.potId,recipeId:C.RECIPE_ID,progressTicks:0,pickupEventId:null,loadEventId:null}:null;
+          break;
+        }
         const context=choice.ingredientId&&choice.stationId?C.eligible(state,choice.ingredientId,choice.stationId,{potId:choice.potId}):null;
         const P=window.SimPerception,missingVisualPose=P?.lacksVisualPoseEnvelopeForSupportedLocomotion?.(a)===true,ingredientObservation=context&&!missingVisualPose&&P?.classifyObjectPointVisualAvailability?.(state,a,context.ingredient),potObservation=context&&!missingVisualPose&&P?.classifyObjectPointVisualAvailability?.(state,a,context.pot);
         const evidence=choice.observed,stationTarget={kind:'furniture',id:choice.stationId};
@@ -1108,7 +1114,60 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
     }
     abortAction(a,'未知的收納階段');
   }
+  function stepPantryCooking(a,p){
+    const pantry=state.furniture?.[p.storageSourceId],prep=state.furniture?.[p.sourceId];
+    const station=state.furniture?.[p.stationId],pot=state.objects?.[p.potId];
+    const keys=['furniture:'+p.storageSourceId,'furniture:'+p.sourceId,'furniture:'+p.stationId,'object:'+p.potId];
+    if(a.offMap||pantry?.objectContainment!==true||prep?.supportsObjects!==true||prep.cookingStation===true||
+      station?.cookingStation!==true||!pot||!C.potsOnStation(state,p.stationId).some(x=>x.id===p.potId)||
+      keys.some(key=>reservationOwner(key)?.id&&reservationOwner(key).id!==a.id)){
+      abortAction(a,'取料來源、檯面、料理設備或預約已失效',{dropHeld:!!p.ingredientId&&a.held===p.ingredientId});return;
+    }
+    if(p.phase==='toStorage'){
+      if(a.held){abortAction(a,'取料前必須有空手',{dropHeld:false});return;}
+      if(!keys.every(key=>reserve(key,a))){abortAction(a,'無法預約取料位置及設備',{dropHeld:false});return;}
+      if(!moveToInteraction(a,{kind:'furniture',id:pantry.id},'前往固定收納處檢視','default'))return;
+      const observed=inspectContainedObjects(a,pantry.id);
+      const ingredient=observed?.objectIds.map(id=>state.objects[id]).find(item=>window.SimEngine.stagingIngredientEligible(state,a,item,pantry.id,station.id,pot.id,prep.id));
+      if(!ingredient){abortAction(a,'收納處沒有已檢視且可合法料理的食材',{dropHeld:false});return;}
+      if(!SP.isAtInteraction(state,a,{kind:'object',id:ingredient.id},'pickup')||
+        !reserve('object:'+ingredient.id,a)||!takeContainedObject(a,ingredient.id)){
+        abortAction(a,'無法在目前接觸位置取出食材',{dropHeld:false});return;
+      }
+      p.ingredientId=ingredient.id;
+      const prior=Object.values(state.causes).reverse().find(e=>e.data?.action==='objectContainerTransfer'&&e.data.objectId===ingredient.id&&e.data.to===pantry.id)
+        ||Object.values(state.causes).reverse().find(e=>e.data?.action==='physicalIngredientAcquired'&&e.data.ingredientId===ingredient.id);
+      p.storagePickupEventId=addEvent(a.name+'從'+endpointName(pantry.id)+'取出'+endpointName(ingredient.id)+'。','normal',[prior?.id].filter(Boolean),
+        {actor:a.id,action:'takeContainerCargo',objectId:ingredient.id,from:pantry.id,entities:['furniture:'+pantry.id,'object:'+ingredient.id]});
+      p.phase='stageIngredient';return;
+    }
+    if(p.phase==='stageIngredient'){
+      if(a.held!==p.ingredientId||keys.some(key=>state.reservations[key]!==a.id)||state.reservations['object:'+p.ingredientId]!==a.id||
+        C.eligible(state,p.ingredientId,p.stationId,{actorId:a.id,potId:p.potId})?.location!=='carried'){
+        abortAction(a,'搬運食材期間持物、容量或預約已失效',{dropHeld:a.held===p.ingredientId});return;
+      }
+      const placement=SP.releaseHeldObjectOnSupport(state,a,prep.id);
+      if(!placement){
+        const contacts=SP.supportContactNodes(state,prep.id,a);
+        const goal=SP.bestCandidateNodeResult(state,a,contacts,{mode:locomotionRuntime()?'auto':'walk'})?.node;
+        if(!goal||SP.nodeSame(state,SP.nodeForAgent(state,a),goal)){
+          p.wait=(p.wait||0)+1;
+          if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'無法在指定合法檯面放置食材');
+          return;
+        }
+        p.wait=0;p.spatialGoal={...goal};
+        if(a.posture?.slotId){standUp(a,goal);return;}
+        moveToward(a,goal,'將食材搬到指定檯面');return;
+      }
+      p.preparationEventId=addEvent(a.name+'將食材放在'+endpointName(prep.id)+'。','normal',[p.storagePickupEventId],{
+        actor:a.id,action:'objectSupportPlacement',objectId:p.ingredientId,supportId:prep.id,sourceId:pantry.id,
+        position:positionRef(placement.node),entities:['object:'+p.ingredientId,'furniture:'+prep.id]});
+      releaseReservation('furniture:'+pantry.id,a);
+      p.phase='toStation';return;
+    }
+  }
   function stepCookMeal(a,p){
+    if(p.phase==='toStorage'||p.phase==='stageIngredient'){stepPantryCooking(a,p);return;}
     const context=C.eligible(state,p.ingredientId,p.stationId,{actorId:a.id,potId:p.potId});
     if(!context||context.pot.id!==p.potId){
       abortAction(a,'料理所需食材、鍋具或爐具已失效',{dropHeld:a.held===p.ingredientId});return;
@@ -1139,7 +1198,7 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
       if(!holdObject(a,p.ingredientId)){
         abortAction(a,'無法拿取料理材料',{dropHeld:false});return;
       }
-      p.pickupEventId=addEvent(a.name+'從合法支撐表面取得完整料理食材。','normal',[],{
+      p.pickupEventId=addEvent(a.name+'從合法支撐表面取得完整料理食材。','normal',[p.preparationEventId].filter(Boolean),{
         actor:a.id,action:'cookMeal',phase:'pickupIngredient',ingredientId:p.ingredientId,
         sourceId:p.sourceId,potId:p.potId,stationId:p.stationId,
         entities:['object:'+p.ingredientId,'furniture:'+p.sourceId,'object:'+p.potId,'furniture:'+p.stationId]
