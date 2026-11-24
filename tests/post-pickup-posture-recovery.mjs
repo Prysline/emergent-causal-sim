@@ -56,8 +56,13 @@ function takeFromCurrentFloor(f){
   assert.deepEqual(actor.locomotion,{mode:'walk',phase:'transition'},
     'recovery must use the canonical one-tick walk posture transition');
   assert.equal(actor.action?.phase,'toSource','the follow-on Action phase must not run for free');
-  E.tick();
-  assert.equal(actor.action?.phase,'fill','the pre-existing restock flow must resume after recovery');
+  let progressed=false;
+  for(let i=0;i<90&&actor.action;i++){
+    E.tick();
+    assert.equal(actor.held,'waterBucket','the resumed Action must retain the canonical held object');
+    if(actor.action?.phase==='fill'){progressed=true;break;}
+  }
+  assert.equal(progressed,true,'the original restock flow must resume and reach real tap contact');
   const validation=V.validateState(st);
   assert.equal(validation.issueCount,0,validation.issues.map(x=>x.code+':'+x.message).join(' | '));
 }
@@ -86,8 +91,12 @@ function takeFromCurrentFloor(f){
   const support=SP.supportSurfaceForFurniture(st,'diningTable');
   assert.ok(support?.surface?.cells?.length,'fixture requires the canonical dining table Surface');
   object.position={...support.surface.cells[0]};object.supportId='diningTable';
-  actor.position={...floor(st,5,1)};
   actor.posture={kind:'standing',slotId:null,furnitureId:null};
+  const target={kind:'object',id:object.id};
+  const contacts=SP.interactionPositions(st,target,actor,'pickup');
+  const currentContact=contacts.find(p=>p.surfaceId==='floor'&&SP.floorNodeFitsMode(st,p,actor,'walk'))||contacts[0];
+  assert.ok(currentContact,'supported pickup requires a legal current Surface contact witness');
+  actor.position={...currentContact};
   assert.equal(SP.isAtInteraction(st,actor,{kind:'object',id:object.id},'pickup'),true,
     'supported pickup must use the actual nearby Surface cell contact');
   armRestock(st,actor);
