@@ -120,7 +120,8 @@
       if(!target||target.entity.objectContainment!==true||(target.kind==='object'&&holderOf(target.id))||!SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup'))return false;
     }
     // Capture the pre-mutation Floor witness once; Held has no independent pickup location.
-    const floorPickup=a.kind==='human'&&a.action&&['kneeling','prone'].includes(a.posture?.kind)
+    // Reduced Engine profiles intentionally omit Locomotion; only schedule a transition when its canonical runtime is installed.
+    const floorPickup=!!locomotionRuntime()&&a.kind==='human'&&a.action&&['kneeling','prone'].includes(a.posture?.kind)
       &&!object.containedBy&&!object.supportId&&SP.objectNode?.(state,id)?.surfaceId==='floor'
       &&SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup')===true;
     if(a.held&&a.held!==id)releaseHeld(a);
