@@ -137,8 +137,10 @@
     const a=typeof aOrId==='string'?state.agents?.[aOrId]:aOrId;
     if(!a||a.offMap||!observation||observation.actorId!==a.id||observation.observedTick!==state.tick)return null;
     const sourceId=observation.sourceId,source=state.objects?.[sourceId],target=SP.objectContainerTarget(state,destinationId);
+    const child=state.objects?.[objectId];
+    const requiredHands=child?.portable===true?O.handlingForObject(child).handsRequired:Infinity;
     if(!source||a.held!==sourceId||source.objectContainment!==true||source.resourceContainer===true
-      ||O.availableSupportHands(state,a)<1||!target||target.entity.objectContainment!==true
+      ||O.availableSupportHands(state,a)<1||requiredHands>O.availableSupportHands(state,a)||!target||target.entity.objectContainment!==true
       ||sourceId===destinationId||!observation.objectIds?.includes(objectId))return null;
     if(target.kind==='object'&&(target.entity.portable!==true||holderOf(target.id)))return null;
     const targetKey=(target.kind==='object'?'object:':'furniture:')+destinationId;
@@ -1028,8 +1030,9 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
       if(!reserve('object:'+objectId,a)){p.wait++;if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'內容物預約逾時');return;}
       if(!takeContainedObject(a,objectId)){abortAction(a,'物件取出失敗');return;}
       p.itemId=objectId;
+      const acquisition=Object.values(state.causes).find(e=>e.data?.action==='physicalIngredientAcquired'&&e.data.ingredientId===objectId)?.id||null;
       p.pickupEventId=addEvent(a.name+'從'+source.name+'取出'+endpointName(objectId)+'。','normal',
-        [p.lastTransferEventId,p.releaseEventId].filter(Boolean),
+        [p.lastTransferEventId,p.releaseEventId,acquisition].filter(Boolean),
         {actor:a.id,action:'takeContainerCargo',objectId,from:source.id,entities:['object:'+source.id,'object:'+objectId]});
       p.phase='carryChild';return;
     }

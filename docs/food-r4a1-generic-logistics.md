@@ -25,3 +25,5 @@ When all hands are occupied, the Action releases the source through the existing
 - Browser B World Authoring QA checks the independently authored small basket and Editor projection. Existing Object, Spatial, Intent, Food and Node/Browser regression remain canonical gates.
 - R4-A2 is separately responsible for extracting from fixed storage, choosing a specified legal `supportsObjects` Surface location and connecting actual exposed Ingredient observation to existing Cooking.
 - R4-B autonomous external resupply, R4-C complete provisioning and pet feeding consumer checks, R5 Legacy Resource Food removal, and R6 closeout are not completed by this slice. Existing Legacy Food code does not gain features.
+
+Exact-head R4-A1 regression found a pre-existing coincident-point visual bearing exception in the Tidying/Food decision path. The Point Visual Availability owner now rejects undefined same-point visual evidence explicitly (`coincident-visual-origin`) instead of crashing the Engine tick. This is not permission to infer remote contents knowledge or to rewrite Visual Bearing geometry.

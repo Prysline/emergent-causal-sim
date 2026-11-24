@@ -8,7 +8,7 @@ const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngin
 assert.ok(Number(A.VERSION.split('v').pop())>=19,'Tidying requires at least the v19 World Authoring contract');
 assert.equal(T.VERSION,'tidying-put-away-v1');
 assert.equal(E.TIDYING_VERSION,T.VERSION);
-assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v4-exposed-meal');
+assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v5-coincident-point-guard');
 assert.equal(E.EMERGENCY_PREEMPTIBLE.has('putAwayObject'),true);
 
 function fixture(){
@@ -39,6 +39,17 @@ for(const [mutate,expected] of [
   assert.ok(A.validateAuthoring(bad).errors.some(issue=>issue.code===expected),expected);
 }
 
+// Local coincident point has no visual bearing: fail closed, never crash a real tick.
+{
+  const coincident=W.createInitialStateFromAuthoring(doc,20261124),actor=coincident.agents.zhen,meal=coincident.objects.readyMealF0;
+  actor.position={...SP.objectPosition(coincident,meal.id)};
+  const sight=P.derivePhysicalSightSamples(actor),point=SP.objectPosition(coincident,meal.id);
+  assert.equal(sight.observerOrigin.x,point.x);
+  assert.equal(sight.observerOrigin.y,point.y);
+  const projection=P.classifyObjectPointVisualAvailability(coincident,actor,meal);
+  assert.equal(projection.visualAvailable,false);
+  assert.equal(projection.unavailableReason,'coincident-visual-origin');
+}
 const initialized=W.createInitialStateFromAuthoring(doc,20261018);
 assert.deepEqual(initialized.objectStorageAssignments,doc.objectStorageAssignments);
 assert.deepEqual(initialized.agents.zhen.knownObjectStorageAssignmentIds,['storage:bookA']);

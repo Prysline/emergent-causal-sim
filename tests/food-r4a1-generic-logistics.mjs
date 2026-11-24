@@ -62,6 +62,7 @@ function begin(a,sourceId,destinationId){
   until(()=>a.action?.phase==='transferHeld','one-hand unloading phase');
   assert.equal(a.held,carrier.id);
   assert.equal(O.availableSupportHands(st,a),1);
+  assert.equal(globalThis.SimPhysical.getEffectiveTraversalEnvelope(st,a,'walk').carriedObjectId,carrier.id);
   assert.ok(SP.objectPosition(st,ids[0]));
   until(()=>!a.action,'small basket unload to fixed pantry');
   assert.equal(a.held,null);
@@ -100,6 +101,9 @@ function begin(a,sourceId,destinationId){
   assert.equal(events(st,'takeContainerCargo').length,2);
   assert.deepEqual(O.containedObjects(st,'pantryA').filter(x=>ids.includes(x.id)).map(x=>x.id).sort(),ids);
   assert.ok(events(st,'objectContainerTransfer').every(e=>e.data.method==='placedSourcePickup'));
+  for(const pickup of events(st,'takeContainerCargo'))
+    assert.ok(pickup.causeIds.includes(events(st,'physicalIngredientAcquired').find(e=>e.data.ingredientId===pickup.data.objectId)?.id),
+      'two-handed pickup must cite the actual R3 Ingredient acquisition');
   valid(st,'two-hand release, take, place');
 }
 {
@@ -133,5 +137,19 @@ function begin(a,sourceId,destinationId){
   assert.equal(events(st,'objectContainerTransfer').length,1,'a committed item must never replay');
   delete st.reservations['furniture:pantryA'];
   valid(st,'partial interruption preserves all Object identities');
+}
+{
+  const {st,a,carrier,ids}=supply('basketSmallA',1);
+  a.held=carrier.id;
+  const observation=E.inspectContainedObjects(a,carrier.id);
+  assert.ok(observation?.objectIds.includes(ids[0]));
+  assert.equal(E.transferContainedObject(a,ids[0],'pantryA',observation),null,'remote target must not be reachable');
+  const contact=SP.interactionGeometry(st,{kind:'furniture',id:'pantryA'},a,'default').positions[0];
+  assert.ok(contact);
+  a.position={...contact};
+  st.objects[ids[0]].handling.handsRequired=2;
+  const local=E.inspectContainedObjects(a,carrier.id);
+  assert.equal(E.transferContainedObject(a,ids[0],'pantryA',local),null,'child needing two hands cannot be unloaded with one free hand');
+  assert.equal(st.objects[ids[0]].containedBy,carrier.id);
 }
 console.log('R4-A1 R3 dynamic cargo, single/two hand, volume, reservation, interruption and Engine events: ok');
