@@ -111,7 +111,23 @@
   function releaseReservation(key,a){if(state.reservations[key]===a.id)delete state.reservations[key];}
   function releaseAgentReservations(a,prefix=null){for(const [k,id] of Object.entries({...state.reservations}))if(id===a.id&&(!prefix||k.startsWith(prefix)))delete state.reservations[k];}
   function holderOf(id){return SP.holderOf(state,id);}
-  function holdObject(a,id){const object=state.objects[id];if(!O.canHoldObject(state,a,object))return false;const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;if(object.containedBy){const target=SP.objectContainerTarget(state,object.containedBy);if(!target||target.entity.objectContainment!==true||(target.kind==='object'&&holderOf(target.id))||!SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup'))return false;}if(a.held&&a.held!==id)releaseHeld(a);a.held=id;delete object.supportId;delete object.containedBy;return true;}
+  function holdObject(a,id){
+    const object=state.objects[id];if(!O.canHoldObject(state,a,object))return false;
+    const reserved=reservationOwner(`object:${id}`);if(reserved&&reserved.id!==a.id)return false;
+    const holder=holderOf(id);if(holder&&holder.id!==a.id)return false;
+    if(object.containedBy){
+      const target=SP.objectContainerTarget(state,object.containedBy);
+      if(!target||target.entity.objectContainment!==true||(target.kind==='object'&&holderOf(target.id))||!SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup'))return false;
+    }
+    // Capture the pre-mutation Floor witness once; Held has no independent pickup location.
+    const floorPickup=a.kind==='human'&&a.action&&['kneeling','prone'].includes(a.posture?.kind)
+      &&!object.containedBy&&!object.supportId&&SP.objectNode?.(state,id)?.surfaceId==='floor'
+      &&SP.isAtInteraction?.(state,a,{kind:'object',id},'pickup')===true;
+    if(a.held&&a.held!==id)releaseHeld(a);
+    a.held=id;delete object.supportId;delete object.containedBy;
+    if(floorPickup)a.action.postPickupRecovery=true;
+    return true;
+  }
 
   // Query-time local contact evidence; no persistent contents mirror or remote visibility.
   function inspectContainedObjects(aOrId,sourceId){
@@ -1168,7 +1184,20 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
     }
     abortAction(a,'未知料理階段',{dropHeld:a.held===p.ingredientId});
   }
-  function stepAction(a){const p=a.action;if(!p)return;if(locomotionRuntime())clearLocomotionState(a);switch(p.kind){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petAnimal':case'seekHuman':stepSocial(a,p);break;case'carryAgent':stepCarryAgent(a,p);break;case'restockContainer':stepRestock(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'cookMeal':stepCookMeal(a,p);break;case'putAwayObject':stepPutAwayObject(a,p);break;case'transferContainedObjects':stepTransferContainedObjects(a,p);break;case'wander':stepWander(a,p);break;case'externalSupply':stepExternalSupply(a,p);break;default:finishAction(a);}}
+  function recoverPostPickupPosture(a,p){
+    if(p.postPickupRecovery!==true)return false;
+    delete p.postPickupRecovery;
+    if(a.kind!=='human'||!a.held||!['kneeling','prone'].includes(a.posture?.kind))return false;
+    const node=SP.nodeForAgent?.(state,a);
+    if(node?.surfaceId!=='floor'||!SP.floorNodeFitsMode?.(state,node,a,'walk'))return false;
+    const L=locomotionRuntime();
+    if(!L?.modeFromPosture||!L?.transitionTicks)throw new Error('Floor pickup recovery requires canonical Locomotion mode transition.');
+    if(L.transitionTicks(L.modeFromPosture(a),'walk')!==1)throw new Error('Unexpected Floor pickup recovery transition timing.');
+    if(!adoptLocomotionPosture(a,'walk'))return false;
+    setLocomotionState(a,'walk','transition');
+    return true;
+  }
+  function stepAction(a){const p=a.action;if(!p)return;if(recoverPostPickupPosture(a,p))return;if(locomotionRuntime())clearLocomotionState(a);switch(p.kind){case'eat':stepEat(a,p);break;case'drinkWater':case'drinkAlcohol':stepDrink(a,p);break;case'rest':stepRest(a,p);break;case'sleep':stepSleep(a,p);break;case'talk':case'petAnimal':case'seekHuman':stepSocial(a,p);break;case'carryAgent':stepCarryAgent(a,p);break;case'restockContainer':stepRestock(a,p);break;case'cleanFloor':stepClean(a,p);break;case'groom':stepGroom(a,p);break;case'read':stepRead(a,p);break;case'cookMeal':stepCookMeal(a,p);break;case'putAwayObject':stepPutAwayObject(a,p);break;case'transferContainedObjects':stepTransferContainedObjects(a,p);break;case'wander':stepWander(a,p);break;case'externalSupply':stepExternalSupply(a,p);break;default:finishAction(a);}}
   function needDrift(){for(const a of Object.values(state.agents)){const sleeping=isSleeping(a),metabolic=sleeping?.12:1,socialNeedGain=.75+T.value(a,'social')*.5;a.needs.hunger=clamp(a.needs.hunger+rand(.15,.55)*metabolic);a.needs.thirst=clamp(a.needs.thirst+rand(.25,.75)*metabolic);if(!sleeping){a.needs.fatigue=clamp(a.needs.fatigue+rand(.005,.02));a.needs.sleepNeed=clamp(a.needs.sleepNeed+sleepProfile(a).sleepNeedGainPerTick);a.needs.social=clamp(a.needs.social+rand(.05,.3)*socialNeedGain);}else a.needs.social=clamp(a.needs.social+rand(.05,.3)*.12*socialNeedGain);if(a.kind==='cat')a.needs.groomingNeed=clamp(a.needs.groomingNeed+rand(.08,.28)*metabolic);a.status.intoxication=clamp(a.status.intoxication-rand(.05,.18));}}
   function decayNoise(){state.noiseEvents=state.noiseEvents.map(n=>({...n,ttl:n.ttl-1})).filter(n=>n.ttl>0);}
   function dayRollover(){if(state.minute<1440)return;state.minute-=1440;state.day++;for(const a of Object.values(state.agents))a.metrics.exertionToday=0;}
