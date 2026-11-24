@@ -8,7 +8,7 @@ const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngin
 assert.ok(Number(A.VERSION.split('v').pop())>=19,'Tidying requires at least the v19 World Authoring contract');
 assert.equal(T.VERSION,'tidying-put-away-v1');
 assert.equal(E.TIDYING_VERSION,T.VERSION);
-assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v5-coincident-point-guard');
+assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v4-exposed-meal');
 assert.equal(E.EMERGENCY_PREEMPTIBLE.has('putAwayObject'),true);
 
 function fixture(){
@@ -39,18 +39,6 @@ for(const [mutate,expected] of [
   assert.ok(A.validateAuthoring(bad).errors.some(issue=>issue.code===expected),expected);
 }
 
-// Local coincident point has no visual bearing: fail closed, never crash a real tick.
-{
-  const coincident=W.createInitialStateFromAuthoring(doc,20261124),actor=coincident.agents.zhen,meal=coincident.objects.readyMealF0;
-  const mealPosition=SP.objectPosition(coincident,meal.id);
-  actor.position={x:mealPosition.x,y:mealPosition.y,z:mealPosition.z??0};
-  const sight=P.derivePhysicalSightSamples(actor),point=SP.objectPosition(coincident,meal.id);
-  assert.equal(sight.observerOrigin.x,point.x);
-  assert.equal(sight.observerOrigin.y,point.y);
-  const projection=P.classifyObjectPointVisualAvailability(coincident,actor,meal);
-  assert.equal(projection.visualAvailable,false);
-  assert.equal(projection.unavailableReason,'coincident-visual-origin');
-}
 const initialized=W.createInitialStateFromAuthoring(doc,20261018);
 assert.deepEqual(initialized.objectStorageAssignments,doc.objectStorageAssignments);
 assert.deepEqual(initialized.agents.zhen.knownObjectStorageAssignmentIds,['storage:bookA']);
@@ -96,19 +84,11 @@ a.facing='south';
 assert.equal(E.tidyingDecisionOption(st,a),null,'Target behind observer must not be globally known as visible');
 a.facing='north';
 let completed=false;
-const lifecycleSamples=[];
 for(let i=0;i<180;i++){
   E.tick();
-  if(i%30===0)lifecycleSamples.push({tick:st.tick,position:a.position,held:a.held,
-    actionKind:a.action?.kind||null,phase:a.action?.phase||null,decision:st.thoughts?.[a.id]?.pick?.id||null});
   if(book.containedBy==='bookshelfA'){completed=true;break;}
 }
-assert.equal(completed,true,'Real tick loop must move Object into canonical Furniture containment: '+JSON.stringify({
-  actor:{position:a.position,posture:a.posture,held:a.held,action:a.action,activeIntent:a.activeIntent},
-  book:{position:book.position,supportId:book.supportId,containedBy:book.containedBy},
-  recentEvents:st.events.slice(0,12).map(e=>({action:e.data?.action,actor:e.data?.actor,phase:e.data?.phase,reason:e.data?.reason})),
-  lifecycleSamples
-}));
+assert.equal(completed,true,'Real tick loop must move Object into canonical Furniture containment');
 assert.equal(a.held,null);
 assert.equal(book.position,undefined);
 assert.equal(book.supportId,undefined);

@@ -40,10 +40,10 @@ const result=await page.evaluate(()=>{
   const optionId=option?.id||null;
   const step=document.getElementById('step');
   for(let i=0;i<200&&st.objects.bookA.containedBy!=='bookshelfA';i++)step.click();
-  return {optionId,containedBy:st.objects.bookA.containedBy,held:st.agents.zhen.held,events:st.events.filter(e=>e.data?.action==='putAwayObject').map(e=>e.data),tick:st.tick,action:st.agents.zhen.action,position:st.agents.zhen.position,recentEvents:st.events.slice(0,8).map(e=>({action:e.data?.action,actor:e.data?.actor,phase:e.data?.phase,reason:e.data?.reason}))};
+  return {optionId,containedBy:st.objects.bookA.containedBy,held:st.agents.zhen.held,events:st.events.filter(e=>e.data?.action==='putAwayObject').map(e=>e.data),tick:st.tick};
 });
 assert.equal(result.optionId,'putAwayObject','B fixture must make the assigned book visible and interaction-reachable before autonomous UI steps');
-assert.equal(result.containedBy,'bookshelfA','Real Preview UI step lifecycle must autonomously put away book: '+JSON.stringify(result));
+assert.equal(result.containedBy,'bookshelfA','Real Preview UI step lifecycle must autonomously put away book');
 assert.equal(result.held,null);
 assert.ok(result.events.some(e=>e.storageAssignmentId==='storage:bookA'));
 const projection=await page.evaluate(()=>({contained:window.SimEngine.getState().objects.bookA.containedBy,markers:[...document.querySelectorAll('[data-entity="object:bookA"]')].filter(el=>el.offsetParent!==null).length}));
