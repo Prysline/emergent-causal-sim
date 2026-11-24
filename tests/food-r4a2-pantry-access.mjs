@@ -124,6 +124,55 @@ function ancestors(st,id,seen=new Set()){
   until(()=>a.action?.kind==='cookMeal'&&a.action.storageSourceId===PANTRY,'autonomous Cooking preparation',40);
   until(()=>cooked(st).length===1,'autonomous completion');valid(st);
 }
+// Select an actual remote pantry view using canonical geometry and Perception.
+function remoteChoice(st,a){
+  const P=globalThis.SimPerception,target={kind:'furniture',id:PANTRY};
+  const pantry=st.furniture[PANTRY],pot=st.objects.potA;
+  const anchor=pantry.displayAt;
+  for(let radius=1;radius<=4;radius++){
+    for(let y=anchor.y-radius;y<=anchor.y+radius;y++)for(let x=anchor.x-radius;x<=anchor.x+radius;x++){
+      if(Math.max(Math.abs(x-anchor.x),Math.abs(y-anchor.y))!==radius)continue;
+      const node=SP.normalizeNode(st,{x,y,z:anchor.z||0},'floor');
+      if(!node||!SP.nodeWalkable(st,node,a)||!SP.floorNodeFitsMode(st,node,a,'walk'))continue;
+      a.position={...node};
+      if(SP.isAtInteraction(st,a,target,'default')||!E.inspectContainedObjects||E.inspectContainedObjects(a,PANTRY)!==null)continue;
+      const potPos=SP.objectPosition(st,pot.id);
+      if(!potPos||(potPos.x===x&&potPos.y===y))continue;
+      const center=P.deriveFurnitureSightSamples(pantry).targetSamples[0].position;
+      if(center.x===x&&center.y===y)continue;
+      for(const facing of facings){
+        a.facing=facing;
+        if(!P.classifyFurnitureVisualSensoryAvailability(st,a,pantry)?.visualAvailable||
+          !P.classifyObjectPointVisualAvailability(st,a,pot)?.visualAvailable)continue;
+        const option=choiceFor(st,a);
+        if(option?.storageSourceId===PANTRY&&option.observed.storageContact===false)return option;
+      }
+    }
+  }
+  assert.fail('B fixture must contain an actual remote visible pantry/cookware witness');
+}
+{
+  const {st,a}=reset();const option=remoteChoice(st,a);
+  const item=st.objects[ID],origin={...a.position};
+  assert.equal(E.inspectContainedObjects(a,PANTRY),null);
+  assert.equal(E.stagingIngredientEligible(st,a,item,PANTRY,option.stationId,option.potId,option.sourceId),false);
+  delete st.objects[ID];
+  assert.deepEqual(choiceFor(st,a),option,'unknown remote contents cannot change the decision or evidence');
+  st.objects[ID]=item;
+  start(st,a,option);
+  until(()=>a.held===ID,'remote inspection then actual pickup');
+  assert.ok(!SP.nodeSame(st,origin,SP.nodeForAgent(st,a)),'the actor really approached storage');
+  assert.ok(SP.isAtInteraction(st,a,{kind:'furniture',id:PANTRY},'default'),'actual contact at extraction');
+  until(()=>cooked(st).length===1,'remote pantry cooking completion');valid(st);
+}
+{
+  const {st,a}=reset();const option=localChoice(st,a);
+  const manipulation=a.physical.manipulation,old=manipulation.handCapacity;
+  manipulation.handCapacity=0;
+  assert.equal(choiceFor(st,a),null,'zero manipulation capacity cannot start a pantry plan');
+  assert.equal(E.buildAction(a,option),null);
+  manipulation.handCapacity=old;valid(st);
+}
 // Actual R3 acquisition -> R4-A1 transfer -> R4-A2 Cooking. No fabricated ingredient or transfer event.
 {
   const {st,a}=reset({empty:true});
