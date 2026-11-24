@@ -7,7 +7,7 @@ loadProductionBefore('src/ui/core.js');
 const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngine;
 const I=globalThis.SimIngredient,S=globalThis.SimObjectStorageVolume,V=globalThis.SimValidator;
 const SOURCE_ID='externalIngredientSupplyA',CARRIER_ID='basketA';
-assert.equal(A.VERSION,'world-authoring-v28');
+assert.equal(A.VERSION,'world-authoring-v29');
 const doc=A.DEFAULT_WORLD_AUTHORING,origin=doc.offMapIngredientSources[SOURCE_ID];
 assert.deepEqual({type:origin.ingredientTypeId,units:origin.availableUnits,exit:origin.exitId},{type:'A',units:10,exit:'frontExit'});
 for(const change of [

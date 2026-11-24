@@ -6,7 +6,7 @@ loadProductionBefore('src/ui/core.js');
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial,O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimValidator;
 const S=globalThis.SimObjectStorageVolume;
-assert.equal(A.VERSION,'world-authoring-v28');
+assert.equal(A.VERSION,'world-authoring-v29');
 assert.equal(O.VERSION,'object-handling-v4-storage-volume');
 assert.equal(S.VERSION,'object-storage-volume-v1');
 

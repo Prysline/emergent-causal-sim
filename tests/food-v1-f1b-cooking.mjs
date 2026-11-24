@@ -11,7 +11,7 @@ assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v3-meal-volume');
 assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v28','current Cooking authoring schema is the explicitly advanced v23');
+assert.equal(A.VERSION,'world-authoring-v29','current Cooking authoring schema is the explicitly advanced v23');
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
