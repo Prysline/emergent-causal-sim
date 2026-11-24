@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.80.0-food-r4a1-generic-logistics`。
+目前 runtime marker：`11.80.1-post-pickup-posture-recovery`。
+
+Current Floor pickup recovery：`SimEngine.holdObject` 僅在 Human 以合法 kneeling／prone 真正拾取 Floor Object 後，記錄一次 Action-local recovery hint；下一 tick `stepAction` 先以 `SimSpatial.floorNodeFitsMode(...,'walk')` 重新確認含攜物幾何的 standing fit，再沿用 `SimLocomotion` 原始 mode transition 支付一 tick。Blocked transition 不改變 canonical `Agent.posture` 或 `Agent.held`，原 Action 照常執行；supported/contained pickup、任意 action completion、crawl arrival 無通用免費站立。此 hint 不建立新 World、Perception、Object Location 或 Agent-private truth。
 
 R4-A1 Generic Physical Ingredient Logistics：正式 B 世界保留 `basketA` 兩手大籃（24 L、0.8 kg），另有 `basketSmallA` 單手小籃（18 L、0.6 kg）；`carryGeometry`、容器 capacity 和籃體 `physicalVolumeCubicMeters` 各自保持單一來源。既有 R3 `externalSupply` 可指定任一合法普通 Object carrier。新明確規劃的 `transferContainedObjects` Engine Action，只有在自身持籃且剩一手、已合法接觸檢視來源／目的地、容量和預約重驗通過時，才逐件原子改寫同一 `containedBy` 並產生 canonical World Event；雙手持籃必須先依 canonical placement 放下，才以既有取物／搬運／contain lifecycle 入櫃。遠距 World facts 不構成 Agent knowledge。此 Slice 不含自主補貨決策、固定櫃取料至指定料理檯面及 Cooking 整合（R4-A2）、R4-B/C、R5 或 R6。詳見 `docs/food-r4a1-generic-logistics.md`。
 

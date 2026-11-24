@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.80.0-food-r4a1-generic-logistics`。
+目前 runtime marker：`11.80.1-post-pickup-posture-recovery`。
+
+Floor pickup posture recovery：Human 在真實 Floor 拿起普通 Object 且採 kneeling／prone 時，既有 Engine Action 會於下一 tick 以當下攜物／站立幾何確認合法性，合法才支付一次 Locomotion mode transition 恢復 standing 並繼續原 Action；低矮空間不強迫站立，Supported／Contained pickup 與普通 crawl 抵達不受影響。此變更不加入新的移動姿勢、物品位置真相或跨 Agent 觀測權威。詳見 `docs/interaction-geometry.md`。
 
 R4-A1 Generic Physical Ingredient Logistics：正式 B 世界保留 `basketA` 兩手大籃（24 L、0.8 kg），另有 `basketSmallA` 單手小籃（18 L、0.6 kg）；`carryGeometry`、容器 capacity 和籃體 `physicalVolumeCubicMeters` 各自保持單一來源。既有 R3 `externalSupply` 可指定任一合法普通 Object carrier。新明確規劃的 `transferContainedObjects` Engine Action，只有在自身持籃且剩一手、已合法接觸檢視來源／目的地、容量和預約重驗通過時，才逐件原子改寫同一 `containedBy` 並產生 canonical World Event；雙手持籃必須先依 canonical placement 放下，才以既有取物／搬運／contain lifecycle 入櫃。遠距 World facts 不構成 Agent knowledge。此 Slice 不含自主補貨決策、固定櫃取料至指定料理檯面及 Cooking 整合（R4-A2）、R4-B/C、R5 或 R6。詳見 `docs/food-r4a1-generic-logistics.md`。
 

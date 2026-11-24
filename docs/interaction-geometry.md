@@ -86,7 +86,7 @@ ordinary floor exact target（例如清理某格地板）不是 interaction targ
 2. Human 必須採 current Physical / Locomotion 已支援且實際 fit 的低姿勢。
 3. 第一版依序嘗試 `kneelCrawl → kneeling`；若 kneeling 不 fit 但 `proneCrawl → prone` fit，才使用 prone witness。
 4. ranking 的 `traversalCost` 與 execution 使用同一 `requiredMode / requiredPosture`；姿勢切換不是免費 execution-only side effect。
-5. 成功 pickup 後不強迫角色立即站回 standing；canonical posture 留待後續 locomotion / Action 需求改變時再處理。
+5. 當 Human 成功從 Floor 拾取普通 Object 且當下是 kneeling／prone，Engine 只在當前 Action 記錄一次恢復要求；下一 tick 依目前 Floor 位置及攜物後的 walk geometry 重新判定能否站立。合法時由既有 Locomotion 支付 1 tick 的姿勢轉換後再執行原 Action；不合法則保留低姿勢並繼續原有行動判斷，不瞬間站立。未發生 pickup 的 crawl 抵達與其他 Action 完成不因此起身。
 
 這個 contract 不新增 crouch / bend / arm IK / limb length，也不把 floor Spatial Node 提升成 persistent sub-tile座標。
 
