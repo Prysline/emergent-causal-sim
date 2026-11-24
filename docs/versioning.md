@@ -4,7 +4,9 @@
 
 ## 11.80.0 R4-A1 generic physical container logistics
 
-This exact-head integration also corrects an existing Point Visual Availability degenerate input: a target sharing the observer's representative point cannot have a legal visual bearing, so the query returns explicit `coincident-visual-origin` unavailable evidence instead of aborting an unrelated Engine tick. The directly owned Perception version advances to `perception-visual-availability-v5-coincident-point-guard`; normal orientation/range/LOS rules remain unchanged.\n\nB World Authoring advances to `world-authoring-v29` to add the independent single-hand ordinary basket `basketSmallA` while retaining the two-hand `basketA`. Explicit Engine `transferContainedObjects` now unloads ordinary portable cargo with local inspection/contact, single held relation, available-hand checks, pure canonical volume legality, reservations and per-item World Events. Two-hand carrier use releases it first and follows canonical pickup/contain. This is the R4-A1 generic logistics consumer, not autonomous restock selection or R4-A2 Cooking access. Object Handling, Object Storage Volume, Spatial, Perception, Food, Intent and Runtime Hook generations are not mechanically bumped because their existing canonical contracts remain the producers. See `docs/food-r4a1-generic-logistics.md`.
+This exact-head integration also corrects an existing Point Visual Availability degenerate input: a target sharing the observer's representative point cannot have a legal visual bearing, so the query returns explicit `coincident-visual-origin` unavailable evidence instead of aborting an unrelated Engine tick. The directly owned Perception version advances to `perception-visual-availability-v5-coincident-point-guard`; normal orientation/range/LOS rules remain unchanged.
+
+B World Authoring advances to `world-authoring-v29` to add the independent single-hand ordinary basket `basketSmallA` while retaining the two-hand `basketA`. Explicit Engine `transferContainedObjects` now unloads ordinary portable cargo with local inspection/contact, single held relation, available-hand checks, pure canonical volume legality, reservations and per-item World Events. Two-hand carrier use releases it first and follows canonical pickup/contain. This is the R4-A1 generic logistics consumer, not autonomous restock selection or R4-A2 Cooking access. Object Handling, Object Storage Volume, Spatial, Perception, Food, Intent and Runtime Hook generations are not mechanically bumped because their existing canonical contracts remain the producers. See `docs/food-r4a1-generic-logistics.md`.
 
 ## 11.79.1 Physical Meal seating correction
 
@@ -41,7 +43,7 @@ Current relevant markers：
 - Furniture Passage Yielding：`furniture-passage-yielding-v1`
 - Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
 - Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-locomotion-posture-guard`
-- Perception Visual Availability production composition：`perception-visual-availability-v4-exposed-meal`
+- Perception Visual Availability production composition：`perception-visual-availability-v5-coincident-point-guard`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v2-object-release`
 - Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
@@ -74,7 +76,7 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v28`
+- World Authoring：`world-authoring-v29`
 - World Editor Resource-container / Source presets：`editor-container-source-authoring-v3`
 - World Editor Ordinary Object templates：`editor-ordinary-object-authoring-v4`
 - Food Meal / Serving：`food-v3-meal-volume`

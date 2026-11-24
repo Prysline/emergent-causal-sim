@@ -96,11 +96,19 @@ a.facing='south';
 assert.equal(E.tidyingDecisionOption(st,a),null,'Target behind observer must not be globally known as visible');
 a.facing='north';
 let completed=false;
+const lifecycleSamples=[];
 for(let i=0;i<180;i++){
   E.tick();
+  if(i%30===0)lifecycleSamples.push({tick:st.tick,position:a.position,held:a.held,
+    actionKind:a.action?.kind||null,phase:a.action?.phase||null,decision:st.thoughts?.[a.id]?.pick?.id||null});
   if(book.containedBy==='bookshelfA'){completed=true;break;}
 }
-assert.equal(completed,true,'Real tick loop must move Object into canonical Furniture containment');
+assert.equal(completed,true,'Real tick loop must move Object into canonical Furniture containment: '+JSON.stringify({
+  actor:{position:a.position,posture:a.posture,held:a.held,action:a.action,activeIntent:a.activeIntent},
+  book:{position:book.position,supportId:book.supportId,containedBy:book.containedBy},
+  recentEvents:st.events.slice(0,12).map(e=>({action:e.data?.action,actor:e.data?.actor,phase:e.data?.phase,reason:e.data?.reason})),
+  lifecycleSamples
+}));
 assert.equal(a.held,null);
 assert.equal(book.position,undefined);
 assert.equal(book.supportId,undefined);
