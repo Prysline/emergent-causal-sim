@@ -88,6 +88,7 @@ jobs:
       - run: node tests/awake-carry-cooperation.mjs
       - run: node tests/logistics-invariants.mjs
       - run: node tests/food-offmap-physical-supply.mjs
+      - run: node tests/food-r4a1-generic-logistics.mjs
       - run: node tests/interaction-geometry.mjs
       - run: node tests/contact-slot-corner-8-direction.mjs
       - run: node tests/interaction-position-batching.mjs

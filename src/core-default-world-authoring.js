@@ -5,7 +5,7 @@
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
   if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v3-meal-volume')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
-  const VERSION='world-authoring-v28',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v29',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
   function validateOffMapIngredientSources(source,errors){
@@ -103,6 +103,10 @@
       objectStorage:{capacityCubicMeters:.024},physicalVolumeCubicMeters:.004,
       handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,massKg:.8},
       position:p(13,3)};
+    objects.basketSmallA={id:'basketSmallA',name:'單手提籃',icon:'🧺',portable:true,objectContainment:true,
+      objectStorage:{capacityCubicMeters:.018},physicalVolumeCubicMeters:.003,
+      handling:{carryGeometry:{width:.40,height:.25,length:.30},handsRequired:1,massKg:.6},
+      position:p(5,8)};
     function servingPlate(id,name,x,y){
       return {id,name,icon:'🍽️',portable:true,canEatFrom:true,
         objectContainment:true,objectStorage:{capacityCubicMeters:.00035},
