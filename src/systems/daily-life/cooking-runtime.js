@@ -49,12 +49,12 @@
   }
   function supportCost(st,a,f){
     const contacts=SP.supportContactNodes(st,f.id,a);
-    return Math.min(Infinity,...SP.interactionTraversalCosts(st,a,contacts,{mode:window.SimLocomotion?'auto':'walk'}));
+    return SP.bestCandidateNodeResult(st,a,contacts,{mode:window.SimLocomotion?'auto':'walk'})?.objectiveCost??Infinity;
   }
   // Pure eligibility projection of an already locally inspected child, not a World mutation.
   // Cooking remains the authority for recipe, cookware, footprint, storage and material balance.
   function stagingIngredientEligible(st,a,ingredient,storageSourceId,stationId,potId,sourceId){
-    if(!ingredient||ingredient.containedBy!==storageSourceId||a.held||!window.SimIngredient.validIngredient(ingredient)||!O.canHoldObject(st,a,ingredient))return false;
+    if(st!==E.getState()||!SP.isAtInteraction(st,a,{kind:'furniture',id:storageSourceId},'default')||!ingredient||ingredient.containedBy!==storageSourceId||a.held||!window.SimIngredient.validIngredient(ingredient)||!O.canHoldObject(st,a,ingredient))return false;
     if(!available(st,a,'object:'+ingredient.id))return false;
     const prep=st.furniture?.[sourceId],entry=SP.supportSurfaceForFurniture(st,prep);
     if(prep?.supportsObjects!==true||prep.cookingStation===true||!entry?.surface)return false;

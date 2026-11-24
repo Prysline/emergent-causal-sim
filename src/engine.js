@@ -1163,6 +1163,7 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
         actor:a.id,action:'objectSupportPlacement',objectId:p.ingredientId,supportId:prep.id,sourceId:pantry.id,
         position:positionRef(placement.node),entities:['object:'+p.ingredientId,'furniture:'+prep.id]});
       releaseReservation('furniture:'+pantry.id,a);
+      releaseReservation('furniture:'+prep.id,a);
       p.phase='toStation';return;
     }
   }
