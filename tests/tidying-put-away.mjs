@@ -42,7 +42,8 @@ for(const [mutate,expected] of [
 // Local coincident point has no visual bearing: fail closed, never crash a real tick.
 {
   const coincident=W.createInitialStateFromAuthoring(doc,20261124),actor=coincident.agents.zhen,meal=coincident.objects.readyMealF0;
-  actor.position={...SP.objectPosition(coincident,meal.id)};
+  const mealPosition=SP.objectPosition(coincident,meal.id);
+  actor.position={x:mealPosition.x,y:mealPosition.y,z:mealPosition.z??0};
   const sight=P.derivePhysicalSightSamples(actor),point=SP.objectPosition(coincident,meal.id);
   assert.equal(sight.observerOrigin.x,point.x);
   assert.equal(sight.observerOrigin.y,point.y);
