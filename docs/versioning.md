@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.79.1-physical-meal-seating`。
+目前 overall runtime marker：`11.80.0-food-r4a1-generic-logistics`。
+
+## 11.80.0 R4-A1 generic physical container logistics
+
+B World Authoring advances to `world-authoring-v29` to add the independent single-hand ordinary basket `basketSmallA` while retaining the two-hand `basketA`. Explicit Engine `transferContainedObjects` now unloads ordinary portable cargo with local inspection/contact, single held relation, available-hand checks, pure canonical volume legality, reservations and per-item World Events. Two-hand carrier use releases it first and follows canonical pickup/contain. This is the R4-A1 generic logistics consumer, not autonomous restock selection or R4-A2 Cooking access. Object Handling, Object Storage Volume, Spatial, Perception, Food, Intent and Runtime Hook generations are not mechanically bumped because their existing canonical contracts remain the producers. See `docs/food-r4a1-generic-logistics.md`.
 
 ## 11.79.1 Physical Meal seating correction
 

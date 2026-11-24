@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.79.1-physical-meal-seating`。
+目前 runtime marker：`11.80.0-food-r4a1-generic-logistics`。
+
+R4-A1 Generic Physical Ingredient Logistics：正式 B 世界保留 `basketA` 兩手大籃（24 L、0.8 kg），另有 `basketSmallA` 單手小籃（18 L、0.6 kg）；`carryGeometry`、容器 capacity 和籃體 `physicalVolumeCubicMeters` 各自保持單一來源。既有 R3 `externalSupply` 可指定任一合法普通 Object carrier。新明確規劃的 `transferContainedObjects` Engine Action，只有在自身持籃且剩一手、已合法接觸檢視來源／目的地、容量和預約重驗通過時，才逐件原子改寫同一 `containedBy` 並產生 canonical World Event；雙手持籃必須先依 canonical placement 放下，才以既有取物／搬運／contain lifecycle 入櫃。遠距 World facts 不構成 Agent knowledge。此 Slice 不含自主補貨決策、固定櫃取料至指定料理檯面及 Cooking 整合（R4-A2）、R4-B/C、R5 或 R6。詳見 `docs/food-r4a1-generic-logistics.md`。
 
 Physical Meal seating correction：現行 `eat` 只在可達 Slot 的真實坐姿 `eatFrom` 接觸成立時選座，settlement 時再次核對 Slot／姿勢／接觸並沿用 `sitOn` 與 canonical Event；站立備援仍須真實接觸。Serving 餐盤先真正放下，才判斷座位接觸；Spatial `supportReach/eatFrom` 僅重用已存在的 Surface contact witness（專用 generation `meal-plate-eat-from-v2-seated-slot-contact`），不建立 Chair→Table 或 Food 庫存第二真相。
 
