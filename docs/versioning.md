@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.80.1-post-pickup-posture-recovery`。
+目前 overall runtime marker：`11.81.0-food-r4a2-pantry-access`。
+
+## 11.81.0 R4-A2 fixed storage ingredient preparation
+
+The existing Cooking provider now falls back to a bounded fixed-storage preparation plan when an exposed-input plan is unavailable. A visible/reachable storage target does not imply knowledge of its contents; actual local inspection selects a whole compatible Ingredient. Engine pins the existing pot/station, the storage source and a reachable supported preparation surface, revalidates hands/volume/reservations at extraction and carry, and physically places the same Object via Spatial before continuing the existing exposed-input Cooking Action. The Nearby Placement contract advances to `nearby-placement-v3-targeted-support`: a specified support uses the same contact and mutation authority, rejects invalid/remote targets without implicit fallback; ordinary nearby release remains unchanged. Preparation events link actual pickup and placement into the existing Cooking chain. Ingredient/Meal, Cooking material-transform, World Authoring, Locomotion and Perception generations remain unchanged. No autonomous off-map sourcing or sustained provision claim.
 
 ## 11.80.1 Floor pickup posture recovery
 
@@ -47,7 +51,7 @@ Current relevant markers：
 - Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-locomotion-posture-guard`
 - Perception Visual Availability production composition：`perception-visual-availability-v4-exposed-meal`
 - Activity Continuity：`activity-continuity-v1`
-- Nearby Placement：`nearby-placement-v2-object-release`
+- Nearby Placement：`nearby-placement-v3-targeted-support`
 - Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
 - Meal Plate EatFrom Interaction：`meal-plate-eat-from-v2-seated-slot-contact`
 - ordinary-object interaction：`ordinary-object-interaction-v2`

@@ -46,7 +46,7 @@ E.reset(20260911);
 let st=E.getState();
 assert.equal(st.version,globalThis.SimRelease.VERSION);
 assert.equal(E.DELIBERATION_SCHEMA_VERSION,'11.48.1-sleep-perception-approach');
-assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v2-object-release');
+assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v3-targeted-support');
 assert.equal(E.SOFT_SWITCH_MARGIN,14);
 assert.equal(E.MIN_INTENT_HOLD_TICKS,2);
 noIssues('reset');
