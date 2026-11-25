@@ -194,8 +194,6 @@ function assertSlotParity(st,slot,a,label){
 // default home need not expose two human bed exits; this is a query fixture.
 {
   const {st,mover:a,other}=resetFixture({knownWidth:false});
-  const basket=st.objects.basketA;
-  assert.ok(basket,'default fixture needs a carry envelope');
   st.map.boundaries={};st.doors={};st.objects={};st.sources={};st.structures={};
   for(const tile of Object.values(st.map.tiles))tile.walkable=false;
   for(const [x,y] of [[1,1],[3,1],[1,2],[2,2],[3,2],[1,3],[3,3]]){
@@ -215,10 +213,19 @@ function assertSlotParity(st,slot,a,label){
   assert.ok(assertSlotParity(st,target,a,'changed egress occupancy'));
   other.offMap=true;
   a.posture={kind:'standing',slotId:null,furnitureId:null};a.position={...exits[0]};
-  st.objects[basket.id]=basket;
-  a.held=basket.id;delete basket.position;delete basket.supportId;delete basket.containedBy;
+  // Define a valid, deliberately wider portable Object locally rather
+  // than depending on the current authored scene's inventory or IDs.
+  const P=globalThis.SimPhysical;
+  const emptyEnvelope=P.getEffectiveTraversalEnvelope(st,a,'walk');
+  const cargo={id:'routeFixture:cargo',name:'Route fixture cargo',portable:true,handling:{massKg:1,handsRequired:1,carryGeometry:{width:emptyEnvelope.clearanceWidth+.1,height:.3,length:.4}}};
+  assert.ok(globalThis.SimObjectHandling.canHoldObject(st,a,cargo),'fixture actor must be able to hold the test Object');
+  st.objects[cargo.id]=cargo;a.held=cargo.id;
+  const loadedEnvelope=P.getEffectiveTraversalEnvelope(st,a,'walk');
+  assert.equal(loadedEnvelope.carriedObjectId,cargo.id);
+  assert.ok(loadedEnvelope.clearanceWidth>emptyEnvelope.clearanceWidth,'carry fixture must actually change the traversal envelope');
   assertSlotParity(st,target,a,'current carried Object envelope');
-  a.held=null;basket.position={...a.position};
+  a.held=null;cargo.position={...a.position};
+  assert.deepEqual(P.getEffectiveTraversalEnvelope(st,a,'walk'),emptyEnvelope,'release must restore the current body-only envelope');
   assert.ok(assertSlotParity(st,target,a,'released carry envelope must be queried fresh'));
 }
 
