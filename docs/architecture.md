@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.80.1-post-pickup-posture-recovery`。
+目前 runtime marker：`11.81.0-food-r4a2-pantry-access`。
+
+R4-A2 固定收納取料：既有 `cookMeal` 可在當下可觀察／接觸的固定收納處實際檢視後，選擇合法完整食材，經單一 `held` 搬到指定合法支撐面，再延續原本 Cooking。遠端未知內容不提供食材 ID；食材容量、接觸與預約重驗，取出及放置事件連至既有料理因果鏈。此切片不代表 R4-B 自主外出補給或 R4-C 持續供餐完成。詳見 [`docs/food-r4a2-pantry-access.md`](docs/food-r4a2-pantry-access.md)。
 
 Current Floor pickup recovery：`SimEngine.holdObject` 僅在 Human 以合法 kneeling／prone 真正拾取 Floor Object 後，記錄一次 Action-local recovery hint；下一 tick `stepAction` 先以 `SimSpatial.floorNodeFitsMode(...,'walk')` 重新確認含攜物幾何的 standing fit，再沿用 `SimLocomotion` 原始 mode transition 支付一 tick。Blocked transition 不改變 canonical `Agent.posture` 或 `Agent.held`，原 Action 照常執行；supported/contained pickup、任意 action completion、crawl arrival 無通用免費站立。此 hint 不建立新 World、Perception、Object Location 或 Agent-private truth。
 

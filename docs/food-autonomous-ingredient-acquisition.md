@@ -18,3 +18,8 @@ Implementation source: [PR #247](https://github.com/Prysline/emergent-causal-sim
 - [Food Workstream Record](https://app.notion.com/p/41fb4185273f8124ad59c3e6c43da474); [Food Domain authority](https://app.notion.com/p/41db4185273f81bebb06d7b802b4a21e).
 - Core Default World remains separate [PR #246](https://github.com/Prysline/emergent-causal-sim/pull/246) (A/B non-canonical geometry); Meal Serving / Physical Transfer, D2 batch planning, Ingredient supply and legacy Resource food migration are not implemented here.
 - No World Authoring/Editor/Furniture generation change or default fixture rewrite; no Current TODO priority change. This implementation does not authorize a release tag, branch deletion, or manual deploy.
+
+
+## R4-A2 preparation extension
+
+Existing exposed-input decision, recipe, physical pickup and load/complete remain unchanged. The same Action may now first inspect fixed storage at real contact, take one actual compatible child, and place it on the specified legal support through the shared Spatial placement owner. The real placement event is the causal predecessor of the ordinary Cooking pickup. See [R4-A2](food-r4a2-pantry-access.md) for the boundary and verification scope.

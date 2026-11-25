@@ -220,3 +220,8 @@ Interaction Geometry 與 pathfinding 共用同一份實體世界。Tile 本身�
 - 一格移動代表的實際距離過長；
 
 才重新評估更細的 physical grid。
+
+
+## Target-constrained support placement (R4-A2)
+
+`SimSpatial.releaseHeldObjectOnSupport(st, actor, supportId)` shares the existing nearby support candidate and mutation authority, accepts only the specified supporting Furniture at current canonical `supportContactNodes`, and rejects invalid, off-map, remote or competing reservation targets without mutating `held` or falling back to another surface. `releaseHeldObjectNearby` retains its existing contact and floor fallback for generic release/interruption. Planned movement to a specified support uses the same support contacts. This does not implement general workspace clearing or a new surface occupancy model.

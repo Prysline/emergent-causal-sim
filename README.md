@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.80.1-post-pickup-posture-recovery`。
+目前 runtime marker：`11.81.0-food-r4a2-pantry-access`。
+
+R4-A2 固定收納取料：既有 `cookMeal` 可在當下可觀察／接觸的固定收納處實際檢視後，選擇合法完整食材，經單一 `held` 搬到指定合法支撐面，再延續原本 Cooking。遠端未知內容不提供食材 ID；食材容量、接觸與預約重驗，取出及放置事件連至既有料理因果鏈。此切片不代表 R4-B 自主外出補給或 R4-C 持續供餐完成。詳見 [`docs/food-r4a2-pantry-access.md`](docs/food-r4a2-pantry-access.md)。
 
 Floor pickup posture recovery：Human 在真實 Floor 拿起普通 Object 且採 kneeling／prone 時，既有 Engine Action 會於下一 tick 以當下攜物／站立幾何確認合法性，合法才支付一次 Locomotion mode transition 恢復 standing 並繼續原 Action；低矮空間不強迫站立，Supported／Contained pickup 與普通 crawl 抵達不受影響。此變更不加入新的移動姿勢、物品位置真相或跨 Agent 觀測權威。詳見 `docs/interaction-geometry.md`。
 
