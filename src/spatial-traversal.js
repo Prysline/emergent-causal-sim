@@ -237,8 +237,9 @@
     const candidates=slotApproachNodes(st,slotOrId,a,mode);
     if(!a)return candidates[0]||null;
     const requested=locomotionRuntime()?'auto':mode,distances=objective==='pathDistance'?pathDistances(st,a,candidates,{mode:requested}):null,ranked=[];
+    const routes=objective==='traversalCost'&&candidates.length>1?slotApproachTraversalCosts(st,a,candidates,{mode:requested}):null;
     for(let i=0;i<candidates.length;i++){
-      const node=candidates[i],route=distances?null:planRoute(st,a,node,{mode:requested,objective});
+      const node=candidates[i],route=distances?null:routes?routes[i]:planRoute(st,a,node,{mode:requested,objective});
       const value=distances?distances[i]:(route?.[objective]??route?.pathDistance??Infinity);
       if(Number.isFinite(value))ranked.push({node,value,pathDistance:distances?value:(route?.pathDistance??0)});
     }
@@ -441,7 +442,7 @@
       let ck=null,best=null;
       for(const k of open){const value=score[k];if(!best||compareRouteScore(value,best)<0){best=value;ck=k;}}
       const cur=states[ck];open.delete(ck);
-      if(onSettle?.(cur.node,cur.mode,best,ck)===true)return {a,start:s,starts,startMode,requestedMode:requested,came,score,states,settledKey:ck};
+      if(onSettle?.(cur.node,cur.mode,best,ck,came)===true)return {a,start:s,starts,startMode,requestedMode:requested,came,score,states,settledKey:ck};
       for(const q of candidateTraversalNeighbors(st,cur.node,a,edgeManeuver)){
         const feasibility=edgeFeasibility(cur.node,q);
         for(const nextMode of modes){
@@ -480,6 +481,34 @@
     const steps=[];let k=search.settledKey;
     while(search.came[k]){steps.unshift(search.came[k].step);k=search.came[k].prev;}
     return {path:[cloneNode(s),...steps.map(step=>cloneNode(step.to))],steps,startMode:search.startMode,requestedMode:search.requestedMode};
+  }
+  // All goals share the same actor, current world, origins, mode and zero
+  // movement credit. The first settlement of each goal is the same search
+  // prefix as its standalone traversalCost plan. Read its actual winning
+  // path at settlement, not a separate shortest-distance objective.
+  function slotApproachTraversalCosts(st,a,targets,{mode=null}={}){
+    const out=targets.map(()=>({traversalCost:Infinity,pathDistance:Infinity}));
+    const origins=routeOriginsForAgent(st,a,'walk'),requested=resolvedRequestedMode(mode);
+    if(!origins.length)return out;
+    availableModes(a,requested);
+    const goals=new Map();
+    for(let i=0;i<targets.length;i++){
+      const g=normalizeNode(st,targets[i]);if(!g||!nodeLocomotionAccessible(st,g,a))continue;
+      const key=nodeKey(st,g),indices=goals.get(key)||[];indices.push(i);goals.set(key,indices);
+    }
+    if(!goals.size)return out;
+    routeStateSearch(st,origins,a,{objective:'traversalCost',mode:requested,trackPath:true,onSettle:(node,_mode,_score,key,came)=>{
+      const goalKey=nodeKey(st,node),indices=goals.get(goalKey);if(!indices)return false;
+      const steps=[];
+      for(let k=key;came[k];k=came[k].prev)steps.push(came[k].step);
+      // Sum in the same origin-to-goal order as routeMetrics, preserving
+      // floating-point tie behavior without computing unused handling facts.
+      let traversalCost=0,pathDistance=0;
+      for(let i=steps.length-1;i>=0;i--){traversalCost+=steps[i].edgeTraversalCost;pathDistance+=steps[i].distanceMeters;}
+      for(const i of indices)out[i]={traversalCost,pathDistance};
+      goals.delete(goalKey);return goals.size===0;
+    }});
+    return out;
   }
   function pathDistances(st,aOrId,targets,{mode=null}={}){
     return withGeometrySnapshot(st,()=>pathDistancesWithin(st,aOrId,targets,{mode}));
