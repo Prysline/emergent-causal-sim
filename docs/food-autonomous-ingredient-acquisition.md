@@ -1,5 +1,7 @@
 # Food／Cooking — Autonomous Ingredient Acquisition v1
 
+**Current contained Meal correction (11.81.1):** Cooking atomically replaces the loaded Ingredient with one Meal with `containedBy=potId`, no independent `position` or `supportId`. The same pot's physical volume/mass remains derived from its actual child. `cookingEligible` alone does not expose content; the cookware additionally needs explicit `canEatFrom:true` and existing reach/supportReach eatFrom geometry to be visible/serving-accessible. Plate-only destination eligibility is retained; generic cargo stays hidden. `serve` delegates to the actual cookware receive contact, `eatFrom` to actual cookware eatFrom. A carried-by-other/off-map or reserved cookware cannot grant interaction. Partial serving keeps the source Meal in the pot; full serving moves the original ID to the plate. No new action, inventory, thermal model or B1 Surface capacity. Earlier slice descriptions below are historical wherever they conflict with this correction.
+
 Implementation source: [PR #247](https://github.com/Prysline/emergent-causal-sim/pull/247). For live merge and CI status, check the PR and canonical current release marker; do not treat historical PR checkpoints as current runtime truth.
 
 ## Minimal lifecycle and canonical owners

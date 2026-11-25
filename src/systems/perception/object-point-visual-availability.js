@@ -1,21 +1,22 @@
 (() => {
   const P=window.SimPerception,SP=window.SimSpatial;
   if(!P?.projectRuntimeVisualOpacity||!P?.derivePhysicalSightSamples||!P?.classifyStaticVisualLos||!SP?.objectLocationState||!SP?.objectPosition)throw new Error('Tidying target visibility requires canonical Spatial and Visual composition.');
-  const VERSION='perception-visual-availability-v4-exposed-meal';
+  const VERSION='perception-visual-availability-v5-exposed-cookware';
   const freeze=value=>{if(!value||typeof value!=='object'||Object.isFrozen(value))return value;Object.freeze(value);for(const child of Object.values(value))freeze(child);return value;};
   function classifyObjectPointVisualAvailability(st,observer,object){
     if(!Number.isInteger(st?.tick)||st.tick<0||!observer?.id||!object?.id)throw new Error('Point availability requires canonical state, observer and Object.');
     const kind=SP.objectLocationState(st,object.id);
     if(kind==='contained'){
-      const plate=window.SimFood?.servingPlateForMeal?.(st,object);
+      const plate=window.SimFood?.exposedMealContainer?.(st,object);
       if(!plate)return freeze({visualAvailable:false,unavailableReason:'object-not-exposed',observedTick:st.tick});
       const holder=SP.holderOf(st,plate.id);
-      if(holder&&holder.id!==observer.id)return freeze({visualAvailable:false,unavailableReason:'plate-held-by-other',observedTick:st.tick});
+      if(holder&&(holder.offMap||holder.id!==observer.id))return freeze({visualAvailable:false,unavailableReason:'plate-held-by-other',observedTick:st.tick});
       const position=SP.objectPosition(st,plate.id);
       const target={kind:'object',id:object.id,locationState:'contained',containedBy:plate.id,position};
-      if(holder?.id===observer.id)return freeze({visualAvailable:true,unavailableReason:null,observedTick:st.tick,target,viaPlateId:plate.id});
+      const via=window.SimFood.servingPlateForMeal(st,object)?{viaPlateId:plate.id}:{viaCookwareId:plate.id};
+      if(holder?.id===observer.id)return freeze({visualAvailable:true,unavailableReason:null,observedTick:st.tick,target,...via});
       const exposure=classifyObjectPointVisualAvailability(st,observer,plate);
-      return freeze({...exposure,target,viaPlateId:plate.id});
+      return freeze({...exposure,target,...via});
     }
     if(!['free','supported'].includes(kind))return freeze({visualAvailable:false,unavailableReason:'object-not-exposed',observedTick:st.tick});
     const location=SP.objectPosition(st,object.id),layer=location?.z??0;

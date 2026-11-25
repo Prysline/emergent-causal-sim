@@ -1,5 +1,5 @@
 (() => {
-  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v3-object-storage-volume')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
+  const W=window.SimWorld,SP=window.SimSpatial,R=window.SimResources,O=window.SimObjectHandling,F=window.SimFood,C=window.SimFoodCooking;if(!W||!SP||!R||!O||!F?.consumeMeal||C?.VERSION!=='food-cooking-v4-contained-output')throw new Error('Engine requires canonical World, Spatial, Resources, Object Handling, Food and Cooking contracts.');
   const T=window.SimCharacterTraits,I=window.SimIngredient,S=window.SimObjectStorageVolume;
   if(!T?.value||I?.VERSION!=='food-ingredient-v1'||S?.VERSION!=='object-storage-volume-v1')throw new Error('Engine requires Character Traits, Ingredient and canonical Object Storage Volume contracts.');
   const {VERSION,RESOURCE_TYPES,SPECIES_PROFILES,ZH,DATA_ZH,createInitialState}=W;
@@ -349,7 +349,7 @@
   }
   // The legacy Resource serving dishes remain distinct from new ordinary Object plates.
   function chooseMealServingDish(a,meal){
-    if(a?.kind!=='human'||a.offMap||a.held||!meal||meal.containedBy)return null;
+    if(a?.kind!=='human'||a.offMap||a.held||!F.isServingSource(state,meal))return null;
     if(!Number.isFinite(targetTraversalCost(a,{kind:'object',id:meal.id},'serve')))return null;
     const classify=window.SimPerception?.classifyObjectPointVisualAvailability;
     if(typeof classify!=='function')throw new Error('Meal plate selection requires canonical Object visual availability.');
@@ -651,7 +651,7 @@
     if(p.phase==='toMealServe'){
       if(a.held!==p.container){abortAction(a,'失去盛餐用餐盤',{dropHeld:false});return;}
       const source=state.objects[p.foodSource];
-      if(!source||!F.validMeal(source)||source.containedBy||holderOf(source.id)){
+      if(!F.isServingSource(state,source)||holderOf(source.id)){
         abortAction(a,'待盛取的餐點已經不存在');return;
       }
       if(!moveToInteraction(a,{kind:'object',id:source.id},'攜餐盤前往盛取餐點','serve'))return;
@@ -659,7 +659,7 @@
     }
     if(p.phase==='serveMeal'){
       const source=state.objects[p.foodSource],plate=state.objects[p.container];
-      if(a.held!==p.container||!source||!F.validMeal(source)||source.containedBy||holderOf(source.id)||!F.isServingPlate(plate)){
+      if(a.held!==p.container||!F.isServingSource(state,source)||holderOf(source.id)||!F.isServingPlate(plate)){
         abortAction(a,'目前無法繼續盛取餐點');return;
       }
       if(!SP.isAtInteraction(state,a,{kind:'object',id:source.id},'serve')){p.phase='toMealServe';return;}
@@ -668,19 +668,28 @@
         if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'餐點持續被其他行動佔用');
         return;
       }
+      const sourcePot=F.cookingContainerForMeal(state,source);
+      if(sourcePot&&!reserve('object:'+sourcePot.id,a)){
+        releaseReservation('object:'+source.id,a);
+        p.wait=(p.wait||0)+1;
+        if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'料理容器持續被其他行動佔用');
+        return;
+      }
       p.wait=0;
       const originalMealId=source.id,originEventId=source.servedByEventId||source.producedByEventId;
       const newMealId='served:'+source.id+':'+state.tick+':'+a.id;
       const result=F.serveMeal(state,originalMealId,p.container,p.targetMassGrams,newMealId);
       releaseReservation('object:'+originalMealId,a);
+      if(sourcePot)releaseReservation('object:'+sourcePot.id,a);
       if(!result.served){abortAction(a,'盛餐條件已失效：'+result.reason);return;}
       const e=addEvent(a.name+'將'+result.actualGrams+' 公克餐點盛入'+endpointName(p.container)+'。','good',
         [p.mealStartEventId,originEventId].filter(Boolean),{
           actor:a.id,action:'eat',phase:'serveMeal',foodKind:'meal',
           from:originalMealId,to:p.container,sourceMealId:originalMealId,mealId:result.servedMealId,
+          ...(sourcePot?{sourceContainerId:sourcePot.id}:{}),
           servedGrams:result.actualGrams,remainingSourceGrams:result.remainingSourceGrams,
           fullTransfer:result.full,unit:'g',position:positionRef(a.position),
-          entities:['object:'+originalMealId,'object:'+result.servedMealId,'object:'+p.container]
+          entities:['object:'+originalMealId,'object:'+result.servedMealId,'object:'+p.container,...(sourcePot?['object:'+sourcePot.id]:[])]
         });
       state.objects[result.servedMealId].servedByEventId=e;
       p.foodSource=result.servedMealId;p.targetMassGrams=result.actualGrams;p.consumedMassGrams=0;

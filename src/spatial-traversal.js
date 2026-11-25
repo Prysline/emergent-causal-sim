@@ -4,7 +4,7 @@
   const VERSION='11.38.0-carried-handling-risk';
   const SPATIAL_IDENTITY_VERSION='11.22.0-spatial-z-identity';
   const PICKUP_INTERACTION_VERSION='pickup-interaction-v3-movable-containment';
-  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v2-seated-slot-contact';
+  const MEAL_PLATE_INTERACTION_VERSION='meal-plate-eat-from-v3-cookware-contact';
   const baseDescribePlace=SP.describePlace;
   const baseInteractionGeometry=SP.interactionGeometry;
   const baseObjectPosition=SP.objectPosition;
@@ -743,15 +743,16 @@
       if(holder){const positions=holder.id===agent?.id?[nodeForAgent(st,agent)]:agentContactNodes(st,holder,agent);return {mode:'heldReach',positions:dedupeNodes(st,positions),target,affordance,holderId:holder.id};}
       if(entity.containedBy){
         // This is the canonical traversal override of the core Spatial resolver.
-        // Only explicitly exposed Food Meal inside an eligible plate can delegate
-        // eatFrom to that plate's real metric interaction geometry.
-        const plate=affordance==='eatFrom'?window.SimFood?.servingPlateForMeal?.(st,entity):null;
+        // Only explicitly exposed Food Meal containers delegate eatFrom/serve
+        // to the parent container's real metric interaction geometry.
+        const F=window.SimFood;
+        const plate=affordance==='eatFrom'?F?.exposedMealContainer?.(st,entity):affordance==='serve'&&F?.isServingSource?.(st,entity)?F.cookingContainerForMeal(st,entity):null;
         if(plate){
           const plateHolder=SP.holderOf(st,plate.id);
-          if(plateHolder&&plateHolder.id!==agent?.id)
+          if((plateHolder&&(plateHolder.offMap||plateHolder.id!==agent?.id))||(F.cookingContainerForMeal(st,entity)&&st.reservations?.['object:'+plate.id]&&st.reservations['object:'+plate.id]!==agent?.id))
             return {mode:'none',positions:[],target,affordance,containedBy:plate.id};
-          const access=interactionGeometry(st,{kind:'object',id:plate.id},agent,'eatFrom');
-          return {...access,mode:'exposedMealPlateReach',target,affordance,containedBy:plate.id};
+          const access=interactionGeometry(st,{kind:'object',id:plate.id},agent,affordance==='serve'?'receive':'eatFrom');
+          return {...access,mode:F.servingPlateForMeal(st,entity)?'exposedMealPlateReach':'exposedMealCookwareReach',target,affordance,containedBy:plate.id};
         }
         if(affordance!=='pickup')return {mode:'none',positions:[],target,affordance,containedBy:entity.containedBy};
         const container=SP.objectContainerTarget(st,entity.containedBy);

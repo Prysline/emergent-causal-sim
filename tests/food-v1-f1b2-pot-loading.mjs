@@ -8,9 +8,9 @@ const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthorin
 const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCooking;
 const O=globalThis.SimObjectHandling,R=globalThis.SimResources,SP=globalThis.SimSpatial;
 const P=globalThis.SimPerception,V=globalThis.SimValidator;
-assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
+assert.equal(C.VERSION,'food-cooking-v4-contained-output');
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(F.VERSION,'food-v3-meal-volume');
+assert.equal(F.VERSION,'food-v4-contained-meal');
 
 const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};

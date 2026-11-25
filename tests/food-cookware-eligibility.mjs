@@ -9,8 +9,8 @@ const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCookin
 const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
-assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v29');
+assert.equal(C.VERSION,'food-cooking-v4-contained-output');
+assert.equal(A.VERSION,'world-authoring-v30');
 
 const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};

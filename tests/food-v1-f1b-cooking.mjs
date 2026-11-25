@@ -7,11 +7,11 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring;
 const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCooking;
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator,D=globalThis.SimFurnitureDefinitions;
-assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
+assert.equal(C.VERSION,'food-cooking-v4-contained-output');
 assert.equal(I.VERSION,'food-ingredient-v1');
-assert.equal(F.VERSION,'food-v3-meal-volume');
+assert.equal(F.VERSION,'food-v4-contained-meal');
 assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v29','current Cooking authoring schema is the explicitly advanced v23');
+assert.equal(A.VERSION,'world-authoring-v30','current Cooking authoring schema is the explicitly advanced v23');
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
@@ -21,7 +21,8 @@ const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 doc.furniture.counterA={id:'counterA',definitionId:'kitchen-counter',origin:{x:3,y:5,z:0},orientation:'south'};
 doc.entities.objects.potA={
-  id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,
+  id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,canEatFrom:true,
+  interactions:{eatFrom:{mode:'supportReach'}},
   objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
   handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
   position:{x:3,y:4,z:0},supportId:'stoveA'
@@ -101,7 +102,7 @@ for(let t=0;t<70;t++){
 assert.equal(finished,true,'real Engine tick loop must finish Cooking Action');
 assert.equal(a.action,null);
 assert.equal(st.objects.ingredientA1,undefined,'whole Ingredient retired exactly once');
-assert.equal(globalThis.SimObjectHandling.objectStorageStatus(st,'potA').count,0,'Cooking leaves no phantom ingredient inside pot');
+assert.equal(globalThis.SimObjectHandling.objectStorageStatus(st,'potA').count,1,'Cooking replaces loaded Ingredient with exactly one Meal in the same pot');
 const events=st.events.filter(e=>e.data?.action==='cookMeal'&&e.data?.phase==='complete');
 assert.equal(events.length,1,'one and only one canonical transformation Event');
 const loads=st.events.filter(e=>e.data?.action==='cookMeal'&&e.data?.phase==='loadPot');
@@ -118,7 +119,8 @@ assert.equal(meal.producedByEventId,event.id);
 assert.equal(st.causes[event.id],event);
 assert.ok(event.data.entities.includes('object:ingredientA1'));
 assert.ok(event.data.entities.includes('object:'+meal.id));
-assert.equal(meal.supportId,'stoveA','Meal remains at same cooking station; no teleport to dining table');
+assert.equal(meal.containedBy,'potA','Meal remains in its cooking container');
+assert.equal(meal.supportId,undefined);assert.equal(meal.position,undefined);
 assert.ok(SP.same(SP.objectPosition(st,meal.id),SP.objectPosition(st,'potA')));
 assert.equal(meal.contents,undefined,'no legacy resource food created');
 assert.ok(Number.isFinite(SP.bestInteractionPositionResult(st,a,{kind:'object',id:meal.id},'eatFrom')?.traversalCost));
@@ -196,7 +198,7 @@ function counterSetup(seed){
   const cooked=st.objects[completes[0].data.mealId];
   assert.ok(F.validMeal(cooked));
   assert.equal(cooked.meal.edibleMassGrams,300);
-  assert.equal(cooked.supportId,'stoveA');
+  assert.equal(cooked.containedBy,'potA');assert.equal(cooked.supportId,undefined);assert.equal(cooked.position,undefined);
   assert.equal(st.causes[completes[0].id],completes[0]);
   assert.equal(V.validateState(st).issueCount,0);
   const eat=E.buildAction(a,{id:'eat'});

@@ -1,5 +1,7 @@
 # Food F1-B2 — Physical pot loading via canonical Object containment
 
+**Current contained Meal correction (11.81.1):** Cooking atomically replaces the loaded Ingredient with one Meal with `containedBy=potId`, no independent `position` or `supportId`. The same pot's physical volume/mass remains derived from its actual child. `cookingEligible` alone does not expose content; the cookware additionally needs explicit `canEatFrom:true` and existing reach/supportReach eatFrom geometry to be visible/serving-accessible. Plate-only destination eligibility is retained; generic cargo stays hidden. `serve` delegates to the actual cookware receive contact, `eatFrom` to actual cookware eatFrom. A carried-by-other/off-map or reserved cookware cannot grant interaction. Partial serving keeps the source Meal in the pot; full serving moves the original ID to the plate. No new action, inventory, thermal model or B1 Surface capacity. Earlier slice descriptions below are historical wherever they conflict with this correction.
+
 Status: merged in PR #243 (squash `d84ae363a1bbe89c6713272ecbfab38ae0b825e8`) on `main`. Exact-head Node #44758215928 and Browser #44758216201 passed; post-merge Node #44768949382 and Pages #44768947191 also completed successfully. Historical predecessor F1-B1 merged in PR #242.
 
 ## Narrow production consumer
@@ -23,4 +25,4 @@ The generic Perception contract deliberately treats contained Objects as **not v
 
 ## Still pending — visible successors, not automatically ACTIVE
 
-The F0 Meal cannot yet be physically contained in a portable pot or transferred in portions to a resident-carried plate. That requires a separate Meal mass/physical container contract, then reuse of original `serve`/`eat` flow. Ingredient `externalSupply` adaptation, old food Resource retirement, off-map capacity/time, full default kitchen and long-term meal continuity also remain outside this PR. There is no fuel/temperature/3D pot volume, spills, cutting, multi-ingredient Recipe engine, or automatic unobserved pot-content discovery. WORLD 001 priority unchanged.
+At the original F1-B2 introduction, the F0 Meal could not yet be physically contained in a portable pot or transferred in portions to a resident-carried plate; this historical limitation is superseded by the current contained Meal correction above. That requires a separate Meal mass/physical container contract, then reuse of original `serve`/`eat` flow. Ingredient `externalSupply` adaptation, old food Resource retirement, off-map capacity/time, full default kitchen and long-term meal continuity also remain outside this PR. There is no fuel/temperature/3D pot volume, spills, cutting, multi-ingredient Recipe engine, or automatic unobserved pot-content discovery. WORLD 001 priority unchanged.

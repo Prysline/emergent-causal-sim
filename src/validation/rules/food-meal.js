@@ -7,8 +7,8 @@
       if(!F.hasMeal(object))continue;
       if(object.resourceContainer===true||object.contents!==undefined)add('food_meal_double_inventory','Meal cannot also use Resource contents.',{objectId:id});
       if(!F.validMeal(object))add('food_meal_invalid','Meal must have valid grams, unique placement and eatFrom affordance.',{objectId:id});
-      else if(object.containedBy&&!F.servingPlateForMeal(st,object))
-        add('food_meal_plate_invalid','Contained Meal requires an explicitly exposed ordinary Object plate.',{objectId:id,plateId:object.containedBy});
+      else if(object.containedBy&&!F.servingPlateForMeal(st,object)&&!F.cookingContainerForMeal(st,object))
+        add('food_meal_plate_invalid','Contained Meal requires an explicitly exposed ordinary Object plate or eligible ordinary cookware.',{objectId:id,plateId:object.containedBy});
     }
     for(const agent of Object.values(st?.agents||{})){
       const action=agent.action;if(action?.kind!=='eat'||!['toMeal','toMealSeat','sitMeal','eatingMeal','toMealDish','takeMealDish','toMealServe','serveMeal','toMealDining','placeMealDish'].includes(action.phase))continue;
