@@ -65,6 +65,7 @@ Interaction Geometry 不只屬於 Action 的最後移動階段。只要 consumer
 - Action 真正移動／轉姿勢時仍重新查詢當下 geometry，不把較早的 winner 或 route 永久快取；
 - `isAtInteraction(...)` 必須驗證完整 witness；只有位置相同但 required posture 不符，不能視為已可執行；
 - Furniture Slot 的坐／躺／睡／用餐 settle 是獨立 Slot contract：先 route 到合法 Slot approach，再 settle；不能把 Slot anchor 當 ordinary floor route destination；
+- `bestSlotApproachResult(state, slot, agent, {mode:'walk'})` 共用既有 Slot approach ranking，回傳 `{ position, traversalCost, pathDistance } | null`；需有 actor，成本使用同一次 traversalCost-optimal route 的數值，距離為該 winning route 的距離，而非另一次 shortest-distance query。原 `bestSlotApproachNode(...)` 保留 position-only、其他 objective 與無 actor 的 geometry query 契約。`mealSlots()` 直接使用同一次查詢的成本；其他 position-only consumers 不必遷移。結果僅供同步評分，不持久保存、不取代 execution 當下的 geometry / reservation 驗證。
 - Slot-use chooser-time `bestSlotApproachNode(...)` winner 是 ephemeral navigation witness，不是 unique arrival truth。`sleep`、`rest` 與 Human `meal` 在 execution 時以 current `slotApproachNodes()` 判斷是否已抵達；actor 若已站在同一 target Slot 的另一個 current legal approach，就停止追逐 stale witness 並轉入 settle / sit。實際 settle 仍在下一個 core tick重驗 capability、Pose fit、availability / reservation 與 current approach。
 
 ordinary floor exact target（例如清理某格地板）不是 interaction target，仍可直接走正式 floor Route。

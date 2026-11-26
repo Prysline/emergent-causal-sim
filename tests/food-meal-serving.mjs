@@ -319,4 +319,66 @@ function eventAncestors(st,id,visited=new Set()){
   assert.deepEqual(issues(),[]);
 }
 
+// C2: compare the actual Engine selection tick with the former two-query
+// mealSlots consumer. Keep the reference test-only and measure only the
+// synchronous Slot scoring calls, not an incidental emergent story.
+function measureMealSlotSelection(kind,useLegacy){
+  const {st,a,meal,plate}=setup(kind==='direct'?20261125:20261123);
+  const target={kind:'object',id:meal.id};
+  if(kind==='direct'){
+    delete st.objects.plateA;
+    const contact=SP.bestInteractionPositionResult(st,a,target,'eatFrom');
+    assert.ok(contact?.position);
+    a.position={...contact.position};
+  }else{
+    const mealContacts=SP.interactionGeometry(st,target,a,'eatFrom').positions;
+    const plateContacts=SP.interactionGeometry(st,{kind:'object',id:plate.id},a,'pickup').positions;
+    const common=mealContacts.find(x=>plateContacts.some(y=>SP.nodeSame(st,x,y)));
+    assert.ok(common,'carried serving fixture must expose actual shared contact');
+    a.position={...common};
+  }
+  const action=startEat(st,a);
+  if(kind==='direct'){
+    E.tick();
+    assert.equal(action.phase,'toMeal');
+    assert.equal(!!action.mealSeatChecked,false);
+  }else{
+    until(()=>servingEvents(st).length===1,50);
+    assert.equal(action.phase,'toMealDining');
+    assert.equal(a.held,plate.id);
+    assert.equal(!!action.mealDiningPosition,false);
+  }
+  const before=JSON.stringify(st),rows=[];
+  let feasibilityCalls=0;
+  const originalResult=SP.bestSlotApproachResult,originalFeasibility=SP.traversalFeasibility;
+  SP.bestSlotApproachResult=(state,slot,agent,options)=>{
+    SP.traversalFeasibility=(...args)=>{feasibilityCalls++;return originalFeasibility(...args);};
+    try{
+      let result;
+      if(useLegacy){
+        const position=SP.bestSlotApproachNode(state,slot,agent,{...options,objective:'traversalCost'});
+        result=position?{position,traversalCost:SP.traversalCost(state,agent,position)}:null;
+      }else result=originalResult(state,slot,agent,options);
+      rows.push({slot:slot.id,result:result?{position:result.position,traversalCost:result.traversalCost}:null});
+      return result;
+    }finally{SP.traversalFeasibility=originalFeasibility;}
+  };
+  try{E.tick();}finally{
+    SP.bestSlotApproachResult=originalResult;
+    SP.traversalFeasibility=originalFeasibility;
+  }
+  assert.ok(rows.length>0&&rows.some(row=>row.result),'real mealSlots consumer must evaluate reachable approaches');
+  if(kind==='direct')assert.equal(action.phase,'toMealSeat','direct selection must exercise the real seat consumer');
+  else assert.ok(action.mealDiningPosition,'carried Meal must exercise the real dining approach consumer');
+  return {before,after:JSON.stringify(st),rows,feasibilityCalls};
+}
+for(const kind of ['direct','carried']){
+  const legacy=measureMealSlotSelection(kind,true),reuse=measureMealSlotSelection(kind,false);
+  assert.equal(reuse.before,legacy.before,kind+' identical selection input including RNG');
+  assert.deepEqual(reuse.rows,legacy.rows,kind+' every candidate position and traversal cost must match');
+  assert.equal(reuse.after,legacy.after,kind+' full Engine selection tick must preserve canonical state and RNG');
+  assert.ok(reuse.feasibilityCalls<legacy.feasibilityCalls,kind+' real consumer must eliminate repeated edge work');
+  console.log('MEAL_SLOT_RESULT_REUSE '+JSON.stringify({kind,candidates:reuse.rows.length,before:legacy.feasibilityCalls,after:reuse.feasibilityCalls}));
+}
+
 console.log('Meal Serving v1: authoring, grams, visibility, carry, eat and real Cooking integration ok');

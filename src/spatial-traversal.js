@@ -231,11 +231,20 @@
   }
   function bestSlotApproachNode(st,slotOrId,aOrId=null,{mode='walk',objective='traversalCost'}={}){
     const a=agentFor(st,aOrId);
-    return withGeometrySnapshot(st,()=>bestSlotApproachNodeWithin(st,slotOrId,a,{mode,objective}));
+    return withGeometrySnapshot(st,()=>bestSlotApproachNodeWithin(st,slotOrId,a,{mode,objective})?.node||null);
+  }
+  // The richer query is a synchronous traversalCost winner, not a route cache.
+  function bestSlotApproachResult(st,slotOrId,aOrId=null,{mode='walk'}={}){
+    const a=agentFor(st,aOrId);
+    if(!a)return null;
+    return withGeometrySnapshot(st,()=>{
+      const winner=bestSlotApproachNodeWithin(st,slotOrId,a,{mode,objective:'traversalCost'});
+      return winner?{position:winner.node,traversalCost:winner.value,pathDistance:winner.pathDistance}:null;
+    });
   }
   function bestSlotApproachNodeWithin(st,slotOrId,a,{mode='walk',objective='traversalCost'}={}){
     const candidates=slotApproachNodes(st,slotOrId,a,mode);
-    if(!a)return candidates[0]||null;
+    if(!a)return candidates[0]?{node:candidates[0]}:null;
     const requested=locomotionRuntime()?'auto':mode,distances=objective==='pathDistance'?pathDistances(st,a,candidates,{mode:requested}):null,ranked=[];
     const routes=objective==='traversalCost'&&candidates.length>1?slotApproachTraversalCosts(st,a,candidates,{mode:requested}):null;
     for(let i=0;i<candidates.length;i++){
@@ -244,7 +253,7 @@
       if(Number.isFinite(value))ranked.push({node,value,pathDistance:distances?value:(route?.pathDistance??0)});
     }
     ranked.sort((x,y)=>x.value-y.value||x.pathDistance-y.pathDistance||nodeKey(st,x.node).localeCompare(nodeKey(st,y.node)));
-    return ranked[0]?.node||null;
+    return ranked[0]||null;
   }
   function slotEgressNodes(st,slotOrId,aOrId=null,mode='walk'){
     const a=agentFor(st,aOrId);
@@ -858,5 +867,5 @@
   SP.bestInteractionPositionResult=bestInteractionPositionResult;
   SP.isAtInteraction=isAtInteraction;
   SP.describePlace=describePlace;
-  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,PICKUP_INTERACTION_VERSION,MEAL_PLATE_INTERACTION_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v2',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
+  Object.assign(SP,{VERSION,SPATIAL_IDENTITY_VERSION,PICKUP_INTERACTION_VERSION,MEAL_PLATE_INTERACTION_VERSION,currentGeometryQuerySnapshot:geometrySnapshotFor,ORDINARY_OBJECT_INTERACTION_VERSION:'ordinary-object-interaction-v2',ROUTE_SEMANTICS_VERSION:'11.38.0-carried-handling-risk',STRUCTURE_TRAVERSAL_PROFILES,nodeKey,nodeSame,nodeForAgent,objectNode,nodeOccupantsAt,nodeWalkable,nodeLocomotionAccessible,traversalManeuver,traversalNeighbors,traversalEdgeCost,pathCost,pathDistance,pathDistances,traversalCost,travelTime,planRoute,routeDecisionScore,canInteract,surfaceEntries,surfaceEntry,surfaceAt,supportSurfaceForFurniture,surfaceStaticFitResult,surfaceNodeFitsMode,overheadAt,supportContactNodes,furnitureSolids,floorGeometry,movementEnvelopeFor,floorNodeFitsMode,slotApproachNodes,bestSlotApproachNode,bestSlotApproachResult,slotEgressNodes,routeOriginsForAgent,bestSlotEgressNode});
 })();
