@@ -51,4 +51,23 @@ assert.equal(held.supportId,counter.id);
 assert.equal(V.validateState(st).issues.some(x=>x.code==='object_surface_placement_invalid'),false);
 held.placementFootprint={width:2,depth:2};
 assert.equal(V.validateState(st).issues.some(x=>x.code==='object_surface_placement_invalid'),true);
-console.log('B1 Surface Placement geometry, authoring/editor and targeted release: ok');
+// Generic intentional release uses the same object-specific rule, not a separate capacity answer.
+// An oversized object is legal on Floor but fits none of the nearby support cells.
+a.held=held.id;delete held.supportId;
+assert.equal(SP.bestNearbySupportPlacement(st,a),null,'no support can fit the oversized held Object');
+const floor=SP.normalizeNode(st,a.position,'floor');
+const fallback=SP.releaseHeldObjectNearby(st,a);
+assert.equal(fallback?.kind,'floor');
+assert.equal(a.held,null);
+assert.equal(held.supportId,undefined);
+assert.ok(SP.nodeSame(st,SP.objectNode(st,held.id),floor));
+assert.equal(V.validateState(st).issues.some(x=>x.code==='object_surface_placement_invalid'),false);
+held.placementFootprint={width:.12,depth:.12};
+a.held=held.id;
+const winner=SP.bestNearbySupportPlacement(st,a);
+assert.ok(winner,'a small held Object can use a legal nearby support');
+const ordinary=SP.releaseHeldObjectNearby(st,a);
+assert.equal(ordinary?.supportId,winner.supportId);
+assert.ok(SP.nodeSame(st,ordinary.node,winner.node));
+assert.equal(a.held,null);
+console.log('B1 Surface Placement geometry, authoring/editor, targeted and generic release: ok');
