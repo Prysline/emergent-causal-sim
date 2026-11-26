@@ -8,7 +8,8 @@ assert.deepEqual(workflows,['browser-regression.yml','node-regression-github.yml
 
 const node=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');
 const nodeGithub=fs.readFileSync(new URL('../.github/workflows/node-regression-github.yml',import.meta.url),'utf8');
-const browser=fs.readFileSync(new URL('../.github/workflows/browser-regression.yml',import.meta.url),'utf8');
+// Windows checkouts may use CRLF; compare workflow structure independently of line endings.
+const browser=fs.readFileSync(new URL('../.github/workflows/browser-regression.yml',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 assert.doesNotMatch(node,/feature\//,'Node regression must not retain historical feature-branch triggers');
 assert.doesNotMatch(browser,/feature\//,'Browser regression must not retain historical feature-branch triggers');
 assert.match(node,/workflow_call:/,'Canonical Node regression must remain reusable by the manual GitHub fallback workflow');
@@ -95,4 +96,14 @@ for(const name of retiredTests)assert.equal(currentTests.has(name),false,'retire
 
 assert.match(browser,/fail-fast:\s*false/,'Browser matrix must report every current suite rather than stop at the first failure');
 assert.match(browser,/suite:\s*resident-view[\s\S]*extra_test:\s*tests\/browser-runtime-hook-pipeline-qa\.mjs/,'Resident View matrix case must retain runtime-hook browser coverage');
+// Manual diagnostics must never replace or enlarge the mandatory PR matrix.
+const browserQaJob=browser.match(/^  browser-qa:\n([\s\S]*?)(?=^  playback-benchmark:)/m)?.[1]||'';
+const playbackJob=browser.match(/^  playback-benchmark:\n([\s\S]*?)(?=^  engine-caller-attribution:)/m)?.[1]||'';
+const callerJob=browser.match(/^  engine-caller-attribution:\n([\s\S]*)$/m)?.[1]||'';
+assert.match(browser,/^      engine_caller_attribution:\n        description: [^\n]+\n        type: boolean\n        required: false\n        default: false$/m,'C1 must be explicitly opted in');
+assert.ok(browserQaJob.includes("    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.playback_benchmark && !inputs.engine_caller_attribution) }}"),'PR/default manual regression remains mandatory; diagnostic dispatch skips the matrix');
+assert.ok(playbackJob.includes("    if: ${{ github.event_name == 'workflow_dispatch' && inputs.playback_benchmark }}"),'Autoplay benchmark must remain manual-only');
+assert.ok(callerJob.includes("    if: ${{ github.event_name == 'workflow_dispatch' && inputs.engine_caller_attribution }}"),'C1 must remain manual-only');
+assert.match(callerJob,/node tests\/browser-engine-cost-attribution\.mjs/,'C1 manual job must execute the diagnostic');
+assert.doesNotMatch(browserQaJob,/browser-engine-cost-attribution\.mjs/,'C1 must not be a routine matrix suite');
 console.log('Workflow architecture regression: ok');
