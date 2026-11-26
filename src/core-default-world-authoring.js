@@ -99,16 +99,16 @@
     for(const [id,[x,y]] of Object.entries(positions))objects[id].position=p(x,y);
     objects.bookA.handling.massKg=.5;
     objects.bookA.physicalVolumeCubicMeters=.00264;
-    objects.basketA={id:'basketA',name:'搬運籃',icon:'🧺',portable:true,objectContainment:true,
+    objects.basketA={id:'basketA',placementFootprint:{width:.55,depth:.40},name:'搬運籃',icon:'🧺',portable:true,objectContainment:true,
       objectStorage:{capacityCubicMeters:.024},physicalVolumeCubicMeters:.004,
       handling:{carryGeometry:{width:.55,height:.30,length:.40},handsRequired:2,massKg:.8},
       position:p(13,3)};
-    objects.basketSmallA={id:'basketSmallA',name:'單手提籃',icon:'🧺',portable:true,objectContainment:true,
+    objects.basketSmallA={id:'basketSmallA',placementFootprint:{width:.40,depth:.30},name:'單手提籃',icon:'🧺',portable:true,objectContainment:true,
       objectStorage:{capacityCubicMeters:.018},physicalVolumeCubicMeters:.003,
       handling:{carryGeometry:{width:.40,height:.25,length:.30},handsRequired:1,massKg:.6},
       position:p(5,8)};
     function servingPlate(id,name,x,y){
-      return {id,name,icon:'🍽️',portable:true,canEatFrom:true,
+      return {id,name,icon:'🍽️',portable:true,canEatFrom:true,placementFootprint:{width:.30,depth:.30},
         objectContainment:true,objectStorage:{capacityCubicMeters:.00035},
         handling:{carryGeometry:{width:.30,height:.05,length:.30},
           handsRequired:1,massKg:.30},
@@ -118,7 +118,7 @@
     objects.plateA=servingPlate('plateA','餐盤 A',11,5);
     objects.plateB=servingPlate('plateB','餐盤 B',12,6);
     objects.potA={
-      id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,canEatFrom:true,
+      id:'potA',placementFootprint:{width:.35,depth:.35},name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,canEatFrom:true,
       interactions:{eatFrom:{mode:'supportReach'}},
       objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
       handling:{carryGeometry:{width:.35,height:.25,length:.35},

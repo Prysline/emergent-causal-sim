@@ -568,6 +568,47 @@
     return resolveWithDefinition(definition,instance);
   }
 
+
+  // Authoring-safe, derived surface placement budget. No occupancy state or carry proxy.
+  const samePlacementCell=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&(a.z??0)===(b.z??0);
+  const positivePlacementNumber=v=>typeof v==='number'&&Number.isFinite(v)&&v>0;
+  function validPlacementFootprint(object){
+    const f=object?.placementFootprint;
+    return !!f&&typeof f==='object'&&!Array.isArray(f)&&Object.keys(f).length===2
+      &&positivePlacementNumber(f.width)&&positivePlacementNumber(f.depth)&&positivePlacementNumber(f.width*f.depth);
+  }
+  function placementCellRegion(furniture,node){
+    const surfaces=furniture?.spatial?.surfaces;
+    if(furniture?.supportsObjects!==true||surfaces?.length!==1||!node)return null;
+    const surface=surfaces[0],r=surface.supportRegion;
+    if(!surface.cells?.some(cell=>samePlacementCell(cell,node))||!r
+      ||(node.surfaceId&&node.surfaceId!==surface.id))return null;
+    const width=Math.min(node.x+1,r.x+r.width)-Math.max(node.x,r.x);
+    const depth=Math.min(node.y+1,r.y+r.depth)-Math.max(node.y,r.y);
+    return positivePlacementNumber(width)&&positivePlacementNumber(depth)?{width,depth,area:width*depth,surfaceId:surface.id}:null;
+  }
+  function surfacePlacementStatus(objects,furniture,node,object){
+    const region=placementCellRegion(furniture,node);
+    if(!region)return {ok:false,reason:'invalid-support-cell'};
+    if(!validPlacementFootprint(object))return {ok:false,reason:'invalid-placement-footprint'};
+    const f=object.placementFootprint,epsilon=1e-9;
+    if(f.width>region.width+epsilon||f.depth>region.depth+epsilon)
+      return {ok:false,reason:'footprint-exceeds-cell',...region};
+    let occupiedArea=0;
+    for(const other of Object.values(objects||{})){
+      if(other.id===object.id||other.containedBy||other.supportId!==furniture.id||!samePlacementCell(other.position,node))continue;
+      if(!validPlacementFootprint(other))return {ok:false,reason:'occupant-footprint-invalid',objectId:other.id};
+      const footprint=other.placementFootprint;
+      if(footprint.width>region.width+epsilon||footprint.depth>region.depth+epsilon)
+        return {ok:false,reason:'occupant-exceeds-cell',objectId:other.id};
+      occupiedArea+=footprint.width*footprint.depth;
+    }
+    const requiredArea=f.width*f.depth;
+    const ok=occupiedArea+requiredArea<=region.area+epsilon;
+    return {ok,reason:ok?null:'surface-area-exceeded',...region,occupiedArea,requiredArea};
+  }
+  window.SimSurfacePlacement=Object.freeze({VERSION:'surface-placement-v1-cell-area',validPlacementFootprint,placementCellRegion,surfacePlacementStatus});
+
   window.SimFurnitureDefinitions=Object.freeze({
     VERSION,
     DEFINITIONS,

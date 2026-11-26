@@ -1155,6 +1155,11 @@ const heldPlateRequired=!!p.container&&['toFood','serve','chooseSeat','toSeat','
         C.eligible(state,p.ingredientId,p.stationId,{actorId:a.id,potId:p.potId})?.location!=='carried'){
         abortAction(a,'搬運食材期間持物、容量或預約已失效',{dropHeld:a.held===p.ingredientId});return;
       }
+      if(!SP.supportPlacementCells(state,state.objects[p.ingredientId],prep.id).length){
+        p.wait=(p.wait||0)+1;
+        if(p.wait>=MAX_INTERACTION_WAIT)abortAction(a,'指定檯面沒有足夠的合法放置空間');
+        return;
+      }
       const placement=SP.releaseHeldObjectOnSupport(state,a,prep.id);
       if(!placement){
         const contacts=SP.supportContactNodes(state,prep.id,a);

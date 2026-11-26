@@ -22,6 +22,7 @@
         icon:'📖',
         portable:true,
         handling:Object.freeze({carryGeometry:Object.freeze({width:.22,height:.04,length:.30}),handsRequired:1,massKg:.5}),
+        placementFootprint:Object.freeze({width:.22,depth:.30}),
         physicalVolumeCubicMeters:.00264,
         affordances:Object.freeze(['read']),
         interactions:Object.freeze({read:Object.freeze({mode:'supportReach'})})
@@ -31,6 +32,7 @@
       id:'physical-basket',label:'搬運籃（普通物件）',icon:'🧺',instanceIdBase:'physical-basket',
       authored:Object.freeze({
         name:'搬運籃',icon:'🧺',portable:true,objectContainment:true,
+        placementFootprint:Object.freeze({width:.55,depth:.40}),
         objectStorage:Object.freeze({capacityCubicMeters:.024}),physicalVolumeCubicMeters:.004,
         handling:Object.freeze({carryGeometry:Object.freeze({width:.55,height:.30,length:.40}),handsRequired:2,massKg:.8})
       })

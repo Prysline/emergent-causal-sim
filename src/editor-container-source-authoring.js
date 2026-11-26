@@ -20,19 +20,19 @@
   const CONTAINER_PRESETS=Object.freeze({
     'water-bucket':Object.freeze({
       id:'water-bucket',label:'水桶',icon:'💧',instanceIdBase:'waterBucket',
-      authored:Object.freeze({resourceContainer:true,name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}})
+      authored:Object.freeze({resourceContainer:true,placementFootprint:{width:0.32,depth:0.32},name:'水桶',icon:'💧',roles:['waterReserve','refillable','drinkSource'],capacity:100,emptyLoad:1.3,preferredResource:'water',contents:{water:72},portable:true,handling:{carryGeometry:{width:.32,height:.35,length:.32},handsRequired:1,containment:'open',contentRetention:openRetention(.08,.44,.14,.64,.20,.82)},canDrinkFrom:true,drinkPreference:.12,access:1,restock:{resource:'water',low:24,strategy:'carryContainer',sourceRole:'resourceSource'},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}})
     }),
     'white-cup':Object.freeze({
       id:'white-cup',label:'白色杯子',icon:'🥛',instanceIdBase:'cupWhite',
-      authored:Object.freeze({resourceContainer:true,name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
+      authored:Object.freeze({resourceContainer:true,placementFootprint:{width:0.1,depth:0.1},name:'白色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
     }),
     'blue-cup':Object.freeze({
       id:'blue-cup',label:'藍色杯子',icon:'🥛',instanceIdBase:'cupBlue',
-      authored:Object.freeze({resourceContainer:true,name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
+      authored:Object.freeze({resourceContainer:true,placementFootprint:{width:0.1,depth:0.1},name:'藍色杯子',icon:'🥛',roles:['drinkVessel'],capacity:35,emptyLoad:.25,contents:{},portable:true,handling:{carryGeometry:{width:.10,height:.12,length:.10},handsRequired:1,containment:'open',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.95})
     }),
     'alcohol-bottle':Object.freeze({
       id:'alcohol-bottle',label:'酒瓶',icon:'🍾',instanceIdBase:'alcoholBottle',
-      authored:Object.freeze({resourceContainer:true,name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1,containment:'sealed',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.28})
+      authored:Object.freeze({resourceContainer:true,placementFootprint:{width:0.1,depth:0.1},name:'酒瓶',icon:'🍾',roles:['drinkSource'],capacity:160,emptyLoad:.65,preferredResource:'alcohol',contents:{alcohol:120},portable:true,handling:{carryGeometry:{width:.10,height:.30,length:.10},handsRequired:1,containment:'sealed',contentRetention:openRetention(.06,.34,.10,.52,.14,.66)},canDrinkFrom:true,drinkPreference:.28})
     })
   });
 
