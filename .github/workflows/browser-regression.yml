@@ -21,6 +21,11 @@ on:
         type: boolean
         required: false
         default: false
+      engine_caller_attribution:
+        description: 'Run optional Engine caller attribution (C1; 10 ticks x 9 cases)'
+        type: boolean
+        required: false
+        default: false
       ticks:
         description: 'Number of complete ticks per measured case'
         type: choice
@@ -45,7 +50,7 @@ concurrency:
 
 jobs:
   browser-qa:
-    if: ${{ github.event_name != 'workflow_dispatch' || !inputs.playback_benchmark }}
+    if: ${{ github.event_name != 'workflow_dispatch' || (!inputs.playback_benchmark && !inputs.engine_caller_attribution) }}
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -193,5 +198,35 @@ jobs:
         with:
           name: browser-playback-speed-benchmark-${{ github.run_id }}-${{ github.run_attempt }}
           path: artifacts/browser-autoplay-speed-benchmark/
+          if-no-files-found: warn
+          retention-days: 14
+
+  engine-caller-attribution:
+    name: Engine caller attribution diagnostic (non-gating)
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.engine_caller_attribution }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - run: node --check tests/browser-engine-cost-attribution.mjs
+      - run: |
+          python3 -m http.server 4173 >/tmp/emergent-causal-sim-http.log 2>&1 &
+          sleep 2
+      - run: |
+          set -o pipefail
+          mkdir -p artifacts/browser-engine-cost-attribution
+          node tests/browser-engine-cost-attribution.mjs 2>&1 | tee artifacts/browser-engine-cost-attribution/ci.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: engine-caller-attribution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/browser-engine-cost-attribution/
           if-no-files-found: warn
           retention-days: 14
