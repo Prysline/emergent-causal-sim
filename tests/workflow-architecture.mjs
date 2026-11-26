@@ -8,7 +8,8 @@ assert.deepEqual(workflows,['browser-regression.yml','node-regression-github.yml
 
 const node=fs.readFileSync(new URL('../.github/workflows/node-regression.yml',import.meta.url),'utf8');
 const nodeGithub=fs.readFileSync(new URL('../.github/workflows/node-regression-github.yml',import.meta.url),'utf8');
-const browser=fs.readFileSync(new URL('../.github/workflows/browser-regression.yml',import.meta.url),'utf8');
+// Windows checkouts may use CRLF; compare workflow structure independently of line endings.
+const browser=fs.readFileSync(new URL('../.github/workflows/browser-regression.yml',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 assert.doesNotMatch(node,/feature\//,'Node regression must not retain historical feature-branch triggers');
 assert.doesNotMatch(browser,/feature\//,'Browser regression must not retain historical feature-branch triggers');
 assert.match(node,/workflow_call:/,'Canonical Node regression must remain reusable by the manual GitHub fallback workflow');
