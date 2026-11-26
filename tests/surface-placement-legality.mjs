@@ -4,6 +4,7 @@ import {loadProductionBefore,loadScriptsInThisContext} from './helpers/productio
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 const A=SimWorldAuthoring,L=SimSurfacePlacement,SP=SimSpatial,E=SimEngine,V=SimValidator;
+E.reset(20261126);
 const st=E.getState(),counter=st.furniture.counterA,node=SP.normalizeNode(st,counter.spatial.surfaces[0].cells[0],counter.spatial.surfaces[0].id);
 const item={id:'probe',placementFootprint:{width:.3,depth:.3}};
 const region=L.placementCellRegion(counter,node);
