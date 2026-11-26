@@ -133,7 +133,7 @@ assert.equal(snapshot.validation.ok,true,'remove must leave the canonical author
 await page.evaluate(()=>{
   const doc=window.SimWorldEditor.getDocument();
   doc.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
-  doc.entities.objects.containedBook={id:'containedBook',name:'收納測試書',icon:'📘',portable:true,handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1,massKg:.5},physicalVolumeCubicMeters:.00264,affordances:['read'],interactions:{read:{mode:'supportReach'}},containedBy:'bookshelfA'};
+  doc.entities.objects.containedBook={id:'containedBook',name:'收納測試書',icon:'📘',portable:true,placementFootprint:{width:.22,depth:.30},handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1,massKg:.5},physicalVolumeCubicMeters:.00264,affordances:['read'],interactions:{read:{mode:'supportReach'}},containedBy:'bookshelfA'};
   window.SimWorldEditor.loadDocument(doc);
 });
 await page.waitForSelector('[data-scene-type="object"][data-scene-id="containedBook"]');

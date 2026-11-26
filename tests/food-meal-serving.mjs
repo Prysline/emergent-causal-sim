@@ -9,7 +9,7 @@ const F=globalThis.SimFood,I=globalThis.SimIngredient,O=globalThis.SimObjectHand
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator;
 assert.equal(F.VERSION,'food-v4-contained-meal');
 assert.equal(O.VERSION,'object-handling-v4-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v30');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v3-cookware-contact','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){

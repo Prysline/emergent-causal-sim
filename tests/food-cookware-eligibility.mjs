@@ -10,13 +10,13 @@ const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
 assert.equal(C.VERSION,'food-cooking-v4-contained-output');
-assert.equal(A.VERSION,'world-authoring-v30');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 
 const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 function addPot(id,capacityCubicMeters,qualified=true){
   doc.entities.objects[id]={
-    id,name:'容器'+id,icon:'🍲',portable:true,cookingEligible:qualified,
+    id,name:'容器'+id,icon:'🍲',portable:true,cookingEligible:qualified,placementFootprint:{width:.35,depth:.35},
     objectContainment:true,objectStorage:{capacityCubicMeters},
     handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
     position:{x:3,y:4,z:0},supportId:'stoveA'

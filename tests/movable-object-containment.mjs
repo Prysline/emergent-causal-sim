@@ -6,14 +6,14 @@ loadProductionBefore('src/ui/core.js');
 const A=globalThis.SimWorldAuthoring,E=globalThis.SimEngine,W=globalThis.SimWorld;
 const SP=globalThis.SimSpatial,O=globalThis.SimObjectHandling,R=globalThis.SimResources,V=globalThis.SimValidator;
 const S=globalThis.SimObjectStorageVolume;
-assert.equal(A.VERSION,'world-authoring-v30');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(O.VERSION,'object-handling-v4-storage-volume');
 assert.equal(S.VERSION,'object-storage-volume-v1');
 
 const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 for(const [id,massKg,volume] of [['cargoA',.5,.009],['cargoB',.75,.01],['cargoC',.6,.008]]){
   authored.entities.objects[id]={
-    id,name:id,icon:'📦',portable:true,position:{x:13,y:3,z:0},
+    id,name:id,icon:'📦',portable:true,placementFootprint:{width:.15,depth:.15},position:{x:13,y:3,z:0},
     handling:{carryGeometry:{width:.15,height:.1,length:.15},handsRequired:1,massKg},
     physicalVolumeCubicMeters:volume
   };
