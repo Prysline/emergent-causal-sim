@@ -406,6 +406,81 @@ for(const occupyAfterChoice of [false,true]){
   assert.deepEqual(issues(),[]);
 }
 
+// A real reachable but visually unavailable support must not be an
+// intentional candidate. Local contact has already been filled by the fixture.
+{
+  const {st,a,plate,action,witness}=intentionalPlacementFixture();
+  const f=st.furniture[witness.supportId];
+  const blind=['north','northEast','east','southEast','south','southWest','west','northWest'].find(face=>{
+    a.facing=face;
+    return P.classifyFurnitureVisualSensoryAvailability(st,a,f)?.visualAvailable===false;
+  });
+  assert.ok(blind,'the remote support must have a canonical blind orientation');
+  a.facing=blind;
+  assert.ok(SP.supportPlacementCells(st,plate,f.id).length);
+  assert.ok(SP.intentionalSupportApproachResults(st,a,[f.id],{maxTraversalCost:4}).length,'physical reach remains possible');
+  assert.deepEqual(SP.intentionalSupportApproachResults(st,a,[f.id],{maxTraversalCost:0}),[],'real remote route exceeds zero budget');
+  E.tick();
+  assert.ok(!action.intentionalPlacement?.candidateSupportIds.includes(f.id),'unobserved remote support cannot enter Action-local candidates');
+  assert.notEqual(action.intentionalPlacement?.supportId,f.id);
+  assert.ok(!st.events.some(e=>e.data?.phase==='placeMealDish'&&e.data?.supportId===f.id));
+  assert.deepEqual(issues(),[]);
+  console.log('B2 unseen support exclusion: ok');
+}
+// Force the route-loss case to execute even when a normal movement can
+// reach contact in one tick. First keep the real candidate query intact
+// but simulate a failed execution plan. On the next tick the same contact
+// endpoints are unreachable for both selection and execution. No World
+// position or successful placement is fabricated by this test adapter.
+{
+  const {st,a,plate,action,witness}=intentionalPlacementFixture();
+  const origin={...a.position},original=SP.planRoute;
+  const keys=new Set(SP.supportContactNodes(st,witness.supportId,a).map(n=>SP.nodeKey(st,n)));
+  let executionFailures=0,revalidationFailures=0,loseRoute=false;
+  SP.planRoute=(state,agent,goal,options)=>{
+    const target=state===st&&(agent===a||agent===a.id)&&keys.has(SP.nodeKey(state,goal));
+    if(target&&(loseRoute||Object.hasOwn(options||{},'movementCredit'))){
+      if(loseRoute)revalidationFailures++;else executionFailures++;
+      return {traversalCost:Infinity,pathDistance:Infinity,path:[],steps:[]};
+    }
+    return original(state,agent,goal,options);
+  };
+  try{
+    E.tick();
+    assert.equal(action.intentionalPlacement?.supportId,witness.supportId);
+    assert.equal(a.held,plate.id);
+    assert.ok(executionFailures>0,'test must exercise failed execution after actual selection');
+    assert.ok(SP.nodeSame(st,origin,a.position),'failed movement cannot teleport');
+    assert.ok(!SP.supportContactNodes(st,witness.supportId,a).some(n=>SP.nodeSame(st,n,SP.nodeForAgent(st,a))));
+    loseRoute=true;
+    E.tick();
+    assert.ok(revalidationFailures>0,'test must exercise failed route revalidation');
+    assert.notEqual(action.intentionalPlacement?.supportId,witness.supportId,'failed remote route must be rejected');
+    assert.ok(!st.events.some(e=>e.data?.phase==='placeMealDish'&&e.data?.supportId===witness.supportId));
+  }finally{SP.planRoute=original;}
+  assert.deepEqual(issues(),[]);
+  console.log('B2 route-loss revalidation: ok');
+}
+// Force a genuine immediate cleanup release via the canonical lifecycle
+// owner, then let the still-running eat phase observe loss of its plate.
+{
+    const {st,a,plate,action}=intentionalPlacementFixture();
+    E.tick();
+    assert.equal(a.held,plate.id);
+    assert.equal(action.phase,'placeMealDish');
+    const origin={...a.position};
+    const immediate=SP.releaseHeldObjectNearby(st,a);
+    assert.ok(immediate);assert.equal(a.held,null);
+    assert.ok(SP.nodeSame(st,origin,a.position),'immediate cleanup never travels');
+    const committedNode=SP.objectNode(st,plate.id);
+    E.tick();
+    assert.notEqual(a.action,action,'lost plate must end the old placement action');
+    assert.ok(!st.events.some(e=>e.data?.phase==='placeMealDish'),'cleanup is not an intentional placement success');
+    assert.ok(SP.nodeSame(st,SP.objectNode(st,plate.id),committedNode),'abort cannot move the released plate again');
+    assert.deepEqual(issues(),[]);
+    console.log('B2 immediate cleanup and held-loss abort: ok');
+}
+
 // C2: compare the actual Engine selection tick with the former two-query
 // mealSlots consumer. Keep the reference test-only and measure only the
 // synchronous Slot scoring calls, not an incidental emergent story.

@@ -219,7 +219,7 @@ else
 
 Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support Surface；0 或 >1 明確失敗。`objectContainment:true` Furniture 可作為 Object `containedBy` target；Held / Contained / Supported / Free location relations 互斥，Furniture / Surface 不保存反向 `objects[]` / `contents[]` mirror。Contained pickup interaction 直接重用 containing Furniture 的 canonical Interaction Geometry；其他 Object affordance 必須先把物件取出。
 
-### Intentional nearby placement v2
+### Immediate nearby release (historical v2 lineage; current B2 distinction)
 
 當 lifecycle-driven release 需要放下 held Object 時，Spatial candidate-selection 是唯一 nearby placement query owner：
 
@@ -229,7 +229,7 @@ Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support
 - winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node並保持無 `supportId`。
 - accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
 
-Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享 intentional release placement。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。
+Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享即時 lifecycle release；B2 Physical Meal Serving `placeMealDish` 則是明確、有限的主動接近後放置，不將一般 cleanup 改為移動。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。
 
 ## Interaction Geometry / Pickup v1
 
