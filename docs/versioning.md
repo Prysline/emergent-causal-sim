@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.82.0-surface-placement-legality`。
+目前 overall runtime marker：`11.83.0-intentional-nearby-placement`。
+
+## 11.83.0 Intentional Nearby Placement (B2)
+
+B2 Intentional Nearby Placement v5: Physical Meal Serving `eat.placeMealDish` keeps immediate legal contact placement first, otherwise selects from Action-local observed Furniture IDs using canonical support contact and finite traversal cost (initial budget 4, elapsed bound 12 ticks). Remote occupancy is not queried for selection; B1 intrinsic fit and actual capacity are checked separately, actual capacity only at contact. Recompute approach each tick, reject failed targets, use canonical Floor fallback when exhausted. No route/feasibility cache, no new Intent, no cleanup/abort/accidental-drop migration, no B1 precision change. Other consumers remain unchanged.
 
 ## 11.82.0 Surface placement legality (B1)
 

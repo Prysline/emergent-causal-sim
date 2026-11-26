@@ -319,6 +319,77 @@ function eventAncestors(st,id,visited=new Set()){
   assert.deepEqual(issues(),[]);
 }
 
+
+function fillPlacementSupport(st,id){
+  const support=st.furniture[id],entry=SP.supportSurfaceForFurniture(st,support),L=globalThis.SimSurfacePlacement;
+  if(!entry)return;
+  for(const [index,cell] of entry.surface.cells.entries()){
+    const node=SP.normalizeNode(st,cell,entry.surface.id),region=L.placementCellRegion(support,node);
+    const used=Object.values(st.objects).filter(o=>o.supportId===id&&!o.containedBy&&SP.nodeSame(st,o.position,node))
+      .reduce((sum,o)=>sum+o.placementFootprint.width*o.placementFootprint.depth,0);
+    const remaining=region.area-used,key='b2-capacity-'+id+'-'+index;
+    if(remaining>1e-9)st.objects[key]={id:key,name:'capacity witness',portable:false,supportId:id,position:node,
+      placementFootprint:{width:region.width,depth:remaining/region.width}};
+  }
+}
+function intentionalPlacementFixture(){
+  const {st,a,meal,plate}=setup(20261123);
+  const common=SP.interactionGeometry(st,{kind:'object',id:meal.id},a,'eatFrom').positions
+    .find(x=>SP.interactionGeometry(st,{kind:'object',id:plate.id},a,'pickup').positions.some(y=>SP.nodeSame(st,x,y)));
+  assert.ok(common);a.position={...common};
+  const action=startEat(st,a);
+  until(()=>action.phase==='placeMealDish',80);
+  assert.equal(a.held,plate.id);
+  // Find a real geometric and visual witness. Fixture setup relocates the
+  // actor before placement only; all subsequent movement is Engine-owned.
+  let witness=null;
+  for(const node of SP.supportContactNodes(st,'diningTable',a)){
+    if(node.surfaceId!=='floor'||!SP.nodeLocomotionAccessible(st,node,a))continue;
+    a.position={...node};
+    for(const face of ['north','northEast','east','southEast','south','southWest','west','northWest']){
+      a.facing=face;
+      const ids=Object.values(st.furniture).filter(f=>f.supportsObjects&&f.spatial?.solids?.length
+        &&P.deriveFurnitureSightSamples(f).targetSamples.some(s=>s.position.x!==a.position.x||s.position.y!==a.position.y)
+        &&P.classifyFurnitureVisualSensoryAvailability(st,a,f)?.visualAvailable===true).map(f=>f.id);
+      const goal=SP.intentionalSupportApproachResults(st,a,ids,{maxTraversalCost:4})[0];
+      if(goal&&SP.supportPlacementCells(st,plate,goal.supportId).length){witness=goal;break;}
+    }
+    if(witness)break;
+  }
+  assert.ok(witness,'fixture requires a visible remote legal support within actual traversal budget');
+  for(const f of Object.values(st.furniture))if(f.supportsObjects&&SP.supportContactNodes(st,f.id,a).some(n=>SP.nodeSame(st,n,SP.nodeForAgent(st,a))))fillPlacementSupport(st,f.id);
+  assert.equal(SP.bestNearbySupportPlacement(st,a),null,'current contacts are full');
+  delete action.spatialGoal;delete action.locomotionStep;delete action.locomotionCredit;
+  assert.deepEqual(SP.intentionalSupportApproachResults(st,a,[],{maxTraversalCost:4}),[],'unknown supports cannot enter the query');
+  return {st,a,plate,action,witness};
+}
+for(const occupyAfterChoice of [false,true]){
+  const {st,a,plate,action,witness}=intentionalPlacementFixture(),origin={...a.position};
+  const serving=servingEvents(st)[0];
+  E.tick();
+  assert.equal(a.held,plate.id,'remote choice must not teleport the plate');
+  assert.equal(action.intentionalPlacement?.supportId,witness.supportId);
+  assert.equal(st.events.some(e=>e.data?.phase==='placeMealDish'),false);
+  if(occupyAfterChoice){
+    const before=SP.intentionalSupportApproachResults(st,a,[witness.supportId],{maxTraversalCost:4});
+    fillPlacementSupport(st,witness.supportId);
+    assert.deepEqual(SP.intentionalSupportApproachResults(st,a,[witness.supportId],{maxTraversalCost:4}),before,
+      'unobserved occupancy must not alter remote route selection');
+  }
+  until(()=>st.events.some(e=>e.data?.phase==='placeMealDish'),20);
+  const event=st.events.find(e=>e.data?.phase==='placeMealDish');
+  assert.equal(a.held,null);
+  assert.ok(!SP.nodeSame(st,origin,a.position),'real locomotion must occur before remote placement');
+  if(occupyAfterChoice)assert.notEqual(event.data.supportId,witness.supportId,'capacity changed: no false success');
+  else assert.equal(event.data.supportId,witness.supportId);
+  assert.equal(st.causes[event.id],event);
+  assert.ok(eventAncestors(st,event.id).has(serving.id));
+  assert.equal(action.intentionalPlacement,undefined);
+  assert.deepEqual(issues(),[]);
+  until(()=>intakeEvents(st).length>0,100);
+  assert.ok(eventAncestors(st,intakeEvents(st)[0].id).has(event.id),'intake cites committed placement');
+}
+
 // C2: compare the actual Engine selection tick with the former two-query
 // mealSlots consumer. Keep the reference test-only and measure only the
 // synchronous Slot scoring calls, not an incidental emergent story.

@@ -5,7 +5,7 @@
   const L=window.SimSurfacePlacement;
   if(L?.VERSION!=='surface-placement-v1-cell-area')throw new Error('Nearby Placement requires canonical Surface Placement.');
   const VERSION='11.46.0-sleep-carry-integration';
-  const NEARBY_PLACEMENT_VERSION='nearby-placement-v4-surface-legality';
+  const NEARBY_PLACEMENT_VERSION='nearby-placement-v5-intentional-approach';
   const SUPPORTED_OBJECTIVES=new Set(['traversalCost','pathDistance']);
 
   function agentFor(st,aOrId){return typeof aOrId==='string'?st.agents?.[aOrId]||null:aOrId||null;}
@@ -72,6 +72,28 @@
 
   function bestNearbySupportPlacement(st,aOrId,options={}){return nearbySupportPlacementResults(st,aOrId,options)[0]||null;}
 
+  // Caller supplies observed support IDs. Never read remote occupancy.
+  function intentionalSupportApproachResults(st,aOrId,supportIds,{maxTraversalCost}={}){
+    if(!Array.isArray(supportIds)||!Number.isFinite(maxTraversalCost)||maxTraversalCost<0)throw new RangeError('Intentional placement requires explicit candidates and a finite traversal budget.');
+    const a=agentFor(st,aOrId),object=a?.held&&st.objects?.[a.held],here=a&&SP.nodeForAgent(st,a);
+    if(!a||a.offMap||!object||!here)return [];
+    const results=[];
+    for(const supportId of [...new Set(supportIds)].sort()){
+      const f=st.furniture?.[supportId],entry=f?.supportsObjects===true&&SP.supportSurfaceForFurniture(st,f);
+      if(!entry?.surface)continue;
+      const contacts=SP.supportContactNodes(st,supportId,a);
+      if(contacts.some(node=>SP.nodeSame(st,node,here)))continue;
+      if(!entry.surface.cells.some(cell=>{
+        const node=SP.normalizeNode(st,cell,entry.surface.id);
+        return node&&L.surfacePlacementStatus({},f,node,object).ok;
+      }))continue;
+      const result=bestCandidateNodeResult(st,a,contacts,{mode:window.SimLocomotion?'auto':'walk'});
+      if(!result||result.objectiveCost>maxTraversalCost)continue;
+      results.push(Object.freeze({supportId,position:result.node,traversalCost:result.objectiveCost,pathDistance:result.pathDistance,nodeKey:result.nodeKey}));
+    }
+    return results.sort((x,y)=>x.traversalCost-y.traversalCost||x.pathDistance-y.pathDistance||x.supportId.localeCompare(y.supportId)||x.nodeKey.localeCompare(y.nodeKey));
+  }
+
   // One mutation owner for deliberate support placement and ordinary nearby release.
   function commitSupportPlacement(st,a,placement){
     const objectId=a?.held,object=objectId&&st.objects?.[objectId];
@@ -92,6 +114,15 @@
     if(!a||!objectId||!object)return null;
     const placement=bestNearbySupportPlacement(st,a);
     if(placement)return commitSupportPlacement(st,a,placement);
+    return commitFloorPlacement(st,a,object);
+  }
+  function releaseHeldObjectOnFloor(st,aOrId){
+    const a=agentFor(st,aOrId),object=a?.held&&st.objects?.[a.held];
+    if(!a||a.offMap||!object)return null;
+    return commitFloorPlacement(st,a,object);
+  }
+  function commitFloorPlacement(st,a,object){
+    const objectId=object.id;
     const actorNode=SP.nodeForAgent(st,a),floorNode=actorNode&&SP.normalizeNode(st,{x:actorNode.x,y:actorNode.y,...(Number.isFinite(actorNode.z)&&actorNode.z!==0?{z:actorNode.z}:{})},'floor');
     if(!floorNode)return null;
     object.position={...floorNode};delete object.supportId;delete object.containedBy;a.held=null;
@@ -107,7 +138,9 @@
     supportPlacementCells,
     nearbySupportPlacementResults,
     bestNearbySupportPlacement,
+    intentionalSupportApproachResults,
     releaseHeldObjectNearby,
-    releaseHeldObjectOnSupport
+    releaseHeldObjectOnSupport,
+    releaseHeldObjectOnFloor
   });
 })();
