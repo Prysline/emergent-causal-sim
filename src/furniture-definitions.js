@@ -596,6 +596,7 @@
       return {ok:false,reason:'footprint-exceeds-cell',...region};
     let occupiedArea=0;
     for(const other of Object.values(objects||{})){
+      if(!other||typeof other!=='object'||Array.isArray(other))return {ok:false,reason:'invalid-object-record'};
       if(other.id===object.id||other.containedBy||other.supportId!==furniture.id||!samePlacementCell(other.position,node))continue;
       if(!validPlacementFootprint(other))return {ok:false,reason:'occupant-footprint-invalid',objectId:other.id};
       const footprint=other.placementFootprint;

@@ -10,6 +10,7 @@ const item={id:'probe',placementFootprint:{width:.3,depth:.3}};
 const region=L.placementCellRegion(counter,node);
 assert.ok(Math.abs(region.area-.7056)<1e-9);
 assert.equal(L.surfacePlacementStatus({},counter,node,item).ok,true);
+assert.equal(L.surfacePlacementStatus({invalid:null},counter,node,item).reason,'invalid-object-record');
 assert.equal(L.surfacePlacementStatus({},counter,node,{id:'missing',handling:{carryGeometry:{width:.1,length:.1}}}).reason,'invalid-placement-footprint');
 assert.equal(L.surfacePlacementStatus({},counter,node,{id:'oversize',placementFootprint:{width:.85,depth:.1}}).ok,false);
 const cargo={};
@@ -22,6 +23,13 @@ cargo.upper={id:'upper',supportId:counter.id,position:{...node,z:1},placementFoo
 assert.equal(L.surfacePlacementStatus(cargo,counter,node,item).ok,true,'contained or different-layer objects do not consume surface');
 const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
 assert.equal(A.validateAuthoring(doc).ok,true);
+for(const invalid of [null,[],false]){
+  const malformed=A.cloneAuthoring(doc);
+  malformed.entities.objects.invalid=invalid;
+  const report=A.validateAuthoring(malformed);
+  assert.equal(report.ok,false,'malformed Object records must be rejected by validation, not throw');
+  assert.ok(report.errors.some(x=>x.code==='authoring_object_invalid'));
+}
 delete doc.entities.objects.plateA.placementFootprint;
 assert.ok(A.validateAuthoring(doc).errors.some(x=>x.code==='authoring_object_placement_footprint_required'));
 const full=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
