@@ -31,7 +31,7 @@
   const seed=clone(Base.DEFAULT_WORLD_AUTHORING);
   seed.authoringSchema=VERSION;
   seed.entities.objects.readyMealF0={
-    id:'readyMealF0',placementFootprint:{width:.30,depth:.30},name:'現成餐點',icon:'🍛',canEatFrom:true,portable:false,
+    id:'readyMealF0',placementFootprint:{width:.20,depth:.12},name:'現成餐點',icon:'🍛',canEatFrom:true,portable:false,
     position:{x:5,y:2,z:0},supportId:'diningTable',interactions:{eatFrom:{mode:'supportReach'}},
     meal:{edibleMassGrams:300,standardServingMassGrams:300,densityKgPerM3:1000}
   };

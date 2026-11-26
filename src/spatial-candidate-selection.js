@@ -5,7 +5,7 @@
   const L=window.SimSurfacePlacement;
   if(L?.VERSION!=='surface-placement-v1-cell-area')throw new Error('Nearby Placement requires canonical Surface Placement.');
   const VERSION='11.46.0-sleep-carry-integration';
-  const NEARBY_PLACEMENT_VERSION='nearby-placement-v3-targeted-support';
+  const NEARBY_PLACEMENT_VERSION='nearby-placement-v4-surface-legality';
   const SUPPORTED_OBJECTIVES=new Set(['traversalCost','pathDistance']);
 
   function agentFor(st,aOrId){return typeof aOrId==='string'?st.agents?.[aOrId]||null:aOrId||null;}

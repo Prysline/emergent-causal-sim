@@ -5,7 +5,7 @@
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
   if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v4-contained-meal')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
-  const VERSION='world-authoring-v30',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v31',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
   function validateOffMapIngredientSources(source,errors){
@@ -31,6 +31,24 @@
   function validateAuthoring(source){
     const report=Base.validateAuthoring(baseDocument(source)),errors=[...report.errors];
     validateOffMapIngredientSources(source,errors);
+    const L=window.SimSurfacePlacement,objects=source?.entities?.objects||{},supports=new Map();
+    if(L?.VERSION!=='surface-placement-v1-cell-area')throw new Error('World Authoring requires canonical Surface Placement.');
+    for(const [id,object] of Object.entries(objects)){
+      if(!object||typeof object!=='object')continue;
+      const path='entities.objects.'+id;
+      if((object.portable===true||object.supportId)&&!L.validPlacementFootprint(object)){
+        errors.push({code:'authoring_object_placement_footprint_required',path:path+'.placementFootprint',message:'Placeable Object requires explicit positive width and depth in meters.'});
+        continue;
+      }
+      if(!object.supportId||object.containedBy||!object.position)continue;
+      if(!supports.has(object.supportId)){
+        let support=null;
+        try{support=Base.resolveFurnitureInstance(source.furniture?.[object.supportId]);}catch{}
+        supports.set(object.supportId,support);
+      }
+      const status=L.surfacePlacementStatus(objects,supports.get(object.supportId),object.position,object);
+      if(!status.ok)errors.push({code:'authoring_object_surface_placement_invalid',path:path+'.position',message:'Surface placement rejected: '+status.reason,reason:status.reason,supportId:object.supportId});
+    }
     if(source?.authoringSchema!==VERSION)
       errors.push({code:'authoring_schema_unsupported',path:'authoringSchema',message:'Expected '+VERSION});
     return {ok:errors.length===0,errors};

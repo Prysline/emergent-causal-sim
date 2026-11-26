@@ -440,6 +440,8 @@
           if(!Number.isInteger(handling.handsRequired)||handling.handsRequired<0)errors.push(authoringIssue('authoring_object_hands_required_invalid',`${basePath}.handling.handsRequired`,'Portable Object handsRequired must be a non-negative integer.'));
         }
       }
+      if(object.placementFootprint!==undefined&&!window.SimSurfacePlacement.validPlacementFootprint(object))
+        errors.push(authoringIssue('authoring_object_placement_footprint_invalid',basePath+'.placementFootprint','placementFootprint must contain finite positive width and depth in meters.'));
       if(object.handling?.massKg!==undefined&&(!Number.isFinite(object.handling.massKg)||object.handling.massKg<=0))errors.push(authoringIssue('authoring_object_mass_invalid',`${basePath}.handling.massKg`,'Object handling.massKg must be positive and finite.'));
       if(object.physicalVolumeCubicMeters!==undefined&&(!S.positive(object.physicalVolumeCubicMeters)||object.ingredient!==undefined||object.meal!==undefined))
         errors.push(authoringIssue('authoring_object_physical_volume_invalid',basePath+'.physicalVolumeCubicMeters','Explicit physical volume is only valid for an ordinary Object.'));

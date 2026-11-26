@@ -1,5 +1,7 @@
 (() => {
   const V=window.SimValidator,SP=window.SimSpatial;if(!V||!SP?.nodeWalkable)return;
+  const L=window.SimSurfacePlacement;
+  if(L?.VERSION!=='surface-placement-v1-cell-area')throw new Error('Spatial Validator requires canonical Surface Placement.');
   const positive=v=>Number.isFinite(Number(v))&&Number(v)>0;
   const zOf=value=>SP.zOf?SP.zOf(value):(value?.z??0);
   const sameLocalPosition=(a,b)=>!!a&&!!b&&a.x===b.x&&a.y===b.y&&zOf(a)===zOf(b);
@@ -27,6 +29,8 @@
     const supportedCollections=[['object',st?.objects||{}]];
     for(const [entityType,collection] of supportedCollections)for(const entity of Object.values(collection)){
       const holder=SP.holderOf(st,entity.id);
+      if((entity.portable===true||entity.supportId||entity.placementFootprint!==undefined)&&!L.validPlacementFootprint(entity))
+        add('object_placement_footprint_invalid','Object requires explicit positive placement footprint width/depth.',{entityType,entityId:entity.id});
       if(holder&&entity.supportId)add('held_object_support_conflict',`${entity.name||entity.id} 同時被 ${holder.id} 持有且仍宣告 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,holderId:holder.id,supportId:entity.supportId});
       if(holder&&entity.containedBy)add('held_object_containment_conflict',`${entity.name||entity.id} 同時被 ${holder.id} 持有且仍宣告 containedBy=${entity.containedBy}。`,{entityType,entityId:entity.id,holderId:holder.id,containedBy:entity.containedBy});
       if(entity.containedBy&&entity.supportId)add('contained_object_support_conflict',`${entity.name||entity.id} 同時宣告 containedBy=${entity.containedBy} 與 supportId=${entity.supportId}。`,{entityType,entityId:entity.id,containedBy:entity.containedBy,supportId:entity.supportId});
@@ -47,6 +51,8 @@
       if(!entity.position||holder)continue;
       const node=SP.objectNode(st,entity.id);if(!node)continue;
       if(entity.supportId){
+        const status=L.surfacePlacementStatus(st.objects,st.furniture?.[entity.supportId],entity.position,entity);
+        if(!status.ok)add('object_surface_placement_invalid','Surface placement rejected: '+status.reason,{entityType,entityId:entity.id,supportId:entity.supportId,reason:status.reason});
         const support=SP.supportSurfaceForFurniture?.(st,entity.supportId)||null,expected=support?.surface?.id||null;
         if(!expected)add('supported_object_surface_ambiguous',`${entity.name||entity.id}承載於 ${entity.supportId}，但找不到唯一 canonical support Surface。`,{entityType,entityId:entity.id,supportId:entity.supportId});
         else {
