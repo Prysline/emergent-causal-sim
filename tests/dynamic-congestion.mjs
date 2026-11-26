@@ -217,7 +217,7 @@ function assertSlotParity(st,slot,a,label){
   // than depending on the current authored scene's inventory or IDs.
   const P=globalThis.SimPhysical;
   const emptyEnvelope=P.getEffectiveTraversalEnvelope(st,a,'walk');
-  const cargo={id:'routeFixture:cargo',name:'Route fixture cargo',portable:true,handling:{massKg:1,handsRequired:1,carryGeometry:{width:emptyEnvelope.clearanceWidth+.1,height:.3,length:.4}}};
+  const cargo={id:'routeFixture:cargo',name:'Route fixture cargo',portable:true,placementFootprint:{width:.3,depth:.4},handling:{massKg:1,handsRequired:1,carryGeometry:{width:emptyEnvelope.clearanceWidth+.1,height:.3,length:.4}}};
   assert.ok(globalThis.SimObjectHandling.canHoldObject(st,a,cargo),'fixture actor must be able to hold the test Object');
   st.objects[cargo.id]=cargo;a.held=cargo.id;
   const loadedEnvelope=P.getEffectiveTraversalEnvelope(st,a,'walk');

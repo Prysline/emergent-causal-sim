@@ -86,7 +86,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v5');
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.entities.objects.syntheticPort={
-    id:'syntheticPort',name:'Port follower',portable:true,handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:5,y:2,z:0},supportId:'diningTable',
+    id:'syntheticPort',name:'Port follower',portable:true,placementFootprint:{width:.15,depth:.15},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:5,y:2,z:0},supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:{x:5,y:3,z:0}}]
   };
   doc.entities.objects.legacyResourceBasket.position={x:5,y:2,z:0};
@@ -152,7 +152,7 @@ assert.equal(C.VERSION,'embodiment-capabilities-v5');
 }
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
-  doc.entities.objects.syntheticPort={id:'syntheticPort',name:'Port object',portable:true,handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:3,z:0},interactionPorts:[{id:'syntheticPort:port',position:{x:4,y:3,z:0}}]};
+  doc.entities.objects.syntheticPort={id:'syntheticPort',name:'Port object',portable:true,placementFootprint:{width:.15,depth:.15},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:3,z:0},interactionPorts:[{id:'syntheticPort:port',position:{x:4,y:3,z:0}}]};
   let result=M.moveObject(doc,{entityType:'object',entityId:'syntheticPort',target:{x:4,y:4,z:0}});
   assert.equal(result.ok,true);
   assert.deepEqual(result.candidate.entities.objects.syntheticPort.interactionPorts[0].position,{x:5,y:4,z:0});

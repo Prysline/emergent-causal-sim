@@ -199,7 +199,7 @@ assert.throws(
 {
   const doc=clone(A.DEFAULT_WORLD_AUTHORING);
   doc.entities.objects.syntheticPort={
-    id:'syntheticPort',name:'Port follower',portable:true,handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},
+    id:'syntheticPort',name:'Port follower',portable:true,placementFootprint:{width:.15,depth:.15},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},
     position:local(5,2),supportId:'diningTable',
     interactionPorts:[{id:'syntheticPort:port',position:local(5,3),edge:'east'}]
   };

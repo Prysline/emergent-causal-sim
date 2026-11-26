@@ -133,8 +133,11 @@ function ancestors(st,id,seen=new Set()){
   for(const [index,cell] of support.spatial.surfaces[0].cells.entries()){
     const node=SP.normalizeNode(st,cell,support.spatial.surfaces[0].id);
     const region=L.placementCellRegion(support,node),id='surface-blocker-'+index;
-    st.objects[id]={id,name:'capacity witness',portable:false,supportId:support.id,position:node,
-      placementFootprint:{width:region.width,depth:region.depth}};
+    const used=Object.values(st.objects).filter(o=>o.supportId===support.id&&!o.containedBy&&SP.nodeSame(st,o.position,node))
+      .reduce((sum,o)=>sum+o.placementFootprint.width*o.placementFootprint.depth,0);
+    const remaining=region.area-used;
+    if(remaining>1e-9)st.objects[id]={id,name:'capacity witness',portable:false,supportId:support.id,position:node,
+      placementFootprint:{width:region.width,depth:remaining/region.width}};
   }
   assert.equal(SP.supportPlacementCells(st,st.objects[ID],support.id).length,0);
   assert.equal(SP.releaseHeldObjectOnSupport(st,a,support.id),null);
