@@ -390,6 +390,22 @@ for(const occupyAfterChoice of [false,true]){
   assert.ok(eventAncestors(st,intakeEvents(st)[0].id).has(event.id),'intake cites committed placement');
 }
 
+{
+  const {st,a,plate,action}=intentionalPlacementFixture();
+  // No surface has sufficient current capacity. Remote candidates are still
+  // possible hypotheses; they must not commit until contact validation.
+  for(const f of Object.values(st.furniture))if(f.supportsObjects)fillPlacementSupport(st,f.id);
+  const start=st.tick;
+  until(()=>st.events.some(e=>e.data?.phase==='placeMealDish'),16);
+  const event=st.events.find(e=>e.data?.phase==='placeMealDish');
+  assert.equal(event.data.supportId,null,'exhausted legal support candidates fall back to Floor');
+  assert.equal(plate.supportId,undefined);assert.equal(a.held,null);
+  assert.ok(st.tick-start<=13,'initial search cannot prolong placement indefinitely');
+  assert.equal(action.intentionalPlacement,undefined);
+  assert.ok(SP.nodeSame(st,SP.objectNode(st,plate.id),SP.normalizeNode(st,a.position,'floor')));
+  assert.deepEqual(issues(),[]);
+}
+
 // C2: compare the actual Engine selection tick with the former two-query
 // mealSlots consumer. Keep the reference test-only and measure only the
 // synchronous Slot scoring calls, not an incidental emergent story.

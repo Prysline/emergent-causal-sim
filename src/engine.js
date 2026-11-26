@@ -629,39 +629,43 @@
     }).map(f=>f.id).sort();
   }
   function stepIntentionalNearbyPlacement(a,p){
-    const here=SP.nodeForAgent(state,a);
-    let attempt=p.intentionalPlacement;
+    const here=SP.nodeForAgent(state,a),options={maxTraversalCost:INTENTIONAL_PLACEMENT_MAX_TRAVERSAL_COST};
+    let attempt=p.intentionalPlacement,goals=null;
+    if(attempt&&attempt.objectId!==a.held){
+      abortAction(a,'主動放置期間持物已改變',{dropHeld:false});return null;
+    }
     if(attempt?.supportId){
       const id=attempt.supportId,contacts=SP.supportContactNodes(state,id,a);
       if(contacts.some(node=>SP.nodeSame(state,node,here))){
         const placement=SP.releaseHeldObjectOnSupport(state,a,id);
         if(placement)return placement;
-        attempt.rejectedIds.push(id);attempt.supportId=null;
+      }else if(state.tick-attempt.started<INTENTIONAL_PLACEMENT_MAX_TICKS){
+        const goal=SP.intentionalSupportApproachResults(state,a,[id],options)[0];
+        if(goal){
+          p.spatialGoal={...goal.position};
+          moveToward(a,goal.position,'尋找附近合法放置位置');
+          return null;
+        }
       }
+      attempt.rejectedIds.push(id);attempt.supportId=null;
     }
-    // Current contact supplies evidence; use B1 actual capacity only here.
-    if(!attempt?.supportId){
-      for(const candidate of SP.nearbySupportPlacementResults(state,a)){
-        if(attempt?.rejectedIds.includes(candidate.supportId))continue;
-        const placement=SP.releaseHeldObjectOnSupport(state,a,candidate.supportId);
-        if(placement)return placement;
-      }
+    // A failed remote approach must not bypass a newly available local
+    // contact. No extra trip is needed to revalidate a current local cell.
+    for(const candidate of SP.nearbySupportPlacementResults(state,a)){
+      const placement=SP.releaseHeldObjectOnSupport(state,a,candidate.supportId);
+      if(placement)return placement;
     }
     if(!attempt){
-      attempt={objectId:a.held,started:state.tick,observedSupportIds:observedPlacementSupportIds(a),rejectedIds:[],supportId:null};
+      goals=SP.intentionalSupportApproachResults(state,a,observedPlacementSupportIds(a),options);
+      // Keep only the initial observed short-range IDs, not their routes,
+      // costs, capacity, or cached feasibility. Later failures replan them.
+      attempt={objectId:a.held,started:state.tick,candidateSupportIds:goals.map(x=>x.supportId),rejectedIds:[],supportId:null};
       p.intentionalPlacement=attempt;
     }
-    if(attempt.objectId!==a.held)throw new Error('Intentional placement held identity changed.');
     if(state.tick-attempt.started<INTENTIONAL_PLACEMENT_MAX_TICKS){
-      const options={maxTraversalCost:INTENTIONAL_PLACEMENT_MAX_TRAVERSAL_COST};
-      let goal=attempt.supportId&&SP.intentionalSupportApproachResults(state,a,[attempt.supportId],options)[0];
-      if(attempt.supportId&&!goal){attempt.rejectedIds.push(attempt.supportId);attempt.supportId=null;}
-      if(!attempt.supportId){
-        goal=SP.intentionalSupportApproachResults(state,a,attempt.observedSupportIds.filter(id=>!attempt.rejectedIds.includes(id)),options)[0];
-        if(goal)attempt.supportId=goal.supportId;
-      }
+      const goal=(goals||SP.intentionalSupportApproachResults(state,a,attempt.candidateSupportIds.filter(id=>!attempt.rejectedIds.includes(id)),options))[0];
       if(goal){
-        p.spatialGoal={...goal.position};
+        attempt.supportId=goal.supportId;p.spatialGoal={...goal.position};
         moveToward(a,goal.position,'尋找附近合法放置位置');
         return null;
       }
