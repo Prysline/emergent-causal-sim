@@ -35,6 +35,7 @@ function patch(path,body,mode){
     const specs=[
       ['bestInteractionPositionResult','interaction','{actor:globalThis.__callerProbe.actor(args[1]),target:args[2],affordance:args[3]??"default"}'],
       ['bestSlotApproachNode','slot','{actor:globalThis.__callerProbe.actor(args[2]),slot:typeof args[1]==="string"?args[1]:args[1]?.id,options:args[3]}'],
+      ['bestSlotApproachResult','slot','{actor:globalThis.__callerProbe.actor(args[2]),slot:typeof args[1]==="string"?args[1]:args[1]?.id,options:args[3],result:true}'],
       ['planRoute','planRoute','{actor:globalThis.__callerProbe.actor(args[1]),goal:args[2],options:args[3]}'],
       ['interactionTraversalCosts','interactionCosts','{actor:globalThis.__callerProbe.actor(args[1]),goals:args[2],options:args[3]}'],
       ['slotApproachTraversalCosts','slotCosts','{actor:globalThis.__callerProbe.actor(args[1]),goals:args[2],options:args[3]}'],

@@ -142,6 +142,12 @@ function legacySlotApproach(st,slot,a,options={}){
 function assertSlotParity(st,slot,a,label){
   const expected=legacySlotApproach(st,slot,a);
   assert.deepEqual(SP.bestSlotApproachNode(st,slot,a),expected,label);
+  const result=SP.bestSlotApproachResult(st,slot,a);
+  if(!expected)assert.equal(result,null,label+' unreachable rich result');
+  else{
+    const route=SP.planRoute(st,a,expected,{mode:globalThis.SimLocomotion?'auto':'walk',objective:'traversalCost'});
+    assert.deepEqual(result,{position:expected,traversalCost:route.traversalCost,pathDistance:route.pathDistance},label+' exact winning route metrics');
+  }
   return expected;
 }
 
@@ -164,6 +170,12 @@ function assertSlotParity(st,slot,a,label){
   assert.ok(Number.isFinite(plan(west).traversalCost));
   const expectedKey=[west,east].sort((x,y)=>SP.nodeKey(st,x).localeCompare(SP.nodeKey(st,y)))[0];
   assert.deepEqual(assertSlotParity(st,slot,mover,'equal costs and distance retain nodeKey tie-break'),expectedKey);
+  assert.deepEqual(SP.bestSlotApproachNode(st,slot,mover,{objective:'pathDistance'}),expectedKey,'position-only alternate objective remains compatible');
+  assert.deepEqual(SP.bestSlotApproachNode(st,slot,null),SP.slotApproachNodes(st,slot,null,'walk')[0]||null,'actorless position-only geometry remains compatible');
+  assert.equal(SP.bestSlotApproachResult(st,slot,null),null,'route cost requires a real actor');
+  mover.position={...west};
+  assert.deepEqual(assertSlotParity(st,slot,mover,'already at a legal approach'),west);
+  assert.deepEqual(SP.bestSlotApproachResult(st,slot,mover),{position:west,traversalCost:0,pathDistance:0});
 
   // A test-only congestion cost makes the nearer east goal tie with the
   // farther west goal. East must win by actual path distance, despite nodeKey.
