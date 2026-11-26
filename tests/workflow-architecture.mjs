@@ -21,6 +21,14 @@ assert.match(nodeGithub,/uses:\s*\.\/\.github\/workflows\/node-regression\.yml/,
 assert.match(nodeGithub,/runner:\s*ubuntu-latest/,'Manual GitHub fallback must explicitly select ubuntu-latest');
 
 const browserPullRequest=browser.match(/pull_request:\s*([\s\S]*?)workflow_dispatch:/)?.[1]||'';
+// Draft PRs already run CI. Becoming ready must not repeat an unchanged head.
+const nodePullRequest=node.match(/pull_request:\s*([\s\S]*?)workflow_call:/)?.[1]||'';
+for(const [name,trigger] of [['Node',nodePullRequest],['Browser',browserPullRequest]]){
+  assert.match(trigger,/^\s*branches:\s*\[main\]\s*$/m,name+' PR CI must target main');
+  assert.match(trigger,/^\s*types:\s*\[opened,\s*synchronize,\s*reopened\]\s*$/m,name+' PR CI must run on open, new commits and reopen, not ready_for_review');
+  assert.doesNotMatch(trigger,/\bready_for_review\b/,name+' PR CI must not repeat on ready-for-review');
+}
+assert.match(node,/^  push:\r?\n    branches: \[main\]\s*$/m,'Node post-merge main verification must remain enabled');
 assert.match(browserPullRequest,/paths:\s*/,'Browser pull requests must use the conservative path-aware trigger');
 const browserPathRules=[
   "      - '**'",

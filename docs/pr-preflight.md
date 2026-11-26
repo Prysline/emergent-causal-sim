@@ -94,6 +94,10 @@ node tests/pr-preflight.mjs
 - [ ] manual fallback 沒有被 `push` / `pull_request` 自動觸發。
 - [ ] fallback 仍重用 canonical Node workflow，而不是維護第二份 test list。
 
+### Draft PR CI 觸發契約
+
+Node／Browser PR workflows 於 `opened`、`synchronize`、`reopened` 觸發（Browser 保留既有 path-aware gate）；Draft PR 不跳過必要驗證。解除 Draft（`ready_for_review`）本身不改變 PR head，不重複觸發 CI。Merge Gate 仍須確認 current exact-head 必要檢查已完成且通過；若缺少驗證或驗證失敗，須依既有重跑／fallback 流程補齊，不得以解除 Draft 取代驗證。Node `push` 至 `main` 的 post-merge regression 及手動診斷入口均不變。若未來引入 Draft skip policy，必須同步重新審查此觸發契約。
+
 ### CI automation-originated commit 注意事項
 
 不要假設 workflow / `github-actions[bot]` 自己建立的新 commit 一定會自然再觸發同一組 PR workflows。若用 automation 修正 branch，必須重新確認 **exact head** 上實際出現且執行的是哪一組 checks；沒有 exact-head run 時，不得把前一個 head 的綠燈當成新 head 的驗證。
