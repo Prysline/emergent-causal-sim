@@ -18,7 +18,7 @@ const initial=await page.evaluate(()=>{
   // Keep this explicit QA plate as the single selectable serving plate.
   delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
-    id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
+    id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,placementFootprint:{width:.30,depth:.30},
     objectContainment:true,objectStorage:{capacityCubicMeters:.00012},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:11,y:5,z:0},supportId:'diningTable',
@@ -90,7 +90,7 @@ const execution=await page.evaluate(()=>{
   // Keep this explicit QA plate as the single selectable serving plate.
   delete st.objects.plateA;delete st.objects.plateB;
   st.objects.servingQaPlate={
-    id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,
+    id:'servingQaPlate',name:'驗證餐盤',icon:'🍽️',portable:true,canEatFrom:true,placementFootprint:{width:.30,depth:.30},
     objectContainment:true,objectStorage:{capacityCubicMeters:.00012},
     handling:{carryGeometry:{width:.3,height:.05,length:.3},handsRequired:1,massKg:.3},
     position:{x:11,y:5,z:0},supportId:'diningTable',

@@ -1,5 +1,11 @@
 # Interaction Geometry — Current
 
+## B1 Surface placement legality
+
+B1 uses explicit `placementFootprint:{width,depth}` in meters, independent of carry geometry and container volume. Canonical `SimSurfacePlacement` derives each cell's actual support rectangle from resolved `supportRegion` and checks individual dimensions plus total direct supported Object area. Multiple objects per cell are allowed; contained children never add independent occupancy. No exact packing, rotation, stacking, cross-cell placement, stored occupancy or persistent subcell coordinates; this approximation can both reject physically possible placements and accept overlapping arrangements. Existing immediate generic release keeps floor fallback; specified placement rejects without redirecting. R4-A2 local inspection, movement and final release use the same eligible cells. World Authoring v31 and runtime validation reject missing/invalid footprints and over-budget supported state; Editor uses existing atomic candidate validation. No B2/C or new Food activity.
+
+The contained Meal correction below predates B1; its no-B1 statement is historical.
+
 **Current contained Meal correction (11.81.1):** Cooking atomically replaces the loaded Ingredient with one Meal with `containedBy=potId`, no independent `position` or `supportId`. The same pot's physical volume/mass remains derived from its actual child. `cookingEligible` alone does not expose content; the cookware additionally needs explicit `canEatFrom:true` and existing reach/supportReach eatFrom geometry to be visible/serving-accessible. Plate-only destination eligibility is retained; generic cargo stays hidden. `serve` delegates to the actual cookware receive contact, `eatFrom` to actual cookware eatFrom. A carried-by-other/off-map or reserved cookware cannot grant interaction. Partial serving keeps the source Meal in the pot; full serving moves the original ID to the plate. No new action, inventory, thermal model or B1 Surface capacity. Earlier slice descriptions below are historical wherever they conflict with this correction.
 
 12×8 Tile grid 仍負責真正的移動與 coarse 站位；Interaction Geometry 負責回答：**這個 Agent 要用某個 affordance 操作某個 target 時，哪些 canonical stance / posture witness 是合法的？**

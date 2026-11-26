@@ -26,7 +26,8 @@ assert.ok(heldPositions.every(p=>same(p,{x:5,y:5})),'拿起容器後不應為相
 assert.ok(restockEvent,'資料驅動 restock 流程應完成');
 assert.equal(restockEvent.data.position,SP.nodeKey(st,SP.nodeForAgent(st,a)),'restock event position must retain canonical Floor identity');
 assert.equal(a.held,null);
-const expected=SP.bestNearbySupportPlacement(st,a),actual=SP.objectNode(st,bucket.id);
+// Reconstruct the released object's carry witness for the object-specific query; do not mutate the actor.
+const expected=SP.bestNearbySupportPlacement(st,{...a,held:bucket.id}),actual=SP.objectNode(st,bucket.id);
 if(expected){
   assert.equal(bucket.supportId,expected.supportId,'restock 完成後應使用 canonical nearby support winner');
   assert.ok(SP.nodeSame(st,actual,expected.node),'restock 完成後 Container 應位於 canonical nearby support node');

@@ -2,8 +2,10 @@
   const SP=window.SimSpatial;
   if(!SP?.planRoute||!SP?.normalizeNode||!SP?.nodeKey||!SP?.nodeForAgent||!SP?.supportSurfaceForFurniture||!SP?.supportContactNodes)throw new Error('spatial-candidate-selection.js requires Spatial Traversal route and support-contact authority.');
 
+  const L=window.SimSurfacePlacement;
+  if(L?.VERSION!=='surface-placement-v1-cell-area')throw new Error('Nearby Placement requires canonical Surface Placement.');
   const VERSION='11.46.0-sleep-carry-integration';
-  const NEARBY_PLACEMENT_VERSION='nearby-placement-v3-targeted-support';
+  const NEARBY_PLACEMENT_VERSION='nearby-placement-v4-surface-legality';
   const SUPPORTED_OBJECTIVES=new Set(['traversalCost','pathDistance']);
 
   function agentFor(st,aOrId){return typeof aOrId==='string'?st.agents?.[aOrId]||null:aOrId||null;}
@@ -34,16 +36,26 @@
     return result?{...result.node}:null;
   }
 
+  function supportPlacementCells(st,object,supportId){
+    const entry=SP.supportSurfaceForFurniture(st,supportId);
+    if(!entry||!object)return [];
+    const nodes=[];
+    for(const cell of entry.surface.cells||[]){
+      const node=SP.normalizeNode(st,cell,entry.surface.id);
+      if(node&&L.surfacePlacementStatus(st.objects,entry.furniture,node,object).ok)nodes.push(node);
+    }
+    return nodes;
+  }
   function nearbySupportPlacementResults(st,aOrId,{supportId=null}={}){
     const a=agentFor(st,aOrId),actorNode=a&&SP.nodeForAgent(st,a);if(!a||!actorNode)return [];
+    const object=a.held&&st.objects?.[a.held];if(!object)return [];
     const results=[];
     for(const furniture of Object.values(st.furniture||{}).sort((x,y)=>String(x.id).localeCompare(String(y.id)))){
       if(furniture?.supportsObjects!==true||(supportId!==null&&furniture.id!==supportId))continue;
       const entry=SP.supportSurfaceForFurniture(st,furniture);if(!entry?.surface)continue;
       const contacts=SP.supportContactNodes(st,furniture.id,a);
       if(!contacts.some(node=>SP.nodeSame(st,node,actorNode)))continue;
-      for(const cell of entry.surface.cells||[]){
-        const node=SP.normalizeNode(st,cell,entry.surface.id);if(!node)continue;
+      for(const node of supportPlacementCells(st,object,furniture.id)){
         const dx=Math.abs((actorNode.x??0)-(node.x??0)),dy=Math.abs((actorNode.y??0)-(node.y??0));
         results.push(Object.freeze({
           supportId:furniture.id,
@@ -63,7 +75,7 @@
   // One mutation owner for deliberate support placement and ordinary nearby release.
   function commitSupportPlacement(st,a,placement){
     const objectId=a?.held,object=objectId&&st.objects?.[objectId];
-    if(!object||!placement)return null;
+    if(!object||!placement||!L.surfacePlacementStatus(st.objects,st.furniture?.[placement.supportId],placement.node,object).ok)return null;
     object.position={...placement.node};object.supportId=placement.supportId;delete object.containedBy;a.held=null;
     return Object.freeze({kind:'surface',objectId,supportId:placement.supportId,surfaceId:placement.surfaceId,node:Object.freeze({...placement.node})});
   }
@@ -92,6 +104,7 @@
     candidateNodeResults,
     bestCandidateNodeResult,
     bestCandidateNode,
+    supportPlacementCells,
     nearbySupportPlacementResults,
     bestNearbySupportPlacement,
     releaseHeldObjectNearby,

@@ -63,7 +63,7 @@
     if(!available(st,a,'object:'+ingredient.id))return false;
     const prep=st.furniture?.[sourceId],entry=SP.supportSurfaceForFurniture(st,prep);
     if(prep?.supportsObjects!==true||prep.cookingStation===true||!entry?.surface)return false;
-    const cell=entry.surface.cells?.[0],position=cell&&SP.normalizeNode(st,cell,entry.surface.id);
+    const position=SP.supportPlacementCells(st,ingredient,sourceId)[0];
     if(!position)return false;
     const exposed={...ingredient,position,supportId:sourceId};delete exposed.containedBy;
     const projected={...st,objects:{...st.objects,[ingredient.id]:exposed}};

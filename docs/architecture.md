@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.81.1-contained-meal-lifecycle`。
+目前 runtime marker：`11.82.0-surface-placement-legality`。
+
+B1 uses explicit `placementFootprint:{width,depth}` in meters, independent of carry geometry and container volume. Canonical `SimSurfacePlacement` derives each cell's actual support rectangle from resolved `supportRegion` and checks individual dimensions plus total direct supported Object area. Multiple objects per cell are allowed; contained children never add independent occupancy. No exact packing, rotation, stacking, cross-cell placement, stored occupancy or persistent subcell coordinates; this approximation can both reject physically possible placements and accept overlapping arrangements. Existing immediate generic release keeps floor fallback; specified placement rejects without redirecting. R4-A2 local inspection, movement and final release use the same eligible cells. World Authoring v31 and runtime validation reject missing/invalid footprints and over-budget supported state; Editor uses existing atomic candidate validation. No B2/C or new Food activity.
 
 Cooking × Serving 收納修正：料理完成在原鍋原子替換 Ingredient 為 Meal（`containedBy=potId`，無獨立 position/supportId），保留真實重量、體積及 loadPot → complete 因果鏈。只有明確外露的料理容器才可透過其真實位置觀察、盛取或進食；不將鍋具誤判為餐盤、不公開一般 cargo。部分盛餐留原鍋，全量轉移保留 Meal ID。沿用原本 eat Action、容量與預約。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
 
@@ -18,7 +20,7 @@ Current B Food / Legacy Resource isolation：正式 `DEFAULT_WORLD_AUTHORING` �
 
 Current Logistics carrier drop integration：Engine 在 completed movement edge 的 `containerDrop` canonical consequence 後，對仍依賴該 carrier 的 `restockContainer` / `externalSupply` 即時呼叫原有 `abortAction`、清理 reservations，並由 existing afterTick Intent reconciliation 收束 actionBound Intent；`abort` Event 引用原 `containerDrop` Event。Spatial nearby intentional release、Resources handling risk / accidental drop placement、其他 Action 與 Runtime Hook 排序不變。
 
-Core Default World B（正式預設場景）：`src/core-default-world-authoring.js` 最後一層將 Food v24 Authoring 組成唯一 `world-authoring-v30` 預設；16×10 公共／私人分區住宅的 geometry、Ingredient A、Cooking 和普通 Serving plates 沿用 B 原有契約。正式 Food truth 只來自 Ingredient/Meal Objects；舊 Resource Food models 已移出 B 但於 base Legacy 情境保留，舊模型使用 `legacyResource*` ID。本場景不屬於 WORLD 001，不宣稱後續供應鏈已完成。
+Core Default World B（正式預設場景）：`src/core-default-world-authoring.js` 最後一層將 Food v24 Authoring 組成唯一 `world-authoring-v31` 預設；16×10 公共／私人分區住宅的 geometry、Ingredient A、Cooking 和普通 Serving plates 沿用 B 原有契約。正式 Food truth 只來自 Ingredient/Meal Objects；舊 Resource Food models 已移出 B 但於 base Legacy 情境保留，舊模型使用 `legacyResource*` ID。本場景不屬於 WORLD 001，不宣稱後續供應鏈已完成。
 
 Current Meal Serving & Physical Transfer v1：`SimFood` 是 fully edible Meal grams 的唯一 mass owner，原子分裝使用 `meal.edibleMassGrams`；`Object.containedBy` 指向普通可攜餐盤或合法料理容器，Object Handling 以該 grams 的唯讀 kg projection 負責 carried load，Storage 容量則由同一 Meal 的 grams／有效密度導出 physical volume，不另建 `handling.massKg`。Spatial `eatFrom` 及 Object point visibility 對已合法觀察的外露餐盤或料理容器內 Meal 提供受控接觸；其他 contained cargo 保持 hidden。Engine `eat` 利用既有 Action / pickup / movement / nearby placement / per-tick `eatingMeal`，Serving Event 引用原 Meal 與 Cooking Event；legacy `contents.food`、Resource serving 與 D2 不變；此 Serving 切片當時未改 Default World，後續由獨立的 B Authoring 層更新。Introduced-in markers：Food `food-v2-meal-serving`、Object Handling `object-handling-v3-meal-mass-projection`、Perception Visual Availability `perception-visual-availability-v4-exposed-meal`、World Authoring `world-authoring-v24`；目前正式 World Authoring 已另進至 v25，Cooking／Resources generation 不假升版。詳見 [`food-meal-serving.md`](food-meal-serving.md)。
 

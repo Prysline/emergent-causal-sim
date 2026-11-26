@@ -6,6 +6,8 @@ import {legacyResourceWorld} from './helpers/legacy-resource-world.mjs';
 globalThis.window=globalThis;
 loadProductionBefore('src/ui/core.js');
 const legacyEditorDocument=legacyResourceWorld(globalThis.SimWorldAuthoring);
+// Isolated move/preview fixture uses a shallow basket base; production dimensions unchanged.
+legacyEditorDocument.entities.objects.legacyResourceBasket.placementFootprint={width:.55,depth:.35};
 import { chromium } from 'playwright';
 
 const outDir='artifacts/browser-world-authoring-editor-qa';
@@ -66,7 +68,7 @@ assert.ok(snapshot.docWidth<=snapshot.width+1,`desktop document overflow: ${snap
 
 // The Editor must initially load the one canonical production B scene.
 const canonicalBDefault=snapshot.document;
-assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v30');
+assert.equal(canonicalBDefault.authoringSchema,'world-authoring-v31');
 assert.equal(canonicalBDefault.map.width,16);
 assert.equal(canonicalBDefault.map.height,10);
 assert.equal(canonicalBDefault.doors.bedroomDoor.boundary.id,'h:6,5');

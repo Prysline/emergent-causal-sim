@@ -47,7 +47,7 @@
     if((containedBy===undefined&&position===undefined)||(containedBy!==undefined&&(position!==undefined||supportId!==undefined)))throw new Error('Ingredient requires exactly one valid canonical location relation.');
     if(containedBy!==undefined&&(typeof containedBy!=='string'||!containedBy.trim()))throw new Error('Ingredient containedBy must be a nonempty Object or Furniture id.');
     const object={
-      id,name:type.name,icon:'🥔',portable:true,
+      id,name:type.name,icon:'🥔',portable:true,placementFootprint:{width:.12,depth:.12},
       handling:{carryGeometry:{width:.12,height:.12,length:.12},handsRequired:1,massKg:grams/1000},
       ingredient:{typeId,densityKgPerM3:density}
     };

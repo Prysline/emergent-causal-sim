@@ -155,7 +155,7 @@ assert.ok(P.surfaceManeuverScaleCandidates(human,{verticalDelta:.74,horizontalGa
 
 E.reset(11711);
 const validationState=E.getState(),validationHuman=validationState.agents.zhen;
-validationState.objects.threeHand={id:'threeHand',name:'Three-hand probe',portable:true,position:{...validationHuman.position},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:3}};
+validationState.objects.threeHand={id:'threeHand',name:'Three-hand probe',portable:true,placementFootprint:{width:.2,depth:.2},position:{...validationHuman.position},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:3}};
 assert.equal(O.canHoldObject(validationState,validationHuman,'threeHand'),false);
 validationHuman.held='threeHand';
 assert.equal(P.locomotionModeHandsFeasible(validationState,validationHuman,'walk'),false,'total hand demand must reject an over-capacity held Container even when walk needs no support hand');

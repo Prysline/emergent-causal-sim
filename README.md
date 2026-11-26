@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.81.1-contained-meal-lifecycle`。
+目前 runtime marker：`11.82.0-surface-placement-legality`。
+
+B1 uses explicit `placementFootprint:{width,depth}` in meters, independent of carry geometry and container volume. Canonical `SimSurfacePlacement` derives each cell's actual support rectangle from resolved `supportRegion` and checks individual dimensions plus total direct supported Object area. Multiple objects per cell are allowed; contained children never add independent occupancy. No exact packing, rotation, stacking, cross-cell placement, stored occupancy or persistent subcell coordinates; this approximation can both reject physically possible placements and accept overlapping arrangements. Existing immediate generic release keeps floor fallback; specified placement rejects without redirecting. R4-A2 local inspection, movement and final release use the same eligible cells. World Authoring v31 and runtime validation reject missing/invalid footprints and over-budget supported state; Editor uses existing atomic candidate validation. No B2/C or new Food activity.
 
 Cooking × Serving 收納修正：料理完成在原鍋原子替換 Ingredient 為 Meal（`containedBy=potId`，無獨立 position/supportId），保留真實重量、體積及 loadPot → complete 因果鏈。只有明確外露的料理容器才可透過其真實位置觀察、盛取或進食；不將鍋具誤判為餐盤、不公開一般 cargo。部分盛餐留原鍋，全量轉移保留 Meal ID。沿用原本 eat Action、容量與預約。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
 

@@ -13,3 +13,7 @@ Limit: no durable storage search memory, global multi-storage planning, autonomo
 ## Route-query cost boundary
 
 The first R4-A2 exact-head Node suite passed, but Browser step-batch QA measured 27 inside-tick planRoute calls against the existing 26-call envelope (10 ticks; Inspector/step-mode parity and traversal budget passed). Avoid speculative storage/support route searches until an observed compatible cookware and source/support combination can actually qualify. Cost reuse is scoped to a single synchronous provider invocation; no cross-tick cache, route metric replacement, change to scoring/tie order, hidden contents shortcut or relaxed Browser assertion. A valid accessible current route origin that is already a legal support contact has zero movement cost. A focused production-provider regression verifies zero route queries when cookware is unavailable, then a fresh unchanged option when restored. Exact-head full CI is still required for the correction.
+
+## B1 integration (Surface placement)
+
+Local pantry ingredient eligibility projects only a cell returned by `SimSpatial.supportPlacementCells`; the held staging phase checks that same set before movement and revalidates at final commit. If the designated surface no longer has a legal cell, the existing bounded wait/abort lifecycle applies, never recording a false `objectSupportPlacement`. Generic abort cleanup remains distinct. Remote unknown food identity remains unknown.

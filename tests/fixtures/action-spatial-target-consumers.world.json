@@ -58,7 +58,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.1,
+          "depth": 0.1
+        }
       },
       "basket": {
         "capacity": 55,
@@ -113,7 +117,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.55,
+          "depth": 0.4
+        }
       },
       "cupA": {
         "canDrinkFrom": true,
@@ -159,7 +167,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.1,
+          "depth": 0.1
+        }
       },
       "cupB": {
         "canDrinkFrom": true,
@@ -203,7 +215,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.1,
+          "depth": 0.1
+        }
       },
       "foodPantry": {
         "access": 1,
@@ -264,7 +280,11 @@
           "readyFood"
         ],
         "supportId": "diningTable",
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.3,
+          "depth": 0.3
+        }
       },
       "legacyResourcePlateA": {
         "canEatFrom": true,
@@ -313,7 +333,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.3,
+          "depth": 0.3
+        }
       },
       "legacyResourcePlateB": {
         "canEatFrom": true,
@@ -362,7 +386,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.3,
+          "depth": 0.3
+        }
       },
       "waterBucket": {
         "access": 1,
@@ -425,7 +453,11 @@
             }
           }
         },
-        "resourceContainer": true
+        "resourceContainer": true,
+        "placementFootprint": {
+          "width": 0.32,
+          "depth": 0.32
+        }
       }
     },
     "sources": {

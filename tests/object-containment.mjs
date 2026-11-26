@@ -33,7 +33,7 @@ function fixture(){
   const authored=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
   authored.furniture.bookshelfA={id:'bookshelfA',definitionId:'bookshelf-basic',origin:{x:2,y:4,z:0},orientation:'south'};
   authored.entities.objects.containedBook={
-    id:'containedBook',name:'收納測試書',icon:'📘',portable:true,
+    id:'containedBook',name:'收納測試書',icon:'📘',portable:true,placementFootprint:{width:.22,depth:.30},
     handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1,massKg:.5},
     physicalVolumeCubicMeters:.00264,
     affordances:['read'],interactions:{read:{mode:'supportReach'}},containedBy:'bookshelfA'

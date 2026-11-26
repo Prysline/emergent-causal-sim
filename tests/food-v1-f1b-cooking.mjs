@@ -11,7 +11,7 @@ assert.equal(C.VERSION,'food-cooking-v4-contained-output');
 assert.equal(I.VERSION,'food-ingredient-v1');
 assert.equal(F.VERSION,'food-v4-contained-meal');
 assert.equal(D.VERSION,'furniture-definitions-v15-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v30','current Cooking authoring schema is the explicitly advanced v23');
+assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION);
 assert.equal(E.COOKING_VERSION,C.VERSION);
 assert.ok(E.EMERGENCY_PREEMPTIBLE.has('cookMeal'));
 assert.equal(D.getDefinition('gas-stove').cookingStation,true);
@@ -21,7 +21,7 @@ const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 doc.furniture.counterA={id:'counterA',definitionId:'kitchen-counter',origin:{x:3,y:5,z:0},orientation:'south'};
 doc.entities.objects.potA={
-  id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,canEatFrom:true,
+  id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,canEatFrom:true,placementFootprint:{width:.35,depth:.35},
   interactions:{eatFrom:{mode:'supportReach'}},
   objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
   handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},

@@ -21,7 +21,7 @@ assert.equal(A.DEFAULT_WORLD_AUTHORING.authoringSchema,A.VERSION,'Object unifica
 assert.equal(O.VERSION,'object-handling-v4-storage-volume');
 assert.equal(R.VERSION,'11.68.0-movable-object-cargo');
 assert.equal(P.VERSION,'11.56.0-physical-object-handling');
-assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v3-targeted-support');
+assert.equal(SP.NEARBY_PLACEMENT_VERSION,'nearby-placement-v4-surface-legality');
 assert.equal(AC.VERSION,'11.46.0-sleep-carry-integration','Agent Carry semantics/generation must remain independent from Object unification');
 assert.equal(Object.hasOwn(A.DEFAULT_WORLD_AUTHORING.entities,'containers'),false,'authoring must not retain a canonical containers collection');
 

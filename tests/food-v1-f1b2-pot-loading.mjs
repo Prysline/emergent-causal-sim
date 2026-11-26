@@ -15,7 +15,7 @@ assert.equal(F.VERSION,'food-v4-contained-meal');
 const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
 doc.entities.objects.potA={
-  id:'potA',name:'料理鍋',icon:'🍲',portable:true,cookingEligible:true,
+  id:'potA',name:'料理鍋',icon:'🍲',portable:true,cookingEligible:true,placementFootprint:{width:.35,depth:.35},
   objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
   handling:{carryGeometry:{width:.35,height:.25,length:.35},handsRequired:1,massKg:.8},
   position:{x:3,y:4,z:0},supportId:'stoveA'

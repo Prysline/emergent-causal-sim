@@ -75,7 +75,7 @@ assert.equal(platePickup.mode,'surfaceContact');
 assert.ok(hasNode(st,platePickup.positions,floor(st,6,4)),'supported pickup must derive contact from the object Surface cell');
 assert.ok(!hasNode(st,platePickup.positions,floor(st,4,3)),'supported pickup must not expand to the whole support Furniture perimeter');
 
-st.objects.testCrate={id:'testCrate',name:'測試箱',portable:true,capacity:10,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:5},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}};
+st.objects.testCrate={id:'testCrate',name:'測試箱',portable:true,placementFootprint:{width:.2,depth:.2},capacity:10,contents:{},handling:{carryGeometry:{width:.2,height:.2,length:.2},handsRequired:1},position:{x:3,y:5},interactions:{pickup:{mode:'occupy'},drinkFrom:{mode:'reach'}}};
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'pickup').mode,'groundContact','authored pickup occupy must not create a competing pickup truth');
 assert.equal(SP.interactionGeometry(st,{kind:'object',id:'testCrate'},a,'drinkFrom').mode,'reach');
 delete st.objects.testCrate;

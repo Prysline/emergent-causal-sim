@@ -16,7 +16,7 @@ const noIssues=label=>{
   assert.equal(result.issueCount,0,`${label}: ${result.issues.map(x=>x.code+': '+x.message).join(' | ')}`);
 };
 function assertCanonicalReleasedPlacement(st,a,c,label){
-  const expected=SP.bestNearbySupportPlacement(st,a),actual=SP.objectNode(st,c.id);
+  const expected=SP.bestNearbySupportPlacement(st,{...a,held:c.id}),actual=SP.objectNode(st,c.id);
   if(expected){
     assert.equal(c.supportId,expected.supportId,`${label}: legal nearby support winner must own supportId`);
     assert.ok(SP.nodeSame(st,actual,expected.node),`${label}: released Container must use canonical nearby support winner`);
