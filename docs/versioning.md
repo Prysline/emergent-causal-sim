@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.81.1-contained-meal-lifecycle`。
+目前 overall runtime marker：`11.82.0-surface-placement-legality`。
+
+## 11.82.0 Surface placement legality (B1)
+
+B1 uses explicit `placementFootprint:{width,depth}` in meters, independent of carry geometry and container volume. Canonical `SimSurfacePlacement` derives each cell's actual support rectangle from resolved `supportRegion` and checks individual dimensions plus total direct supported Object area. Multiple objects per cell are allowed; contained children never add independent occupancy. No exact packing, rotation, stacking, cross-cell placement, stored occupancy or persistent subcell coordinates; this approximation can both reject physically possible placements and accept overlapping arrangements. Existing immediate generic release keeps floor fallback; specified placement rejects without redirecting. R4-A2 local inspection, movement and final release use the same eligible cells. World Authoring v31 and runtime validation reject missing/invalid footprints and over-budget supported state; Editor uses existing atomic candidate validation. No B2/C or new Food activity.
 
 ## 11.81.1 Contained Meal lifecycle
 

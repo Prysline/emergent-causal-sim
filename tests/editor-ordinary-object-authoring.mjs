@@ -39,6 +39,7 @@ assert.deepEqual(result.candidate.entities.objects['readable-book-1'],{
   name:'一本書',
   icon:'📖',
   portable:true,
+  placementFootprint:{width:.22,depth:.30},
   handling:{carryGeometry:{width:.22,height:.04,length:.30},handsRequired:1,massKg:.5},
   physicalVolumeCubicMeters:.00264,
   affordances:['read'],
