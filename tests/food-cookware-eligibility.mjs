@@ -9,8 +9,8 @@ const I=globalThis.SimIngredient,F=globalThis.SimFood,C=globalThis.SimFoodCookin
 const K=globalThis.SimFoodCookwareEligibility,O=globalThis.SimObjectHandling;
 const V=globalThis.SimValidator;
 assert.equal(K.VERSION,'food-cookware-eligibility-v1');
-assert.equal(C.VERSION,'food-cooking-v3-object-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v29');
+assert.equal(C.VERSION,'food-cooking-v4-contained-output');
+assert.equal(A.VERSION,'world-authoring-v30');
 
 const doc=legacyResourceWorld(A);
 doc.furniture.stoveA={id:'stoveA',definitionId:'gas-stove',origin:{x:3,y:4,z:0},orientation:'south'};
@@ -76,9 +76,21 @@ assert.equal(loads[0].data.potId,'potB');
 assert.equal(completes[0].data.potId,'potB');
 assert.equal(st.causes[completes[0].id],completes[0]);
 assert.equal(st.objects.ingredientA1,undefined);
-assert.equal(O.objectStorageStatus(st,'potB').count,0);
-assert.ok(F.validMeal(st.objects[completes[0].data.mealId]));
-assert.equal(st.objects[completes[0].data.mealId].meal.edibleMassGrams,300);
+const cooked=st.objects[completes[0].data.mealId];
+const cookedStorage=O.objectStorageStatus(st,'potB');
+assert.equal(cookedStorage.count,1,'the selected cookware retains exactly one cooked Meal');
+assert.equal(cookedStorage.items[0].id,cooked.id,'the stored child is the canonical output, not the retired Ingredient');
+assert.ok(F.validMeal(cooked));
+assert.equal(cooked.containedBy,'potB');
+assert.equal(cooked.position,undefined);
+assert.equal(cooked.supportId,undefined);
+assert.equal(cooked.meal.edibleMassGrams,300);
+assert.ok(Math.abs(cookedStorage.massKg-.3)<1e-9);
+assert.ok(Math.abs(cookedStorage.volumeCubicMeters-.0003)<1e-12);
+assert.equal(F.exposedMealContainer(st,cooked),null,'cooking eligibility alone must not expose the cooked Meal');
+assert.equal(F.isServingSource(st,cooked),false);
+assert.equal(O.objectStorageStatus(st,'potA').count,0);
+assert.equal(O.objectStorageStatus(st,'potC').count,0);
 assert.equal(V.validateState(st).issueCount,0);
 ({st,a}=setup(20261122));
 st.objects.potC.cookingEligible=true; // second valid alternative must not replace pinned potB

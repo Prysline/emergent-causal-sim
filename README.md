@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.81.0-food-r4a2-pantry-access`。
+目前 runtime marker：`11.81.1-contained-meal-lifecycle`。
+
+Cooking × Serving 收納修正：料理完成在原鍋原子替換 Ingredient 為 Meal（`containedBy=potId`，無獨立 position/supportId），保留真實重量、體積及 loadPot → complete 因果鏈。只有明確外露的料理容器才可透過其真實位置觀察、盛取或進食；不將鍋具誤判為餐盤、不公開一般 cargo。部分盛餐留原鍋，全量轉移保留 Meal ID。沿用原本 eat Action、容量與預約。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
 
 R4-A2 固定收納取料：既有 `cookMeal` 可在當下可觀察／接觸的固定收納處實際檢視後，選擇合法完整食材，經單一 `held` 搬到指定合法支撐面，再延續原本 Cooking。遠端未知內容不提供食材 ID；食材容量、接觸與預約重驗，取出及放置事件連至既有料理因果鏈。此切片不代表 R4-B 自主外出補給或 R4-C 持續供餐完成。詳見 [`docs/food-r4a2-pantry-access.md`](docs/food-r4a2-pantry-access.md)。
 
@@ -18,17 +20,17 @@ Logistics carrier drop lifecycle：當實際 completed movement edge 產生合�
 
 Core Default World B：正式預設住宅採用有實際隔間與臥室門的 16×10 公共／私人分區格局，配置可接觸的瓦斯爐、廚房櫃台、料理鍋及 Ingredient A；正式餐盤 `plateA`／`plateB` 均使用 Food v2 普通 Object 盛餐契約，舊 Resource 餐盤不出現在正式預設場景。舊 Resource 餐盤 `legacyResourcePlateA/B` 與其他 `legacyResource*` food containers 僅供獨立 Legacy 情境；正式 B 不再混用。完整物理供應鏈仍待後續 slices。
 
-Meal Serving & Physical Transfer v1：既有 `eat` Action 在可合法觀察到 Meal 與可用明確外露普通餐盤時，可依真實公克分裝、由 `Agent.held` 搬運並按 canonical nearby placement 放下，再由自己或其他居民以既有 `eatingMeal` 逐 tick 食用。部分轉移建立新 Meal Object；全量轉移保留身份，單一 `meal.edibleMassGrams` 與 Object `containedBy` 不設鏡像庫存；Object／Spatial／Perception 只對可合法進食的外露餐盤提供受控質量與接觸投影。Legacy `contents.food` 仍是不同 Resource 單位；並不包含 Core Default World、主動送餐、D2 或原料持續補給。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
+Meal Serving & Physical Transfer v1：既有 `eat` Action 在可合法觀察到 Meal 與可用明確外露普通餐盤時，可依真實公克分裝、由 `Agent.held` 搬運並按 canonical nearby placement 放下，再由自己或其他居民以既有 `eatingMeal` 逐 tick 食用。部分轉移建立新 Meal Object；全量轉移保留身份，單一 `meal.edibleMassGrams` 與 Object `containedBy` 不設鏡像庫存；Object／Spatial／Perception 對合法外露餐盤及料理容器提供受控質量與接觸投影。Legacy `contents.food` 仍是不同 Resource 單位；並不包含 Core Default World、主動送餐、D2 或原料持續補給。詳見 [`docs/food-meal-serving.md`](docs/food-meal-serving.md)。
 
 本版修正合法跪爬／匍匐姿勢缺少 static PoseEnvelope 時，Cooking / Tidying 視覺候選與直接 Action revalidation 可能中止 Engine tick 的跨系統問題。依 canonical Embodiment / Physical profile 確認視覺前置證據；缺少時不產生依賴該證據的行動，但 Perception API 仍明確失敗。沒有新增 kneeling / prone 3D geometry、預設住宅、Serving 或 D2 行為。
 
 前一個 release 完成 Character Traits Foundation v1 Slice B1：Social Trait 對 `needs.social` 的自然形成使用 bounded multiplier `.75 + .5 * social`；主動 `talk`、`seekHuman` 移除直接 social Trait 加分；Human／Animal 收到邀請的 response score 繼續保留獨立 social Trait 傾向，並統一 canonical 缺值 `0`／非法值 fail-closed。僅更動受影響的 Social Response generations，既有 World Event／Agent-private Need／Social Bid 邊界、互動緩解、其他 Trait、World Authoring 和 Deliberation 沿用既有 owner。詳見 [`docs/character-traits.md`](docs/character-traits.md)。
 
-Food autonomous Ingredient acquisition v1：居民依當下視覺、實際支撐表面和 Spatial 可達性，可在 kitchen-counter 等合法 Furniture 上自主取得完整 Type A Ingredient，搬到指定的合法料理鍋中，逐 tick 完成原有單批 D1 料理；原始 sourceId 與 potId 固定、重驗，pickupIngredient → loadPot → complete 保留唯一 World Event 因果鏈。Meal 仍在爐面交由既有 F0 eat 消費，尚未做盛餐、D2、外部 Ingredient 補給或核心住宅整合。詳見 [`docs/food-autonomous-ingredient-acquisition.md`](docs/food-autonomous-ingredient-acquisition.md)。
+Food autonomous Ingredient acquisition v1：居民依當下視覺、實際支撐表面和 Spatial 可達性，可在 kitchen-counter 等合法 Furniture 上自主取得完整 Type A Ingredient，搬到指定的合法料理鍋中，逐 tick 完成原有單批 D1 料理；原始 sourceId 與 potId 固定、重驗，pickupIngredient → loadPot → complete 保留唯一 World Event 因果鏈。該切片當時的 Meal 爐面位置已由現行 contained Meal 修正取代；D2 仍待獨立 Gate。詳見 [`docs/food-autonomous-ingredient-acquisition.md`](docs/food-autonomous-ingredient-acquisition.md)。
 
 Cookware Eligibility v1：普通 Object 以明示的 `cookingEligible` 暫定功能資格取代 `cookingPot` 物件種類判斷。Cooking 先對單批真實 Ingredient、既有 `cookingStation` 與所有可用容器完成容量／可視／接觸／預約檢查，確定性選定 `potId` 後從 Action 建立到每 tick、真實裝鍋和完成均禁止換鍋。World Authoring v23／runtime validator 共用資格錯誤契約；單一 `containedBy`、`loadPot → complete` Event 因果鏈不變。未實作 D2、多料理方式、盛餐、外出供料或預設住宅。詳見 [`docs/food-cookware-eligibility.md`](docs/food-cookware-eligibility.md)。
 
-Food v1 Slice F1-B2：Cook Action 使用既有 Object pickup 與 `containHeldObject`，把可觀察、完整的 Ingredient 真正放進有界的可搬運鍋具 Object；內含物僅用 `containedBy` 保存，物理負重由既有 Object Handling 派生。鍋具裝入事件是料理完成質量轉換的因果前驅。完成時仍由 F0 Meal 出現在同一瓦斯爐合法表面，沒有假設 Meal 已可被鍋具搬走。詳細見 [`docs/food-v1-f1b2-pot-loading.md`](docs/food-v1-f1b2-pot-loading.md)。
+Food v1 Slice F1-B2：Cook Action 使用既有 Object pickup 與 `containHeldObject`，把可觀察、完整的 Ingredient 真正放進有界的可搬運鍋具 Object；內含物僅用 `containedBy` 保存，物理負重由既有 Object Handling 派生。鍋具裝入事件是料理完成質量轉換的因果前驅。該切片當時的爐面成品位置已由現行 contained Meal 修正取代。詳細見 [`docs/food-v1-f1b2-pot-loading.md`](docs/food-v1-f1b2-pot-loading.md)。
 
 Food v1 Slice F1-B1：新增 kitchen gas-stove、kitchen-counter Furniture 與鍋子普通 Object 的實際工作位置；沿用 Decision Option / Engine Action / Spatial，讓居民在合法觀察與接觸後將完整 Type A Ingredient 等重轉換為同位置 F0 Meal，記錄投入／產出／加工流出與可追溯 World Event，並由現有 `eat` 消費。首個鍋具為必需工作物件，尚未模擬鍋內收納；Food 供餐、舊 Resource 移除與預設完整場景另有後續 Gate。詳見 [`docs/food-v1-f1b-cooking.md`](docs/food-v1-f1b-cooking.md)。
 

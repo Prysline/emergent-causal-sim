@@ -1,5 +1,7 @@
 # Food — Cookware Eligibility v1
 
+**Current contained Meal correction (11.81.1):** Cooking atomically replaces the loaded Ingredient with one Meal with `containedBy=potId`, no independent `position` or `supportId`. The same pot's physical volume/mass remains derived from its actual child. `cookingEligible` alone does not expose content; the cookware additionally needs explicit `canEatFrom:true` and existing reach/supportReach eatFrom geometry to be visible/serving-accessible. Plate-only destination eligibility is retained; generic cargo stays hidden. `serve` delegates to the actual cookware receive contact, `eatFrom` to actual cookware eatFrom. A carried-by-other/off-map or reserved cookware cannot grant interaction. Partial serving keeps the source Meal in the pot; full serving moves the original ID to the plate. No new action, inventory, thermal model or B1 Surface capacity. Earlier slice descriptions below are historical wherever they conflict with this correction.
+
 ## Scope and truth
 
 - Version boundary introduced by PR #245 (historical, not a current-release claim): overall `11.72.0-food-cookware-eligibility`; Cooking `food-cooking-v1-cookware-eligibility`; World Authoring `world-authoring-v23`. The canonical current overall release is owned by `src/release.js`; later Cooking acquisition work advances its own generation without changing this cookware qualification contract.
@@ -13,7 +15,7 @@
 - Enumerate all same-station eligible portable ordinary containers with `objectContainment:true`, canonical support and footprint geometry. For the real batch, use `SimObjectHandling.objectStorageStatus` and `objectStorageLegality` to check `maxItems` / `maxMassKg`; no lexicographic-first pot before capacity checks.
 - Decision checks actual Ingredient/pot visual availability, Spatial stove contact, Ingredient pickup and pot receive traversal geometry, and Ingredient/pot/station reservations. Deterministic score/IDs break ties only after legality; world inventory is not automatically Agent-private knowledge.
 - Engine `buildAction` binds the chosen `potId` with same-tick evidence. `stepCookMeal` revalidates **that pot** on every tick through pickup, carry, generic `containHeldObject`, `loadPot`, four Cooking ticks and completion. Loss of capacity, placement, eligibility, material or reservation aborts; it never switches to another pot without a new Action.
-- Canonical child-side `containedBy=potId` is the only physical cargo truth. Completion retires the one Ingredient, creates one F0 Meal on the same stove support, and records exactly one `complete` material World Event citing the actual `loadPot` World Event; `Meal.producedByEventId` is a reference.
+- Canonical child-side `containedBy=potId` is the only physical cargo truth. Completion retires the one Ingredient, creates one F0 Meal in the same pot, and records exactly one `complete` material World Event citing the actual `loadPot` World Event; `Meal.producedByEventId` is a reference.
 
 ## Evidence and boundaries
 

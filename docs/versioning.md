@@ -1,6 +1,10 @@
 # Versioning Contract — Current
 
-目前 overall runtime marker：`11.81.0-food-r4a2-pantry-access`。
+目前 overall runtime marker：`11.81.1-contained-meal-lifecycle`。
+
+## 11.81.1 Contained Meal lifecycle
+
+Cooking replaces its loaded Ingredient with a Meal in the same ordinary cookware, checking projected canonical capacity before mutation. Explicitly exposed cookware delegates visibility and serve/eatFrom to actual parent geometry; cookware is not a destination serving plate. Existing eat Action, partial/full transfer identity and grams, reservations and causality are retained. Food `food-v4-contained-meal`, Cooking `food-cooking-v4-contained-output`, Meal interaction `meal-plate-eat-from-v3-cookware-contact`, Perception `perception-visual-availability-v5-exposed-cookware`, World Authoring `world-authoring-v30`. No Object Storage, Ingredient, Nearby Placement, Route, Hook or unrelated generation change.
 
 ## 11.81.0 R4-A2 fixed storage ingredient preparation
 
@@ -49,11 +53,11 @@ Current relevant markers：
 - Furniture Passage Yielding：`furniture-passage-yielding-v1`
 - Perception Visual LOS production composition：`perception-visual-los-v3-runtime-furniture`
 - Perception Visual Sight Samples production composition：`perception-visual-sight-samples-v2-locomotion-posture-guard`
-- Perception Visual Availability production composition：`perception-visual-availability-v4-exposed-meal`
+- Perception Visual Availability production composition：`perception-visual-availability-v5-exposed-cookware`
 - Activity Continuity：`activity-continuity-v1`
 - Nearby Placement：`nearby-placement-v3-targeted-support`
 - Pickup Interaction Geometry：`pickup-interaction-v3-movable-containment`
-- Meal Plate EatFrom Interaction：`meal-plate-eat-from-v2-seated-slot-contact`
+- Meal Plate EatFrom Interaction：`meal-plate-eat-from-v3-cookware-contact`
 - ordinary-object interaction：`ordinary-object-interaction-v2`
 - Daily Life Routine：`daily-life-routine-v1`
 - Daily Life Learned Habit：`daily-life-learned-habit-v1`
@@ -82,13 +86,13 @@ Current relevant markers：
 - Horizontal Geometry：`11.29.0-horizontal-geometry-foundation`
 - Embodiment Capabilities 為 `embodiment-capabilities-v5`
 - Character Traits：`character-traits-v1`
-- World Authoring：`world-authoring-v29`
+- World Authoring：`world-authoring-v30`
 - World Editor Resource-container / Source presets：`editor-container-source-authoring-v3`
 - World Editor Ordinary Object templates：`editor-ordinary-object-authoring-v4`
-- Food Meal / Serving：`food-v3-meal-volume`
+- Food Meal / Serving：`food-v4-contained-meal`
 - Food Ingredient：`food-ingredient-v1`
 - Furniture Catalog：`furniture-definitions-v15-storage-volume`
-- Food Cooking：`food-cooking-v3-object-storage-volume`
+- Food Cooking：`food-cooking-v4-contained-output`
 - Food Cookware Eligibility：`food-cookware-eligibility-v1`
 
 ## Current release impact

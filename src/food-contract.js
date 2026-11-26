@@ -1,15 +1,31 @@
 (() => {
   // Fully edible Meal mass is the sole quantity truth, including when served into a plate.
-  const VERSION='food-v3-meal-volume',INTAKE_GRAMS_PER_TICK=50,HUNGER_RELIEF_PER_GRAM=.08;
+  const VERSION='food-v4-contained-meal',INTAKE_GRAMS_PER_TICK=50,HUNGER_RELIEF_PER_GRAM=.08;
   const record=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
   const positiveGrams=value=>Number.isSafeInteger(value)&&value>0;
   const hasMeal=object=>!!object&&Object.prototype.hasOwnProperty.call(object,'meal');
   function isServingPlate(plate){
     const storage=plate?.objectStorage;
-    return !!plate&&plate.objectContainment===true&&plate.resourceContainer!==true
+    return !!plate&&plate.cookingEligible!==true&&plate.objectContainment===true&&plate.resourceContainer!==true
       &&plate.portable===true&&plate.canEatFrom===true&&plate.contents===undefined
       &&['reach','supportReach'].includes(plate.interactions?.eatFrom?.mode)
       &&!!storage&&window.SimObjectStorageVolume.positive(storage.capacityCubicMeters);
+  }
+  // Containment capability and explicit exposure are separate. A cookware tag
+  // alone does not expose arbitrary contents or turn a pot into a serving plate.
+  function isCookingMealContainer(pot){
+    return !!pot&&pot.cookingEligible===true&&pot.objectContainment===true&&pot.portable===true&&pot.resourceContainer!==true&&pot.contents===undefined&&window.SimObjectStorageVolume.positive(pot.objectStorage?.capacityCubicMeters);
+  }
+  function cookingContainerForMeal(st,meal){
+    const pot=meal?.containedBy&&st?.objects?.[meal.containedBy];
+    return validMeal(meal)&&isCookingMealContainer(pot)?pot:null;
+  }
+  function exposedMealContainer(st,meal){
+    const pot=cookingContainerForMeal(st,meal);
+    return servingPlateForMeal(st,meal)||(pot&&pot.canEatFrom===true&&['reach','supportReach'].includes(pot.interactions?.eatFrom?.mode)?pot:null);
+  }
+  function isServingSource(st,meal){
+    return validMeal(meal)&&(!meal.containedBy||!!(cookingContainerForMeal(st,meal)&&exposedMealContainer(st,meal)));
   }
   function validMeal(object){
     if(!hasMeal(object)||!record(object.meal))return false;
@@ -48,10 +64,12 @@
   function serveMeal(st,sourceId,plateId,requestedGrams,newMealId){
     if(!positiveGrams(requestedGrams))throw new Error('Meal serving requires positive integer grams.');
     const source=st?.objects?.[sourceId],plate=st?.objects?.[plateId];
-    if(!source||!validMeal(source)||source.containedBy||!isServingPlate(plate)||sourceId===plateId)
+    if(!isServingSource(st,source)||!isServingPlate(plate)||sourceId===plateId)
       return {served:false,reason:'invalid-source-or-plate'};
     const O=window.SimObjectHandling;
     if(!O?.objectStorageStatus||!O?.cargoMassKg)throw new Error('Meal serving requires canonical Object storage.');
+    const sourcePot=cookingContainerForMeal(st,source);
+    if(sourcePot&&!O.objectStorageStatus(st,sourcePot).withinCapacity)return {served:false,reason:'source-volume-capacity'};
     const storage=O.objectStorageStatus(st,plate);
     if(!storage.withinCapacity||storage.count!==0)
       return {served:false,reason:'plate-not-empty-or-capacity'};
@@ -92,5 +110,5 @@
 
   window.SimFood=Object.freeze({VERSION,INTAKE_GRAMS_PER_TICK,HUNGER_RELIEF_PER_GRAM,
     hasMeal,validMeal,assertMeal,remainingGrams,servingsFromMass,targetIntakeGrams,
-    hungerReliefForGrams,isServingPlate,servingPlateForMeal,serveMeal,consumeMeal});
+    hungerReliefForGrams,isServingPlate,servingPlateForMeal,isCookingMealContainer,cookingContainerForMeal,exposedMealContainer,isServingSource,serveMeal,consumeMeal});
 })();

@@ -7,7 +7,7 @@ loadProductionBefore('src/ui/core.js');
 const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngine;
 const O=globalThis.SimObjectHandling,R=globalThis.SimResources;
 const S=globalThis.SimObjectStorageVolume,V=globalThis.SimValidator,SP=globalThis.SimSpatial;
-assert.equal(A.VERSION,'world-authoring-v29');
+assert.equal(A.VERSION,'world-authoring-v30');
 const doc=A.DEFAULT_WORLD_AUTHORING;
 const large=doc.entities.objects.basketA,small=doc.entities.objects.basketSmallA;
 assert.ok(large&&small&&large!==small);

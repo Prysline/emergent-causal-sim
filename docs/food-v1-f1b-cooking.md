@@ -1,5 +1,7 @@
 # Food v1 F1-B1 — Bounded Cooking Action and kitchen affordances
 
+**Current contained Meal correction (11.81.1):** Cooking atomically replaces the loaded Ingredient with one Meal with `containedBy=potId`, no independent `position` or `supportId`. The same pot's physical volume/mass remains derived from its actual child. `cookingEligible` alone does not expose content; the cookware additionally needs explicit `canEatFrom:true` and existing reach/supportReach eatFrom geometry to be visible/serving-accessible. Plate-only destination eligibility is retained; generic cargo stays hidden. `serve` delegates to the actual cookware receive contact, `eatFrom` to actual cookware eatFrom. A carried-by-other/off-map or reserved cookware cannot grant interaction. Partial serving keeps the source Meal in the pot; full serving moves the original ID to the plate. No new action, inventory, thermal model or B1 Surface capacity. Earlier slice descriptions below are historical wherever they conflict with this correction.
+
 Status: historical F1-B1 slice, merged in PR #242 (squash `c6a8940ce12b2466871aee26a1e2d2853034e687`). This slice did **not** model pot contents. Its successor F1-B2 merged in PR #243 and provides the current physical Ingredient-in-pot behavior; see [`food-v1-f1b2-pot-loading.md`](food-v1-f1b2-pot-loading.md). Other Food integration gaps remain open.
 
 ## Authoritative boundaries

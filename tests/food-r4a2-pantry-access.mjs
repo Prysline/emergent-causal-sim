@@ -78,6 +78,7 @@ function ancestors(st,id,seen=new Set()){
   },'pantry to cooked meal');
   assert.equal(held,true);assert.equal(staged,true);assert.equal(cooked(st).length,1);assert.equal(st.objects[ID],undefined);
   assert.ok(F.validMeal(st.objects[cooked(st)[0].data.mealId]));
+  assert.equal(st.objects[cooked(st)[0].data.mealId].containedBy,cooked(st)[0].data.potId);
   const pickup=events(st,'takeContainerCargo').find(e=>e.data.objectId===ID&&e.data.from===PANTRY);
   const placement=events(st,'objectSupportPlacement').find(e=>e.data.objectId===ID);
   assert.ok(pickup&&placement);assert.equal(placement.data.supportId,option.sourceId);

@@ -8,7 +8,7 @@ const A=globalThis.SimWorldAuthoring,W=globalThis.SimWorld,E=globalThis.SimEngin
 assert.ok(Number(A.VERSION.split('v').pop())>=19,'Tidying requires at least the v19 World Authoring contract');
 assert.equal(T.VERSION,'tidying-put-away-v1');
 assert.equal(E.TIDYING_VERSION,T.VERSION);
-assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v4-exposed-meal');
+assert.equal(P.VISUAL_AVAILABILITY_VERSION,'perception-visual-availability-v5-exposed-cookware');
 assert.equal(E.EMERGENCY_PREEMPTIBLE.has('putAwayObject'),true);
 
 function fixture(){

@@ -1,6 +1,6 @@
 (() => {
   const Base=window.SimWorldAuthoring,F=window.SimFood;
-  if(Base?.VERSION!=='world-authoring-v19'||F?.VERSION!=='food-v3-meal-volume')throw new Error('Food F0 authoring requires World Authoring v19 and the canonical Food v1 F0 contract.');
+  if(Base?.VERSION!=='world-authoring-v19'||F?.VERSION!=='food-v4-contained-meal')throw new Error('Food F0 authoring requires World Authoring v19 and the canonical Food v1 F0 contract.');
   const VERSION='world-authoring-v20',clone=Base.cloneAuthoring;
   const hasMeal=F.hasMeal,validMeal=F.validMeal;
   function baseDocument(source){
@@ -14,8 +14,8 @@
     for(const [id,object] of Object.entries(source?.entities?.objects||{})){
       if(!hasMeal(object))continue;
       if(!validMeal(object))errors.push({code:'food_meal_invalid',path:'entities.objects.'+id+'.meal',message:'Meal requires valid integer grams, eatFrom affordance, unique placement and no parallel inventory.'});
-      else if(object.containedBy&&!F.isServingPlate(source?.entities?.objects?.[object.containedBy]))
-        errors.push({code:'food_meal_plate_invalid',path:'entities.objects.'+id+'.containedBy',message:'Contained Meal requires a clearly exposed ordinary Object serving plate.'});
+      else if(object.containedBy&&!F.isServingPlate(source?.entities?.objects?.[object.containedBy])&&!F.isCookingMealContainer(source?.entities?.objects?.[object.containedBy]))
+        errors.push({code:'food_meal_plate_invalid',path:'entities.objects.'+id+'.containedBy',message:'Contained Meal requires a clearly exposed ordinary Object serving plate or eligible ordinary cookware.'});
     }
     return {ok:errors.length===0,errors};
   }

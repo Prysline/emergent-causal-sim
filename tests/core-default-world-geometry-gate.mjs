@@ -120,7 +120,8 @@ function makeCandidate(name) {
   const [stoveX, stoveY] = plan.furniture.stoveA;
   const [counterX, counterY] = plan.furniture.counterA;
   doc.entities.objects.potA = {
-    id: 'potA', name: '料理鍋', icon: '🍲', cookingEligible: true, portable: true,
+    id: 'potA', name: '料理鍋', icon: '🍲', cookingEligible: true, portable: true, canEatFrom: true,
+    interactions: { eatFrom: { mode: 'supportReach' } },
     objectContainment: true, objectStorage: { capacityCubicMeters: 0.0006 },
     handling: {
       carryGeometry: { width: 0.35, height: 0.25, length: 0.35 },
@@ -275,7 +276,7 @@ E.configureResetStateSource('core-default-world-ab-controlled', seed =>
 // outcome. The previous 36-tick probes separately exercise Deliberation.
 const Cooking = globalThis.SimFoodCooking;
 const Food = globalThis.SimFood;
-assert.equal(Cooking.VERSION, 'food-cooking-v3-object-storage-volume');
+assert.equal(Cooking.VERSION, 'food-cooking-v4-contained-output');
 const facings = ['north', 'northEast', 'east', 'southEast', 'south',
   'southWest', 'west', 'northWest'];
 for (const name of ['A', 'B']) {
@@ -358,7 +359,7 @@ for (const name of ['A', 'B']) {
   const cooked = st.objects[phases.complete.data.mealId];
   assert.ok(Food.validMeal(cooked), name + ': missing produced F0 Meal');
   assert.equal(cooked.producedByEventId, phases.complete.id);
-  assert.equal(cooked.supportId, 'stoveA',
+  assert.equal(cooked.containedBy, 'potA',
     name + ': no teleportation of cooked Meal to the table');
   assert.equal(phases.complete.data.inputMassGrams,
     phases.complete.data.mealMassGrams +

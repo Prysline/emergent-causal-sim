@@ -7,10 +7,10 @@ loadProductionBefore('src/ui/core.js');
 const E=globalThis.SimEngine,W=globalThis.SimWorld,A=globalThis.SimWorldAuthoring;
 const F=globalThis.SimFood,I=globalThis.SimIngredient,O=globalThis.SimObjectHandling;
 const SP=globalThis.SimSpatial,P=globalThis.SimPerception,V=globalThis.SimValidator;
-assert.equal(F.VERSION,'food-v3-meal-volume');
+assert.equal(F.VERSION,'food-v4-contained-meal');
 assert.equal(O.VERSION,'object-handling-v4-storage-volume');
-assert.equal(A.VERSION,'world-authoring-v29');
-assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v2-seated-slot-contact','production Spatial Traversal owns exposed plate contact');
+assert.equal(A.VERSION,'world-authoring-v30');
+assert.equal(SP.MEAL_PLATE_INTERACTION_VERSION,'meal-plate-eat-from-v3-cookware-contact','production Spatial Traversal owns exposed plate contact');
 
 function fixture({cooking=false}={}){
   const doc=A.cloneAuthoring(A.DEFAULT_WORLD_AUTHORING);
@@ -64,6 +64,9 @@ function eventAncestors(st,id,visited=new Set()){
   const doc=fixture(),meal=doc.entities.objects.readyMealF0;
   delete meal.position;delete meal.supportId;meal.containedBy='plateA';meal.meal.edibleMassGrams=120;
   assert.equal(A.validateAuthoring(doc).ok,true,'authoring must accept a legal contained Meal without handling.massKg');
+  const inPot=A.cloneAuthoring(doc);
+  inPot.entities.objects.readyMealF0.containedBy='potA';
+  assert.equal(A.validateAuthoring(inPot).ok,true,'authoring accepts contained cookware Meal');
   const invalid=A.cloneAuthoring(doc);
   invalid.entities.objects.plateA.canEatFrom=false;
   assert.ok(A.validateAuthoring(invalid).errors.some(x=>x.code==='food_meal_plate_invalid'),'closed plate must fail Food authoring');
@@ -253,7 +256,25 @@ function eventAncestors(st,id,visited=new Set()){
   until(()=>st.events.some(x=>x.data?.action==='cookMeal'&&x.data?.phase==='complete'),90);
   const completion=st.events.find(x=>x.data?.action==='cookMeal'&&x.data?.phase==='complete');
   assert.equal(st.objects.ingredientA1,undefined);
-  assert.equal(st.objects[completion.data.mealId].meal.edibleMassGrams,300);
+  const cooked=st.objects[completion.data.mealId],pot=st.objects[completion.data.potId];
+  assert.equal(cooked.meal.edibleMassGrams,300);
+  assert.equal(cooked.containedBy,pot.id);
+  assert.equal(cooked.position,undefined);assert.equal(cooked.supportId,undefined);
+  assert.equal(O.objectStorageStatus(st,pot).count,1);
+  assert.ok(Math.abs(O.objectStorageStatus(st,pot).volumeCubicMeters-.0003)<1e-12);
+  assert.equal(F.isServingPlate(pot),false);
+  assert.equal(F.isServingSource(st,cooked),true);
+  assert.equal(SP.interactionGeometry(st,{kind:'object',id:cooked.id},a,'serve').mode,'exposedMealCookwareReach');
+  const originalExposure=pot.canEatFrom;delete pot.canEatFrom;
+  assert.equal(F.cookingContainerForMeal(st,cooked),pot);
+  assert.equal(P.classifyObjectPointVisualAvailability(st,a,cooked).visualAvailable,false);
+  assert.equal(SP.interactionGeometry(st,{kind:'object',id:cooked.id},a,'serve').positions.length,0);
+  assert.equal(F.serveMeal(st,cooked.id,plate.id,50,'hidden').served,false);
+  pot.canEatFrom=originalExposure;
+  st.reservations['object:'+pot.id]='zhou';
+  assert.equal(SP.interactionGeometry(st,{kind:'object',id:cooked.id},a,'serve').positions.length,0);
+  delete st.reservations['object:'+pot.id];
+  assert.deepEqual(issues(),[]);
   a.needs.hunger=80;
   const facings=['north','northEast','east','southEast','south','southWest','west','northWest'];
   const observedPlate=facings.some(face=>{
@@ -268,10 +289,33 @@ function eventAncestors(st,id,visited=new Set()){
   const event=servingEvents(st)[0];
   assert.equal(event.data.servedGrams,120);
   assert.equal(event.data.remainingSourceGrams,180);
+  assert.equal(event.data.sourceContainerId,pot.id);
+  assert.equal(cooked.containedBy,pot.id);
+  assert.equal(O.objectStorageStatus(st,pot).count,1);
+  assert.ok(Math.abs(O.objectStorageStatus(st,pot).volumeCubicMeters-.00018)<1e-12);
   assert.ok(eventAncestors(st,event.id).has(completion.id),'Serving must cite the real Cooking completion');
   assert.equal(a.held,plate.id,'Cooking → Serving still uses canonical Agent held');
   until(()=>intakeEvents(st).length>0,120);
   assert.ok(eventAncestors(st,intakeEvents(st)[0].id).has(completion.id),'first intake must retain Ingredient→Cooking provenance');
+  assert.deepEqual(issues(),[]);
+}
+
+{
+  const {st,a,b,plate,meal}=setup(20261124),pot=st.objects.potA;
+  delete meal.position;delete meal.supportId;meal.containedBy=pot.id;meal.meal.edibleMassGrams=100;
+  assert.equal(O.objectStorageStatus(st,pot).count,1);
+  const originalSupport=pot.supportId;
+  a.held=pot.id;delete pot.supportId;b.offMap=false;
+  assert.ok(SP.nodeSame(st,SP.objectNode(st,meal.id),SP.nodeForAgent(st,a)),'Meal follows actual carried cookware');
+  assert.equal(P.classifyObjectPointVisualAvailability(st,b,meal).visualAvailable,false);
+  assert.equal(SP.interactionGeometry(st,{kind:'object',id:meal.id},b,'serve').positions.length,0);
+  a.offMap=true;
+  assert.equal(P.classifyObjectPointVisualAvailability(st,a,meal).visualAvailable,false);
+  a.offMap=false;a.held=null;pot.supportId=originalSupport;b.offMap=true;
+  const full=F.serveMeal(st,meal.id,plate.id,100,'unused-cookware');
+  assert.equal(full.full,true);assert.equal(full.servedMealId,meal.id);
+  assert.equal(O.objectStorageStatus(st,pot).count,0);
+  assert.equal(meal.containedBy,plate.id);assert.equal(st.objects['unused-cookware'],undefined);
   assert.deepEqual(issues(),[]);
 }
 

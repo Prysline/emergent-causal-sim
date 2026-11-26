@@ -3,9 +3,9 @@
   // Earlier authoring layers own their schemas; the Core Default World B
   // projection owns only the assembled starting house and authored placements.
   const Base=window.SimWorldAuthoring,I=window.SimIngredient,F=window.SimFood;
-  if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v3-meal-volume')
+  if(Base?.VERSION!=='world-authoring-v24'||I?.VERSION!=='food-ingredient-v1'||F?.VERSION!=='food-v4-contained-meal')
     throw new Error('Core Default World B requires World Authoring v24, Ingredient v1 and Food v2.');
-  const VERSION='world-authoring-v29',clone=Base.cloneAuthoring;
+  const VERSION='world-authoring-v30',clone=Base.cloneAuthoring;
   const p=(x,y)=>({x,y,z:0});
   function baseDocument(source){const out=clone(source||{});out.authoringSchema=Base.VERSION;return out;}
   function validateOffMapIngredientSources(source,errors){
@@ -118,7 +118,8 @@
     objects.plateA=servingPlate('plateA','餐盤 A',11,5);
     objects.plateB=servingPlate('plateB','餐盤 B',12,6);
     objects.potA={
-      id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,
+      id:'potA',name:'料理鍋',icon:'🍲',cookingEligible:true,portable:true,canEatFrom:true,
+      interactions:{eatFrom:{mode:'supportReach'}},
       objectContainment:true,objectStorage:{capacityCubicMeters:.0006},
       handling:{carryGeometry:{width:.35,height:.25,length:.35},
         handsRequired:1,massKg:.8},
