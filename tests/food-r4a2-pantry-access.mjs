@@ -125,6 +125,25 @@ function ancestors(st,id,seen=new Set()){
   until(()=>a.action?.kind==='cookMeal'&&a.action.storageSourceId===PANTRY,'autonomous Cooking preparation',40);
   until(()=>cooked(st).length===1,'autonomous completion');valid(st);
 }
+// Capacity can change after extraction. The designated placement must not become a false success.
+{
+  const {st,a}=reset();const option=localChoice(st,a);
+  start(st,a,option);until(()=>a.held===ID,'real pickup before capacity change');
+  const support=st.furniture[option.sourceId],L=globalThis.SimSurfacePlacement;
+  for(const [index,cell] of support.spatial.surfaces[0].cells.entries()){
+    const node=SP.normalizeNode(st,cell,support.spatial.surfaces[0].id);
+    const region=L.placementCellRegion(support,node),id='surface-blocker-'+index;
+    st.objects[id]={id,name:'capacity witness',portable:false,supportId:support.id,position:node,
+      placementFootprint:{width:region.width,depth:region.depth}};
+  }
+  assert.equal(SP.supportPlacementCells(st,st.objects[ID],support.id).length,0);
+  assert.equal(SP.releaseHeldObjectOnSupport(st,a,support.id),null);
+  assert.equal(a.held,ID);
+  until(()=>events(st,'abort').some(e=>e.data.reason==='指定檯面沒有足夠的合法放置空間'),'capacity rejection',240);
+  assert.equal(events(st,'objectSupportPlacement').some(e=>e.data.objectId===ID),false);
+  assert.equal(cooked(st).length,0);
+  assert.ok(st.objects[ID]);
+}
 // Select an actual remote pantry view using canonical geometry and Perception.
 function remoteChoice(st,a){
   const P=globalThis.SimPerception,target={kind:'furniture',id:PANTRY};

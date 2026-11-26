@@ -54,6 +54,7 @@ jobs:
       - run: node tests/state-regression.mjs
       - run: node tests/world-authoring-foundation.mjs
       - run: node tests/object-unification.mjs
+      - run: node tests/surface-placement-legality.mjs
       - run: node tests/object-containment.mjs
       - run: node tests/movable-object-containment.mjs
       - run: node tests/agent-facing-foundation.mjs
