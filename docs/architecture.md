@@ -2,7 +2,9 @@
 
 本頁是跨 subsystem 的**現行入口**。若與 current implementation / regression 衝突，以已實作且經測試的行為為準；`docs/archive/` 只供歷史追溯。
 
-目前 runtime marker：`11.82.0-surface-placement-legality`。
+目前 runtime marker：`11.83.0-intentional-nearby-placement`。
+
+B2 Intentional Nearby Placement v5: Physical Meal Serving `eat.placeMealDish` keeps immediate legal contact placement first, otherwise selects from Action-local observed Furniture IDs using canonical support contact and finite traversal cost (initial budget 4, elapsed bound 12 ticks). Remote occupancy is not queried for selection; B1 intrinsic fit and actual capacity are checked separately, actual capacity only at contact. Retain only initial short-range observed candidate IDs (not feasibility); recompute approach each tick, reject failed targets, recheck current local contacts, then use canonical Floor fallback when exhausted. No route/feasibility cache, no new Intent, no cleanup/abort/accidental-drop migration, no B1 precision change. Other consumers remain unchanged.
 
 B1 uses explicit `placementFootprint:{width,depth}` in meters, independent of carry geometry and container volume. Canonical `SimSurfacePlacement` derives each cell's actual support rectangle from resolved `supportRegion` and checks individual dimensions plus total direct supported Object area. Multiple objects per cell are allowed; contained children never add independent occupancy. No exact packing, rotation, stacking, cross-cell placement, stored occupancy or persistent subcell coordinates; this approximation can both reject physically possible placements and accept overlapping arrangements. Existing immediate generic release keeps floor fallback; specified placement rejects without redirecting. R4-A2 local inspection, movement and final release use the same eligible cells. World Authoring v31 and runtime validation reject missing/invalid footprints and over-budget supported state; Editor uses existing atomic candidate validation. No B2/C or new Food activity.
 
@@ -217,7 +219,7 @@ else
 
 Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support Surface；0 或 >1 明確失敗。`objectContainment:true` Furniture 可作為 Object `containedBy` target；Held / Contained / Supported / Free location relations 互斥，Furniture / Surface 不保存反向 `objects[]` / `contents[]` mirror。Contained pickup interaction 直接重用 containing Furniture 的 canonical Interaction Geometry；其他 Object affordance 必須先把物件取出。
 
-### Intentional nearby placement v2
+### Immediate nearby release (historical v2 lineage; current B2 distinction)
 
 當 lifecycle-driven release 需要放下 held Object 時，Spatial candidate-selection 是唯一 nearby placement query owner：
 
@@ -227,7 +229,7 @@ Current `supportsObjects:true` Furniture 必須恰好有一個 canonical support
 - winner 寫 held Object 的 `position + supportId` 並清除 `Agent.held`；沒有合法 winner 時寫 actor current canonical Floor node並保持無 `supportId`。
 - accidental movement `containerDrop` 是另一條 handling consequence authority，仍落在 completed-edge current node，不經 nearby placement。
 
-Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享 intentional release placement。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。
+Engine 的一般 `releaseHeld()`、Deliberation soft reconsideration、replanning interruption 與 Human social soft-reconsideration 都委派同一 `releaseHeldObjectNearby(...)` helper；ordinary Object 與 Resource-container Object 因此共享即時 lifecycle release；B2 Physical Meal Serving `placeMealDish` 則是明確、有限的主動接近後放置，不將一般 cleanup 改為移動。Accidental movement `containerDrop` 仍是 Resources-owned intentionally-distinct consequence path，只適用具有 Resource-container handling capability 的 held Object。
 
 ## Interaction Geometry / Pickup v1
 

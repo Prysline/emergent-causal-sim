@@ -2,7 +2,9 @@
 
 湧現式因果模擬器：以少量、底層且可組合的規則，產生可追溯的因果鏈與湧現行為。
 
-目前 runtime marker：`11.82.0-surface-placement-legality`。
+目前 runtime marker：`11.83.0-intentional-nearby-placement`。
+
+B2 Intentional Nearby Placement v5: Physical Meal Serving `eat.placeMealDish` keeps immediate legal contact placement first, otherwise selects from Action-local observed Furniture IDs using canonical support contact and finite traversal cost (initial budget 4, elapsed bound 12 ticks). Remote occupancy is not queried for selection; B1 intrinsic fit and actual capacity are checked separately, actual capacity only at contact. Retain only initial short-range observed candidate IDs (not feasibility); recompute approach each tick, reject failed targets, recheck current local contacts, then use canonical Floor fallback when exhausted. No route/feasibility cache, no new Intent, no cleanup/abort/accidental-drop migration, no B1 precision change. Other consumers remain unchanged.
 
 B1 uses explicit `placementFootprint:{width,depth}` in meters, independent of carry geometry and container volume. Canonical `SimSurfacePlacement` derives each cell's actual support rectangle from resolved `supportRegion` and checks individual dimensions plus total direct supported Object area. Multiple objects per cell are allowed; contained children never add independent occupancy. No exact packing, rotation, stacking, cross-cell placement, stored occupancy or persistent subcell coordinates; this approximation can both reject physically possible placements and accept overlapping arrangements. Existing immediate generic release keeps floor fallback; specified placement rejects without redirecting. R4-A2 local inspection, movement and final release use the same eligible cells. World Authoring v31 and runtime validation reject missing/invalid footprints and over-budget supported state; Editor uses existing atomic candidate validation. No B2/C or new Food activity.
 

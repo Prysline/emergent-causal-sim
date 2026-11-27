@@ -234,3 +234,8 @@ Interaction Geometry 與 pathfinding 共用同一份實體世界。Tile 本身�
 ## Target-constrained support placement (R4-A2)
 
 `SimSpatial.releaseHeldObjectOnSupport(st, actor, supportId)` shares the existing nearby support candidate and mutation authority, accepts only the specified supporting Furniture at current canonical `supportContactNodes`, and rejects invalid, off-map, remote or competing reservation targets without mutating `held` or falling back to another surface. `releaseHeldObjectNearby` retains its existing contact and floor fallback for generic release/interruption. Planned movement to a specified support uses the same support contacts. This does not implement general workspace clearing or a new surface occupancy model.
+
+
+## B2 intentional approach placement
+
+B2 Intentional Nearby Placement v5: Physical Meal Serving `eat.placeMealDish` keeps immediate legal contact placement first, otherwise selects from Action-local observed Furniture IDs using canonical support contact and finite traversal cost (initial budget 4, elapsed bound 12 ticks). Remote occupancy is not queried for selection; B1 intrinsic fit and actual capacity are checked separately, actual capacity only at contact. Retain only initial short-range observed candidate IDs (not feasibility); recompute approach each tick, reject failed targets, recheck current local contacts, then use canonical Floor fallback when exhausted. No route/feasibility cache, no new Intent, no cleanup/abort/accidental-drop migration, no B1 precision change. Other consumers remain unchanged.
